@@ -5,13 +5,13 @@ orquestração e a página de qualidade leem. Nada aqui interrompe a captura: o 
 quebrou, não parar o que ainda funciona. O frescor (idade do dado carregado) é medido pelo dbt.
 """
 
-import csv
 import json
 from datetime import datetime
 from pathlib import Path
 
 from plataforma_dados.core import runs
 from plataforma_dados.core.warehouse import Connection
+from plataforma_dados.ingestion import read
 from plataforma_dados.ingestion.contract import Dataset, SourceContract
 
 VOLUME_DROP = 0.8  # menos de 80% das linhas da carga anterior vira aviso
@@ -36,9 +36,8 @@ def record(
 def check_header(
     con: Connection, contract: SourceContract, dataset: Dataset, partition: int | None, file: Path
 ) -> None:
-    """Compara as colunas do arquivo com o contrato e com o arquivo anterior do mesmo dataset."""
-    with file.open(encoding=contract.encoding, newline="") as f:
-        header = next(csv.reader(f, delimiter=contract.delimiter), [])
+    """Compara os campos do arquivo com o contrato e com o arquivo anterior do mesmo dataset."""
+    header = read.fields(file, contract, dataset)
     source, name = contract.source, dataset.name
     missing = [c for c in dataset.columns if c not in header]
     previous = con.execute(

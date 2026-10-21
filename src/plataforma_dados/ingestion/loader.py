@@ -8,7 +8,6 @@ aparece sozinha), faz `merge` pela chave natural (ou pelo conteúdo da linha, co
 registra cada carga (`_dlt_load_id`).
 """
 
-import csv
 import hashlib
 from collections.abc import Iterator
 from pathlib import Path
@@ -21,10 +20,15 @@ from dlt.extract import DltResource
 from plataforma_dados.core import runs
 from plataforma_dados.core.settings import Settings
 from plataforma_dados.core.warehouse import Connection
-from plataforma_dados.ingestion import landing, monitoring
+from plataforma_dados.ingestion import landing, monitoring, read
 from plataforma_dados.ingestion.contract import ROW_HASH, Dataset, SourceContract
 
 normalize = NamingConvention().normalize_identifier
+
+
+def _clean(value: Any) -> Any:
+    """Vazio vira nulo; o resto fica como veio (listas seguem para o dlt, que cria as tabelas filhas)."""
+    return None if value is None or (isinstance(value, str) and not value.strip()) else value
 
 
 def read_rows(
@@ -33,28 +37,30 @@ def read_rows(
     """Linhas do arquivo, só com as colunas permitidas. Linhas sem a chave são rejeitadas."""
     names = {column: normalize(column) for column in dataset.columns}
     key = [names.get(c, c) for c in dataset.primary_key]
-    with file.open(encoding=contract.encoding, newline="") as f:
-        for record in csv.DictReader(f, delimiter=contract.delimiter):
-            stats["read"] += 1
-            row: dict[str, Any] = {names[c]: (record.get(c) or None) for c in dataset.columns}
-            row["_source_file_id"] = file_id
-            if ROW_HASH in dataset.primary_key:
-                joined = "".join(str(row[names[c]] or "") for c in dataset.columns)
-                row[ROW_HASH] = hashlib.sha256(joined.encode()).hexdigest()
-            if any(row[k] is None for k in key):
-                stats["rejected"] += 1
-                continue
-            stats["loaded"] += 1
-            yield row
+    for record in read.records(file, contract, dataset):
+        stats["read"] += 1
+        row: dict[str, Any] = {names[c]: _clean(record.get(c)) for c in dataset.columns}
+        row["_source_file_id"] = file_id
+        if ROW_HASH in dataset.primary_key:
+            joined = "".join(str(row[names[c]] or "") for c in dataset.columns)
+            row[ROW_HASH] = hashlib.sha256(joined.encode()).hexdigest()
+        if any(row[k] is None for k in key):
+            stats["rejected"] += 1
+            continue
+        stats["loaded"] += 1
+        yield row
 
 
 def resource(
     file: Path, contract: SourceContract, dataset: Dataset, file_id: int, stats: dict[str, int]
 ) -> DltResource:
     key = [normalize(c) for c in dataset.primary_key]
-    columns: dict[str, dict[str, Any]] = {
-        normalize(c): {"data_type": "text", "nullable": normalize(c) not in key} for c in dataset.columns
-    }
+    # CSV: tudo texto (o dbt converte). JSON: o dlt infere os tipos e cria as tabelas filhas das listas.
+    columns: dict[str, dict[str, Any]] = (
+        {normalize(c): {"data_type": "text", "nullable": normalize(c) not in key} for c in dataset.columns}
+        if contract.format == "csv"
+        else {}
+    )
     if ROW_HASH in dataset.primary_key:
         columns[ROW_HASH] = {"data_type": "text", "nullable": False}
     columns["_source_file_id"] = {"data_type": "bigint", "nullable": False}

@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 
 from plataforma_dados.core import migrations
 from plataforma_dados.core.settings import Settings
-from plataforma_dados.ingestion import contract, landing, loader, monitoring
+from plataforma_dados.ingestion import contract, fetch, landing, loader, monitoring
 from plataforma_dados.transformation import build
 
 SOURCE = "camara"
@@ -37,8 +37,8 @@ def run_all(
     items: list[landing.Item],
     rebuild: bool = False,
     force: bool = False,
-    downloader: landing.Downloader = landing.download,
-    head_request: landing.HeadRequest = landing.head,
+    downloader: fetch.Downloader | None = None,
+    head_request: fetch.HeadRequest | None = None,
 ) -> Summary:
     """Roda a cadeia inteira."""
     source = contract_of()

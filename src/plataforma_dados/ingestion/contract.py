@@ -1,13 +1,18 @@
-"""Contrato declarativo de uma fonte (`contracts/<fonte>.yml`): de onde vem e o que se carrega."""
+"""Declaração de uma fonte (`sources/<poder>/<esfera>/<fonte>/source.yml`): de onde vem e o que se carrega.
 
+Ao lado do YAML pode haver um `custom.py` com o código que só aquela fonte precisa (ver `fetch.py` e
+`read.py`)."""
+
+import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import yaml
 
-from plataforma_dados.core.settings import SOURCES_DIR
-
+SOURCES_DIR = Path(__file__).resolve().parents[1] / "sources"
+FORMATS = {"csv", "json"}
 POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly"}
@@ -35,6 +40,7 @@ class Dataset:
     extra_years: bool = False
     first_year: int | None = None
     partition: str = "year"
+    records: str | None = None  # JSON: caminho (com pontos) da lista de registros
 
     @property
     def yearly(self) -> bool:
@@ -50,6 +56,9 @@ class SourceContract:
     base_url: str
     delimiter: str
     encoding: str
+    format: str = "csv"
+    headers: dict[str, str] = field(default_factory=dict)  # aceita ${VARIAVEL} do ambiente
+    custom: ModuleType | None = None
     datasets: dict[str, Dataset] = field(default_factory=dict)
 
     def url(self, dataset: str, year: int | None = None) -> str:
@@ -100,8 +109,21 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         stable_after_years=int(data.get("stable_after_years", 1)),
         extra_years=bool(data.get("extra_years", False)),
         partition=str(data.get("partition", "year")),
+        records=data.get("records"),
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
     )
+
+
+def _custom(path: Path) -> ModuleType | None:
+    """O `custom.py` da fonte (ao lado do YAML), se existir."""
+    file = path.with_name("custom.py")
+    if not file.exists():
+        return None
+    spec = importlib.util.spec_from_file_location(f"custom_{path.parent.name}", file)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def load_contract(path: Path) -> SourceContract:
@@ -109,6 +131,8 @@ def load_contract(path: Path) -> SourceContract:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     access = data.get("access", {})
     source = data["source"]
+    if access.get("format", "csv") not in FORMATS:
+        raise InvalidContract(f"{source}: format deve ser um de {sorted(FORMATS)}")
     for field_name, allowed in (("power", POWERS), ("level", LEVELS)):
         if data.get(field_name) not in allowed:
             raise InvalidContract(f"{source}: {field_name} deve ser um de {sorted(allowed)}")
@@ -120,12 +144,15 @@ def load_contract(path: Path) -> SourceContract:
         base_url=access["base_url"],
         delimiter=access.get("delimiter", ";"),
         encoding=access.get("encoding", "utf-8-sig"),
+        format=access.get("format", "csv"),
+        headers=dict(access.get("headers", {})),
+        custom=_custom(path),
         datasets={n: _dataset(source, n, d) for n, d in data["datasets"].items()},
     )
 
 
 def find(source: str) -> SourceContract:
-    """Contrato de uma fonte, procurado em `sources/<poder>/<esfera>/<fonte>.yml`."""
-    for path in SOURCES_DIR.glob(f"*/*/{source}.yml"):
+    """Declaração de uma fonte, procurada em `sources/<poder>/<esfera>/<fonte>/source.yml`."""
+    for path in SOURCES_DIR.glob(f"*/*/{source}/source.yml"):
         return load_contract(path)
     raise InvalidContract(f"fonte '{source}' não tem contrato em {SOURCES_DIR}")

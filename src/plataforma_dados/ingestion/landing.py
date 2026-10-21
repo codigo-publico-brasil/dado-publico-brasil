@@ -11,59 +11,19 @@ Três maneiras de montar o que baixar (o plano):
   o anterior).
 """
 
-import hashlib
-import urllib.request
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from http.client import HTTPException
-from pathlib import Path
 from typing import Any
 
 from plataforma_dados.core import runs
 from plataforma_dados.core.settings import Settings
 from plataforma_dados.core.warehouse import Connection, rows, scalar
-from plataforma_dados.ingestion import monitoring
+from plataforma_dados.ingestion import fetch, monitoring
 from plataforma_dados.ingestion.contract import Dataset, SourceContract
+from plataforma_dados.ingestion.fetch import Downloader, HeadRequest
 
-AGENT = "quem-decidiu/0.1 (projeto civico aberto)"
-CHUNK = 1024 * 1024
-
-Downloader = Callable[[str, Path], tuple[Path, str, int]]
-HeadRequest = Callable[[str], dict[str, str | None]]
 Item = tuple[str, int | None]
-
-
-def download(url: str, folder: Path) -> tuple[Path, str, int]:
-    """Baixa sem alterar. Devolve o caminho, o SHA-256 e o tamanho em bytes."""
-    folder.mkdir(parents=True, exist_ok=True)
-    temporary = folder / "download.tmp"
-    sha = hashlib.sha256()
-    size = 0
-    request = urllib.request.Request(url, headers={"User-Agent": AGENT})
-    with urllib.request.urlopen(request, timeout=120) as response, temporary.open("wb") as f:
-        while chunk := response.read(CHUNK):
-            f.write(chunk)
-            sha.update(chunk)
-            size += len(chunk)
-    digest = sha.hexdigest()
-    stem, _, extension = url.rsplit("/", 1)[-1].rpartition(".")
-    target = folder / f"{stem}-{digest[:12]}.{extension}"
-    if target.exists():
-        temporary.unlink()
-    else:
-        temporary.rename(target)
-    return target, digest, size
-
-
-def head(url: str) -> dict[str, str | None]:
-    """Pergunta à fonte (HEAD) se o arquivo mudou, sem baixá-lo. Valores ausentes ficam `None`."""
-    request = urllib.request.Request(url, method="HEAD", headers={"User-Agent": AGENT})
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return {
-            "etag": response.headers.get("ETag"),
-            "last_modified": response.headers.get("Last-Modified"),
-            "size": response.headers.get("Content-Length"),
-        }
 
 
 def unchanged(previous: Mapping[str, Any] | None, headers: Mapping[str, str | None]) -> bool:
@@ -198,8 +158,8 @@ def extract(
     contract: SourceContract,
     dataset: str,
     year: int | None = None,
-    downloader: Downloader = download,
-    head_request: HeadRequest = head,
+    downloader: Downloader | None = None,
+    head_request: HeadRequest | None = None,
     force: bool = False,
 ) -> int:
     """Captura um dataset e devolve o id da captura (nova ou a anterior, se nada mudou).
@@ -208,6 +168,8 @@ def extract(
     falhar, a falha é registrada em `metadata.source_checks` e devolve -1, sem interromper o plano.
     """
     url = contract.url(dataset, year)
+    downloader = downloader or fetch.downloader(contract)
+    head_request = head_request or fetch.head_request(contract)
     with runs.track(con, "extract", contract.source, dataset, year) as run:
         previous = last_capture(con, url)
         try:
@@ -237,8 +199,8 @@ def extract_plan(
     settings: Settings,
     contract: SourceContract,
     items: list[Item],
-    downloader: Downloader = download,
-    head_request: HeadRequest = head,
+    downloader: Downloader | None = None,
+    head_request: HeadRequest | None = None,
     force: bool = False,
 ) -> int:
     """Executa um plano, item a item. Devolve quantos itens foram processados."""
