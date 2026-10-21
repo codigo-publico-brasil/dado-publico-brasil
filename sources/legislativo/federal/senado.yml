@@ -45,3 +45,25 @@ datasets:
        identificacao, sigla, numero, ano, dataApresentacao, ementa, informeLegislativo__siglaColegiado,
        informeLegislativo__nomeColegiado, votos]
     nested: [votos]
+
+  processos:
+    # Por item: o processo de cada matéria votada (situação atual, norma gerada, autoria). O corpo inteiro
+    # fica no landing; só estes campos vão ao raw (tramitação e informes ainda não).
+    url: "{base_url}/processo/{item}"
+    load: foreach
+    write: merge
+    foreach:
+      from: votacoes
+      item: id_processo
+      recent_by: data_sessao
+      refresh_after_days: 30
+      batch_size: 200
+    primary_key: [_item]
+    columns:
+      [_item, id, codigoMateria, identificacao, sigla, numero, ano, tramitando, situacaoAtual,
+       siglaSituacaoAtual, dataSituacaoAtual, dataInicioEfetivo, siglaCasaIniciadora,
+       normaGerada__codigo, normaGerada__siglaTipo, normaGerada__tipo, normaGerada__numero,
+       normaGerada__anoAssinatura, normaGerada__dataAssinatura, normaGerada__descricao,
+       normaGerada__dataPublicacao, normaGerada__siglaVeiculoPublicacao, autoriaIniciativa]
+    nested: [autoriaIniciativa]
+

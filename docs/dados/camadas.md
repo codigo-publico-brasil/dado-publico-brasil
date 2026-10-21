@@ -1,6 +1,6 @@
 # Camadas da plataforma de dados
 
-Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas fazem cada passo e onde mudar cada coisa. Serve também de material de estudo: os quadros **Conceito** nomeiam a prática de engenharia de dados por trás de cada decisão. Decisões formais: ADRs [0004](../adr/0004-camadas-da-plataforma-de-dados.md), [0005](../adr/0005-fontes-declarativas-e-portabilidade.md), [0006](../adr/0006-adotar-dlt-dbt-e-dagster.md), [0007](../adr/0007-dois-pacotes-e-camadas-de-mercado.md), [0008](../adr/0008-motores-separados-e-organizacao-por-poder-e-esfera.md) [0009](../adr/0009-repositorio-de-dados-pacote-unico.md), [0010](../adr/0010-duas-pastas-env-e-specs-fora.md) e [0011](../adr/0011-buscar-ler-custom-e-chave-por-fonte.md).
+Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas fazem cada passo e onde mudar cada coisa. Serve também de material de estudo: os quadros **Conceito** nomeiam a prática de engenharia de dados por trás de cada decisão. Decisões formais: ADRs [0004](../adr/0004-camadas-da-plataforma-de-dados.md), [0005](../adr/0005-fontes-declarativas-e-portabilidade.md), [0006](../adr/0006-adotar-dlt-dbt-e-dagster.md), [0007](../adr/0007-dois-pacotes-e-camadas-de-mercado.md), [0008](../adr/0008-motores-separados-e-organizacao-por-poder-e-esfera.md) [0009](../adr/0009-repositorio-de-dados-pacote-unico.md), [0010](../adr/0010-duas-pastas-env-e-specs-fora.md) [0011](../adr/0011-buscar-ler-custom-e-chave-por-fonte.md) e [0012](../adr/0012-dataset-por-item-lotes-com-envelope.md).
 
 ## O desenho
 
@@ -89,6 +89,10 @@ Os marts são **por entidade** (`pessoas`, `proposicoes`, `votacoes`...), não p
 ## Como a captura é flexível
 
 Três passos por dataset ([ADR 0011](../adr/0011-buscar-ler-custom-e-chave-por-fonte.md)): **buscar** (`ingestion/fetch.py`: HTTP com nova tentativa, cabeçalhos e credenciais por variável de ambiente), **guardar** (`landing.py`: arquivo com hash e registro da captura, igual para toda fonte) e **ler** (`read.py`: CSV e JSON). Uma fonte que precise de outro jeito (SOAP, robô, pacote compactado) tem um módulo em `ingestion/custom/<poder>/<esfera>/<fonte>.py` que substitui só o passo necessário; a saída de `buscar` é sempre um arquivo com hash, então o resto não muda. Passo a passo em [especificação de fonte](especificacao-de-fonte.md).
+
+## Datasets por item e auditoria
+
+Tramitação e situação só existem por item (uma chamada por proposição). Um dataset `load: foreach` busca, em lotes e a uma taxa educada, os itens que faltam ou mudaram, começando pelos mais recentes; roda só com `--foreach N` ou `--foreach all`. Cada lote guarda a resposta de cada item byte a byte, e dois comandos auditam: `plataforma verify` (hashes do landing e do índice `metadata.capture_items`) e `plataforma coverage` (itens esperados, obtidos, inexistentes, com falha e faltantes). Detalhes no [ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md).
 
 ## Monitoramento das fontes
 

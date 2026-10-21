@@ -9,6 +9,9 @@ A pasta de armazenamento e o warehouse vêm de PLATAFORMA_STORAGE_ROOT e PLATAFO
     uv run plataforma run --years 2024 2025 2026 --extra-years 2019
 
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
+Auditoria: verify (hashes do landing) e coverage (itens obtidos nos datasets por item).
+Datasets por item (tramitação, processos): `--foreach 200` busca os 200 mais recentes que faltam;
+`--foreach all` busca todos.
 Modos de extração: --years (anos pedidos), --historical --from-year N (carga massiva) e
 --incremental (só o que pode ter mudado).
 """
@@ -19,11 +22,22 @@ from pathlib import Path
 from plataforma_dados.core import migrations, warehouse
 from plataforma_dados.core import settings as settings_module
 from plataforma_dados.core.settings import Settings
-from plataforma_dados.ingestion import contract, landing, loader
+from plataforma_dados.ingestion import contract, foreach, landing, loader
 from plataforma_dados.orchestration import pipeline
 from plataforma_dados.transformation import build, catalog, dbt
 
-COMMANDS = ("run", "extract", "load", "transform", "identity", "catalog", "docs", "query")
+COMMANDS = (
+    "run",
+    "extract",
+    "load",
+    "transform",
+    "identity",
+    "catalog",
+    "docs",
+    "query",
+    "verify",
+    "coverage",
+)
 
 
 def _plan(args: argparse.Namespace) -> pipeline.Plan:
@@ -32,6 +46,10 @@ def _plan(args: argparse.Namespace) -> pipeline.Plan:
     if args.historical:
         return lambda c: landing.plan_historical(c, args.from_year, args.to_year, args.extra_years)
     return lambda c: landing.plan(c, args.years, args.extra_years)
+
+
+def _per_item(args: argparse.Namespace) -> int:
+    return foreach.MAX if args.foreach == "all" else int(args.foreach)
 
 
 def _query(settings: Settings, sql: str) -> None:
@@ -49,6 +67,18 @@ def _query(settings: Settings, sql: str) -> None:
         print("  ".join(v.ljust(w) for v, w in zip(row, widths, strict=True)))
 
 
+def _coverage(settings: Settings, only: str | None) -> None:
+    con = warehouse.connect(settings, read_only=True)
+    try:
+        for source in contract.find_all():
+            for name, dataset in source.datasets.items():
+                if dataset.foreach and only in (None, source.source):
+                    counts = foreach.coverage(con, source, name)
+                    print(f"{source.source}.{name}: " + ", ".join(f"{k} {v}" for k, v in counts.items()))
+    finally:
+        con.close()
+
+
 def _ingest(settings: Settings, args: argparse.Namespace) -> None:
     con = migrations.open_warehouse(settings)
     try:
@@ -57,6 +87,9 @@ def _ingest(settings: Settings, args: argparse.Namespace) -> None:
                 if args.command == "extract":
                     n = landing.extract_plan(con, settings, source, _plan(args)(source), force=args.force)
                     print(f"{source.source}: {n} datasets processados")
+                    for name, dataset in source.datasets.items():
+                        if dataset.foreach and args.foreach:
+                            foreach.capture(con, settings, source, name, _per_item(args))
                 else:
                     captures, rows = loader.load_pending(con, settings, source, args.rebuild)
                     print(f"{source.source}: {captures} capturas carregadas, {rows} linhas")
@@ -67,6 +100,9 @@ def _ingest(settings: Settings, args: argparse.Namespace) -> None:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument("command", choices=COMMANDS)
+    p.add_argument(
+        "--foreach", help="itens por dataset por item (número ou all); sem isso, esses datasets não rodam"
+    )
     p.add_argument("--source", help="só esta fonte (padrão: todas as de sources/)")
     p.add_argument("--years", type=int, nargs="+", default=[], help="anos de votações e proposições")
     p.add_argument("--extra-years", type=int, nargs="*", default=[], help="anos só de proposições")
@@ -101,10 +137,27 @@ def main(argv: list[str] | None = None) -> int:
         case "docs":
             return dbt.serve_docs(settings, args.port)
         case "run":
-            print(pipeline.run_all(settings, _plan(args), args.rebuild, args.force, only=args.source))
+            print(
+                pipeline.run_all(
+                    settings,
+                    _plan(args),
+                    args.rebuild,
+                    args.force,
+                    only=args.source,
+                    per_item=_per_item(args) if args.foreach else None,
+                )
+            )
         case "transform":
             build.run(settings)
             print("dbt concluído (staging, intermediate, identidade e marts)")
+        case "verify":
+            con = migrations.open_warehouse(settings)
+            problems = foreach.verify(con, settings, args.source)
+            con.close()
+            print(chr(10).join(problems) or "landing íntegro: todos os hashes conferem")
+            return 1 if problems else 0
+        case "coverage":
+            _coverage(settings, args.source)
         case "identity":
             print(f"{build.resolve_identity(settings)} pessoas novas")
         case _:

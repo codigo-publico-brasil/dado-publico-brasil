@@ -82,7 +82,7 @@ def current_captures(con: Connection, source: str) -> list[dict[str, Any]]:
         con,
         "SELECT * FROM metadata.captures c WHERE c.source = ? "
         "AND c.id = (SELECT MAX(id) FROM metadata.captures WHERE url = c.url) "
-        "ORDER BY c.dataset, c.year",
+        "ORDER BY c.dataset, c.year, c.id",
         (source,),
     )
 
@@ -119,6 +119,8 @@ def plan(contract: SourceContract, years: list[int], extra_years: list[int] | No
     """
     items: list[Item] = []
     for d in contract.datasets.values():
+        if d.foreach:
+            continue  # por item: só com --foreach (ver foreach.py)
         if not d.yearly:
             items.append((d.name, None))
             continue
@@ -142,6 +144,8 @@ def plan_incremental(contract: SourceContract, current: int | None = None) -> li
     current = current or current_year()
     items: list[Item] = []
     for d in contract.datasets.values():
+        if d.foreach:
+            continue
         if not d.yearly:
             items.append((d.name, None))
         else:
@@ -168,8 +172,8 @@ def extract(
     falhar, a falha é registrada em `metadata.source_checks` e devolve -1, sem interromper o plano.
     """
     url = contract.url(dataset, year)
-    downloader = downloader or fetch.downloader(contract)
-    head_request = head_request or fetch.head_request(contract)
+    downloader = downloader or fetch.downloader(contract, dataset)
+    head_request = head_request or fetch.head_request(contract, dataset)
     with runs.track(con, "extract", contract.source, dataset, year) as run:
         previous = last_capture(con, url)
         try:

@@ -112,7 +112,8 @@ def load_capture(
         stats = load_file(
             settings, contract, dataset, settings.storage_root / capture["path"], capture["id"], con
         )
-        monitoring.check_volume(con, contract.source, dataset.name, capture["year"], stats["read"])
+        if not dataset.foreach:  # lotes têm tamanhos diferentes por natureza
+            monitoring.check_volume(con, contract.source, dataset.name, capture["year"], stats["read"])
         run.rows_in, run.rows_out = stats["read"], stats["loaded"]
         con.execute("UPDATE metadata.captures SET loaded_at = ? WHERE id = ?", (runs.now(), capture["id"]))
         return stats["loaded"]

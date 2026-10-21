@@ -39,15 +39,17 @@ senado as (
         coalesce(standardize_summary(m.ementa, s.lista), m.ementa) as ementa,
         m.ementa as ementa_oficial,
         m.apresentada_em,
-        cast(null as varchar) as situacao,
+        pr.situacao,
         cast(null as varchar) as orgao_ultimo_status,
-        cast(null as date) as ultimo_status_em,
+        pr.situacao_em as ultimo_status_em,
         '{{ var("url_materia_senado") }}' || cast(m.materia_id as varchar) as fonte_url,
         cast(c.capturado_em as date) as capturado_em
 
     from {{ ref('int_materias_do_senado_unicas') }} as m
 
     cross join siglas as s
+
+    left join {{ ref('stg_senado__processos') }} as pr on pr.materia_id = m.materia_id
 
     left join {{ ref('stg_metadata__captures') }} as c on c.source_file_id = m.source_file_id
 

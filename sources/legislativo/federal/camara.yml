@@ -167,3 +167,26 @@ datasets:
     columns:
       [id, deputado_.id, deputado_.idLegislatura, deputado_.urlFoto, deputado_.codTitulo, deputado_.titulo,
        dataInicio, dataFim]
+
+  proposicoes_tramitacoes:
+    # Por item: uma chamada à API para cada proposição que pode virar norma (não existe arquivo em lote).
+    # Só entram PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC; requerimentos, pareceres e emendas ficam de fora.
+    # Roda só com `--foreach N` (os N itens mais recentes que faltam) ou `--foreach all`.
+    url: "https://dadosabertos.camara.leg.br/api/v2/proposicoes/{item}/tramitacoes"
+    load: foreach
+    format: json
+    headers: {Accept: application/json}
+    records: dados
+    write: merge
+    foreach:
+      from: proposicoes
+      item: id
+      where: "sigla_tipo IN ('PL', 'PLP', 'PEC', 'MPV', 'PDL', 'PLV', 'PLN', 'PRC')"
+      recent_by: data_apresentacao
+      version: ultimo_status_data_hora   # mudou a última situação: busca de novo
+      batch_size: 500
+    primary_key: [_item, sequencia]
+    columns:
+      [_item, sequencia, dataHora, siglaOrgao, regime, descricaoTramitacao, codTipoTramitacao,
+       descricaoSituacao, codSituacao, despacho, ambito, apreciacao]
+

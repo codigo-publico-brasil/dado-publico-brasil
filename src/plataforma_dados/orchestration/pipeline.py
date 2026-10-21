@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 
 from plataforma_dados.core import migrations
 from plataforma_dados.core.settings import Settings
-from plataforma_dados.ingestion import contract, fetch, landing, loader, monitoring
+from plataforma_dados.ingestion import contract, fetch, foreach, landing, loader, monitoring
 from plataforma_dados.transformation import build
 
 Plan = Callable[[contract.SourceContract], list[landing.Item]]
@@ -37,8 +37,14 @@ def run_all(
     downloader: fetch.Downloader | None = None,
     head_request: fetch.HeadRequest | None = None,
     only: str | None = None,
+    per_item: int | None = None,
+    get: foreach.Get | None = None,
 ) -> Summary:
-    """Roda a cadeia inteira para todas as fontes (ou só `only`). `plan` diz o que extrair de cada uma."""
+    """Roda a cadeia inteira para todas as fontes (ou só `only`). `plan` diz o que extrair de cada uma.
+
+    Os datasets por item (`foreach`) só rodam com `per_item`: quantos itens por dataset, os mais recentes
+    primeiro.
+    """
     summary = Summary()
     started = datetime.now(UTC)
     con = migrations.open_warehouse(settings)
@@ -49,6 +55,12 @@ def run_all(
                     con, settings, source, plan(source), downloader, head_request, force
                 )
                 captures, rows = loader.load_pending(con, settings, source, rebuild)
+                if per_item:
+                    for name, dataset in source.datasets.items():
+                        if dataset.foreach:
+                            summary.items += foreach.capture(con, settings, source, name, per_item, get)
+                    more_captures, more_rows = loader.load_pending(con, settings, source)
+                    captures, rows = captures + more_captures, rows + more_rows
                 summary.captures_loaded += captures
                 summary.rows_loaded += rows
         summary.source_errors = monitoring.errors_since(con, started)

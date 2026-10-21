@@ -17,6 +17,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `partidos` | Partidos com sigla e nome. | publico-agente-publico |  |
 | `proposicoes` | Proposições, um arquivo por ano, com a última situação. | publico-agente-publico |  |
 | `proposicoes_autores` | Autores de cada proposição (pessoa ou órgão), na ordem de assinatura. | publico-agente-publico |  |
+| `proposicoes_tramitacoes` | Tramitação das proposições que podem virar norma, buscada por item na API (`_item` é o id da proposição), só das que já foram buscadas. | publico-agente-publico |  |
 | `votacoes` | Votações com resultado e totais oficiais. | publico-agente-publico |  |
 | `votacoes_objetos` | Proposições que são objeto de cada votação. | publico-agente-publico |  |
 | `votacoes_orientacoes` | Orientação de cada bancada em cada votação. | publico-agente-publico |  |
@@ -27,6 +28,8 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
+| `processos` | Processo de cada matéria votada, buscado por item na API (`_item` é o id do processo), só das já buscadas: situação atual e norma gerada. | publico-agente-publico |  |
+| `processos__autoria_iniciativa` | Autoria de cada processo (lista `autoriaIniciativa`). | publico-agente-publico |  |
 | `senadores` | Senadores por legislatura (o mesmo senador aparece em várias), com os mandatos em tabelas filhas. | publico-agente-publico |  |
 | `votacoes` | Votações em plenário com resultado, totais e a matéria votada. | publico-agente-publico |  |
 | `votacoes__votos` | Voto de cada senador em cada votação nominal (lista `votos` da votação). | publico-agente-publico |  |
@@ -46,6 +49,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `stg_camara__partidos` | Partidos, uma linha por partido. | publico-agente-publico |  |
 | `stg_camara__proposicoes` | Proposições com a última situação. A ementa fica como veio da fonte. | publico-agente-publico |  |
 | `stg_camara__proposicoes_autores` | Autores de proposições (deputados, comissões, Senado, Executivo...), por ordem de assinatura. | publico-agente-publico |  |
+| `stg_camara__tramitacoes` | Tramitação das proposições que podem virar norma (só as já buscadas), uma linha por andamento. | publico-agente-publico |  |
 | `stg_camara__votacoes` | Votações com resultado e totais oficiais. | publico-agente-publico |  |
 | `stg_camara__votacoes_objetos` | Proposições que são objeto de votação. | publico-agente-publico |  |
 | `stg_camara__votacoes_orientacoes` | Orientação de cada bancada em cada votação. | publico-agente-publico |  |
@@ -54,6 +58,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `stg_identity__pessoa_identificadores` | Identificadores de cada pessoa em cada fonte. | publico-agente-publico |  |
 | `stg_identity__pessoas` | Pessoas do projeto (chave própria). | publico-agente-publico |  |
 | `stg_metadata__captures` | Capturas dos arquivos da fonte (um arquivo, uma linha). `source_file_id` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
+| `stg_senado__processos` | Processo de cada matéria votada (só as já buscadas), com a situação atual e a norma gerada. | publico-agente-publico |  |
 | `stg_senado__senadores` | Senadores, uma linha por senador (o mais recente dos arquivos de legislatura), com nomes padronizados. | publico-agente-publico |  |
 | `stg_senado__votacoes` | Votações em plenário com resultado, totais e a matéria votada. Votação secreta tem `secreta` verdadeiro. | publico-agente-publico |  |
 | `stg_senado__votos` | Voto de cada senador em cada votação nominal. Em votação secreta a sigla é "Votou". | publico-agente-publico |  |
@@ -89,11 +94,13 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `mandatos` | Mandatos por legislatura, a partir de votos observados (início e fim oficiais vazios). Uma linha por pessoa e legislatura. | publico-agente-publico | pessoa e legislatura |
 | `membros_de_frentes` | Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título. | publico-agente-publico | pessoa |
 | `membros_de_orgaos` | Participação de pessoas em órgãos da Câmara, com cargo e período. Uma linha por pessoa, órgão, cargo e período informado. | publico-agente-publico | pessoa |
+| `normas_geradas` | Norma jurídica que resultou de uma matéria, com número, datas e veículo de publicação. Só o Senado informa por enquanto. Uma linha por matéria. | publico | matéria |
 | `ocupacoes` | Ocupações anteriores declaradas. Uma linha por pessoa e ocupação. | publico-agente-publico | pessoa e ocupação |
 | `orgaos` | Órgãos da Câmara (comissões, plenário, mesa diretora, conselhos), com tipo e situação. Uma linha por órgão. | publico | órgão |
 | `partidos` | Partidos com sigla e nome oficiais. Uma linha por partido. | publico | partido |
 | `pessoas` | Pessoas (agentes públicos) com perfil, contagens e último partido. Uma linha por pessoa. | publico-agente-publico | pessoa |
 | `proposicoes` | Proposições com ementa padronizada, ementa oficial, situação atual e URL da fonte. Uma linha por proposição. | publico | proposição |
+| `tramitacoes` | Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição e sequência. | publico | proposição e sequência |
 | `votacoes` | Votações com resultado oficial, totais e proposições. Uma linha por votação. | publico | votação |
 | `votos` | Voto de cada pessoa em cada votação nominal, com partido e UF na data. Uma linha por pessoa e votação. | publico-agente-publico | pessoa e votação |
 
@@ -192,6 +199,21 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `inicio` | date | Início da participação. |
 | `fim` | date | Fim da participação; vazio se a fonte não informa. |
 
+### marts.normas_geradas
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |
+| `proposicao_id` | varchar | Matéria (marts.proposicoes, junto com a fonte). |
+| `tipo` | varchar | Tipo da norma (lei, emenda constitucional, decreto legislativo etc.). |
+| `numero` | integer | Número da norma. |
+| `ano` | integer | Ano de assinatura da norma. |
+| `assinada_em` | date | Data de assinatura. |
+| `publicada_em` | date | Data de publicação. |
+| `descricao` | varchar | Descrição oficial da norma. |
+| `veiculo_publicacao` | varchar | Veículo de publicação (por exemplo, DOU). |
+| `capturado_em` | date | Data da captura do lote de origem. |
+
 ### marts.ocupacoes
 
 | Coluna | Tipo | Descrição |
@@ -272,6 +294,21 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `ultimo_status_em` | date | Data do último andamento. |
 | `fonte_url` | varchar | Endereço da proposição na fonte oficial. |
 | `capturado_em` | date | Data da captura do arquivo de origem. |
+
+### marts.tramitacoes
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |
+| `proposicao_id` | varchar | Proposição (marts.proposicoes, junto com a fonte). |
+| `sequencia` | integer | Número do andamento dentro da proposição. |
+| `registrada_em` | timestamp | Data e hora do andamento. |
+| `orgao_sigla` | varchar | Órgão em que ocorreu. |
+| `regime` | varchar | Regime de tramitação informado. |
+| `descricao` | varchar | Descrição do tipo de andamento. |
+| `situacao` | varchar | Situação da proposição após o andamento. |
+| `despacho` | varchar | Texto do despacho, como a fonte informa. |
+| `capturado_em` | date | Data da captura do lote de origem. |
 
 ### marts.votacoes
 

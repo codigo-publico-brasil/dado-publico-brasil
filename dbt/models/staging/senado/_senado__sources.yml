@@ -24,3 +24,9 @@ sources:
             tests: [unique, not_null]
       - name: votacoes__votos
         description: Voto de cada senador em cada votação nominal (lista `votos` da votação).
+      - name: processos
+        description: >
+          Processo de cada matéria votada, buscado por item na API (`_item` é o id do processo), só das já
+          buscadas: situação atual e norma gerada.
+      - name: processos__autoria_iniciativa
+        description: Autoria de cada processo (lista `autoriaIniciativa`).

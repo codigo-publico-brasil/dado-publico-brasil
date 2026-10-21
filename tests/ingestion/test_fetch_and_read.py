@@ -103,7 +103,7 @@ def test_custom_module_of_the_source_replaces_reading_and_fetching(
     contract = source(tmp_path, monkeypatch, custom)
     dataset = contract.datasets["votacoes"]
     assert list(read.records(landed_json(tmp_path), contract, dataset)) == [{"id": 7, "ementa": "do custom"}]
-    assert fetch.downloader(contract)("u", tmp_path) == (Path("x"), "hash", 1)
+    assert fetch.downloader(contract, "votacoes")("u", tmp_path) == (Path("x"), "hash", 1)
     monkeypatch.delitem(sys.modules, CUSTOM)
     assert source(tmp_path).custom is None  # sem módulo próprio: o padrão
 

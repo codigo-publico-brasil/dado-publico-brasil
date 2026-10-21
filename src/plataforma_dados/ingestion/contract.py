@@ -4,6 +4,7 @@ O código que só aquela fonte precisa (ver `fetch.py` e `read.py`) fica em
 `ingestion/custom/<poder>/<esfera>/<fonte>.py`, espelhando a árvore das declarações."""
 
 import importlib
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -16,17 +17,32 @@ from plataforma_dados.core.settings import SOURCES_DIR
 FORMATS = {"csv", "json"}
 POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
-LOADS = {"full", "yearly"}
+LOADS = {"full", "yearly", "foreach"}
 PARTITIONS = {"year", "legislature"}
 WRITES = {"merge", "replace"}
 # Documentos pessoais nunca são lidos de nenhuma fonte (princípio IX da constituição do projeto).
 # Chave "linha inteira": identifica a linha pelo conteúdo, para arquivos sem chave natural.
 ROW_HASH = "_row_hash"
+ITEM = "_item"  # nos datasets `foreach`: o item que deu origem à linha
+IDENTIFIER = re.compile(r"^\w+$")
 FORBIDDEN_COLUMNS = {"cpf", "rg", "tituloeleitor", "cnh", "passaporte"}
 
 
 class InvalidContract(ValueError):
     """O YAML do contrato está errado (a mensagem diz onde)."""
+
+
+@dataclass(frozen=True)
+class ForEach:
+    """Dataset por item: uma chamada para cada linha de outro dataset da mesma fonte (já no raw)."""
+
+    source: str  # dataset que dá os itens
+    item: str  # coluna do raw que vai em {item} na URL
+    where: str = "true"  # filtro SQL sobre o raw do dataset de origem
+    recent_by: str | None = None  # coluna: os itens mais recentes primeiro (amostras e cargas limitadas)
+    version: str | None = None  # coluna: se mudar depois da busca, o item é buscado de novo
+    refresh_after_days: int | None = None  # busca de novo depois de N dias
+    batch_size: int = 500  # itens por arquivo de lote no landing
 
 
 @dataclass(frozen=True)
@@ -43,6 +59,9 @@ class Dataset:
     partition: str = "year"
     records: str | None = None  # JSON: caminho (com pontos) da lista de registros
     nested: tuple[str, ...] = ()  # JSON: campos que são listas (viram tabelas filhas no raw)
+    format: str | None = None  # sobrepõe `access.format` neste dataset
+    headers: dict[str, str] | None = None  # somam-se aos de `access.headers`
+    foreach: ForEach | None = None
 
     @property
     def yearly(self) -> bool:
@@ -60,6 +79,7 @@ class SourceContract:
     encoding: str
     format: str = "csv"
     headers: dict[str, str] = field(default_factory=dict)  # aceita ${VARIAVEL} do ambiente
+    rate_limit: float = 4.0  # chamadas por segundo nos datasets por item (educação com a fonte)
     custom: ModuleType | None = None
     datasets: dict[str, Dataset] = field(default_factory=dict)
 
@@ -72,7 +92,17 @@ class SourceContract:
         d = self.datasets[dataset]
         if d.yearly and year is None:
             raise ValueError(f"{dataset} é particionado: informe o ano ou a legislatura")
-        return d.url.format(base_url=self.base_url, year=year, legislature=year)
+        return d.url.format(base_url=self.base_url, year=year, legislature=year, item=year)
+
+    def item_url(self, dataset: str, item: str) -> str:
+        """Endereço de um item de um dataset `foreach`."""
+        return self.datasets[dataset].url.format(base_url=self.base_url, item=item)
+
+    def format_of(self, dataset: str) -> str:
+        return self.datasets[dataset].format or self.format
+
+    def headers_of(self, dataset: str) -> dict[str, str]:
+        return {**self.headers, **(self.datasets[dataset].headers or {})}
 
     @property
     def schema(self) -> str:
@@ -91,6 +121,8 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         raise InvalidContract(f"{where}: partition '{data['partition']}' inválido ({sorted(PARTITIONS)})")
     if data["write"] not in WRITES:
         raise InvalidContract(f"{where}: write '{data['write']}' inválido ({sorted(WRITES)})")
+    if data.get("format", "csv") not in FORMATS:
+        raise InvalidContract(f"{where}: format deve ser um de {sorted(FORMATS)}")
     columns = tuple(data["columns"])
     for column in columns:
         if column.lower().replace("_", "") in FORBIDDEN_COLUMNS:
@@ -99,6 +131,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
     stray = [c for c in data.get("nested", ()) if c not in columns]
     if stray:
         raise InvalidContract(f"{where}: nested {stray} não está em columns")
+    foreach = _foreach(where, data) if data["load"] == "foreach" else None
     missing = [c for c in key if c not in columns and c != ROW_HASH]
     if missing:
         raise InvalidContract(f"{where}: chave {missing} não está em columns")
@@ -116,7 +149,30 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         partition=str(data.get("partition", "year")),
         records=data.get("records"),
         nested=tuple(data.get("nested", ())),
+        format=data.get("format"),
+        headers=data.get("headers"),
+        foreach=foreach,
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
+    )
+
+
+def _foreach(where: str, data: dict[str, Any]) -> ForEach:
+    spec = data.get("foreach")
+    if not spec or "from" not in spec or "item" not in spec:
+        raise InvalidContract(f"{where}: load foreach exige foreach.from e foreach.item")
+    for name in ("item", "recent_by", "version"):
+        if spec.get(name) and not IDENTIFIER.match(spec[name]):
+            raise InvalidContract(f"{where}: foreach.{name} deve ser o nome de uma coluna")
+    if "{item}" not in data["url"] or ITEM not in data["columns"] or ITEM not in data.get("primary_key", ()):
+        raise InvalidContract(f"{where}: foreach exige {{item}} na url e {ITEM} em columns e primary_key")
+    return ForEach(
+        source=spec["from"],
+        item=spec["item"],
+        where=spec.get("where", "true"),
+        recent_by=spec.get("recent_by"),
+        version=spec.get("version"),
+        refresh_after_days=spec.get("refresh_after_days"),
+        batch_size=int(spec.get("batch_size", 500)),
     )
 
 
@@ -141,6 +197,12 @@ def load_contract(path: Path) -> SourceContract:
     for field_name, allowed in (("power", POWERS), ("level", LEVELS)):
         if data.get(field_name) not in allowed:
             raise InvalidContract(f"{source}: {field_name} deve ser um de {sorted(allowed)}")
+    datasets = {n: _dataset(source, n, d) for n, d in data["datasets"].items()}
+    for name, dataset in datasets.items():
+        if dataset.foreach and dataset.foreach.source not in datasets:
+            raise InvalidContract(
+                f"{source}.{name}: foreach.from '{dataset.foreach.source}' não é um dataset"
+            )
     return SourceContract(
         source=source,
         power=data["power"],
@@ -150,9 +212,10 @@ def load_contract(path: Path) -> SourceContract:
         delimiter=access.get("delimiter", ";"),
         encoding=access.get("encoding", "utf-8-sig"),
         format=access.get("format", "csv"),
+        rate_limit=float(access.get("rate_limit", 4)),
         headers=dict(access.get("headers", {})),
         custom=_custom(data["power"], data["level"], source),
-        datasets={n: _dataset(source, n, d) for n, d in data["datasets"].items()},
+        datasets=datasets,
     )
 
 

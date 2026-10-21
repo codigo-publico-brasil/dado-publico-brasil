@@ -235,3 +235,33 @@ models:
       - {name: legislatura_id, data_type: integer, description: "Legislatura do registro."}
       - {name: inicio, data_type: date, description: "Início da participação, quando a fonte informa."}
       - {name: fim, data_type: date, description: "Fim da participação, quando a fonte informa."}
+
+  - name: tramitacoes
+    description: Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição e sequência.
+    meta: {sensitivity: publico, grain: proposição e sequência, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Proposição (marts.proposicoes, junto com a fonte)."}
+      - {name: sequencia, data_type: integer, tests: [not_null], description: "Número do andamento dentro da proposição."}
+      - {name: registrada_em, data_type: timestamp, description: "Data e hora do andamento."}
+      - {name: orgao_sigla, data_type: varchar, description: "Órgão em que ocorreu."}
+      - {name: regime, data_type: varchar, description: "Regime de tramitação informado."}
+      - {name: descricao, data_type: varchar, description: "Descrição do tipo de andamento."}
+      - {name: situacao, data_type: varchar, description: "Situação da proposição após o andamento."}
+      - {name: despacho, data_type: varchar, description: "Texto do despacho, como a fonte informa."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do lote de origem."}
+
+  - name: normas_geradas
+    description: Norma jurídica que resultou de uma matéria, com número, datas e veículo de publicação. Só o Senado informa por enquanto. Uma linha por matéria.
+    meta: {sensitivity: publico, grain: matéria, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Matéria (marts.proposicoes, junto com a fonte)."}
+      - {name: tipo, data_type: varchar, description: "Tipo da norma (lei, emenda constitucional, decreto legislativo etc.)."}
+      - {name: numero, data_type: integer, description: "Número da norma."}
+      - {name: ano, data_type: integer, description: "Ano de assinatura da norma."}
+      - {name: assinada_em, data_type: date, description: "Data de assinatura."}
+      - {name: publicada_em, data_type: date, description: "Data de publicação."}
+      - {name: descricao, data_type: varchar, description: "Descrição oficial da norma."}
+      - {name: veiculo_publicacao, data_type: varchar, description: "Veículo de publicação (por exemplo, DOU)."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do lote de origem."}

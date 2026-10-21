@@ -68,3 +68,7 @@ sources:
             tests: [unique, not_null]
       - name: frentes_deputados
         description: Deputados em cada frente parlamentar, com o título (coordenador, membro) na legislatura.
+      - name: proposicoes_tramitacoes
+        description: >
+          Tramitação das proposições que podem virar norma, buscada por item na API (`_item` é o id da
+          proposição), só das que já foram buscadas.

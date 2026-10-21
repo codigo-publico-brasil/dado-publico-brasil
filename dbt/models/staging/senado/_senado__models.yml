@@ -22,3 +22,10 @@ models:
         tests: [not_null]
       - name: senador_id
         tests: [not_null]
+  - name: stg_senado__processos
+    description: Processo de cada matéria votada (só as já buscadas), com a situação atual e a norma gerada.
+    columns:
+      - name: processo_id
+        tests: [unique, not_null]
+      - name: materia_id
+        tests: [not_null]

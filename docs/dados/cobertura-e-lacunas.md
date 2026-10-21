@@ -24,6 +24,8 @@ Os números abaixo são da carga histórica de 21/10/2026 (Câmara: `run --histo
 | Participações em frentes sem deputado identificado pela fonte | 256 (coordenações antigas) |
 | Pessoas, votações, votos e matérias do **Senado** | 864, 3.389 (de 1999 a 2026), 273.094 e 2.738 |
 | Mandatos (votos observados) do Senado | 989 |
+| Tramitação da Câmara (amostra por item: os 300 mais recentes dos 96.134 alvos) | 300 proposições, 338 andamentos |
+| Processos do Senado (amostra por item: 300 das 2.738 matérias votadas) | 300 processos, 75 normas geradas |
 | Testes do dbt do tipo erro que falharam | 0 |
 
 ## 1. O que a Câmara entrega e o projeto já usa
@@ -74,6 +76,14 @@ Lacunas conhecidas, medidas ou registradas:
 - **Sem autoria nem situação das matérias**: exigem uma chamada por matéria; `autorias` e `situacao` ficam vazios para o Senado, e `pessoas.qtd_propostas` é vazio (não zero) para senadores.
 - **Mandatos oficiais** (titular, suplente, períodos de exercício, causas de afastamento) estão no raw, mas ainda não nos marts: `marts.mandatos` do Senado vem dos votos observados, como na Câmara.
 - **Quem foi deputado e senador tem duas chaves de pessoa**: a regra conservadora liga só por identificador oficial da própria fonte, nunca por nome.
+
+## Datasets por item (amostra)
+
+Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada um, e **só rodam sob pedido** (`--foreach N`). Até a carga total ser pedida, o banco tem uma amostra dos itens mais recentes:
+
+- **Câmara, tramitação:** só proposições que podem virar norma (PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC: 96.134). Estão buscadas 300; o teste `proposicoes_alvo_sem_tramitacao` mede as que faltam, e `plataforma coverage` mostra o quadro por dataset. A fonte não tem a norma resultante nesse endpoint: `normas_geradas` vem só do Senado por enquanto.
+- **Senado, processo:** estão buscados 300 das 2.738 matérias votadas. Em metade das respostas (150) a fonte não informa `situacaoAtual`; fica vazia (nada é inferido). A autoria está no raw (`processos__autoria_iniciativa`) e o corpo completo no landing, mas ainda não nos marts, para não publicar contagens parciais por senador. A tramitação do Senado (`autuacoes`) está só no landing.
+- **Auditoria:** `plataforma verify` confere os hashes de todos os arquivos do landing e das respostas dentro dos lotes (landing íntegro na última conferência).
 
 ## 3. O que a Câmara **não** tem e precisa vir de outra instância
 

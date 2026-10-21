@@ -45,6 +45,30 @@ datasets:
 
 Os campos que não são listas entram como texto. O raw é fiel: `votacoes` e `votacoes__votos` ligam-se por `_dlt_parent_id = _dlt_id`.
 
+## Dataset por item (`load: foreach`)
+
+Uma chamada para cada linha de outro dataset da mesma fonte. Exemplo (tramitação da Câmara):
+
+```yaml
+  proposicoes_tramitacoes:
+    url: "https://dadosabertos.camara.leg.br/api/v2/proposicoes/{item}/tramitacoes"
+    load: foreach
+    format: json                  # este dataset em JSON, mesmo que a fonte seja CSV
+    headers: {Accept: application/json}
+    records: dados
+    foreach:
+      from: proposicoes           # dataset (raw) que dá os itens
+      item: id                    # coluna do raw que vai em {item}
+      where: "sigla_tipo IN ('PL', 'PEC')"   # filtro SQL opcional
+      recent_by: data_apresentacao           # mais recentes primeiro
+      version: ultimo_status_data_hora       # mudou: busca de novo (ou refresh_after_days: 30)
+      batch_size: 500
+    primary_key: [_item, sequencia]          # `_item` é o item de origem; precisa estar em columns
+    columns: [_item, sequencia, dataHora, ...]
+```
+
+Roda só com `--foreach N` (os N mais recentes que faltam) ou `--foreach all`. Cada lote vai ao landing com a resposta de cada item byte a byte, e `metadata.capture_items` registra status e hash ([ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md)). Conferir com `plataforma verify` e `plataforma coverage`. A taxa é `access.rate_limit` (padrão 4 por segundo).
+
 ## Credenciais, arquivo compactado, SOAP, robô
 
 O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósito. Os pontos de extensão existem:

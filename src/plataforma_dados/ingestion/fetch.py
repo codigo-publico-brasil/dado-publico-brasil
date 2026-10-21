@@ -83,6 +83,27 @@ def download(
     return target, digest, size
 
 
+def get(url: str, headers: dict[str, str] | None = None) -> tuple[int, bytes]:
+    """GET de um item. Devolve (status, corpo); erro 4xx, 5xx (depois das tentativas) e falta de resposta
+    (status 0) viram resultado, não exceção: quem chama registra e segue."""
+
+    def attempt() -> tuple[int, bytes]:
+        try:
+            with urllib.request.urlopen(_request(url, headers or {}), timeout=120) as response:
+                return int(response.status), response.read()
+        except urllib.error.HTTPError as error:
+            if error.code >= 500:
+                raise
+            return error.code, error.read()
+
+    try:
+        return _retrying(attempt)
+    except urllib.error.HTTPError as error:
+        return error.code, b""
+    except (OSError, HTTPException):
+        return 0, b""
+
+
 def head(url: str, headers: dict[str, str] | None = None) -> dict[str, str | None]:
     """Pergunta à fonte (HEAD) se o arquivo mudou, sem baixá-lo. Valores ausentes ficam `None`."""
     with urllib.request.urlopen(_request(url, headers or {}, "HEAD"), timeout=60) as response:
@@ -93,12 +114,14 @@ def head(url: str, headers: dict[str, str] | None = None) -> dict[str, str | Non
         }
 
 
-def downloader(contract: SourceContract) -> Downloader:
+def downloader(contract: SourceContract, dataset: str) -> Downloader:
     """O `download` do módulo `custom` da fonte, se houver, ou o padrão com os cabeçalhos do YAML."""
     custom = getattr(contract.custom, "download", None)
-    return custom or partial(download, headers=contract.headers, suffix=contract.format)
+    return custom or partial(
+        download, headers=contract.headers_of(dataset), suffix=contract.format_of(dataset)
+    )
 
 
-def head_request(contract: SourceContract) -> HeadRequest:
+def head_request(contract: SourceContract, dataset: str) -> HeadRequest:
     custom = getattr(contract.custom, "head", None)
-    return custom or partial(head, headers=contract.headers)
+    return custom or partial(head, headers=contract.headers_of(dataset))

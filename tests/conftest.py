@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from synthetic_camara import fake_downloader, no_headers, synthetic_files
 from synthetic_senado import senado_files
+from synthetic_tramitacao import fake_get
 
 from plataforma_dados.core import migrations
 from plataforma_dados.core.settings import Settings
@@ -48,6 +49,8 @@ def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract
         lambda c: landing.plan(c, [2024], []),
         downloader=fake_downloader({**files, **senado_files(base / "origin_senado")}),
         head_request=no_headers,
+        per_item=100,
+        get=fake_get,
     )
     return {name: base / name for name in ("landed", "raw", "full")}
 

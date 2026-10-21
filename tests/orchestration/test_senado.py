@@ -71,7 +71,11 @@ def test_each_voted_matter_appears_once_with_its_official_page(full: tuple[Conne
     ).fetchall()
     assert len(row) == 1
     sigla, ementa, oficial, apresentada, situacao, url = row[0]
-    assert (sigla, str(apresentada), situacao) == ("PLP 700/2023", "2023-05-02", None)
+    assert (sigla, str(apresentada), situacao) == (
+        "PLP 700/2023",
+        "2023-05-02",
+        "Transformada em norma jurídica",
+    )
     assert oficial == "ALTERA A LEI COMPLEMENTAR X."  # sem a quebra de linha final, caixa como veio
     assert ementa != oficial and ementa.startswith("Altera")
     assert url == "https://www25.senado.leg.br/web/atividade/materias/-/materia/700"

@@ -99,3 +99,10 @@ models:
         tests:
           - not_null:
               config: {severity: warn}
+  - name: stg_camara__tramitacoes
+    description: Tramitação das proposições que podem virar norma (só as já buscadas), uma linha por andamento.
+    columns:
+      - name: proposicao_id
+        tests: [not_null]
+      - name: sequencia
+        tests: [not_null]

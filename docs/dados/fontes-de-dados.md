@@ -21,7 +21,7 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 - **Votações:** arquivos anuais com votações, votos por deputado, orientações de bancada (só plenário), objetos votados e proposições afetadas. O registro de voto traz o deputado com o partido na data (`siglaPartido`), o que ajuda a mostrar o partido no momento da votação.
 - **Cobertura histórica de votos (testada):** arquivo de votações de 1999 existe (primeiro registro em 20/01/1999); arquivos de votos de 2001 e 2003 existem; o de 1995 não pôde ser obtido; o de 1999 falhou na consulta e fica **não confirmado**. A página da Câmara não informa o ano inicial.
 - **Também em lote:** deputados, órgãos e composição por legislatura (desde a 51ª), eventos e presenças, frentes, mesas diretoras, e cota parlamentar (CEAP) desde 2008.
-- **Licença e limites:** o FAQ diz que os dados são livres, que não há cadastro e que não há restrição a uso comercial, e que dados pessoais e familiares ficam de fora (Ato da Mesa 45/2012). Licença formal, limite de requisições e máximo por página: **não confirmados**.
+- **Licença e limites (verificado em 21/10/2026):** o FAQ diz que os dados são gratuitos e livres, que não há cadastro, que não há restrição a uso comercial e que dados pessoais de parlamentares e colaboradores ficam de fora (Ato da Mesa 45/2012). Não há licença formal nem limite de requisições publicados; a API é indicada para consultas pontuais e os arquivos em lote para conjuntos grandes.
 - **Cuidado:** votação simbólica não tem voto individual (a página diz que alguns registros simbólicos existem, mas não é regra).
 
 ### Senado Federal (dados abertos)
@@ -31,7 +31,7 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 - **Matérias:** `GET /processo` com filtros por sigla, número, ano, autor, datas; detalhes por processo (autoria, tramitações, textos), relatorias, emendas e documentos.
 - **CSVs:** vários só cobrem o último ano ou o que está em tramitação.
 - **Cobertura histórica:** a página não informa. **Não confirmado** a partir de que ano há votos nominais em formato aberto.
-- **Licença e limites:** não informados nas páginas lidas.
+- **Licença e limites (verificado em 21/10/2026):** os dados são "disponibilizados sob licença que permita sua livre utilização", sem nomear a licença; a política de uso do portal não pôde ser lida; sem cadastro e sem limite de requisições informado.
 
 ### Diário Oficial da União (DOU)
 

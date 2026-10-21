@@ -22,3 +22,5 @@ exposures:
       - ref('membros_de_orgaos')
       - ref('frentes')
       - ref('membros_de_frentes')
+      - ref('tramitacoes')
+      - ref('normas_geradas')

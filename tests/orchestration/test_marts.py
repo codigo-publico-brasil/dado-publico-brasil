@@ -131,11 +131,13 @@ def test_every_warehouse_table_of_the_marts_has_a_declared_contract(
         "mandatos",
         "membros_de_frentes",
         "membros_de_orgaos",
+        "normas_geradas",
         "ocupacoes",
         "orgaos",
         "partidos",
         "pessoas",
         "proposicoes",
+        "tramitacoes",
         "votacoes",
         "votos",
     ]
