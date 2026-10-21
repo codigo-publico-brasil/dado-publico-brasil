@@ -40,7 +40,7 @@ O campo `sigla_tipo` (e `descricao_tipo`) diz o que a proposição é. Os princi
 | **PRL** | Parecer de relator em comissão | Documento da tramitação, não um projeto |
 | **RDF** | Redação final | Versão final do texto aprovado, antes de seguir |
 
-Consequência para o dado: **a maior parte das "propostas" de um deputado é requerimento ou emenda**, não projeto de lei. Contar "quantos projetos o deputado propôs" exige filtrar por tipo, e o projeto precisa dizer qual filtro usou. A metodologia ([metodologia-v0](../produto/metodologia-v0.md)) define "propôs".
+Consequência para o dado: **a maior parte das "propostas" de um deputado é requerimento ou emenda**, não projeto de lei. Contar "quantos projetos o deputado propôs" exige filtrar por tipo, e o projeto precisa dizer qual filtro usou. A metodologia ([metodologia-v0](../../../quem-decidiu/docs/produto/metodologia-v0.md)) define "propôs".
 
 ## Autoria, assinatura e "proponente"
 
@@ -70,7 +70,11 @@ O campo `situacao` é a **última situação registrada**, por exemplo "Aguardan
 
 - É o **estado em um momento**, com data (`data_ultimo_status`) e órgão (`orgao_ultimo_status`). A página sempre mostra a data.
 - **Não é nota nem julgamento.** "Arquivada" ou "Aguardando Parecer" descreve o trâmite, não o mérito da proposta, e o projeto não usa linguagem avaliativa.
-- Nos arquivos, uma parte grande das proposições vem **sem situação**. Isso é registrado como lacuna (`proposicao_sem_situacao`), nunca preenchido por suposição.
+- Nos arquivos, uma parte grande das proposições vem **sem situação**. Isso é registrado como lacuna (`proposicoes_sem_situacao`), nunca preenchido por suposição.
+
+### Andamentos (tramitação)
+
+A tramitação completa (cada andamento, com data, órgão, regime, situação e o texto do despacho) não existe em arquivo em lote: a plataforma a busca na API, **uma chamada por proposição**, e só das que podem virar norma: PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC (requerimentos, pareceres e emendas ficam de fora). A busca roda sob pedido (`--foreach`), dos mais recentes aos mais antigos, e o resultado é o mart `tramitacoes`. Enquanto a carga é por amostra, `plataforma coverage` e o teste `proposicoes_alvo_sem_tramitacao` mostram quantas faltam. Esse endpoint não traz a norma resultante (número da lei): ela virá do Planalto e do LexML.
 
 ## Votação
 

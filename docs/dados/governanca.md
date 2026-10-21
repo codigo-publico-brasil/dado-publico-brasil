@@ -57,7 +57,7 @@ O que ainda falta: o agendamento. As etapas já são idempotentes e registram ex
 
 ## 5. Linhagem e auditoria
 
-Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta para a execução que a trouxe. Toda execução registra versão do código, linhas lidas e gravadas e resultado. Mais detalhes em [camadas](camadas.md).
+Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta para a execução que a trouxe. Toda execução registra versão do código, linhas lidas e gravadas e resultado. Nos datasets por item, a captura também aponta para cada resposta (`metadata.capture_items`: status HTTP e hash do corpo), e `plataforma verify` confere os hashes de todo o landing. O passo a passo de como provar a origem de um dado está em [auditoria](auditoria.md); mais detalhes em [camadas](camadas.md).
 
 ## 6. Segurança
 
@@ -98,5 +98,5 @@ Ementas às vezes são difíceis de entender. Um resumo em linguagem simples ger
 | Sensibilidade | feita, com testes | revisão por pessoa a cada fonte nova |
 | Qualidade | testes de erro e de medida | contrato com respostas gravadas; amostra contra páginas oficiais |
 | Frescor | medido por captura | agendar e alertar |
-| Linhagem | completa até o arquivo do landing | exibir a linhagem na página |
+| Linhagem | completa até o arquivo do landing e, nos datasets por item, até a resposta de cada item (`verify` confere) | exibir a linhagem na página |
 | Segurança | leitura somente, segredos varridos | permissão por esquema no PostgreSQL |

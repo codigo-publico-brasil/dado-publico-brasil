@@ -1,6 +1,6 @@
 # Arquitetura (resumo)
 
-> **Estado atual da camada de dados:** implementada e documentada em [`docs/dados/camadas.md`](../dados/camadas.md) (ADRs [0004](../adr/0004-camadas-da-plataforma-de-dados.md) a [0009](../adr/0009-repositorio-de-dados-pacote-unico.md): dlt, dbt-core, Dagster e DuckDB; motores de ingestão e de transformação em subpacotes de um só pacote). O restante deste resumo continua sendo proposta.
+> **Estado atual da camada de dados:** implementada e documentada em [`docs/dados/camadas.md`](../dados/camadas.md) (ADRs [0004](../adr/0004-camadas-da-plataforma-de-dados.md) a [0012](../adr/0012-dataset-por-item-lotes-com-envelope.md): dlt, dbt-core, Dagster e DuckDB; motores de ingestão e de transformação em subpacotes de um só pacote). O restante deste resumo continua sendo proposta.
 
 Resumo das camadas e das decisões propostas. As decisões viram ADRs aceitos conforme forem tomadas; até lá, tudo aqui é **proposta**. O raciocínio completo, com alternativas e custos, está em `docs/planejamento/plano-de-implementacao.md`.
 

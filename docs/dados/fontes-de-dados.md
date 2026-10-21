@@ -1,6 +1,6 @@
 # Catálogo de fontes de dados abertas
 
-Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas chamadas de teste. **Nada aqui foi baixado em volume nem validado contra os dados.** Itens marcados "não confirmado" precisam ser checados antes de entrar em um pipeline. Páginas que a ferramenta de pesquisa não conseguiu abrir (robots.txt ou desafio de acesso) aparecem como "não verificado", o que não significa que a fonte não exista.
+Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas chamadas de teste; Câmara e Senado já estão carregados (ver [cobertura e lacunas](cobertura-e-lacunas.md)) e os termos de uso dos dois foram verificados em 21/10/2026. **Para as demais fontes, nada foi baixado em volume nem validado contra os dados.** Itens marcados "não confirmado" precisam ser checados antes de entrar em um pipeline. Páginas que a ferramenta de pesquisa não conseguiu abrir (robots.txt ou desafio de acesso) aparecem como "não verificado", o que não significa que a fonte não exista.
 
 ## Prioridade de consumo
 

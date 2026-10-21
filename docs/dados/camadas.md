@@ -137,11 +137,16 @@ A pasta de armazenamento (`data_store/`, fora do git) vem de `PLATAFORMA_STORAGE
 uv run plataforma run --incremental                               # só o que pode ter mudado
 uv run plataforma run --historical --from-year 2000   # carga massiva
 uv run plataforma run --years 2024 2025 2026 --extra-years 2019   # anos escolhidos
+uv run plataforma run --incremental --source senado               # só uma fonte
+uv run plataforma run --incremental --foreach 300                 # + os 300 itens mais recentes que faltam nos datasets por item
 ```
 
 - **Incremental:** datasets completos mais o ano corrente e o anterior (anos antigos são estáveis). Antes de baixar, pergunta-se à fonte (`ETag`, `Last-Modified`, tamanho) se o arquivo mudou; se não mudou, só se atualiza a data da última verificação. Se nada novo foi carregado, o dbt nem roda.
 - **Histórico:** todos os anos do intervalo, para a primeira carga ou uma recarga.
 - Etapas separadas: `extract`, `load [--rebuild]`, `transform`, `identity`, `catalog`, `docs`, `query`.
+- **Datasets por item** (tramitação da Câmara, processo do Senado) só rodam com `--foreach N` ou `--foreach all`; a carga total é decisão de quem opera, por levar horas.
+- O Dagster ainda não tem ativo para `--foreach`: os datasets por item rodam pela linha de comando.
+- **Auditoria:** `uv run plataforma verify` (hashes do landing e das respostas) e `uv run plataforma coverage` (o que já foi buscado e o que falta). Ver [auditoria](auditoria.md).
 - **Dagster** (interface, agendamento diário às 6h, linhagem entre ativos): `uv run dagster dev -m plataforma_dados.orchestration.definitions`. O ativo `landing_camara` recebe a configuração do modo (`incremental`, `historical`, `years`).
 
 ## Como acessar os dados
@@ -162,7 +167,7 @@ O [catálogo](catalogo.md) lista todas as tabelas, gerado do dbt (`uv run plataf
 
 **Imutabilidade do landing.** O arquivo é salvo com o hash no nome e nunca é sobrescrito. Se a fonte mudar o conteúdo, nasce um segundo arquivo.
 
-**Linhagem.** Toda linha do raw leva `_source_file_id`, que aponta para `metadata.captures` (URL, hash, tamanho, datas, caminho). Cada execução registra a versão do código (commit). O dlt grava `_dlt_load_id` por carga e o Dagster mostra o grafo entre ativos.
+**Linhagem.** Toda linha do raw leva `_source_file_id`, que aponta para `metadata.captures` (URL, hash, tamanho, datas, caminho); nos datasets por item, `metadata.capture_items` aponta para cada resposta dentro do lote. Cada execução registra a versão do código (commit). O dlt grava `_dlt_load_id` por carga e o Dagster mostra o grafo entre ativos.
 
 > **Conceito: linhagem de dados.** O rastro de cada dado até a origem. Exigência do projeto: "todo dado exibido precisa de fonte oficial, URL e data de captura".
 

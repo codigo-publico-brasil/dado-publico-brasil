@@ -24,7 +24,7 @@ As regras de apresentação (neutralidade, sem recomendação de voto) pertencem
 
 | Parte | Situação |
 | --- | --- |
-| Ingestão (Câmara e Senado) | Funcionando: captura com hash (CSV e JSON), carga no raw (dlt), monitoramento de disponibilidade, colunas e volume; código próprio por fonte só quando preciso |
+| Ingestão (Câmara e Senado) | Funcionando: captura com hash (CSV e JSON), carga no raw (dlt), monitoramento de disponibilidade, colunas e volume; datasets por item (tramitação, processos) em lotes auditáveis, por amostra até a carga total ser pedida; código próprio por fonte só quando preciso |
 | Transformação | Funcionando: dbt em camadas, identidade de pessoas, testes de qualidade, catálogo e dicionário de colunas |
 | Orquestração | Linha de comando e Dagster, com os ativos gerados a partir de `sources/` |
 | Documentos e vetores (esqueleto em `documents/`), camada de consumo em PostgreSQL, infraestrutura | A fazer |
@@ -68,7 +68,15 @@ uv run plataforma query --sql "SELECT * FROM marts.pessoas LIMIT 10"
 uv run plataforma docs
 ```
 
-O último abre o grafo de linhagem e o dicionário de colunas (dbt docs). Para a interface do Dagster:
+O último abre o grafo de linhagem e o dicionário de colunas (dbt docs). Auditoria e datasets por item:
+
+```bash
+uv run plataforma verify
+uv run plataforma coverage
+uv run plataforma run --incremental --foreach 300
+```
+
+`verify` confere os hashes de todo o landing; `coverage` mostra o que já foi buscado nos datasets por item (tramitação, processos); `--foreach N` busca os N itens mais recentes que faltam (a carga total só quando pedida). Para a interface do Dagster:
 
 ```bash
 uv run dagster dev -m plataforma_dados.orchestration.definitions
@@ -86,6 +94,7 @@ uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pyt
 | --- | --- |
 | ver as camadas e como executar | [`docs/dados/camadas.md`](docs/dados/camadas.md) |
 | saber quais tabelas e colunas existem | [`docs/dados/catalogo.md`](docs/dados/catalogo.md) |
+| conferir de onde veio um dado e o que falta | [`docs/dados/auditoria.md`](docs/dados/auditoria.md) |
 | acrescentar uma fonte | [`docs/dados/especificacao-de-fonte.md`](docs/dados/especificacao-de-fonte.md) |
 | ver o que falta e o que cada fonte não entrega | [`docs/dados/cobertura-e-lacunas.md`](docs/dados/cobertura-e-lacunas.md) |
 | entender a ligação de pessoas entre fontes | [`docs/dados/identidade-de-pessoas.md`](docs/dados/identidade-de-pessoas.md) |
