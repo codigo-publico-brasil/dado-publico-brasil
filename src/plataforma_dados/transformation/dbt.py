@@ -64,20 +64,27 @@ def serve_docs(settings: Settings, port: int = 8080) -> int:
     return 0
 
 
+def read_results(
+    settings: Settings, results_file: str = "run_results.json", target: Path | None = None
+) -> list[dict[str, Any]]:
+    """Resultado de cada nó (modelo, teste, frescor) de uma execução do dbt (por padrão, a última)."""
+    file = (target or target_dir(settings)) / results_file
+    if not file.exists():
+        return []
+    return [
+        {
+            "unique_id": item.get("unique_id", ""),
+            "status": str(item.get("status", "")),
+            "failures": item.get("failures"),
+            "message": item.get("message"),
+        }
+        for item in json.loads(file.read_text(encoding="utf-8")).get("results", [])
+    ]
+
+
 def invoke(settings: Settings, *args: str, results_file: str = "run_results.json") -> Outcome:
     """Roda `dbt <args>` no projeto da camada de dados e lê o arquivo de resultados."""
     command, env = _command(settings, *args)
     process = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
-    file = target_dir(settings) / results_file
-    results: list[dict[str, Any]] = []
-    if file.exists():
-        for item in json.loads(file.read_text(encoding="utf-8")).get("results", []):
-            results.append(
-                {
-                    "unique_id": item.get("unique_id", ""),
-                    "status": str(item.get("status", "")),
-                    "failures": item.get("failures"),
-                    "message": item.get("message"),
-                }
-            )
+    results = read_results(settings, results_file)
     return Outcome(process.returncode, (process.stdout + process.stderr)[-2000:], results)

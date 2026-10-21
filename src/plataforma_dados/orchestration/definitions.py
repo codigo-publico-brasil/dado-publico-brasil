@@ -10,6 +10,7 @@ dependência vem da declaração do dbt. Carga histórica ou incremental é só 
 
 import os
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 from dagster import (
@@ -23,22 +24,23 @@ from dagster import (
     ScheduleDefinition,
     asset,
     define_asset_job,
+    in_process_executor,
     multi_asset,
 )
 from dagster_dbt import DbtCliResource, DbtProject, dbt_assets
 
-from plataforma_dados.core import migrations
+from plataforma_dados.core import migrations, runs, warehouse
 from plataforma_dados.core.settings import DBT_DIR, load_settings
 from plataforma_dados.ingestion import contract, landing, loader
 from plataforma_dados.orchestration import pipeline
-from plataforma_dados.transformation import build
+from plataforma_dados.transformation import build, quality
+from plataforma_dados.transformation import dbt as dbt_runner
 
 SETTINGS = load_settings()
 os.environ["PLATAFORMA_WAREHOUSE_FILE"] = str(SETTINGS.warehouse.resolve())
+DBT_TARGET = SETTINGS.state_dir / "dbt" / "dagster"  # artefatos do dbt fora do repositório
 PROJECT = DbtProject(
-    project_dir=DBT_DIR,
-    profiles_dir=DBT_DIR,
-    target_path=SETTINGS.state_dir / "dbt" / "target",
+    project_dir=DBT_DIR, profiles_dir=DBT_DIR, target_path=SETTINGS.state_dir / "dbt" / "target"
 )
 PROJECT.prepare_if_dev()
 
@@ -98,9 +100,25 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
     return [landing_asset, raw_asset]
 
 
+def _record_dbt(stage: str, target: Path) -> None:
+    """Grava o resultado dos modelos e testes em `metadata.dbt_results`, como a linha de comando faz."""
+    con = warehouse.connect(SETTINGS)
+    try:
+        with runs.track(con, stage, "dbt") as run:
+            results = dbt_runner.read_results(SETTINGS, target=target)
+            quality.record(con, run.id, results)
+            run.rows_in = len(results)
+    finally:
+        con.close()
+
+
 @dbt_assets(manifest=PROJECT.manifest_path, select="tag:pre_identity", name="dbt_pre_identity")
 def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
-    yield from dbt.cli(["build", "--indirect-selection", "cautious"], context=context).stream()
+    invocation = dbt.cli(
+        ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
+    )
+    yield from invocation.stream()
+    _record_dbt("transform_pre", invocation.target_path)
 
 
 @multi_asset(
@@ -115,7 +133,11 @@ def identity_asset() -> Iterator[MaterializeResult[Any]]:
 
 @dbt_assets(manifest=PROJECT.manifest_path, exclude="tag:pre_identity", name="dbt_post_identity")
 def dbt_post_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
-    yield from dbt.cli(["build", "--indirect-selection", "cautious"], context=context).stream()
+    invocation = dbt.cli(
+        ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
+    )
+    yield from invocation.stream()
+    _record_dbt("transform_post", invocation.target_path)
 
 
 daily = define_asset_job("daily_pipeline", selection="*")
@@ -129,5 +151,7 @@ defs = Definitions(
     ],
     jobs=[daily],
     schedules=[ScheduleDefinition(job=daily, cron_schedule="0 6 * * *", name="daily_incremental")],
+    # O DuckDB em arquivo aceita um escritor por vez: os passos rodam em sequência, num processo só.
+    executor=in_process_executor,
     resources={"dbt": DbtCliResource(project_dir=PROJECT, profiles_dir=str(DBT_DIR))},
 )

@@ -76,7 +76,7 @@ uv run plataforma coverage
 uv run plataforma run --incremental --foreach 300
 ```
 
-`verify` confere os hashes de todo o landing; `coverage` mostra o que já foi buscado nos datasets por item (tramitação, processos); `--foreach N` busca os N itens mais recentes que faltam (a carga total só quando pedida). Para a interface do Dagster:
+`verify` confere os hashes de todo o landing; `coverage` mostra o que já foi buscado nos datasets por item (tramitação, processos); `--foreach N` busca os N itens mais recentes que faltam (a carga total só quando pedida). Para a interface do Dagster (guarde o estado dele em uma pasta absoluta, por exemplo `data_store/.state/dagster`, em `DAGSTER_HOME`):
 
 ```bash
 uv run dagster dev -m plataforma_dados.orchestration.definitions
