@@ -1,6 +1,6 @@
 # Camadas da plataforma de dados
 
-Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas fazem cada passo e onde mudar cada coisa. Serve também de material de estudo: os quadros **Conceito** nomeiam a prática de engenharia de dados por trás de cada decisão. Decisões formais: ADRs [0004](../adr/0004-camadas-da-plataforma-de-dados.md), [0005](../adr/0005-fontes-declarativas-e-portabilidade.md), [0006](../adr/0006-adotar-dlt-dbt-e-dagster.md), [0007](../adr/0007-dois-pacotes-e-camadas-de-mercado.md), [0008](../adr/0008-motores-separados-e-organizacao-por-poder-e-esfera.md) e [0009](../adr/0009-repositorio-de-dados-pacote-unico.md).
+Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas fazem cada passo e onde mudar cada coisa. Serve também de material de estudo: os quadros **Conceito** nomeiam a prática de engenharia de dados por trás de cada decisão. Decisões formais: ADRs [0004](../adr/0004-camadas-da-plataforma-de-dados.md), [0005](../adr/0005-fontes-declarativas-e-portabilidade.md), [0006](../adr/0006-adotar-dlt-dbt-e-dagster.md), [0007](../adr/0007-dois-pacotes-e-camadas-de-mercado.md), [0008](../adr/0008-motores-separados-e-organizacao-por-poder-e-esfera.md) [0009](../adr/0009-repositorio-de-dados-pacote-unico.md), [0010](../adr/0010-duas-pastas-env-e-specs-fora.md) e [0011](../adr/0011-buscar-ler-custom-e-chave-por-fonte.md).
 
 ## O desenho
 
@@ -61,7 +61,8 @@ Um teste falha se alguma coluna dos marts ficar sem descrição.
 src/plataforma_dados/       um só pacote Python, com extras por motor (`uv sync --all-extras`)
   documents/                trilha de documentos e vetores (a fazer; só o esqueleto)
   core/                     configuração, warehouse, execuções, migrações
-  ingestion/                MOTOR DE INGESTÃO: landing com hash, carga no raw (dlt), monitoramento
+  ingestion/                MOTOR DE INGESTÃO: fetch (buscar), landing (guardar), read (ler), loader (raw), monitoring;
+                            custom/<poder>/<esfera>/<fonte>.py só para o que o padrão não cobre
   transformation/           MOTOR DE TRANSFORMAÇÃO: identidade, qualidade, catálogo, execução do dbt
   orchestration/            liga os motores: comando `plataforma` e Dagster
 sources/<poder>/<esfera>/   declaração das fontes (YAML)
@@ -87,7 +88,7 @@ Os marts são **por entidade** (`pessoas`, `proposicoes`, `votacoes`...), não p
 
 ## Como a captura é flexível
 
-A declaração diz **como** capturar; só a captura conhece o tipo de acesso (`file` hoje; `rest`, `soap` e `rpa` previstos). Um robô só precisa gravar o arquivo obtido no landing, com URL e data, e registrar a captura; daí em diante o caminho (raw, staging, marts) é o mesmo. Ver ADR 0008.
+Três passos por dataset ([ADR 0011](../adr/0011-buscar-ler-custom-e-chave-por-fonte.md)): **buscar** (`ingestion/fetch.py`: HTTP com nova tentativa, cabeçalhos e credenciais por variável de ambiente), **guardar** (`landing.py`: arquivo com hash e registro da captura, igual para toda fonte) e **ler** (`read.py`: CSV e JSON). Uma fonte que precise de outro jeito (SOAP, robô, pacote compactado) tem um módulo em `ingestion/custom/<poder>/<esfera>/<fonte>.py` que substitui só o passo necessário; a saída de `buscar` é sempre um arquivo com hash, então o resto não muda. Passo a passo em [especificação de fonte](especificacao-de-fonte.md).
 
 ## Monitoramento das fontes
 
@@ -103,6 +104,7 @@ Onde mudar cada coisa:
 | --- | --- |
 | a pasta dos dados ou o arquivo do warehouse | variáveis `PLATAFORMA_STORAGE_ROOT` e `PLATAFORMA_WAREHOUSE` |
 | a URL de uma fonte, ou as colunas que se carregam | `sources/<poder>/<esfera>/<fonte>.yml` |
+| um jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/plataforma_dados/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
 | uma regra de transformação (nome, tipo, caixa, junção) | o modelo SQL em `dbt/models/` |
 | uma regra de limpeza de texto | `dbt/macros/text_functions.sql` |
 | um teste de dados | `schema.yml` do modelo ou SQL em `dbt/tests/` |

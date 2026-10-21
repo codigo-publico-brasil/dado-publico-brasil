@@ -1,6 +1,7 @@
 -- Une a pessoa do projeto (chave própria) ao cadastro e aos dados vistos nos votos.
 select
     i.id_pessoa,
+    '{{ var("source_camara") }}' as fonte,
     d.deputado_id,
     coalesce(c.nome, n.nome) as nome,
     c.nome_civil,

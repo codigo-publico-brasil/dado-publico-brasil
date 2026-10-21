@@ -2,8 +2,10 @@
 
 import http.server
 import json
+import sys
 import threading
 import time
+import types
 import urllib.error
 from collections.abc import Iterator
 from email.message import Message
@@ -17,6 +19,7 @@ from plataforma_dados.core.warehouse import rows
 from plataforma_dados.ingestion import fetch, loader, read
 from plataforma_dados.ingestion.contract import SourceContract, load_contract
 
+CUSTOM = "plataforma_dados.ingestion.custom.legislativo.federal.teste"
 YAML = """
 source: teste
 power: legislativo
@@ -33,6 +36,7 @@ datasets:
     records: dados.itens
     primary_key: [id]
     columns: [id, ementa, orgao__sigla, votos]
+    nested: [votos]
 """
 PAYLOAD = {
     "dados": {
@@ -44,13 +48,17 @@ PAYLOAD = {
 }
 
 
-def source(tmp_path: Path, custom: str | None = None) -> SourceContract:
-    folder = tmp_path / "teste"
-    folder.mkdir(parents=True, exist_ok=True)
-    (folder / "source.yml").write_text(YAML.format(), encoding="utf-8")
-    if custom:
-        (folder / "custom.py").write_text(custom, encoding="utf-8")
-    return load_contract(folder / "source.yml")
+def source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch | None = None, custom: str | None = None
+) -> SourceContract:
+    """Declaração de teste; `custom` é o código de um módulo `ingestion/custom/legislativo/federal/teste`."""
+    file = tmp_path / "teste.yml"
+    file.write_text(YAML.format(), encoding="utf-8")
+    if monkeypatch and custom:
+        module = types.ModuleType(CUSTOM)
+        exec(custom, module.__dict__)  # noqa: S102
+        monkeypatch.setitem(sys.modules, CUSTOM, module)
+    return load_contract(file)
 
 
 def landed_json(tmp_path: Path) -> Path:
@@ -65,7 +73,7 @@ def test_json_reader_follows_the_records_path_and_flattens_objects(tmp_path: Pat
     found = list(read.records(landed_json(tmp_path), contract, dataset))
     assert [r["orgao__sigla"] for r in found] == ["PLEN", "CCJ"]
     assert found[0]["votos"] == [{"nome": "X", "voto": "Sim"}]  # listas seguem para o dlt
-    assert read.fields(landed_json(tmp_path), contract, dataset) == ["id", "ementa", "orgao__sigla", "votos"]
+    assert read.fields(landed_json(tmp_path), contract, dataset) == ["ementa", "id", "orgao__sigla", "votos"]
 
 
 def test_json_loads_into_the_raw_with_a_child_table_for_the_list(tmp_path: Path) -> None:
@@ -77,24 +85,27 @@ def test_json_loads_into_the_raw_with_a_child_table_for_the_list(tmp_path: Path)
     assert stats == {"read": 2, "loaded": 2, "rejected": 0}
     parents = rows(con, f"SELECT id, ementa, orgao_sigla FROM {schema}.votacoes ORDER BY id")
     assert [(p["id"], p["ementa"], p["orgao_sigla"]) for p in parents] == [
-        (1, "A", "PLEN"),
-        (2, None, "CCJ"),
+        ("1", "A", "PLEN"),
+        ("2", None, "CCJ"),
     ]
     child = rows(con, f"SELECT nome, voto FROM {schema}.votacoes__votos")
     assert [(c["nome"], c["voto"]) for c in child] == [("X", "Sim")]
 
 
-def test_custom_py_beside_the_yaml_replaces_reading_and_fetching(tmp_path: Path) -> None:
+def test_custom_module_of_the_source_replaces_reading_and_fetching(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     custom = (
         "from pathlib import Path\n"
         "def records(file, dataset):\n    yield {'id': 7, 'ementa': 'do custom'}\n"
         "def download(url, folder):\n    return Path('x'), 'hash', 1\n"
     )
-    contract = source(tmp_path, custom)
+    contract = source(tmp_path, monkeypatch, custom)
     dataset = contract.datasets["votacoes"]
     assert list(read.records(landed_json(tmp_path), contract, dataset)) == [{"id": 7, "ementa": "do custom"}]
     assert fetch.downloader(contract)("u", tmp_path) == (Path("x"), "hash", 1)
-    assert fetch.downloader(source(tmp_path / "outra")) is not None  # sem custom.py: o padrão
+    monkeypatch.delitem(sys.modules, CUSTOM)
+    assert source(tmp_path).custom is None  # sem módulo próprio: o padrão
 
 
 def test_credentials_come_from_the_environment_never_from_the_yaml(
@@ -157,3 +168,13 @@ def test_client_error_is_definitive_and_not_retried(tmp_path: Path, monkeypatch:
     with pytest.raises(urllib.error.HTTPError):
         fetch._retrying(not_found)
     assert calls == [1]
+
+
+def test_a_null_object_and_a_filled_one_have_the_same_fields(tmp_path: Path) -> None:
+    contract = source(tmp_path)
+    dataset = contract.datasets["votacoes"]
+    file = tmp_path / "v.json"
+    file.write_text(json.dumps({"dados": {"itens": [{"id": 1, "orgao": None}]}}), encoding="utf-8")
+    nulo = read.fields(file, contract, dataset)
+    file.write_text(json.dumps({"dados": {"itens": [{"id": 1, "orgao": {"sigla": "X"}}]}}), encoding="utf-8")
+    assert nulo == ["id", "orgao"] and read.fields(file, contract, dataset) == ["id", "orgao__sigla"]

@@ -1,10 +1,11 @@
 """Linha de comando da camada de dados (a mesma lógica que o Dagster executa).
 
-A pasta de armazenamento e o warehouse vêm de `config/settings.yml` (ou de --storage-root e
---warehouse, que vencem). Tudo roda a partir da raiz do repositório:
+A pasta de armazenamento e o warehouse vêm de PLATAFORMA_STORAGE_ROOT e PLATAFORMA_WAREHOUSE (ou de
+--storage-root e --warehouse, que vencem). Tudo roda a partir da pasta plataforma-dados:
 
     uv run plataforma run --incremental
     uv run plataforma run --historical --from-year 2000
+    uv run plataforma run --incremental --source senado
     uv run plataforma run --years 2024 2025 2026 --extra-years 2019
 
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
@@ -18,20 +19,19 @@ from pathlib import Path
 from plataforma_dados.core import migrations, warehouse
 from plataforma_dados.core import settings as settings_module
 from plataforma_dados.core.settings import Settings
-from plataforma_dados.ingestion import landing, loader
+from plataforma_dados.ingestion import contract, landing, loader
 from plataforma_dados.orchestration import pipeline
 from plataforma_dados.transformation import build, catalog, dbt
 
 COMMANDS = ("run", "extract", "load", "transform", "identity", "catalog", "docs", "query")
 
 
-def _plan(args: argparse.Namespace) -> list[landing.Item]:
-    contract = pipeline.contract_of()
+def _plan(args: argparse.Namespace) -> pipeline.Plan:
     if args.incremental:
-        return landing.plan_incremental(contract)
+        return landing.plan_incremental
     if args.historical:
-        return landing.plan_historical(contract, args.from_year, args.to_year, args.extra_years)
-    return landing.plan(contract, args.years, args.extra_years)
+        return lambda c: landing.plan_historical(c, args.from_year, args.to_year, args.extra_years)
+    return lambda c: landing.plan(c, args.years, args.extra_years)
 
 
 def _query(settings: Settings, sql: str) -> None:
@@ -50,15 +50,16 @@ def _query(settings: Settings, sql: str) -> None:
 
 
 def _ingest(settings: Settings, args: argparse.Namespace) -> None:
-    contract = pipeline.contract_of()
     con = migrations.open_warehouse(settings)
     try:
-        if args.command == "extract":
-            n = landing.extract_plan(con, settings, contract, _plan(args), force=args.force)
-            print(f"{n} datasets processados")
-        else:
-            captures, rows = loader.load_pending(con, settings, contract, args.rebuild)
-            print(f"{captures} capturas carregadas, {rows} linhas")
+        for source in contract.find_all():
+            if args.source in (None, source.source):
+                if args.command == "extract":
+                    n = landing.extract_plan(con, settings, source, _plan(args)(source), force=args.force)
+                    print(f"{source.source}: {n} datasets processados")
+                else:
+                    captures, rows = loader.load_pending(con, settings, source, args.rebuild)
+                    print(f"{source.source}: {captures} capturas carregadas, {rows} linhas")
     finally:
         con.close()
 
@@ -66,6 +67,7 @@ def _ingest(settings: Settings, args: argparse.Namespace) -> None:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument("command", choices=COMMANDS)
+    p.add_argument("--source", help="só esta fonte (padrão: todas as de sources/)")
     p.add_argument("--years", type=int, nargs="+", default=[], help="anos de votações e proposições")
     p.add_argument("--extra-years", type=int, nargs="*", default=[], help="anos só de proposições")
     p.add_argument("--historical", action="store_true", help="carga massiva de um intervalo de anos")
@@ -99,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
         case "docs":
             return dbt.serve_docs(settings, args.port)
         case "run":
-            print(pipeline.run_all(settings, _plan(args), args.rebuild, args.force))
+            print(pipeline.run_all(settings, _plan(args), args.rebuild, args.force, only=args.source))
         case "transform":
             build.run(settings)
             print("dbt concluído (staging, intermediate, identidade e marts)")

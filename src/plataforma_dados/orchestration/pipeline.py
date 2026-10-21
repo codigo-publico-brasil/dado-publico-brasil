@@ -1,12 +1,13 @@
 """Encadeia os dois motores: ingestão (extract, load) e transformação (dbt e identidade).
 
-    extract (fonte -> landing) -> load (landing -> raw_<esfera>_<fonte>, dlt)
-      -> transformação (dbt, identidade, dbt)
+    para cada fonte de `sources/`: extract (fonte -> landing) -> load (landing -> raw_<esfera>_<fonte>, dlt)
+    depois, uma vez: transformação (dbt, identidade, dbt)
 
 Cada etapa roda sozinha e pode rodar de novo. Se nada novo foi carregado, a transformação é pulada.
 O Dagster (`definitions.py`) e a linha de comando chamam as mesmas funções.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -15,11 +16,7 @@ from plataforma_dados.core.settings import Settings
 from plataforma_dados.ingestion import contract, fetch, landing, loader, monitoring
 from plataforma_dados.transformation import build
 
-SOURCE = "camara"
-
-
-def contract_of(source: str = SOURCE) -> contract.SourceContract:
-    return contract.find(source)
+Plan = Callable[[contract.SourceContract], list[landing.Item]]
 
 
 @dataclass
@@ -34,20 +31,26 @@ class Summary:
 
 def run_all(
     settings: Settings,
-    items: list[landing.Item],
+    plan: Plan,
     rebuild: bool = False,
     force: bool = False,
     downloader: fetch.Downloader | None = None,
     head_request: fetch.HeadRequest | None = None,
+    only: str | None = None,
 ) -> Summary:
-    """Roda a cadeia inteira."""
-    source = contract_of()
+    """Roda a cadeia inteira para todas as fontes (ou só `only`). `plan` diz o que extrair de cada uma."""
     summary = Summary()
     started = datetime.now(UTC)
     con = migrations.open_warehouse(settings)
     try:
-        summary.items = landing.extract_plan(con, settings, source, items, downloader, head_request, force)
-        summary.captures_loaded, summary.rows_loaded = loader.load_pending(con, settings, source, rebuild)
+        for source in contract.find_all():
+            if only in (None, source.source):
+                summary.items += landing.extract_plan(
+                    con, settings, source, plan(source), downloader, head_request, force
+                )
+                captures, rows = loader.load_pending(con, settings, source, rebuild)
+                summary.captures_loaded += captures
+                summary.rows_loaded += rows
         summary.source_errors = monitoring.errors_since(con, started)
         built = build.is_built(con)
     finally:

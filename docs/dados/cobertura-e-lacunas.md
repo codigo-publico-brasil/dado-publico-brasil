@@ -2,26 +2,28 @@
 
 Para quem quer saber **o que o banco tem hoje, o que a Câmara ainda não entrega ao projeto e o que precisa vir de outras fontes**. Responde a três perguntas: o que vem da Câmara, o que falta dela, e de onde viria o resto. O catálogo das fontes (`fontes-de-dados.md`) diz o que cada fonte oferece; este documento diz o que já foi carregado e o que sobra.
 
-Os números abaixo são da carga histórica de 21/10/2026 (`run --historical --from-year 2000`). Eles mudam a cada carga; a página `/qualidade` do explorador mostra os atuais.
+Os números abaixo são da carga histórica de 21/10/2026 (Câmara: `run --historical --from-year 2000`; Senado: `run --historical --from-year 1999 --source senado`). Eles mudam a cada carga; a página `/qualidade` do explorador mostra os atuais.
 
 ## Números da carga de 21/10/2026
 
 | Medida | Valor |
 | --- | --- |
-| Pessoas | 7.889 (887 só aparecem nos votos, sem cadastro) |
-| Proposições | 885.735 |
-| Votações | 190.401, de 10/01/2000 a 15/10/2026 |
-| Votações sem nenhum voto individual (simbólicas ou sem registro) | 184.347 |
-| Votos individuais | 1.927.167 |
-| Proposições sem situação atual | 489.787 |
+| Pessoas (Câmara) | 7.889 (887 só aparecem nos votos, sem cadastro) |
+| Proposições (Câmara) | 885.777 |
+| Votações (Câmara) | 190.401, de 10/01/2000 a 15/10/2026 |
+| Votações sem nenhum voto individual (simbólicas ou sem registro) | 184.362 |
+| Votos individuais (Câmara) | 1.927.167 |
+| Proposições sem situação atual | 489.694 |
 | Pessoas sem foto | 5.682 |
-| Autorias de pessoas em proposições não carregadas | 11.226 |
-| Ligações votação-proposição de proposições não carregadas | 6.010 |
+| Autorias de pessoas em proposições não carregadas | 11.257 |
+| Ligações votação-proposição de proposições não carregadas | 6.158 |
 | Legislaturas, partidos | 58, 104 |
 | Órgãos, participações em órgãos | 3.883, 94.616 |
 | Frentes parlamentares, participações em frentes | 1.443, 262.014 |
 | Participações em órgãos de órgão ausente da lista de órgãos da fonte | 6.409 (129 órgãos, como o Congresso Nacional e comissões especiais) |
 | Participações em frentes sem deputado identificado pela fonte | 256 (coordenações antigas) |
+| Pessoas, votações, votos e matérias do **Senado** | 864, 3.389 (de 1999 a 2026), 273.094 e 2.738 |
+| Mandatos (votos observados) do Senado | 989 |
 | Testes do dbt do tipo erro que falharam | 0 |
 
 ## 1. O que a Câmara entrega e o projeto já usa
@@ -54,6 +56,24 @@ Os números abaixo são da carga histórica de 21/10/2026 (`run --historical --f
 | Cota parlamentar (CEAP) | gastos | traz CPF e CNPJ de fornecedores: só entra com a minimização definida (o contrato recusa CPF) |
 | Texto integral das proposições | leitura e resumo | links existem em `url_inteiro_teor`; o texto não é baixado |
 | Início e fim do mandato **de cada pessoa** | mandato exato, com suplentes | a Câmara não publica em lote; o mart traz as datas oficiais da **legislatura** e os votos observados |
+
+## Senado Federal: o que entra e o que falta
+
+| Dado | Fonte | Cobertura carregada |
+| --- | --- | --- |
+| Senadores (nome, nome civil, sexo) e mandatos | `senadores` (por legislatura, 51 a 57) | todas as legislaturas desde 1999; mandatos e exercícios ficam no raw (`senadores__mandatos_mandato`) |
+| Votações em plenário e voto de cada senador | `votacoes` (por ano) | 1999 a 2026 |
+| Matérias votadas (sigla, ementa, apresentação, página oficial) | dentro das votações | só as que foram votadas |
+
+Lacunas conhecidas, medidas ou registradas:
+
+- **2015 e 2016 têm quase nenhuma votação** (17 e 13, contra cerca de 120 por ano nos demais). É o que a fonte devolve; a plataforma não completa.
+- **Votação secreta** (1.782 das 3.389 votações e 96.075 dos 273.094 votos): a fonte não informa a escolha; o voto fica como `Votou`. `marts.votacoes.votacao_secreta` marca essas votações.
+- **Totais de Sim, Não e Abstenção** vêm vazios em parte das votações antigas. O teste `votacoes_com_total_sim_divergente` compara o total oficial com a contagem dos votos individuais, deixando de fora a votação secreta (não há Sim a contar): 13 votações, todas da Câmara.
+- **Sem nascimento, foto e redes** dos senadores: o arquivo de legislatura não as traz.
+- **Sem autoria nem situação das matérias**: exigem uma chamada por matéria; `autorias` e `situacao` ficam vazios para o Senado, e `pessoas.qtd_propostas` é vazio (não zero) para senadores.
+- **Mandatos oficiais** (titular, suplente, períodos de exercício, causas de afastamento) estão no raw, mas ainda não nos marts: `marts.mandatos` do Senado vem dos votos observados, como na Câmara.
+- **Quem foi deputado e senador tem duas chaves de pessoa**: a regra conservadora liga só por identificador oficial da própria fonte, nunca por nome.
 
 ## 3. O que a Câmara **não** tem e precisa vir de outra instância
 

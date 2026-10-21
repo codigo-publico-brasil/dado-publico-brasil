@@ -2,9 +2,10 @@
 -- mandato de cada pessoa (suplentes entram e saem no meio da legislatura), então ficam vazios; as datas
 -- do primeiro e do último voto são só o observado e as da legislatura são as oficiais dela.
 select
+    v.fonte,
     v.id_pessoa,
-    'Deputado federal' as cargo,
-    'Câmara dos Deputados' as casa,
+    if(v.fonte = '{{ var("source_senado") }}', 'Senador', 'Deputado federal') as cargo,
+    if(v.fonte = '{{ var("source_senado") }}', 'Senado Federal', 'Câmara dos Deputados') as casa,
     v.legislatura_id,
     arg_max(v.uf_sigla, v.votou_em) as uf,
     cast(null as date) as inicio,
@@ -21,4 +22,4 @@ left join {{ ref('stg_camara__legislaturas') }} as l on l.legislatura_id = v.leg
 
 where v.legislatura_id is not null
 
-group by v.id_pessoa, v.legislatura_id
+group by v.fonte, v.id_pessoa, v.legislatura_id

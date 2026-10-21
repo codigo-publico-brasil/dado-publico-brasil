@@ -23,6 +23,14 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `votacoes_proposicoes` | Proposições afetadas por cada votação. | publico-agente-publico |  |
 | `votacoes_votos` | Voto de cada deputado em cada votação nominal, com partido e UF na data. | publico-agente-publico |  |
 
+## raw_federal_senado
+
+| Tabela | O que é | Sensibilidade | Grain |
+| --- | --- | --- | --- |
+| `senadores` | Senadores por legislatura (o mesmo senador aparece em várias), com os mandatos em tabelas filhas. | publico-agente-publico |  |
+| `votacoes` | Votações em plenário com resultado, totais e a matéria votada. | publico-agente-publico |  |
+| `votacoes__votos` | Voto de cada senador em cada votação nominal (lista `votos` da votação). | publico-agente-publico |  |
+
 ## staging
 
 | Tabela | O que é | Sensibilidade | Grain |
@@ -46,6 +54,9 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `stg_identity__pessoa_identificadores` | Identificadores de cada pessoa em cada fonte. | publico-agente-publico |  |
 | `stg_identity__pessoas` | Pessoas do projeto (chave própria). | publico-agente-publico |  |
 | `stg_metadata__captures` | Capturas dos arquivos da fonte (um arquivo, uma linha). `source_file_id` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
+| `stg_senado__senadores` | Senadores, uma linha por senador (o mais recente dos arquivos de legislatura), com nomes padronizados. | publico-agente-publico |  |
+| `stg_senado__votacoes` | Votações em plenário com resultado, totais e a matéria votada. Votação secreta tem `secreta` verdadeiro. | publico-agente-publico |  |
+| `stg_senado__votos` | Voto de cada senador em cada votação nominal. Em votação secreta a sigla é "Votou". | publico-agente-publico |  |
 
 ## intermediate
 
@@ -53,13 +64,17 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | --- | --- | --- | --- |
 | `int_autorias_ligadas_a_pessoas` | Autorias com a pessoa do projeto; autor que não é deputado fica sem pessoa. | publico-agente-publico |  |
 | `int_deputados_fotos_das_frentes` | Uma foto por deputado, a da legislatura mais recente nos arquivos de frentes. | publico-agente-publico |  |
-| `int_deputados_ids_unidos` | Todo deputado informado pela Câmara (cadastro mais votos). Entrada do código de identidade. | publico-agente-publico |  |
+| `int_deputados_ids_unidos` | Todo deputado informado pela Câmara (cadastro mais votos). | publico-agente-publico |  |
 | `int_deputados_nos_votos_agregados` | Um registro por deputado visto nos votos, com nome e foto mais recentes. | publico-agente-publico |  |
 | `int_frentes_membros_ligados_a_pessoas` | Participação em frentes ligada à pessoa do projeto. | publico-agente-publico |  |
+| `int_materias_do_senado_unicas` | Uma linha por matéria votada no Senado, com os dados da votação mais recente. | publico-agente-publico |  |
 | `int_orgaos_membros_ligados_a_pessoas` | Participação em órgãos ligada à pessoa do projeto. | publico-agente-publico |  |
 | `int_pessoas_atividade_agregada` | Uma linha por pessoa, com votos, propostas e legislaturas. | publico-agente-publico |  |
+| `int_pessoas_do_senado_unidas_ao_cadastro` | Pessoa do projeto unida ao cadastro do Senado. | publico-agente-publico |  |
+| `int_pessoas_ids_vistos` | Todo identificador de pessoa informado pelas fontes. Entrada do código de identidade. | publico-agente-publico |  |
 | `int_pessoas_profissoes_agregadas` | Uma linha por pessoa, com as profissões declaradas. | publico-agente-publico |  |
 | `int_pessoas_unidas_ao_cadastro` | Pessoa do projeto unida ao cadastro e aos dados vistos nos votos. | publico-agente-publico |  |
+| `int_senadores_unidos` | Todo senador informado pelo Senado (cadastro mais votos). | publico-agente-publico |  |
 | `int_siglas_em_ementas_extraidas` | Siglas escritas em maiúsculas dentro de ementas de caixa mista. | publico-agente-publico |  |
 | `int_votacoes_proposicoes_unidas` | Proposições de cada votação, com o papel (afetada ou objeto). | publico-agente-publico |  |
 | `int_votos_ligados_a_pessoas` | Votos com a pessoa do projeto (chave própria). | publico-agente-publico |  |
@@ -137,6 +152,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 
 | Coluna | Tipo | Descrição |
 | --- | --- | --- |
+| `fonte` | varchar | \"Fonte oficial do registro.\" |
 | `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
 | `cargo` | varchar | Cargo exercido. |
 | `casa` | varchar | Casa legislativa. |
@@ -218,6 +234,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | Coluna | Tipo | Descrição |
 | --- | --- | --- |
 | `id_pessoa` | bigint | Chave própria e estável da pessoa (schema identity). |
+| `fonte` | varchar | Fonte do cadastro da pessoa (camara ou senado). |
 | `nome` | varchar | Nome parlamentar, com caixa padronizada. |
 | `nome_civil` | varchar | Nome civil, com caixa padronizada. |
 | `nome_ordem` | varchar | Nome sem acento e em minúsculas, para ordenar. |
@@ -236,7 +253,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `ultimo_partido` | varchar | Partido no voto mais recente. |
 | `ultima_uf` | varchar | UF no voto mais recente. |
 | `ultimo_voto_em` | timestamp | Data e hora do voto mais recente. |
-| `qtd_propostas` | bigint | Quantidade de proposições em que consta como autora ou apoiadora. |
+| `qtd_propostas` | bigint | Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado). |
 | `qtd_votos` | bigint | Quantidade de votos nominais registrados. |
 | `capturado_em` | date | Data da captura do cadastro de deputados. |
 
@@ -270,6 +287,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `votos_nao` | integer | Total de votos Não informado pela fonte. |
 | `votos_outros` | integer | Total de outros votos informado pela fonte. |
 | `proposicoes` | varchar | Proposições ligadas à votação, separadas por ponto e vírgula. |
+| `votacao_secreta` | boolean | Verdadeiro se a votação foi secreta; vazio onde a fonte não informa (Câmara). |
 | `capturado_em` | date | Data da captura do arquivo de origem. |
 
 ### marts.votos
@@ -278,7 +296,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | --- | --- | --- |
 | `fonte` | varchar | Fonte oficial do registro. |
 | `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `votacao_id` | varchar | Votação (marts.votacoes). |
+| `votacao_id` | varchar | Votação (marts.votacoes, junto com a fonte). |
 | `voto` | varchar | Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.). |
 | `votou_em` | timestamp | Data e hora do voto. |
 | `partido` | varchar | Partido na data do voto. |

@@ -8,6 +8,7 @@ models:
     meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário}
     columns:
       - {name: id_pessoa, data_type: bigint, tests: [unique, not_null], description: "Chave própria e estável da pessoa (schema identity)."}
+      - {name: fonte, data_type: varchar, description: "Fonte do cadastro da pessoa (camara ou senado)."}
       - {name: nome, data_type: varchar, tests: [not_null], description: "Nome parlamentar, com caixa padronizada."}
       - {name: nome_civil, data_type: varchar, description: "Nome civil, com caixa padronizada."}
       - {name: nome_ordem, data_type: varchar, description: "Nome sem acento e em minúsculas, para ordenar."}
@@ -26,7 +27,7 @@ models:
       - {name: ultimo_partido, data_type: varchar, description: "Partido no voto mais recente."}
       - {name: ultima_uf, data_type: varchar, description: "UF no voto mais recente."}
       - {name: ultimo_voto_em, data_type: timestamp, description: "Data e hora do voto mais recente."}
-      - {name: qtd_propostas, data_type: bigint, tests: [not_null], description: "Quantidade de proposições em que consta como autora ou apoiadora."}
+      - {name: qtd_propostas, data_type: bigint, description: "Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado)."}
       - {name: qtd_votos, data_type: bigint, tests: [not_null], description: "Quantidade de votos nominais registrados."}
       - {name: capturado_em, data_type: date, description: "Data da captura do cadastro de deputados."}
 
@@ -34,6 +35,7 @@ models:
     description: Mandatos por legislatura, a partir de votos observados (início e fim oficiais vazios). Uma linha por pessoa e legislatura.
     meta: {sensitivity: publico-agente-publico, grain: pessoa e legislatura, owner: fundador do projeto, freshness: diário}
     columns:
+      - {name: fonte, data_type: varchar, description: \"Fonte oficial do registro.\"}
       - name: id_pessoa
         data_type: bigint
         description: "Chave da pessoa (marts.pessoas)."
@@ -73,7 +75,7 @@ models:
     meta: {sensitivity: publico, grain: proposição, owner: fundador do projeto, freshness: diário}
     columns:
       - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte oficial do registro (por exemplo, camara)."}
-      - {name: proposicao_id, data_type: varchar, tests: [unique, not_null], description: "Identificador da proposição na fonte."}
+      - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Identificador da proposição na fonte."}
       - {name: sigla, data_type: varchar, tests: [not_null], description: "Sigla do tipo da proposição, número e ano."}
       - {name: ementa, data_type: varchar, description: "Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista."}
       - {name: ementa_oficial, data_type: varchar, description: "Texto oficial, exatamente como veio."}
@@ -106,7 +108,7 @@ models:
     meta: {sensitivity: publico, grain: votação, owner: fundador do projeto, freshness: diário}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
-      - {name: votacao_id, data_type: varchar, tests: [unique, not_null], description: "Identificador da votação na fonte."}
+      - {name: votacao_id, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}
       - {name: data, data_type: date, tests: [not_null], description: "Data da votação."}
       - {name: orgao_sigla, data_type: varchar, description: "Sigla do órgão em que ocorreu."}
       - {name: descricao, data_type: varchar, description: "Descrição oficial da votação, com caixa padronizada."}
@@ -115,6 +117,7 @@ models:
       - {name: votos_nao, data_type: integer, description: "Total de votos Não informado pela fonte."}
       - {name: votos_outros, data_type: integer, description: "Total de outros votos informado pela fonte."}
       - {name: proposicoes, data_type: varchar, description: "Proposições ligadas à votação, separadas por ponto e vírgula."}
+      - {name: votacao_secreta, data_type: boolean, description: "Verdadeiro se a votação foi secreta; vazio onde a fonte não informa (Câmara)."}
       - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: votos
@@ -130,10 +133,8 @@ models:
           - relationships: {to: ref('pessoas'), field: id_pessoa}
       - name: votacao_id
         data_type: varchar
-        description: "Votação (marts.votacoes)."
-        tests:
-          - not_null
-          - relationships: {to: ref('votacoes'), field: votacao_id}
+        description: "Votação (marts.votacoes, junto com a fonte)."
+        tests: [not_null]
       - {name: voto, data_type: varchar, tests: [not_null], description: "Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.)."}
       - {name: votou_em, data_type: timestamp, description: "Data e hora do voto."}
       - {name: partido, data_type: varchar, description: "Partido na data do voto."}

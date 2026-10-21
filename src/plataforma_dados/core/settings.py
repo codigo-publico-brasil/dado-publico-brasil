@@ -1,6 +1,6 @@
 """Configuração do ambiente: só a pasta de armazenamento e o warehouse, por variável de ambiente.
 
-Fonte: `src/plataforma_dados/sources/`. Transformação: `dbt/`. Tabelas próprias: `ddl/`.
+Fontes: `sources/`. Transformação: `dbt/`. Tabelas próprias: `ddl/`.
 """
 
 import os
@@ -12,6 +12,7 @@ ENV_WAREHOUSE = "PLATAFORMA_WAREHOUSE"
 DEFAULT_WAREHOUSE = "{root}/warehouse.duckdb"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+SOURCES_DIR = REPO_ROOT / "sources"
 DBT_DIR = REPO_ROOT / "dbt"
 DDL_DIR = REPO_ROOT / "ddl"
 

@@ -12,9 +12,10 @@ description: Câmara dos Deputados, dados abertos (arquivos em lote)
 
 access:
   base_url: https://dadosabertos.camara.leg.br/arquivos
-  format: csv
-  delimiter: ";"
+  format: csv                       # csv | json
+  delimiter: ";"                    # (csv)
   encoding: utf-8-sig               # com BOM
+  headers: {}                       # cabeçalhos HTTP; aceita ${VARIAVEL} do ambiente (credenciais)
 
 datasets:
   proposicoes:                      # um dataset = um arquivo (full) ou um por ano (yearly)
@@ -27,6 +28,29 @@ datasets:
     primary_key: [id]
     columns: [id, siglaTipo, numero, ano, ementa, dataApresentacao]   # lista permitida
 ```
+
+## Fonte em JSON (API REST)
+
+O [Senado](../../sources/legislativo/federal/senado.yml) é o exemplo. Mudam três coisas em relação ao CSV:
+
+```yaml
+access: {base_url: https://legis.senado.leg.br/dadosabertos, format: json, headers: {Accept: application/json}}
+datasets:
+  votacoes:
+    url: "{base_url}/votacao?dataInicio={year}-01-01&dataFim={year}-12-31"   # a janela vai na URL
+    records: ListaX.Itens          # caminho (com pontos) da lista de registros; vazio se o JSON já é a lista
+    nested: [votos]                # campos que são listas: viram tabelas filhas no raw (`votacoes__votos`)
+    columns: [codigoSessaoVotacao, informeLegislativo__siglaColegiado, votos]   # objetos aninhados viram a__b
+```
+
+Os campos que não são listas entram como texto. O raw é fiel: `votacoes` e `votacoes__votos` ligam-se por `_dlt_parent_id = _dlt_id`.
+
+## Credenciais, arquivo compactado, SOAP, robô
+
+O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósito. Os pontos de extensão existem:
+
+- **Credencial:** coloque `${VARIAVEL}` no `headers` do YAML e a variável no `.env` (nunca o valor no YAML).
+- **Qualquer outro jeito de obter ou ler** (pacote `.zip`, XML, SOAP, robô): crie `src/plataforma_dados/ingestion/custom/<poder>/<esfera>/<fonte>.py` com `download(url, folder)` (devolve o arquivo, o hash e o tamanho), `head(url)` e/ou `records(file, dataset)`. O que não definir segue o padrão, e o landing continua guardando o arquivo original com hash.
 
 ## Regras
 
@@ -53,4 +77,4 @@ datasets:
 2. Escrever o `_<fonte>__sources.yml` e os modelos `stg_<fonte>__*.sql` (um por tabela do raw) em `dbt/models/staging/<fonte>/`.
 3. Escrever os modelos de intermediate que unem a fonte às entidades do projeto, e a ligação de identidade (`identity/`), com a regra de ligação conservadora ([identidade de pessoas](identidade-de-pessoas.md)).
 4. Declarar descrição, `meta` (sensibilidade, grain, dono) e testes no YAML do dbt; rodar `catalog` e conferir `docs/dados/catalogo.md`.
-5. Testes: o modelo é `tests/test_landing_and_loader.py` (fonte fictícia só com contrato) e `tests/test_marts.py` (conjunto sintético da Câmara).
+5. Testes: o modelo é `tests/ingestion/` (fonte fictícia só com declaração, leitores e `custom`) e `tests/orchestration/` (conjuntos sintéticos da Câmara e do Senado em `tests/support/`).

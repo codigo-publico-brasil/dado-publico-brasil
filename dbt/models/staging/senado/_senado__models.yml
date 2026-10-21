@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: stg_senado__senadores
+    description: Senadores, uma linha por senador (o mais recente dos arquivos de legislatura), com nomes padronizados.
+    columns:
+      - name: senador_id
+        tests: [unique, not_null]
+      - name: nome
+        tests: [not_null]
+  - name: stg_senado__votacoes
+    description: Votações em plenário com resultado, totais e a matéria votada. Votação secreta tem `secreta` verdadeiro.
+    columns:
+      - name: votacao_id
+        tests: [unique, not_null]
+      - name: data
+        tests: [not_null]
+  - name: stg_senado__votos
+    description: Voto de cada senador em cada votação nominal. Em votação secreta a sigla é "Votou".
+    columns:
+      - name: votacao_id
+        tests: [not_null]
+      - name: senador_id
+        tests: [not_null]

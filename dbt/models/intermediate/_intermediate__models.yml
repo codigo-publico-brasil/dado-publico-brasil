@@ -9,7 +9,7 @@ models:
       - name: deputado_id
         tests: [unique, not_null]
   - name: int_deputados_ids_unidos
-    description: Todo deputado informado pela Câmara (cadastro mais votos). Entrada do código de identidade.
+    description: Todo deputado informado pela Câmara (cadastro mais votos).
     config:
       tags: [pre_identity]
     columns:
@@ -63,4 +63,25 @@ models:
     description: Uma foto por deputado, a da legislatura mais recente nos arquivos de frentes.
     columns:
       - name: deputado_id
+        tests: [unique, not_null]
+  - name: int_senadores_unidos
+    description: Todo senador informado pelo Senado (cadastro mais votos).
+    config:
+      tags: [pre_identity]
+    columns:
+      - name: senador_id
+        tests: [unique, not_null]
+  - name: int_pessoas_ids_vistos
+    description: Todo identificador de pessoa informado pelas fontes. Entrada do código de identidade.
+    config:
+      tags: [pre_identity]
+  - name: int_pessoas_do_senado_unidas_ao_cadastro
+    description: Pessoa do projeto unida ao cadastro do Senado.
+    columns:
+      - name: id_pessoa
+        tests: [unique, not_null]
+  - name: int_materias_do_senado_unicas
+    description: Uma linha por matéria votada no Senado, com os dados da votação mais recente.
+    columns:
+      - name: materia_id
         tests: [unique, not_null]

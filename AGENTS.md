@@ -36,7 +36,8 @@ Leia `README.md` e `docs/dados/camadas.md`. Não contrarie um ADR de `docs/adr/`
 
 | Para... | Edite |
 | --- | --- |
-| fonte (URL, colunas, chaves) | `sources/<poder>/<esfera>/<fonte>.yml` |
+| fonte (URL, colunas, chaves, credenciais por `${VARIAVEL}`) | `sources/<poder>/<esfera>/<fonte>.yml` |
+| jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/plataforma_dados/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
 | regra de transformação, teste de dado, descrição de coluna | `dbt/` (modelos, YAML ao lado) |
 | tabela própria (metadata, identity) | `ddl/` |
 | ordem das etapas, agendamento | `src/plataforma_dados/orchestration/` |

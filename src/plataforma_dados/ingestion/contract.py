@@ -1,9 +1,9 @@
-"""Declaração de uma fonte (`sources/<poder>/<esfera>/<fonte>/source.yml`): de onde vem e o que se carrega.
+"""Declaração de uma fonte (`sources/<poder>/<esfera>/<fonte>.yml`): de onde vem e o que se carrega.
 
-Ao lado do YAML pode haver um `custom.py` com o código que só aquela fonte precisa (ver `fetch.py` e
-`read.py`)."""
+O código que só aquela fonte precisa (ver `fetch.py` e `read.py`) fica em
+`ingestion/custom/<poder>/<esfera>/<fonte>.py`, espelhando a árvore das declarações."""
 
-import importlib.util
+import importlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -11,7 +11,8 @@ from typing import Any
 
 import yaml
 
-SOURCES_DIR = Path(__file__).resolve().parents[1] / "sources"
+from plataforma_dados.core.settings import SOURCES_DIR
+
 FORMATS = {"csv", "json"}
 POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
@@ -41,6 +42,7 @@ class Dataset:
     first_year: int | None = None
     partition: str = "year"
     records: str | None = None  # JSON: caminho (com pontos) da lista de registros
+    nested: tuple[str, ...] = ()  # JSON: campos que são listas (viram tabelas filhas no raw)
 
     @property
     def yearly(self) -> bool:
@@ -94,6 +96,9 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         if column.lower().replace("_", "") in FORBIDDEN_COLUMNS:
             raise InvalidContract(f"{where}: '{column}' é documento pessoal e nunca é lido")
     key = tuple(data.get("primary_key", ()))
+    stray = [c for c in data.get("nested", ()) if c not in columns]
+    if stray:
+        raise InvalidContract(f"{where}: nested {stray} não está em columns")
     missing = [c for c in key if c not in columns and c != ROW_HASH]
     if missing:
         raise InvalidContract(f"{where}: chave {missing} não está em columns")
@@ -110,20 +115,20 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         extra_years=bool(data.get("extra_years", False)),
         partition=str(data.get("partition", "year")),
         records=data.get("records"),
+        nested=tuple(data.get("nested", ())),
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
     )
 
 
-def _custom(path: Path) -> ModuleType | None:
-    """O `custom.py` da fonte (ao lado do YAML), se existir."""
-    file = path.with_name("custom.py")
-    if not file.exists():
-        return None
-    spec = importlib.util.spec_from_file_location(f"custom_{path.parent.name}", file)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def _custom(power: str, level: str, source: str) -> ModuleType | None:
+    """O módulo de código próprio da fonte (`ingestion/custom/<poder>/<esfera>/<fonte>.py`), se existir."""
+    name = f"plataforma_dados.ingestion.custom.{power}.{level}.{source}"
+    try:
+        return importlib.import_module(name)
+    except ModuleNotFoundError as error:
+        if error.name and name.startswith(error.name):
+            return None
+        raise
 
 
 def load_contract(path: Path) -> SourceContract:
@@ -146,13 +151,18 @@ def load_contract(path: Path) -> SourceContract:
         encoding=access.get("encoding", "utf-8-sig"),
         format=access.get("format", "csv"),
         headers=dict(access.get("headers", {})),
-        custom=_custom(path),
+        custom=_custom(data["power"], data["level"], source),
         datasets={n: _dataset(source, n, d) for n, d in data["datasets"].items()},
     )
 
 
 def find(source: str) -> SourceContract:
-    """Declaração de uma fonte, procurada em `sources/<poder>/<esfera>/<fonte>/source.yml`."""
-    for path in SOURCES_DIR.glob(f"*/*/{source}/source.yml"):
+    """Declaração de uma fonte, procurada em `sources/<poder>/<esfera>/<fonte>.yml`."""
+    for path in SOURCES_DIR.glob(f"*/*/{source}.yml"):
         return load_contract(path)
     raise InvalidContract(f"fonte '{source}' não tem contrato em {SOURCES_DIR}")
+
+
+def find_all() -> list[SourceContract]:
+    """Todas as fontes declaradas em `sources/`."""
+    return [load_contract(path) for path in sorted(SOURCES_DIR.glob("*/*/*.yml"))]

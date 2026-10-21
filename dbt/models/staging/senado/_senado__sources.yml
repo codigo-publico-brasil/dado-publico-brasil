@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+  - name: senado
+    description: >
+      Senado Federal, dados abertos (API REST, JSON). Carregado pelo dlt em raw_federal_senado, fiel à fonte
+      (declaração em sources/legislativo/federal/senado.yml). Listas viram tabelas filhas (`<tabela>__<lista>`).
+    schema: raw_federal_senado
+    loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
+    freshness:
+      warn_after: {count: 3, period: day}
+      error_after: {count: 14, period: day}
+    meta:
+      origin: Senado Federal
+      sensitivity: publico-agente-publico
+      owner: fundador do projeto
+    tables:
+      - name: senadores
+        description: Senadores por legislatura (o mesmo senador aparece em várias), com os mandatos em tabelas filhas.
+      - name: votacoes
+        description: Votações em plenário com resultado, totais e a matéria votada.
+        columns:
+          - name: codigo_sessao_votacao
+            tests: [unique, not_null]
+      - name: votacoes__votos
+        description: Voto de cada senador em cada votação nominal (lista `votos` da votação).

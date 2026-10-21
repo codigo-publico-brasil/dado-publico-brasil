@@ -2,10 +2,10 @@
 
 O padrão serve a qualquer URL que devolva um arquivo ou um JSON (CSV em lote, API REST): GET com nova
 tentativa em falha de rede ou 5xx, cabeçalhos da declaração da fonte e pergunta barata (HEAD) para saber
-se mudou. Credenciais entram como `${VARIAVEL}` nos cabeçalhos do YAML e vêm do ambiente (`.env`), nunca do
-repositório. Uma fonte que precise de outro jeito (SOAP, robô, pacote compactado...) traz um `custom.py` na
-sua pasta e define `download(url, folder)` e/ou `head(url)`; o resto do pipeline não muda, porque a saída
-é sempre um arquivo com hash.
+se mudou. Credenciais entram como `${VARIAVEL}` nos cabeçalhos do YAML e vêm do ambiente (`.env`), nunca
+do repositório. Uma fonte que precise de outro jeito (SOAP, robô, pacote compactado...) tem um módulo em
+`ingestion/custom/<poder>/<esfera>/<fonte>.py` com `download(url, folder)` e/ou `head(url)`; o resto do
+pipeline não muda, porque a saída é sempre um arquivo com hash.
 """
 
 import hashlib
@@ -94,7 +94,7 @@ def head(url: str, headers: dict[str, str] | None = None) -> dict[str, str | Non
 
 
 def downloader(contract: SourceContract) -> Downloader:
-    """O `download` da fonte: o do `custom.py`, se houver, ou o padrão com os cabeçalhos do YAML."""
+    """O `download` do módulo `custom` da fonte, se houver, ou o padrão com os cabeçalhos do YAML."""
     custom = getattr(contract.custom, "download", None)
     return custom or partial(download, headers=contract.headers, suffix=contract.format)
 

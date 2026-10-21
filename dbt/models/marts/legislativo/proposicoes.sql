@@ -4,9 +4,11 @@ with siglas as (
 
     from {{ ref('int_siglas_em_ementas_extraidas') }}
 
-)
+),
 
-select
+camara as (
+
+    select
     '{{ var("source_camara") }}' as fonte,
     cast(p.proposicao_id as varchar) as proposicao_id,
     p.sigla_tipo || ' ' || coalesce(cast(p.numero as varchar), '?') || '/'
@@ -25,3 +27,34 @@ from {{ ref('stg_camara__proposicoes') }} as p
 cross join siglas as s
 
 left join {{ ref('stg_metadata__captures') }} as c on c.source_file_id = p.source_file_id
+
+),
+
+senado as (
+
+    select
+        '{{ var("source_senado") }}' as fonte,
+        cast(m.materia_id as varchar) as proposicao_id,
+        m.sigla,
+        coalesce(standardize_summary(m.ementa, s.lista), m.ementa) as ementa,
+        m.ementa as ementa_oficial,
+        m.apresentada_em,
+        cast(null as varchar) as situacao,
+        cast(null as varchar) as orgao_ultimo_status,
+        cast(null as date) as ultimo_status_em,
+        '{{ var("url_materia_senado") }}' || cast(m.materia_id as varchar) as fonte_url,
+        cast(c.capturado_em as date) as capturado_em
+
+    from {{ ref('int_materias_do_senado_unicas') }} as m
+
+    cross join siglas as s
+
+    left join {{ ref('stg_metadata__captures') }} as c on c.source_file_id = m.source_file_id
+
+)
+
+select * from camara
+
+union all
+
+select * from senado

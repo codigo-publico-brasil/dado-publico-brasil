@@ -4,7 +4,7 @@ Camada de dados oficial do projeto [Código Público Brasil](https://github.com/
 
 ## Propósito
 
-- **Um só lugar para os dados públicos**, de qualquer poder (legislativo, executivo, judiciário) e esfera (federal, estadual, municipal). Hoje: legislativo federal, Câmara dos Deputados.
+- **Um só lugar para os dados públicos**, de qualquer poder (legislativo, executivo, judiciário) e esfera (federal, estadual, municipal). Hoje: legislativo federal, Câmara dos Deputados e Senado Federal.
 - **Executado em infraestrutura própria de dados:** pipelines agendados, banco de consumo, trilha de documentos com banco vetorial e aplicações de IA, além do ETL clássico. A infraestrutura ainda será escolhida; a plataforma não depende de nenhuma nuvem específica.
 - **Código aberto (AGPL-3.0) e dados curados abertos (CC BY 4.0)**, a confirmar.
 - **Material de estudo:** a documentação explica cada decisão de arquitetura e de dados.
@@ -24,10 +24,10 @@ As regras de apresentação (neutralidade, sem recomendação de voto) pertencem
 
 | Parte | Situação |
 | --- | --- |
-| Ingestão (Câmara) | Funcionando: captura com hash, carga no raw (dlt), monitoramento de disponibilidade, colunas e volume |
+| Ingestão (Câmara e Senado) | Funcionando: captura com hash (CSV e JSON), carga no raw (dlt), monitoramento de disponibilidade, colunas e volume; código próprio por fonte só quando preciso |
 | Transformação | Funcionando: dbt em camadas, identidade de pessoas, testes de qualidade, catálogo e dicionário de colunas |
-| Orquestração | Linha de comando e Dagster (só a Câmara) |
-| Documentos e vetores (esqueleto em `documents/`), camada de consumo em PostgreSQL, infraestrutura, Senado | A fazer |
+| Orquestração | Linha de comando e Dagster, com os ativos gerados a partir de `sources/` |
+| Documentos e vetores (esqueleto em `documents/`), camada de consumo em PostgreSQL, infraestrutura | A fazer |
 
 Última carga real (2000 a 2026): 190 mil votações, 1,9 milhão de votos, 886 mil proposições, 7,9 mil pessoas.
 

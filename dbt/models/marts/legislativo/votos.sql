@@ -1,5 +1,5 @@
 select
-    '{{ var("source_camara") }}' as fonte,
+    fonte,
     id_pessoa,
     votacao_id,
     voto,

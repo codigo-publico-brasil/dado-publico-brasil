@@ -55,12 +55,13 @@ def resource(
     file: Path, contract: SourceContract, dataset: Dataset, file_id: int, stats: dict[str, int]
 ) -> DltResource:
     key = [normalize(c) for c in dataset.primary_key]
-    # CSV: tudo texto (o dbt converte). JSON: o dlt infere os tipos e cria as tabelas filhas das listas.
-    columns: dict[str, dict[str, Any]] = (
-        {normalize(c): {"data_type": "text", "nullable": normalize(c) not in key} for c in dataset.columns}
-        if contract.format == "csv"
-        else {}
-    )
+    # Tudo texto (o dbt converte), assim a coluna existe mesmo que venha toda vazia; as listas (`nested`)
+    # ficam sem tipo: o dlt cria as tabelas filhas.
+    columns: dict[str, dict[str, Any]] = {
+        normalize(c): {"data_type": "text", "nullable": normalize(c) not in key}
+        for c in dataset.columns
+        if c not in dataset.nested
+    }
     if ROW_HASH in dataset.primary_key:
         columns[ROW_HASH] = {"data_type": "text", "nullable": False}
     columns["_source_file_id"] = {"data_type": "bigint", "nullable": False}

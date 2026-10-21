@@ -56,3 +56,13 @@ def test_volume_drop_against_the_previous_load_is_a_warning(con: Connection) -> 
     monitoring.check_volume(con, "camara", "partidos", None, 90)
     monitoring.check_volume(con, "camara", "partidos", None, 50)
     assert [s for s, _ in checks(con, "volume")] == ["ok", "warn"]
+
+
+def test_a_different_column_order_is_not_a_schema_change(
+    con: Connection, contract: SourceContract, tmp_path: Path
+) -> None:
+    dataset = contract.datasets["partidos"]
+    columns = list(dataset.columns)
+    monitoring.check_header(con, contract, dataset, None, header_file(tmp_path, columns))
+    monitoring.check_header(con, contract, dataset, None, header_file(tmp_path, columns[::-1], "g.csv"))
+    assert [s for s, _ in checks(con, "schema")] == ["ok", "ok"]

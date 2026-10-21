@@ -5,9 +5,9 @@
 | Pasta | O que guarda | Arquivos |
 | --- | --- | --- |
 | `dados/` | Como os dados são tratados e o que sabemos sobre eles | [`camadas.md`](dados/camadas.md), [`especificacao-de-fonte.md`](dados/especificacao-de-fonte.md), [`catalogo.md`](dados/catalogo.md) (gerado), [`identidade-de-pessoas.md`](dados/identidade-de-pessoas.md), [`governanca.md`](dados/governanca.md), [`cobertura-e-lacunas.md`](dados/cobertura-e-lacunas.md), [`fontes-de-dados.md`](dados/fontes-de-dados.md) |
-| `dominio/` | O que as instituições são e as regras por trás dos campos (material didático) | [`camara-dos-deputados.md`](dominio/camara-dos-deputados.md) |
+| `dominio/` | O que as instituições são e as regras por trás dos campos (material didático) | [`camara-dos-deputados.md`](dominio/camara-dos-deputados.md), [`senado-federal.md`](dominio/senado-federal.md) |
 | `engenharia/` | Como o sistema é construído | [`arquitetura.md`](engenharia/arquitetura.md) |
-| `adr/` | Decisões de arquitetura aceitas, uma por arquivo | [`0001`](adr/0001-fases-e-portoes.md) a [`0010`](adr/0010-duas-pastas-env-e-specs-fora.md) |
+| `adr/` | Decisões de arquitetura aceitas, uma por arquivo | [`0001`](adr/0001-fases-e-portoes.md) a [`0011`](adr/0011-buscar-ler-custom-e-chave-por-fonte.md) |
 | `planejamento/` | Raciocínio e plano de longo prazo, de quando o projeto era um só (consulta) | [`plano-de-implementacao.md`](planejamento/plano-de-implementacao.md) |
 
 ## Regras

@@ -46,7 +46,7 @@ def check_header(
         (source, name),
     ).fetchone()
     old = json.loads(previous[0]) if previous else None
-    changed = old is not None and old != header
+    changed = old is not None and set(old) != set(header)
     if missing:
         record(con, source, name, partition, "schema", "error", f"colunas do contrato ausentes: {missing}")
     if changed:

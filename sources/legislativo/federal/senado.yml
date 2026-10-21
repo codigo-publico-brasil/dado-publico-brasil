@@ -1,0 +1,47 @@
+# Declaração da fonte: Senado Federal, dados abertos (API REST, JSON). Sem código próprio: a janela de
+# datas vai na URL e o JSON é lido pelo caminho dos registros. Campos aninhados viram `a__b`; listas
+# (`nested`: `votos`, `Mandatos__Mandato`) viram tabelas filhas no raw. Ver ingestion/fetch.py e ingestion/read.py.
+
+source: senado
+power: legislativo
+level: federal
+description: Senado Federal, dados abertos (API REST, JSON)
+
+access:
+  base_url: https://legis.senado.leg.br/dadosabertos
+  format: json
+  headers: {Accept: application/json}
+
+datasets:
+  senadores:
+    # Um arquivo por legislatura, com os mandatos que a tocam. O mesmo senador aparece em várias; a
+    # linha é identificada pelo conteúdo, e o staging fica com uma linha por senador.
+    url: "{base_url}/senador/lista/legislatura/{legislature}"
+    load: yearly
+    partition: legislature
+    first_year: 1999
+    stable_after_years: 1
+    write: merge
+    records: ListaParlamentarLegislatura.Parlamentares.Parlamentar
+    primary_key: [_row_hash]
+    columns:
+      [IdentificacaoParlamentar__CodigoParlamentar, IdentificacaoParlamentar__NomeParlamentar,
+       IdentificacaoParlamentar__NomeCompletoParlamentar, IdentificacaoParlamentar__SexoParlamentar,
+       Mandatos__Mandato]
+    nested: [Mandatos__Mandato]
+
+  votacoes:
+    # Votações em plenário de um ano, cada uma com a lista de votos nominais (`votos`). Votação secreta
+    # traz a sigla "Votou" no lugar da escolha.
+    url: "{base_url}/votacao?dataInicio={year}-01-01&dataFim={year}-12-31"
+    load: yearly
+    first_year: 1999
+    stable_after_years: 1
+    write: merge
+    primary_key: [codigoSessaoVotacao]
+    columns:
+      [codigoSessaoVotacao, codigoSessao, dataSessao, siglaTipoSessao, votacaoSecreta, resultadoVotacao,
+       totalVotosSim, totalVotosNao, totalVotosAbstencao, descricaoVotacao, codigoMateria, idProcesso,
+       identificacao, sigla, numero, ano, dataApresentacao, ementa, informeLegislativo__siglaColegiado,
+       informeLegislativo__nomeColegiado, votos]
+    nested: [votos]

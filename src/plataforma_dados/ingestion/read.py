@@ -3,7 +3,7 @@
 Um leitor por formato (`csv`, `json`). No JSON, `records` do dataset diz onde está a lista de registros
 (caminho com pontos) e os objetos aninhados viram campos `a__b`; as listas ficam como estão e o dlt as
 transforma em tabelas filhas. Uma fonte que precise de outro jeito (arquivo compactado, XML, layout fixo...)
-define `records(file, dataset)` no seu `custom.py`.
+define `records(file, dataset)` no módulo `custom` da fonte.
 """
 
 import csv
@@ -57,4 +57,5 @@ def fields(file: Path, contract: SourceContract, dataset: Dataset) -> list[str]:
     names: dict[str, None] = {}
     for record in islice(records(file, contract, dataset), SAMPLE):
         names.update(dict.fromkeys(record))
-    return list(names)
+    # objeto nulo aparece como o próprio nome e, preenchido, como `nome__campo`: vale só o segundo
+    return sorted(n for n in names if not any(o.startswith(n + "__") for o in names))
