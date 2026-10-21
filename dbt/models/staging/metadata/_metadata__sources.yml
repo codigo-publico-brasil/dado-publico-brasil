@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: metadata
+    description: Metadados operacionais do pipeline (capturas dos arquivos, execuções, resultado de testes).
+    schema: metadata
+    meta:
+      sensitivity: controle
+      owner: fundador do projeto
+    tables:
+      - name: captures
+        description: Cada arquivo recebido da fonte, com URL, hash, caminho no landing e datas.
+      - name: runs
+        description: Cada execução de etapa do pipeline, com início, fim, versão do código e resultado.
+      - name: dbt_results
+        description: Resultado de cada modelo e teste do dbt na última execução de cada comando.

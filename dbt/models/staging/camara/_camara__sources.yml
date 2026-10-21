@@ -1,0 +1,70 @@
+version: 2
+
+sources:
+  - name: camara
+    description: >
+      Câmara dos Deputados, dados abertos (arquivos CSV em lote). Carregado pelo dlt em raw_federal_camara,
+      fiel à fonte (declaração em sources/legislativo/federal/camara.yml). Só as colunas permitidas pelo contrato existem aqui.
+    schema: raw_federal_camara
+    loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
+    freshness:
+      warn_after: {count: 3, period: day}
+      error_after: {count: 14, period: day}
+    meta:
+      origin: Câmara dos Deputados
+      sensitivity: publico-agente-publico
+      owner: fundador do projeto
+    tables:
+      - name: deputados
+        description: Cadastro de deputados (sem documentos pessoais).
+        columns:
+          - name: uri
+            tests: [unique, not_null]
+      - name: deputados_profissoes
+        description: Profissões declaradas pelos deputados (arquivo completo, substituído a cada carga).
+      - name: deputados_ocupacoes
+        description: Ocupações anteriores declaradas pelos deputados (arquivo completo).
+      - name: proposicoes
+        description: Proposições, um arquivo por ano, com a última situação.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+      - name: proposicoes_autores
+        description: Autores de cada proposição (pessoa ou órgão), na ordem de assinatura.
+      - name: votacoes
+        description: Votações com resultado e totais oficiais.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+      - name: votacoes_votos
+        description: Voto de cada deputado em cada votação nominal, com partido e UF na data.
+      - name: votacoes_orientacoes
+        description: Orientação de cada bancada em cada votação.
+      - name: votacoes_proposicoes
+        description: Proposições afetadas por cada votação.
+      - name: votacoes_objetos
+        description: Proposições que são objeto de cada votação.
+      - name: legislaturas
+        description: Legislaturas da Câmara, com início, fim e ano da eleição.
+        columns:
+          - name: id_legislatura
+            tests: [unique, not_null]
+      - name: partidos
+        description: Partidos com sigla e nome.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+      - name: orgaos
+        description: Órgãos da Câmara (comissões, plenário, mesa, conselhos), com tipo e situação.
+        columns:
+          - name: uri
+            tests: [unique, not_null]
+      - name: orgaos_deputados
+        description: Deputados em cada órgão, com cargo e período, um arquivo por legislatura.
+      - name: frentes
+        description: Frentes parlamentares, com legislatura de criação e coordenador.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+      - name: frentes_deputados
+        description: Deputados em cada frente parlamentar, com o título (coordenador, membro) na legislatura.

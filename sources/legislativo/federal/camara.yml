@@ -1,0 +1,169 @@
+# Declaração da fonte: Câmara dos Deputados, dados abertos (arquivos CSV em lote).
+#
+# Diz O QUE receber e COMO carregar no raw. Não transforma nada: renomear, tipar e padronizar é
+# trabalho do dbt (camada staging). `columns` é a lista permitida: só estas colunas do arquivo são
+# lidas (minimização de dados, princípio IX). Documentos pessoais (cpf, rg...) são recusados.
+#
+# Por dataset:
+#   url               endereço oficial; `{year}` nos anuais
+#   load              full (um arquivo) | yearly (um arquivo por partição)
+#   partition         (yearly) year (padrão, `{year}`) | legislature (`{legislature}`, derivada do ano)
+#   stable_after_years  (yearly) anos mais antigos que isso não mudam: a carga incremental os pula
+#   first_year        (yearly) primeiro ano que a fonte publica; anos anteriores não são pedidos
+#   extra_years       (yearly) aceita anos só deste dataset (opção --extra-years)
+#   write             merge (upsert pela chave) | replace (troca o conteúdo anterior)
+#   primary_key       `_row_hash` identifica a linha pelo conteúdo, para arquivos sem chave natural
+#   primary_key       colunas da chave natural
+#   columns           colunas lidas, com o nome que têm no arquivo
+
+source: camara
+power: legislativo     # legislativo | executivo | judiciario (e a pasta onde este arquivo mora)
+level: federal          # federal | estadual | municipal; o raw vira raw_federal_camara
+description: Câmara dos Deputados, dados abertos (arquivos em lote)
+
+access:
+  base_url: https://dadosabertos.camara.leg.br/arquivos
+  format: csv
+  delimiter: ";"
+  encoding: utf-8-sig
+
+datasets:
+  deputados:
+    url: "{base_url}/deputados/csv/deputados.csv"
+    load: full
+    write: merge
+    primary_key: [uri]
+    columns:
+      [uri, nome, nomeCivil, siglaSexo, dataNascimento, dataFalecimento, ufNascimento,
+       municipioNascimento, urlRedeSocial, urlWebsite, idLegislaturaInicial, idLegislaturaFinal]
+
+  deputadosProfissoes:
+    url: "{base_url}/deputadosProfissoes/csv/deputadosProfissoes.csv"
+    load: full
+    write: replace
+    primary_key: [id, titulo]
+    columns: [id, codTipoProfissao, titulo, dataHora]
+
+  deputadosOcupacoes:
+    url: "{base_url}/deputadosOcupacoes/csv/deputadosOcupacoes.csv"
+    load: full
+    write: replace
+    columns: [id, titulo, entidade, entidadeUF, entidadePais, anoInicio, anoFim]
+
+  proposicoes:
+    url: "{base_url}/proposicoes/csv/proposicoes-{year}.csv"
+    load: yearly
+    stable_after_years: 1
+    extra_years: true
+    write: merge
+    primary_key: [id]
+    columns:
+      [id, siglaTipo, numero, ano, descricaoTipo, ementa, dataApresentacao, urlInteiroTeor,
+       ultimoStatus_dataHora, ultimoStatus_siglaOrgao, ultimoStatus_descricaoSituacao,
+       ultimoStatus_descricaoTramitacao, ultimoStatus_regime, ultimoStatus_apreciacao]
+
+  proposicoesAutores:
+    url: "{base_url}/proposicoesAutores/csv/proposicoesAutores-{year}.csv"
+    load: yearly
+    stable_after_years: 1
+    extra_years: true
+    write: merge
+    primary_key: [idProposicao, ordemAssinatura, nomeAutor]
+    columns:
+      [idProposicao, idDeputadoAutor, codTipoAutor, tipoAutor, nomeAutor, siglaPartidoAutor,
+       siglaUFAutor, ordemAssinatura, proponente, uriAutor]
+
+  votacoes:
+    url: "{base_url}/votacoes/csv/votacoes-{year}.csv"
+    load: yearly
+    stable_after_years: 1
+    write: merge
+    primary_key: [id]
+    columns:
+      [id, data, dataHoraRegistro, idOrgao, siglaOrgao, idEvento, aprovacao, votosSim, votosNao,
+       votosOutros, descricao]
+
+  votacoesVotos:
+    url: "{base_url}/votacoesVotos/csv/votacoesVotos-{year}.csv"
+    load: yearly
+    first_year: 2001
+    stable_after_years: 1
+    write: merge
+    primary_key: [idVotacao, deputado_id]
+    columns:
+      [idVotacao, dataHoraVoto, voto, deputado_id, deputado_nome, deputado_siglaPartido,
+       deputado_uriPartido, deputado_siglaUf, deputado_idLegislatura, deputado_urlFoto]
+
+  votacoesOrientacoes:
+    url: "{base_url}/votacoesOrientacoes/csv/votacoesOrientacoes-{year}.csv"
+    load: yearly
+    first_year: 2003
+    stable_after_years: 1
+    write: merge
+    primary_key: [idVotacao, siglaBancada]
+    columns: [idVotacao, siglaBancada, orientacao]
+
+  votacoesProposicoes:
+    url: "{base_url}/votacoesProposicoes/csv/votacoesProposicoes-{year}.csv"
+    load: yearly
+    stable_after_years: 1
+    write: merge
+    primary_key: [idVotacao, proposicao_id]
+    columns: [idVotacao, proposicao_id]
+
+  votacoesObjetos:
+    url: "{base_url}/votacoesObjetos/csv/votacoesObjetos-{year}.csv"
+    load: yearly
+    stable_after_years: 1
+    write: merge
+    primary_key: [idVotacao, proposicao_id]
+    columns: [idVotacao, proposicao_id]
+
+  legislaturas:
+    url: "{base_url}/legislaturas/csv/legislaturas.csv"
+    load: full
+    write: merge
+    primary_key: [idLegislatura]
+    columns: [idLegislatura, dataInicio, dataFim, anoEleicao]
+
+  partidos:
+    url: "{base_url}/partidos/csv/partidos.csv"
+    load: full
+    write: merge
+    primary_key: [id]
+    columns: [id, sigla, nome]
+
+  orgaos:
+    url: "{base_url}/orgaos/csv/orgaos.csv"
+    load: full
+    write: merge
+    primary_key: [uri]
+    columns:
+      [uri, sigla, apelido, nome, codTipoOrgao, tipoOrgao, dataInicio, dataInstalacao, dataFim,
+       descricaoSituacao, casa]
+
+  orgaosDeputados:
+    url: "{base_url}/orgaosDeputados/csv/orgaosDeputados-L{legislature}.csv"
+    load: yearly
+    partition: legislature
+    stable_after_years: 1
+    write: merge
+    primary_key: [_row_hash]
+    columns:
+      [uriOrgao, siglaOrgao, uriDeputado, nomeDeputado, siglaPartido, siglaUF, cargo, dataInicio, dataFim]
+
+  frentes:
+    url: "{base_url}/frentes/csv/frentes.csv"
+    load: full
+    write: merge
+    primary_key: [id]
+    columns: [id, titulo, dataCriacao, idLegislatura, situacao, coordenador_id]
+
+  frentesDeputados:
+    url: "{base_url}/frentesDeputados/csv/frentesDeputados.csv"
+    load: full
+    write: merge
+    primary_key: [_row_hash]
+    columns:
+      [id, deputado_.id, deputado_.idLegislatura, deputado_.urlFoto, deputado_.codTitulo, deputado_.titulo,
+       dataInicio, dataFim]

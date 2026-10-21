@@ -1,0 +1,9 @@
+# O arquivo do warehouse vem da configuração central (PLATAFORMA_WAREHOUSE_FILE, definido pelo
+# pipeline).
+quem_decidiu:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ env_var('PLATAFORMA_WAREHOUSE_FILE', '../data_store/warehouse.duckdb') }}"
+      schema: main

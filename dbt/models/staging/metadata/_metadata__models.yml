@@ -1,0 +1,8 @@
+version: 2
+
+models:
+  - name: stg_metadata__captures
+    description: Capturas dos arquivos da fonte (um arquivo, uma linha). `source_file_id` liga as linhas do raw ao arquivo.
+    columns:
+      - name: source_file_id
+        tests: [unique, not_null]

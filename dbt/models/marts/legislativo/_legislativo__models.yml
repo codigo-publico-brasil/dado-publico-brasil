@@ -1,0 +1,236 @@
+version: 2
+
+# Os marts são o contrato com a aplicação: colunas e tipos são garantidos (contract.enforced).
+
+models:
+  - name: pessoas
+    description: Pessoas (agentes públicos) com perfil, contagens e último partido. Uma linha por pessoa.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: id_pessoa, data_type: bigint, tests: [unique, not_null], description: "Chave própria e estável da pessoa (schema identity)."}
+      - {name: nome, data_type: varchar, tests: [not_null], description: "Nome parlamentar, com caixa padronizada."}
+      - {name: nome_civil, data_type: varchar, description: "Nome civil, com caixa padronizada."}
+      - {name: nome_ordem, data_type: varchar, description: "Nome sem acento e em minúsculas, para ordenar."}
+      - {name: nome_busca, data_type: varchar, description: "Nome e nome civil sem acento, para buscar."}
+      - {name: sexo, data_type: varchar, description: "Sexo registrado no cadastro da fonte."}
+      - {name: data_nascimento, data_type: date, description: "Data de nascimento informada pela fonte."}
+      - {name: data_falecimento, data_type: date, description: "Data de falecimento informada pela fonte."}
+      - {name: municipio_nascimento, data_type: varchar, description: "Município de nascimento informado pela fonte."}
+      - {name: uf_nascimento, data_type: varchar, description: "UF de nascimento informada pela fonte."}
+      - {name: foto_url, data_type: varchar, description: "Endereço da foto oficial."}
+      - {name: rede_social_url, data_type: varchar, description: "Primeira rede social informada no cadastro."}
+      - {name: site_url, data_type: varchar, description: "Site informado no cadastro."}
+      - {name: primeira_legislatura_com_voto, data_type: integer, description: "Primeira legislatura em que há voto registrado."}
+      - {name: ultima_legislatura_com_voto, data_type: integer, description: "Última legislatura em que há voto registrado."}
+      - {name: profissoes, data_type: varchar, description: "Profissões declaradas, separadas por ponto e vírgula."}
+      - {name: ultimo_partido, data_type: varchar, description: "Partido no voto mais recente."}
+      - {name: ultima_uf, data_type: varchar, description: "UF no voto mais recente."}
+      - {name: ultimo_voto_em, data_type: timestamp, description: "Data e hora do voto mais recente."}
+      - {name: qtd_propostas, data_type: bigint, tests: [not_null], description: "Quantidade de proposições em que consta como autora ou apoiadora."}
+      - {name: qtd_votos, data_type: bigint, tests: [not_null], description: "Quantidade de votos nominais registrados."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do cadastro de deputados."}
+
+  - name: mandatos
+    description: Mandatos por legislatura, a partir de votos observados (início e fim oficiais vazios). Uma linha por pessoa e legislatura.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa e legislatura, owner: fundador do projeto, freshness: diário}
+    columns:
+      - name: id_pessoa
+        data_type: bigint
+        description: "Chave da pessoa (marts.pessoas)."
+        tests:
+          - not_null
+          - relationships: {to: ref('pessoas'), field: id_pessoa}
+      - {name: cargo, data_type: varchar, description: "Cargo exercido."}
+      - {name: casa, data_type: varchar, description: "Casa legislativa."}
+      - {name: legislatura_id, data_type: integer, description: "Número da legislatura."}
+      - {name: uf, data_type: varchar, description: "UF de eleição ou representação nos votos da legislatura."}
+      - {name: inicio, data_type: date, description: "Início oficial do mandato; vazio quando a fonte não informa."}
+      - {name: fim, data_type: date, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: primeiro_voto_observado_em, data_type: timestamp, description: "Primeiro voto registrado na legislatura."}
+      - {name: ultimo_voto_observado_em, data_type: timestamp, description: "Último voto registrado na legislatura."}
+      - {name: base, data_type: varchar, description: "Origem do período: votos observados, não ato oficial."}
+      - {name: legislatura_inicio, data_type: date, description: "Início oficial da legislatura (não do mandato da pessoa)."}
+      - {name: legislatura_fim, data_type: date, description: "Fim oficial da legislatura (não do mandato da pessoa)."}
+
+  - name: ocupacoes
+    description: Ocupações anteriores declaradas. Uma linha por pessoa e ocupação.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa e ocupação, owner: fundador do projeto, freshness: diário}
+    columns:
+      - name: id_pessoa
+        data_type: bigint
+        description: "Chave da pessoa (marts.pessoas)."
+        tests:
+          - not_null
+          - relationships: {to: ref('pessoas'), field: id_pessoa}
+      - {name: titulo, data_type: varchar, description: "Ocupação declarada."}
+      - {name: entidade, data_type: varchar, description: "Entidade em que exerceu a ocupação."}
+      - {name: entidade_uf, data_type: varchar, description: "UF da entidade."}
+      - {name: ano_inicio, data_type: integer, description: "Ano de início."}
+      - {name: ano_fim, data_type: integer, description: "Ano de fim."}
+
+  - name: proposicoes
+    description: Proposições com ementa padronizada, ementa oficial, situação atual e URL da fonte. Uma linha por proposição.
+    meta: {sensitivity: publico, grain: proposição, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte oficial do registro (por exemplo, camara)."}
+      - {name: proposicao_id, data_type: varchar, tests: [unique, not_null], description: "Identificador da proposição na fonte."}
+      - {name: sigla, data_type: varchar, tests: [not_null], description: "Sigla do tipo da proposição, número e ano."}
+      - {name: ementa, data_type: varchar, description: "Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista."}
+      - {name: ementa_oficial, data_type: varchar, description: "Texto oficial, exatamente como veio."}
+      - {name: apresentada_em, data_type: date, description: "Data de apresentação."}
+      - {name: situacao, data_type: varchar, description: "Situação atual segundo a fonte."}
+      - {name: orgao_ultimo_status, data_type: varchar, description: "Órgão do último andamento."}
+      - {name: ultimo_status_em, data_type: date, description: "Data do último andamento."}
+      - {name: fonte_url, data_type: varchar, description: "Endereço da proposição na fonte oficial."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: autorias
+    description: Proposições de que cada pessoa é autora ou apoiadora, com a posição na assinatura e o total de autores. Uma linha por pessoa e proposição.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa e proposição, owner: fundador do projeto, freshness: diário}
+    columns:
+      - name: id_pessoa
+        data_type: bigint
+        description: "Chave da pessoa (marts.pessoas)."
+        tests:
+          - not_null
+          - relationships: {to: ref('pessoas'), field: id_pessoa}
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Identificador da proposição na fonte."}
+      - {name: ordem_assinatura, data_type: integer, description: "Posição na assinatura."}
+      - {name: qtd_autores, data_type: bigint, description: "Total de autores da proposição."}
+      - {name: proponente, data_type: integer, description: "1 quando consta como proponente; 0 caso contrário."}
+      - {name: proposicao_fonte_url, data_type: varchar, description: "Endereço da proposição na fonte oficial."}
+
+  - name: votacoes
+    description: Votações com resultado oficial, totais e proposições. Uma linha por votação.
+    meta: {sensitivity: publico, grain: votação, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: votacao_id, data_type: varchar, tests: [unique, not_null], description: "Identificador da votação na fonte."}
+      - {name: data, data_type: date, tests: [not_null], description: "Data da votação."}
+      - {name: orgao_sigla, data_type: varchar, description: "Sigla do órgão em que ocorreu."}
+      - {name: descricao, data_type: varchar, description: "Descrição oficial da votação, com caixa padronizada."}
+      - {name: aprovada, data_type: integer, description: "1 se a fonte registra aprovação; 0 se não; vazio se não informa."}
+      - {name: votos_sim, data_type: integer, description: "Total de votos Sim informado pela fonte."}
+      - {name: votos_nao, data_type: integer, description: "Total de votos Não informado pela fonte."}
+      - {name: votos_outros, data_type: integer, description: "Total de outros votos informado pela fonte."}
+      - {name: proposicoes, data_type: varchar, description: "Proposições ligadas à votação, separadas por ponto e vírgula."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: votos
+    description: Voto de cada pessoa em cada votação nominal, com partido e UF na data. Uma linha por pessoa e votação.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa e votação, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - name: id_pessoa
+        data_type: bigint
+        description: "Chave da pessoa (marts.pessoas)."
+        tests:
+          - not_null
+          - relationships: {to: ref('pessoas'), field: id_pessoa}
+      - name: votacao_id
+        data_type: varchar
+        description: "Votação (marts.votacoes)."
+        tests:
+          - not_null
+          - relationships: {to: ref('votacoes'), field: votacao_id}
+      - {name: voto, data_type: varchar, tests: [not_null], description: "Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.)."}
+      - {name: votou_em, data_type: timestamp, description: "Data e hora do voto."}
+      - {name: partido, data_type: varchar, description: "Partido na data do voto."}
+      - {name: uf, data_type: varchar, description: "UF na data do voto."}
+  - name: legislaturas
+    description: Legislaturas da Câmara, com datas oficiais de início e fim. Uma linha por legislatura.
+    meta: {sensitivity: publico, grain: legislatura, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: legislatura_id, data_type: integer, tests: [unique, not_null], description: "Número da legislatura."}
+      - {name: inicio, data_type: date, description: "Início oficial da legislatura."}
+      - {name: fim, data_type: date, description: "Fim oficial da legislatura."}
+      - {name: ano_eleicao, data_type: integer, description: "Ano da eleição que a formou."}
+
+  - name: partidos
+    description: Partidos com sigla e nome oficiais. Uma linha por partido.
+    meta: {sensitivity: publico, grain: partido, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: partido_id, data_type: bigint, tests: [unique, not_null], description: "Identificador do partido na fonte."}
+      - {name: sigla, data_type: varchar, description: "Sigla do partido."}
+      - {name: nome, data_type: varchar, description: "Nome do partido, com caixa padronizada."}
+
+  - name: orgaos
+    description: Órgãos da Câmara (comissões, plenário, mesa diretora, conselhos), com tipo e situação. Uma linha por órgão.
+    meta: {sensitivity: publico, grain: órgão, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: orgao_id, data_type: bigint, tests: [unique, not_null], description: "Identificador do órgão na fonte."}
+      - {name: sigla, data_type: varchar, description: "Sigla do órgão."}
+      - {name: apelido, data_type: varchar, description: "Nome curto do órgão."}
+      - {name: nome, data_type: varchar, description: "Nome oficial do órgão."}
+      - {name: tipo, data_type: varchar, description: "Tipo do órgão segundo a fonte."}
+      - {name: inicio, data_type: date, description: "Início do órgão, quando a fonte informa."}
+      - {name: instalado_em, data_type: date, description: "Data de instalação, quando a fonte informa."}
+      - {name: fim, data_type: date, description: "Fim do órgão, quando a fonte informa."}
+      - {name: situacao, data_type: varchar, description: "Situação do órgão segundo a fonte."}
+      - {name: casa, data_type: varchar, description: "Casa legislativa informada pela fonte; vazia quando não informa."}
+      - {name: fonte_url, data_type: varchar, description: "Endereço do órgão na fonte oficial."}
+
+  - name: membros_de_orgaos
+    description: Participação de pessoas em órgãos da Câmara, com cargo e período. Uma linha por pessoa, órgão, cargo e período informado.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, órgão, cargo e período, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - name: orgao_id
+        data_type: bigint
+        description: "Órgão (marts.orgaos). Parte dos órgãos citados (Congresso, comissões especiais) não consta da lista de órgãos da fonte; o teste de relação mede essa lacuna."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('orgaos')
+              field: orgao_id
+              config: {severity: warn}
+      - {name: orgao_sigla, data_type: varchar, description: "Sigla do órgão como informada na própria linha de composição."}
+      - name: id_pessoa
+        data_type: bigint
+        description: "Chave da pessoa (marts.pessoas)."
+        tests:
+          - not_null
+          - relationships: {to: ref('pessoas'), field: id_pessoa}
+      - {name: cargo, data_type: varchar, description: "Cargo no órgão (titular, suplente, presidente etc.)."}
+      - {name: partido, data_type: varchar, description: "Partido informado no registro."}
+      - {name: uf, data_type: varchar, description: "UF informada no registro."}
+      - {name: inicio, data_type: date, description: "Início da participação."}
+      - {name: fim, data_type: date, description: "Fim da participação; vazio se a fonte não informa."}
+
+  - name: frentes
+    description: Frentes parlamentares, com legislatura de criação e coordenador. Uma linha por frente.
+    meta: {sensitivity: publico, grain: frente parlamentar, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: frente_id, data_type: bigint, tests: [unique, not_null], description: "Identificador da frente na fonte."}
+      - {name: titulo, data_type: varchar, description: "Título da frente."}
+      - {name: criada_em, data_type: date, description: "Data de criação."}
+      - {name: legislatura_id, data_type: integer, description: "Legislatura em que foi criada."}
+      - {name: situacao, data_type: varchar, description: "Situação informada pela fonte."}
+      - {name: id_pessoa_coordenador, data_type: bigint, description: "Pessoa coordenadora (marts.pessoas); vazia se a fonte não informa ou não é deputado."}
+
+  - name: membros_de_frentes
+    description: Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, frente e legislatura, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - name: frente_id
+        data_type: bigint
+        description: "Frente (marts.frentes)."
+        tests:
+          - not_null
+          - relationships: {to: ref('frentes'), field: frente_id}
+      - name: id_pessoa
+        data_type: bigint
+        description: "Chave da pessoa (marts.pessoas)."
+        tests:
+          - not_null
+          - relationships: {to: ref('pessoas'), field: id_pessoa}
+      - {name: titulo, data_type: varchar, description: "Título na frente (coordenador, membro etc.)."}
+      - {name: legislatura_id, data_type: integer, description: "Legislatura do registro."}
+      - {name: inicio, data_type: date, description: "Início da participação, quando a fonte informa."}
+      - {name: fim, data_type: date, description: "Fim da participação, quando a fonte informa."}

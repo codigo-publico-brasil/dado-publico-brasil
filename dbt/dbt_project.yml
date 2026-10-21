@@ -1,0 +1,50 @@
+# Projeto dbt da camada de dados (ADR 0006). Segue o guia de estrutura da dbt Labs:
+#   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
+#   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
+#   marts         entidades prontas para consumo, uma por grain, com contrato de colunas.
+name: quem_decidiu
+version: "0.1.0"
+profile: quem_decidiu
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+clean-targets: ["target"]
+
+on-run-start:
+  - "{{ create_text_functions() }}"
+
+vars:
+  source_camara: camara
+  id_type_camara: deputado
+  url_proposicao_camara: "https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao="
+
+models:
+  quem_decidiu:
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      +schema: staging
+      +materialized: view
+      +meta:
+        sensitivity: publico-agente-publico
+        owner: fundador do projeto
+      camara:
+        +tags: [pre_identity]
+      metadata:
+        +tags: [pre_identity]
+    intermediate:
+      +schema: intermediate
+      +materialized: table
+      +meta:
+        sensitivity: publico-agente-publico
+        owner: fundador do projeto
+    marts:
+      +schema: marts
+      +materialized: table
+      +contract:
+        enforced: true
+
+data_tests:
+  quem_decidiu:
+    +severity: error

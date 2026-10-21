@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: int_deputados_nos_votos_agregados
+    description: Um registro por deputado visto nos votos, com nome e foto mais recentes.
+    config:
+      tags: [pre_identity]
+    columns:
+      - name: deputado_id
+        tests: [unique, not_null]
+  - name: int_deputados_ids_unidos
+    description: Todo deputado informado pela Câmara (cadastro mais votos). Entrada do código de identidade.
+    config:
+      tags: [pre_identity]
+    columns:
+      - name: deputado_id
+        tests: [unique, not_null]
+  - name: int_siglas_em_ementas_extraidas
+    description: Siglas escritas em maiúsculas dentro de ementas de caixa mista.
+    config:
+      tags: [pre_identity]
+    columns:
+      - name: sigla
+        tests: [unique, not_null]
+  - name: int_pessoas_unidas_ao_cadastro
+    description: Pessoa do projeto unida ao cadastro e aos dados vistos nos votos.
+    columns:
+      - name: id_pessoa
+        tests: [unique, not_null]
+  - name: int_votos_ligados_a_pessoas
+    description: Votos com a pessoa do projeto (chave própria).
+    columns:
+      - name: id_pessoa
+        tests: [not_null]
+  - name: int_autorias_ligadas_a_pessoas
+    description: Autorias com a pessoa do projeto; autor que não é deputado fica sem pessoa.
+  - name: int_pessoas_atividade_agregada
+    description: Uma linha por pessoa, com votos, propostas e legislaturas.
+    columns:
+      - name: id_pessoa
+        tests: [unique, not_null]
+  - name: int_pessoas_profissoes_agregadas
+    description: Uma linha por pessoa, com as profissões declaradas.
+    columns:
+      - name: id_pessoa
+        tests: [unique, not_null]
+  - name: int_votacoes_proposicoes_unidas
+    description: Proposições de cada votação, com o papel (afetada ou objeto).
+    columns:
+      - name: votacao_id
+        tests: [not_null]
+  - name: int_orgaos_membros_ligados_a_pessoas
+    description: Participação em órgãos ligada à pessoa do projeto.
+    columns:
+      - name: id_pessoa
+        tests: [not_null]
+  - name: int_frentes_membros_ligados_a_pessoas
+    description: Participação em frentes ligada à pessoa do projeto.
+    columns:
+      - name: id_pessoa
+        tests: [not_null]
+  - name: int_deputados_fotos_das_frentes
+    description: Uma foto por deputado, a da legislatura mais recente nos arquivos de frentes.
+    columns:
+      - name: deputado_id
+        tests: [unique, not_null]

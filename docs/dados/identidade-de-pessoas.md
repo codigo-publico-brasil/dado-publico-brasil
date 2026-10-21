@@ -1,0 +1,61 @@
+# Identidade de pessoas
+
+Problema: uma mesma pessoa pode aparecer em várias fontes e em vários cargos. Quem foi deputado, depois senador, depois ministro ou presidente tem, em cada fonte, um identificador diferente. Se a "pessoa" do projeto fosse o cadastro de deputados da Câmara, o senador seria outra pessoa, e a história se perderia.
+
+## A solução: três tabelas
+
+```text
+        identity.pessoa                   identity.pessoa_identificador             marts.mandatos
+  ┌──────────────────────────┐        ┌───────────────────────────────────┐   ┌─────────────────────────────┐
+  │ id_pessoa  (chave nossa) │◄───────│ id_pessoa                         │   │ id_pessoa                   │
+  │ nome, nome_civil         │        │ fonte        ex.: camara          │   │ cargo   Deputado federal    │
+  │ nascimento, foto, redes  │        │ tipo_id      ex.: deputado        │   │ casa    Câmara dos Deputados│
+  └──────────────────────────┘        │ id_na_fonte  ex.: 74161           │   │ legislatura, uf             │
+            ▲                         │ metodo, confirmado_por, data      │   │ inicio, fim (oficiais)      │
+            └─────────────────────────┴───────────────────────────────────┘   └─────────────────────────────┘
+```
+
+- **`pessoa`:** a pessoa do projeto, com chave própria (`id_pessoa`) que não significa nada fora do projeto e nunca muda.
+- **`pessoa_identificador`:** a ponte. Uma pessoa tem vários identificadores (Câmara, Senado, TSE...). Cada ligação registra o **método** (como foi ligada), **quem confirmou** e **quando**.
+- **`mandato`:** o que a pessoa foi e quando. Mudar de cargo cria outro mandato, não outra pessoa.
+
+> **Conceito: chave substituta (*surrogate key*).** Usar o identificador de uma fonte como chave da entidade prende o projeto àquela fonte. A chave própria isola o modelo das fontes: trocar ou acrescentar fonte não muda quem a pessoa é.
+
+> **Conceito: tabela-ponte de identificadores (*crosswalk*, parte do que o mercado chama de MDM, gestão de dados mestres).** É a peça que permite juntar sistemas que não compartilham chave. Em ambientes corporativos o mesmo problema aparece como "cliente duplicado em três sistemas".
+
+## O caso "deputado que virou senador e presidente"
+
+| Momento | Fonte | Identificador | O que se grava |
+| --- | --- | --- | --- |
+| Deputado federal | Câmara | `camara / deputado / 12345` | 1 pessoa, 1 identificador, mandato "Deputado federal" por legislatura |
+| Depois, senador | Senado | `senado / parlamentar / 6789` | **mesma** pessoa; novo identificador; mandato "Senador" |
+| Depois, candidato a presidente | TSE | `tse / candidato / 123456` | **mesma** pessoa; novo identificador |
+| Presidente eleito | TSE, DOU | (mesmo identificador do TSE) | mandato "Presidente da República" |
+
+O que **liga** os identificadores é a regra de ligação, e ela é o ponto delicado.
+
+## Regra de ligação (conservadora)
+
+Decidida na spec 008: um erro de ligação (juntar duas pessoas diferentes, ou separar uma só) distorce quem votou em quê, e isso é pior do que deixar duas pessoas separadas por um tempo. Por isso:
+
+1. **Ligação automática** só quando uma chave oficial constar nas duas fontes (por exemplo, um identificador que o TSE e o Senado publiquem para a mesma pessoa).
+2. **Sugestão para revisão humana** quando houver coincidência de nome e data de nascimento sem chave oficial em comum. Uma pessoa confirma; o nome de quem confirmou fica em `confirmado_por`.
+3. **Nunca** ligar só por nome. Há homônimos, e nomes de urna se repetem.
+4. Toda ligação é registrada com método e data, e pode ser desfeita.
+
+Hoje só existe a fonte Câmara, então toda ligação é a automática "identificador oficial da própria fonte". O código está em [`identity.py`](../../src/plataforma_dados/transformation/identity.py) e as tabelas são criadas por [migração](../../ddl/0002_identity.sql). Os dados da pessoa (nome, foto, nascimento) e o mandato são modelos SQL do dbt ([`int_pessoas_unidas_ao_cadastro`](../../dbt/models/intermediate/int_pessoas_unidas_ao_cadastro.sql) e [`mandatos`](../../dbt/models/marts/legislativo/mandatos.sql)).
+
+## Mandato: o que é oficial e o que é observado
+
+O arquivo de deputados da Câmara informa a primeira e a última legislatura, mas não que o deputado serviu em todas as legislaturas do intervalo (houve suplentes, licenças e interrupções). Por isso o projeto não deduz mandato dessas duas datas.
+
+Hoje o mandato nasce dos **votos observados**: existe um mandato por pessoa e legislatura em que há voto registrado, com a UF do voto mais recente. `inicio` e `fim` oficiais ficam **vazios** até entrar uma fonte que os informe (por exemplo, a composição por legislatura da Câmara ou o TSE). As colunas `primeiro_voto_observado` e `ultimo_voto_observado` mostram só o que foi visto, e `base` diz de onde o mandato veio.
+
+> **Conceito: não completar o que a fonte não diz.** Campo vazio com a origem explicada é mais confiável do que campo preenchido por estimativa. A página mostrará "sem informação" em vez de um valor inventado.
+
+## O que ainda não existe e o que decidir quando entrar
+
+- **Partido por data.** O partido de um voto vem do arquivo de votos (`sigla_partido_na_data`). Filiação partidária por período exigiria o TSE; fica em aberto.
+- **Pessoa que nunca foi parlamentar** (ministro, presidente, vereador). Entra com outras fontes; o modelo já comporta (uma pessoa, um identificador, um mandato).
+- **Proposição entre casas.** Um projeto aprovado na Câmara segue ao Senado com outro número. Hoje proposição se identifica por (`fonte`, `id_na_fonte`); a relação "é a mesma proposição" entre casas será modelada quando o Senado entrar.
+- **Pessoa privada.** Nenhuma pessoa privada entra no modelo; só agentes públicos no exercício da função.

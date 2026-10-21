@@ -1,0 +1,101 @@
+version: 2
+
+models:
+  - name: stg_camara__deputados
+    description: Deputados, uma linha por deputado, com nomes padronizados e tipos corretos.
+    columns:
+      - name: deputado_id
+        tests: [unique, not_null]
+      - name: nome
+        tests: [not_null]
+  - name: stg_camara__deputados_profissoes
+    description: Profissões declaradas por deputado (linhas sem título descartadas pela padronização).
+    columns:
+      - name: deputado_id
+        tests: [not_null]
+  - name: stg_camara__deputados_ocupacoes
+    description: Ocupações anteriores declaradas por deputado.
+    columns:
+      - name: deputado_id
+        tests: [not_null]
+  - name: stg_camara__proposicoes
+    description: Proposições com a última situação. A ementa fica como veio da fonte.
+    columns:
+      - name: proposicao_id
+        tests: [unique, not_null]
+      - name: sigla_tipo
+        tests: [not_null]
+  - name: stg_camara__proposicoes_autores
+    description: Autores de proposições (deputados, comissões, Senado, Executivo...), por ordem de assinatura.
+    columns:
+      - name: proposicao_id
+        tests: [not_null]
+      - name: nome_autor
+        tests: [not_null]
+  - name: stg_camara__votacoes
+    description: Votações com resultado e totais oficiais.
+    columns:
+      - name: votacao_id
+        tests: [unique, not_null]
+      - name: data
+        tests: [not_null]
+  - name: stg_camara__votos
+    description: Voto de cada deputado em cada votação nominal. Voto vazio fica como texto vazio.
+    columns:
+      - name: votacao_id
+        tests: [not_null]
+      - name: deputado_id
+        tests: [not_null]
+  - name: stg_camara__votacoes_orientacoes
+    description: Orientação de cada bancada em cada votação.
+    columns:
+      - name: votacao_id
+        tests: [not_null]
+  - name: stg_camara__votacoes_proposicoes
+    description: Proposições afetadas por votação.
+    columns:
+      - name: votacao_id
+        tests: [not_null]
+  - name: stg_camara__votacoes_objetos
+    description: Proposições que são objeto de votação.
+    columns:
+      - name: votacao_id
+        tests: [not_null]
+  - name: stg_camara__legislaturas
+    description: Legislaturas, uma linha por legislatura, com datas oficiais.
+    columns:
+      - name: legislatura_id
+        tests: [unique, not_null]
+  - name: stg_camara__partidos
+    description: Partidos, uma linha por partido.
+    columns:
+      - name: partido_id
+        tests: [unique, not_null]
+  - name: stg_camara__orgaos
+    description: Órgãos da Câmara, um por órgão, com a URL da fonte.
+    columns:
+      - name: orgao_id
+        tests: [unique, not_null]
+  - name: stg_camara__orgaos_membros
+    description: Participação de deputados em órgãos, uma linha por cargo e período.
+    columns:
+      - name: orgao_id
+        tests: [not_null]
+      - name: deputado_id
+        tests: [not_null]
+  - name: stg_camara__frentes
+    description: Frentes parlamentares, uma por frente.
+    columns:
+      - name: frente_id
+        tests: [unique, not_null]
+  - name: stg_camara__frentes_membros
+    description: >
+      Participação de deputados em frentes parlamentares, uma linha por legislatura e título. Em parte das
+      linhas (coordenações antigas) a fonte não identifica o deputado; elas ficam aqui e saem dos marts.
+    columns:
+      - name: frente_id
+        tests: [not_null]
+      - name: deputado_id
+        tests:
+          - not_null:
+              config: {severity: warn}

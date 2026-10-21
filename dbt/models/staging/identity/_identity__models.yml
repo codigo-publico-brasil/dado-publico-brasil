@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: stg_identity__pessoas
+    description: Pessoas do projeto (chave própria).
+    columns:
+      - name: id_pessoa
+        tests: [unique, not_null]
+  - name: stg_identity__pessoa_identificadores
+    description: Identificadores de cada pessoa em cada fonte.
+    columns:
+      - name: id_pessoa
+        tests: [not_null]
+      - name: id_na_fonte
+        tests: [not_null]

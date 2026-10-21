@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+  - name: identity
+    description: >
+      Identidade de pessoas (ADR 0004): tabelas persistentes mantidas pelo código de identidade, que
+      não se reconstroem do raw. A chave da pessoa vem de uma sequência e nunca é reaproveitada.
+    schema: identity
+    meta:
+      sensitivity: publico-agente-publico
+      owner: fundador do projeto
+    tables:
+      - name: pessoa
+        description: Pessoa do projeto, com chave própria, independente da fonte.
+        columns:
+          - name: id_pessoa
+            tests: [unique, not_null]
+      - name: pessoa_identificador
+        description: Ponte entre a chave da pessoa e o identificador em cada fonte, com método e confirmação.
+        columns:
+          - name: id_pessoa
+            tests:
+              - not_null
+              - relationships:
+                  to: source('identity', 'pessoa')
+                  field: id_pessoa

@@ -1,0 +1,24 @@
+version: 2
+
+exposures:
+  - name: explorer
+    label: Explorador local de dados
+    type: application
+    maturity: low
+    description: Página local para olhar pessoas, propostas, votos e a qualidade dos dados. Lê só os marts, em modo somente leitura.
+    owner:
+      name: fundador do projeto
+    depends_on:
+      - ref('pessoas')
+      - ref('ocupacoes')
+      - ref('proposicoes')
+      - ref('autorias')
+      - ref('votacoes')
+      - ref('votos')
+      - ref('mandatos')
+      - ref('legislaturas')
+      - ref('partidos')
+      - ref('orgaos')
+      - ref('membros_de_orgaos')
+      - ref('frentes')
+      - ref('membros_de_frentes')
