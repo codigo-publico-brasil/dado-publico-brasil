@@ -14,6 +14,19 @@ with cadastro as (
 
 ),
 
+uma_por_pessoa as (
+
+    -- depois da fusão das chaves, a pessoa pode estar nas duas casas: os dados da Câmara vencem
+    select
+        *,
+        string_agg(fonte, ', ' order by fonte) over (partition by id_pessoa) as fontes
+
+    from cadastro
+
+    qualify row_number() over (partition by id_pessoa order by if(fonte = '{{ var("source_camara") }}', 0, 1)) = 1
+
+),
+
 capturas as (
 
     select fonte, cast(max(capturado_em) as date) as capturado_em
@@ -29,6 +42,7 @@ capturas as (
 select
     p.id_pessoa,
     p.fonte,
+    p.fontes,
     p.nome,
     p.nome_civil,
     lower(strip_accents(p.nome)) as nome_ordem,
@@ -52,7 +66,7 @@ select
     coalesce(a.qtd_votos, 0) as qtd_votos,
     c.capturado_em
 
-from cadastro as p
+from uma_por_pessoa as p
 
 left join {{ ref('int_pessoas_atividade_agregada') }} as a on a.id_pessoa = p.id_pessoa
 

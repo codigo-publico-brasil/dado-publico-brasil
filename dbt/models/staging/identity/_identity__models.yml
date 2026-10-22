@@ -13,3 +13,8 @@ models:
         tests: [not_null]
       - name: id_na_fonte
         tests: [not_null]
+  - name: stg_identity__pessoa_fusoes
+    description: Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa, uma linha por chave absorvida.
+    columns:
+      - name: id_pessoa_absorvida
+        tests: [unique, not_null]

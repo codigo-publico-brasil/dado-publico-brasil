@@ -45,6 +45,24 @@ datasets:
 
 Os campos que não são listas entram como texto. O raw é fiel: `votacoes` e `votacoes__votos` ligam-se por `_dlt_parent_id = _dlt_id`.
 
+## Pacote `.zip`, anos por passo e minimização
+
+O [TSE](../../sources/judiciario/federal/tse.yml) é o exemplo:
+
+```yaml
+  candidaturas:
+    url: "{base_url}/consulta_cand/consulta_cand_{year}.zip"
+    load: yearly
+    first_year: 1998
+    step: 4                     # só os anos a cada 4 a partir de first_year (eleições gerais)
+    archive: zip                # o landing guarda o pacote original; o leitor lê o membro dentro dele, sem extrair
+    member: "*_BRASIL.csv"      # padrão (glob) do nome do membro
+    only: {DS_CARGO: ["DEPUTADO FEDERAL", "SENADOR"]}   # minimização: só linhas com estes valores entram no raw
+    columns: [...]              # a lista permitida: CPF, título e e-mail não estão nela
+```
+
+`only` filtra as linhas **do raw** (o arquivo original no landing continua inteiro, para auditoria); `columns` filtra as colunas.
+
 ## Dataset por item (`load: foreach`)
 
 Uma chamada para cada linha de outro dataset da mesma fonte. Exemplo (tramitação da Câmara):

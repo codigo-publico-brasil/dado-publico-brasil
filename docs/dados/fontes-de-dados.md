@@ -43,7 +43,7 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 - **Acesso:** `https://dadosabertos.tse.jus.br/` com 187 conjuntos em arquivos, principalmente CSV. Não há API.
 - **Conteúdo:** candidaturas (inclui bens e coligações), prestação de contas, resultados por município, zona e seção, eleitorado, dados processuais.
 - **Cobertura:** a página mostra 2018, 2020 e 2026; há marcações para 2022, 2024 e 2025. Séries mais antigas: **não confirmadas**. Filiação partidária: não apareceu na página.
-- **Licença:** não informada.
+- **Licença (verificado em 21/10/2026):** cada conjunto declara Creative Commons Attribution (CC BY): citar a fonte. Os pacotes de candidaturas de cada eleição têm cerca de 3 a 5 MB; o arquivo `_BRASIL.csv` dentro do pacote reúne os estados.
 - **Cuidado:** são dados pessoais de candidatos (bens, redes sociais, fotos). Usar só o necessário e seguir a política de dados do projeto.
 
 ### Portal da Transparência (CGU)

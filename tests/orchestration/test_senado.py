@@ -12,7 +12,10 @@ def test_senators_become_people_with_standardized_names_and_empty_fields_the_sou
         "SELECT nome, nome_civil, sexo, data_nascimento, foto_url, qtd_propostas, qtd_votos, ultimo_partido, "
         "ultima_uf, capturado_em IS NOT NULL FROM marts.pessoas WHERE fonte = 'senado' AND nome = 'Beto Barreiras'"
     ).fetchone()
-    assert row == ("Beto Barreiras", "Roberto Barreiras", "M", None, None, None, 2, "AAA", "SP", True)
+    assert row is not None
+    assert row[:3] == ("Beto Barreiras", "Roberto Barreiras", "M")
+    assert str(row[3]) == "1970-05-05" and row[4] == "http://foto/s5000.jpg"  # do detalhe do senador
+    assert row[5:] == (None, 2, "AAA", "SP", True)
     # a Câmara informa autoria; o Senado não, e isso fica vazio em vez de zero
     assert (
         scalar(con, "SELECT COUNT(*) FROM marts.pessoas WHERE fonte = 'camara' AND qtd_propostas IS NULL")
@@ -99,4 +102,4 @@ def test_senate_mandates_come_from_observed_votes_with_the_official_legislature_
 def test_raw_keeps_the_lists_as_child_tables(full: tuple[Connection, Settings]) -> None:
     con, _ = full
     assert scalar(con, "SELECT COUNT(*) FROM raw_federal_senado.votacoes__votos") == 4
-    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_senado.senadores__mandatos_mandato") == 2
+    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_senado.senadores__mandatos_mandato") == 3

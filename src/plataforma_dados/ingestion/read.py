@@ -7,7 +7,10 @@ define `records(file, dataset)` no módulo `custom` da fonte.
 """
 
 import csv
+import fnmatch
+import io
 import json
+import zipfile
 from collections.abc import Iterator
 from itertools import islice
 from pathlib import Path
@@ -20,6 +23,14 @@ SAMPLE = 200  # registros olhados para listar os campos de um JSON
 
 
 def _csv(file: Path, contract: SourceContract, dataset: Dataset) -> Iterator[dict[str, Any]]:
+    if dataset.archive == "zip":  # lê o membro direto do pacote, sem extrair
+        with zipfile.ZipFile(file) as package:
+            for info in package.infolist():
+                if fnmatch.fnmatch(info.filename, dataset.member):
+                    with package.open(info) as member:
+                        text = io.TextIOWrapper(member, encoding=contract.encoding, newline="")
+                        yield from csv.DictReader(text, delimiter=contract.delimiter)
+        return
     with file.open(encoding=contract.encoding, newline="") as f:
         yield from csv.DictReader(f, delimiter=contract.delimiter)
 
@@ -68,7 +79,8 @@ def records(file: Path, contract: SourceContract, dataset: Dataset) -> Iterator[
 
 def fields(file: Path, contract: SourceContract, dataset: Dataset) -> list[str]:
     """Campos do arquivo: o cabeçalho do CSV ou a união dos campos dos primeiros registros do JSON."""
-    if contract.format_of(dataset.name) == "csv" and not contract.custom and not dataset.foreach:
+    plain_csv = contract.format_of(dataset.name) == "csv" and not dataset.archive
+    if plain_csv and not contract.custom and not dataset.foreach:
         with file.open(encoding=contract.encoding, newline="") as f:
             return next(csv.reader(f, delimiter=contract.delimiter), [])
     names: dict[str, None] = {}

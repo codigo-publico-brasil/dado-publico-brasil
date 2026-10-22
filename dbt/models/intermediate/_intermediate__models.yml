@@ -85,3 +85,18 @@ models:
     columns:
       - name: materia_id
         tests: [unique, not_null]
+  - name: int_pessoas_para_vinculo
+    description: Pessoas das duas casas com nome civil (como chave) e nascimento, para ligar entre fontes.
+    config:
+      tags: [pre_identity]
+  - name: int_vinculos_propostos
+    description: >
+      Vínculos propostos entre fontes pela regra de nome civil e nascimento iguais e únicos: Câmara com Senado
+      (mesma pessoa) e candidatura do TSE com a pessoa. Entrada da identidade.
+    config:
+      tags: [pre_identity]
+    columns:
+      - name: origem_id
+        tests: [not_null]
+      - name: destino_id
+        tests: [not_null]

@@ -4,7 +4,7 @@ Camada de dados oficial do projeto [Código Público Brasil](https://github.com/
 
 ## Propósito
 
-- **Um só lugar para os dados públicos**, de qualquer poder (legislativo, executivo, judiciário) e esfera (federal, estadual, municipal). Hoje: legislativo federal, Câmara dos Deputados e Senado Federal.
+- **Um só lugar para os dados públicos**, de qualquer poder (legislativo, executivo, judiciário) e esfera (federal, estadual, municipal). Hoje: legislativo federal (Câmara dos Deputados e Senado Federal) e, do Judiciário federal, as candidaturas ao Congresso no TSE.
 - **Executado em infraestrutura própria de dados:** pipelines agendados, banco de consumo, trilha de documentos com banco vetorial e aplicações de IA, além do ETL clássico. A infraestrutura ainda será escolhida; a plataforma não depende de nenhuma nuvem específica.
 - **Código aberto (AGPL-3.0) e dados curados abertos (CC BY 4.0)**, a confirmar.
 - **Material de estudo:** a documentação explica cada decisão de arquitetura e de dados.

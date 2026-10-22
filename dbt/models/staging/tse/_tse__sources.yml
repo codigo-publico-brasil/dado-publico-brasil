@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: tse
+    description: >
+      Tribunal Superior Eleitoral, dados abertos (pacotes .zip com CSV). Carregado pelo dlt em raw_federal_tse (declaração em
+      sources/judiciario/federal/tse.yml): só candidaturas ao Congresso, sem CPF, título de eleitor nem e-mail.
+    schema: raw_federal_tse
+    loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
+    freshness:
+      warn_after: {count: 400, period: day}
+      error_after: {count: 1500, period: day}
+    meta:
+      origin: Tribunal Superior Eleitoral
+      sensitivity: publico-agente-publico
+      owner: fundador do projeto
+    tables:
+      - name: candidaturas
+        description: Candidaturas a deputado federal e senador (e suplentes) nas eleições gerais, uma linha por candidatura.

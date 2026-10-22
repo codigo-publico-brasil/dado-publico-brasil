@@ -6,7 +6,9 @@ tabela-ponte `identity.pessoa_identificador`, com método, quem confirmou e quan
 pessoa (nome, foto...) não ficam aqui: o dbt os une à chave nos modelos de intermediate e marts.
 
 Lê `intermediate.int_pessoas_ids_vistos` (saída da primeira fase do dbt, todas as fontes) e cria só as
-pessoas novas.
+pessoas novas. Depois aplica `intermediate.int_vinculos_propostos` (ADR 0013): a candidatura do TSE ganha a
+pessoa a que se liga, e duas pessoas que a regra mostra serem a mesma (deputado que virou senador) são
+fundidas: a chave mais nova é absorvida pela mais antiga e a fusão fica em `identity.pessoa_fusao`.
 """
 
 from plataforma_dados.core import runs
@@ -15,6 +17,8 @@ from plataforma_dados.core.warehouse import Connection, scalar
 METHOD = "identificador oficial da própria fonte"
 CONFIRMED_BY = "regra automática"
 SEEN = "intermediate.int_pessoas_ids_vistos"
+LINKS = "intermediate.int_vinculos_propostos"
+BRIDGE = "identity.pessoa_identificador"
 
 
 def resolve(con: Connection) -> tuple[int, int]:
@@ -34,7 +38,39 @@ def resolve(con: Connection) -> tuple[int, int]:
             "SELECT fonte, tipo_id, id_na_fonte, id_pessoa, ?, ?, ? FROM new_people",
             (METHOD, CONFIRMED_BY, moment),
         )
+        _link(con, moment)
         seen = int(scalar(con, f"SELECT COUNT(*) FROM {SEEN}"))
         created = int(scalar(con, "SELECT COUNT(*) FROM new_people"))
         run.rows_in, run.rows_out = seen, created
         return seen, created
+
+
+def _same(alias: str, *columns: str) -> str:
+    return f"({alias}.source, {alias}.id_type, {alias}.source_id) = ({', '.join('v.' + c for c in columns)})"
+
+
+def _link(con: Connection, moment: str) -> None:
+    """Aplica os vínculos propostos: funde as chaves que são a mesma pessoa e liga as candidaturas."""
+    origin = _same("a", "origem_fonte", "origem_tipo", "origem_id")
+    target = _same("b", "destino_fonte", "destino_tipo", "destino_id")
+    con.execute(
+        "CREATE OR REPLACE TEMP TABLE fusions AS "
+        "SELECT least(a.id_pessoa, b.id_pessoa) AS survivor, greatest(a.id_pessoa, b.id_pessoa) AS absorbed, "
+        f"any_value(v.metodo) AS metodo FROM {LINKS} v "
+        f"JOIN {BRIDGE} a ON {origin} JOIN {BRIDGE} b ON {target} "
+        "WHERE v.origem_fonte <> 'tse' AND a.id_pessoa <> b.id_pessoa GROUP BY 1, 2"
+    )
+    con.execute(
+        "INSERT INTO identity.pessoa_fusao SELECT absorbed, survivor, metodo, ? FROM fusions", (moment,)
+    )
+    con.execute(
+        f"UPDATE {BRIDGE} SET id_pessoa = f.survivor FROM fusions f WHERE {BRIDGE}.id_pessoa = f.absorbed"
+    )
+    con.execute("DELETE FROM identity.pessoa WHERE id_pessoa IN (SELECT absorbed FROM fusions)")
+    con.execute(
+        f"INSERT INTO {BRIDGE} "
+        "SELECT v.origem_fonte, v.origem_tipo, v.origem_id, b.id_pessoa, v.metodo, ?, ? "
+        f"FROM {LINKS} v JOIN {BRIDGE} b ON {target} WHERE v.origem_fonte = 'tse' AND NOT EXISTS "
+        f"(SELECT 1 FROM {BRIDGE} a WHERE {origin})",
+        (CONFIRMED_BY, moment),
+    )

@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: stg_tse__candidaturas
+    description: Candidaturas ao Congresso (deputado federal e senador, com suplentes) nas eleições gerais, uma linha por candidatura e turno.
+    columns:
+      - name: candidatura_id
+        tests: [not_null]
+      - name: nome
+        tests: [not_null]

@@ -85,6 +85,7 @@ def senado_files(pasta: Path) -> dict[str, Path]:
                 "Parlamentar": [
                     _parlamentar("5000", "BETO BARREIRAS", "Roberto Barreiras", "Masculino"),
                     _parlamentar("5001", "Ana Árvore", "Ana Aparecida da Silva", "Feminino"),
+                    _parlamentar("5003", "BIA SOUZA", "Bia Souza", "Feminino"),
                 ]
             }
         }

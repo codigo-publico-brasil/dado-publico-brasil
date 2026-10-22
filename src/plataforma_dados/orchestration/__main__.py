@@ -11,7 +11,7 @@ A pasta de armazenamento e o warehouse vêm de PLATAFORMA_STORAGE_ROOT e PLATAFO
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
 Auditoria: verify (hashes do landing) e coverage (itens obtidos nos datasets por item).
 Datasets por item (tramitação, processos): `--foreach 200` busca os 200 mais recentes que faltam;
-`--foreach all` busca todos.
+`--foreach all` busca todos; `--dataset NOME` limita a um dataset.
 Modos de extração: --years (anos pedidos), --historical --from-year N (carga massiva) e
 --incremental (só o que pode ter mudado).
 """
@@ -88,7 +88,7 @@ def _ingest(settings: Settings, args: argparse.Namespace) -> None:
                     n = landing.extract_plan(con, settings, source, _plan(args)(source), force=args.force)
                     print(f"{source.source}: {n} datasets processados")
                     for name, dataset in source.datasets.items():
-                        if dataset.foreach and args.foreach:
+                        if dataset.foreach and args.foreach and args.dataset in (None, name):
                             foreach.capture(con, settings, source, name, _per_item(args))
                 else:
                     captures, rows = loader.load_pending(con, settings, source, args.rebuild)
@@ -103,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--foreach", help="itens por dataset por item (número ou all); sem isso, esses datasets não rodam"
     )
+    p.add_argument("--dataset", help="com --foreach: só este dataset por item")
     p.add_argument("--source", help="só esta fonte (padrão: todas as de sources/)")
     p.add_argument("--years", type=int, nargs="+", default=[], help="anos de votações e proposições")
     p.add_argument("--extra-years", type=int, nargs="*", default=[], help="anos só de proposições")
@@ -145,6 +146,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.force,
                     only=args.source,
                     per_item=_per_item(args) if args.foreach else None,
+                    dataset_name=args.dataset,
                 )
             )
         case "transform":

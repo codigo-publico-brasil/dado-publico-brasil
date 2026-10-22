@@ -18,6 +18,7 @@ FORMATS = {"csv", "json"}
 POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
+ARCHIVES = {"zip"}
 PARTITIONS = {"year", "legislature"}
 WRITES = {"merge", "replace"}
 # Documentos pessoais nunca são lidos de nenhuma fonte (princípio IX da constituição do projeto).
@@ -62,6 +63,10 @@ class Dataset:
     format: str | None = None  # sobrepõe `access.format` neste dataset
     headers: dict[str, str] | None = None  # somam-se aos de `access.headers`
     foreach: ForEach | None = None
+    archive: str | None = None  # "zip": o arquivo guardado é um pacote; `member` diz qual membro ler
+    member: str = "*"  # padrão (glob) do nome do membro dentro do pacote
+    step: int = 1  # (yearly) só os anos a cada N a partir de first_year (eleições gerais: 4)
+    only: dict[str, tuple[str, ...]] = field(default_factory=dict)  # minimização: só linhas com estes valores
 
     @property
     def yearly(self) -> bool:
@@ -121,6 +126,10 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         raise InvalidContract(f"{where}: partition '{data['partition']}' inválido ({sorted(PARTITIONS)})")
     if data["write"] not in WRITES:
         raise InvalidContract(f"{where}: write '{data['write']}' inválido ({sorted(WRITES)})")
+    if data.get("archive") is not None and data["archive"] not in ARCHIVES:
+        raise InvalidContract(f"{where}: archive deve ser um de {sorted(ARCHIVES)}")
+    if int(data.get("step", 1)) > 1 and data.get("first_year") is None:
+        raise InvalidContract(f"{where}: step exige first_year")
     if data.get("format", "csv") not in FORMATS:
         raise InvalidContract(f"{where}: format deve ser um de {sorted(FORMATS)}")
     columns = tuple(data["columns"])
@@ -152,6 +161,10 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         format=data.get("format"),
         headers=data.get("headers"),
         foreach=foreach,
+        archive=data.get("archive"),
+        member=str(data.get("member", "*")),
+        step=int(data.get("step", 1)),
+        only={k: tuple(v) for k, v in data.get("only", {}).items()},
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
     )
 

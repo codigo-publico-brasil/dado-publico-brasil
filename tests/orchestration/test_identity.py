@@ -21,9 +21,12 @@ def test_each_deputy_gets_a_person_with_its_own_key_and_a_traceable_method(
         ("camara", "deputado", "10"),
         ("camara", "deputado", "11"),
         ("camara", "deputado", "12"),
+        ("tse", "candidato", "2022:1001"),
+        ("tse", "candidato", "2022:1002"),
         ("senado", "senador", "5000"),
         ("senado", "senador", "5001"),
         ("senado", "senador", "5002"),
+        ("senado", "senador", "5003"),
     ]
     assert all(method for *_, method in found)
     assert scalar(con, "SELECT COUNT(DISTINCT id_pessoa) FROM identity.pessoa_identificador") == 6
@@ -39,7 +42,7 @@ def test_person_keys_do_not_change_when_the_pipeline_runs_again(
     con.close()
     build.transform(settings, "transform_pre", *build.PRE_IDENTITY)
     con = warehouse.connect(settings)
-    assert identity.resolve(con) == (6, 0)  # 6 vistos, nenhuma pessoa nova
+    assert identity.resolve(con) == (7, 0)  # 7 vistos, nenhuma pessoa nova e nenhuma fusão a repetir
     after = con.execute(
         "SELECT source_id, id_pessoa FROM identity.pessoa_identificador ORDER BY 1"
     ).fetchall()
