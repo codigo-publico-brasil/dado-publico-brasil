@@ -12,7 +12,7 @@ description: Câmara dos Deputados, dados abertos (arquivos em lote)
 
 access:
   base_url: https://dadosabertos.camara.leg.br/arquivos
-  format: csv                       # csv | json
+  format: csv                       # csv | json | html (html exige `records` no módulo próprio)
   delimiter: ";"                    # (csv)
   encoding: utf-8-sig               # com BOM
   headers: {}                       # cabeçalhos HTTP; aceita ${VARIAVEL} do ambiente (credenciais)

@@ -16,3 +16,23 @@ union all
 
 select 'exercicios', fonte, mandato_id || '/' || exercicio_id || '/' || id_pessoa from {{ ref('exercicios') }}
 group by fonte, mandato_id, exercicio_id, id_pessoa having count(*) > 1
+
+union all
+
+select 'normas', fonte, cast(norma_id as varchar) from {{ ref('normas') }}
+group by fonte, norma_id having count(*) > 1
+
+union all
+
+select 'vetos', fonte, cast(veto_id as varchar) from {{ ref('vetos') }}
+group by fonte, veto_id having count(*) > 1
+
+union all
+
+select 'dispositivos_vetados', fonte, cast(dispositivo_id as varchar) from {{ ref('dispositivos_vetados') }}
+group by fonte, dispositivo_id having count(*) > 1
+
+union all
+
+select 'constituicao_dispositivos', parte, cast(ordem as varchar) from {{ ref('constituicao_dispositivos') }}
+group by parte, ordem having count(*) > 1

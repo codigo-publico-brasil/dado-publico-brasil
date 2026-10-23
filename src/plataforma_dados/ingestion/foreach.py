@@ -18,7 +18,7 @@ from typing import Any
 
 from plataforma_dados.core import runs
 from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, rows
+from plataforma_dados.core.warehouse import Connection, rows, tables
 from plataforma_dados.ingestion import batch, fetch, landing, monitoring
 from plataforma_dados.ingestion.contract import SourceContract
 from plataforma_dados.ingestion.loader import normalize
@@ -31,6 +31,8 @@ def _items(con: Connection, contract: SourceContract, name: str) -> list[tuple[s
     """Itens do dataset, os mais recentes primeiro, com a versão atual de cada um."""
     f = contract.datasets[name].foreach
     assert f
+    if normalize(f.source) not in tables(con, contract.schema):
+        return []  # o dataset de origem ainda não foi carregado: não há itens
     version = f"max(CAST({f.version} AS VARCHAR))" if f.version else "NULL"
     recent = f"max({f.recent_by}) DESC NULLS LAST, " if f.recent_by else ""
     found = con.execute(

@@ -2,6 +2,7 @@
 select
     '{{ var("source_senado") }}' as fonte,
     cast(p.materia_id as varchar) as proposicao_id,
+    p.norma_id,
     p.norma_tipo as tipo,
     p.norma_numero as numero,
     p.norma_ano as ano,

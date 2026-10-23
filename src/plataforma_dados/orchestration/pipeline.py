@@ -60,8 +60,9 @@ def run_all(
                     for name, dataset in source.datasets.items():
                         if dataset.foreach and dataset_name in (None, name):
                             summary.items += foreach.capture(con, settings, source, name, per_item, get)
-                    more_captures, more_rows = loader.load_pending(con, settings, source)
-                    captures, rows = captures + more_captures, rows + more_rows
+                            # carrega já: o próximo dataset por item pode listar os itens deste
+                            more_captures, more_rows = loader.load_pending(con, settings, source)
+                            captures, rows = captures + more_captures, rows + more_rows
                 summary.captures_loaded += captures
                 summary.rows_loaded += rows
         summary.source_errors = monitoring.errors_since(con, started)

@@ -34,6 +34,36 @@ models:
     columns:
       - name: exercicio_id
         tests: [not_null]
+  - name: stg_senado__normas
+    description: Catálogo das normas federais, uma linha por norma, só metadados, com a ementa padronizada e a original.
+    columns:
+      - name: norma_id
+        tests: [unique, not_null]
+  - name: stg_senado__normas_publicacoes
+    description: Publicações de cada norma detalhada (e da Constituição) no Diário Oficial, uma linha por norma e publicação.
+    columns:
+      - name: norma_id
+        tests: [not_null]
+  - name: stg_senado__normas_relacoes
+    description: Relações de cada norma detalhada (e da Constituição) com atos posteriores, uma linha por norma, ato e tipo de relação.
+    columns:
+      - name: norma_id
+        tests: [not_null]
+  - name: stg_senado__vetos
+    description: Vetos presidenciais apreciados pelo Congresso, uma linha por veto, com a matéria vetada e a norma gerada.
+    columns:
+      - name: veto_id
+        tests: [unique, not_null]
+  - name: stg_senado__vetos_dispositivos
+    description: Dispositivos vetados de cada veto buscado, com o texto vetado, a razão do veto e a situação.
+    columns:
+      - name: dispositivo_id
+        tests: [unique, not_null]
+  - name: stg_senado__vetos_votos
+    description: Voto nominal de cada deputado e senador num dispositivo vetado, sem o código do parlamentar.
+    columns:
+      - name: dispositivo_id
+        tests: [not_null]
   - name: stg_senado__senadores_detalhe
     description: Detalhe de cada senador (só os já buscados), com nome civil, nascimento, naturalidade e foto.
     columns:

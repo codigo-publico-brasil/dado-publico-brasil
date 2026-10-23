@@ -102,6 +102,30 @@ Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada 
 - **Resultado da eleição de 2026:** vem como a fonte informa na data da carga; uma eleição recente pode ter resultado ainda não consolidado.
 - **Ainda não carregados:** bens declarados, redes sociais, fotos, certidões, coligações, vagas e votação por candidato.
 
+## Normas, vetos e Constituição
+
+| O que | Dataset | Cobertura |
+| --- | --- | --- |
+| Catálogo das normas federais (metadados) | `normas` (por ano) | 1808 a 2026; só metadados |
+| Publicações no Diário Oficial e relações com atos posteriores | `normas_detalhe` (por item) | leis, leis complementares, emendas e medidas provisórias (cerca de 25 mil), por amostra das mais recentes; a Constituição inteira em `normas_detalhe_constituicao` |
+| Vetos | `vetos` (por ano) | 1994 a 2026 |
+| Dispositivos vetados (texto, razão, situação) | `vetos_dispositivos` (por item) | por amostra dos vetos mais recentes |
+| Voto nominal em dispositivo vetado | `vetos_votos` (por item) | por amostra; **não ligado a pessoas** |
+| Constituição e ADCT, dispositivo a dispositivo | `constituicao`, `adct` | texto até a EC 141 e até a EC 136 |
+
+Números de 23/10/2026: catálogo com **244.020 normas distintas** (as listas anuais da fonte repetem 511 entradas, que a carga junta pela chave); detalhe de 30 normas recentes e da Constituição; 1.350 vetos (1994 a 2026), com os dispositivos dos 126 mais recentes (1.256, dos quais 318 têm voto nominal na fonte) e o voto nominal de 20 desses dispositivos (9.696 votos); Constituição em 2.747 linhas e ADCT em 771.
+
+Lacunas conhecidas, medidas ou registradas:
+
+- **Catálogo:** 12 normas vêm sem o campo `tipo` e 103 sem ementa na própria fonte; ficam vazios (o teste `normas_sem_tipo` mede).
+- **Texto das leis comuns:** não está na API documentada do Senado (ver o [catálogo de fontes](fontes-de-dados.md)). Hoje há só metadados e links; o texto virá de outra fonte, a decidir.
+- **Vetos antes de 1994:** a API não devolve.
+- **Voto nominal dos vetos sem código do parlamentar:** a fonte traz nome, partido e UF. A regra de ligação (ADR 0013) não liga só por nome, então esses votos ficam fora de `pessoas`, com a fonte como está. Ligá-los exigiria uma regra nova, decidida em ADR.
+- **Relações só das normas detalhadas:** o detalhe por norma vem por amostra; o teste `relacoes_de_norma_fora_do_catalogo` mede as que ainda não estão no catálogo (por exemplo, a Constituição enquanto 1988 não foi carregado).
+- **Dispositivos votados sem voto carregado:** `dispositivos_votados_sem_votos_carregados` mede os dispositivos com voto nominal na fonte cujo voto ainda não foi buscado.
+- **Constituição, emendas citadas:** o texto só cita a última emenda de cada trecho, então emendas que o Senado declara como alteração e o texto não cita são esperadas (13 em 23/10/2026). O inverso não pode acontecer: `emendas_do_texto_desconhecidas_do_senado` mede e `constituicao_cita_emenda_posterior_ao_arquivo` barra.
+- **Leitura do HTML da Câmara:** o arquivo vem do Word, um parágrafo por dispositivo; o tipo e o contexto saem do começo de cada linha. Notas com erro de digitação na própria fonte ("nº 41, 2003") e com o parêntese de fechamento faltando foram tratadas; `constituicao_artigo_repetido` barra uma leitura que se perca.
+
 ## 3. O que a Câmara **não** tem e precisa vir de outra instância
 
 | Necessidade | Fonte provável | Por que a Câmara não basta |
@@ -110,8 +134,8 @@ Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada 
 | Presidente, vice e ministros | TSE (candidaturas e eleitos), Planalto, DOU | pertencem ao Executivo |
 | Candidaturas, eleições e resultados | TSE | a Câmara só conhece quem tomou posse |
 | Filiação partidária por período | TSE | a Câmara só informa o partido **na data do voto**; mudanças de nome, fusões e incorporações dos partidos estão em `marts.linhagem_de_partidos` (curada, só o que foi conferido no TSE; faltam as siglas medidas por `partidos_encerrados_sem_linhagem`) |
-| Lei, decreto ou medida provisória que resultou da proposição | Diário Oficial da União, LexML | a Câmara termina no trâmite; a norma publicada é outro documento |
-| Sanção, veto e derrubada de veto | Senado/Congresso, DOU | acontecem depois da votação na Câmara |
+| Lei, decreto ou medida provisória que resultou da proposição | Diário Oficial da União, API de legislação do Senado | a Câmara termina no trâmite; a norma publicada é outro documento (o catálogo de normas já está em `marts.normas`; falta ligar as proposições da Câmara) |
+| Sanção, veto e derrubada de veto | Senado/Congresso, DOU | acontecem depois da votação na Câmara (vetos desde 1994 em `marts.vetos` e `marts.dispositivos_vetados`) |
 | Emendas parlamentares e dinheiro público | Portal da Transparência, TCU | outro assunto |
 | Município de São Paulo | Câmara Municipal, Querido Diário | outro ente |
 | Decisões anteriores às séries digitais | curadoria manual, rotulada | não há dado estruturado |

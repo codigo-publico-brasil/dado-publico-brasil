@@ -1,0 +1,8 @@
+version: 2
+
+models:
+  - name: stg_constituicao__linhas
+    description: Uma linha por parágrafo de texto do arquivo da Constituição e do ADCT, como publicado.
+    columns:
+      - name: ordem
+        tests: [not_null]

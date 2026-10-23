@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from synthetic_camara import fake_downloader, no_headers, synthetic_files
+from synthetic_normas import normas_files, normas_get
 from synthetic_senado import senado_files
 from synthetic_tramitacao import fake_get
 from synthetic_tse import tse_files
@@ -31,6 +32,12 @@ def _open(root: Path) -> tuple[Connection, Settings]:
     return migrations.open_warehouse(settings), settings
 
 
+def get_everything(url: str) -> tuple[int, bytes]:
+    """Chamadas por item das fontes sintéticas: Câmara e Senado (tramitação, processos) e normas e vetos."""
+    status, body = fake_get(url)
+    return (status, body) if status != 404 else normas_get(url)
+
+
 @pytest.fixture(scope="session")
 def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract) -> dict[str, Path]:
     base = tmp_path_factory.mktemp("snapshots")
@@ -49,11 +56,16 @@ def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract
         Settings(storage_root=base / "full"),
         lambda c: landing.plan(c, [2022] if c.source == "tse" else [2024], []),  # TSE: só eleição geral
         downloader=fake_downloader(
-            {**files, **senado_files(base / "origin_senado"), **tse_files(base / "origin_tse")}
+            {
+                **files,
+                **senado_files(base / "origin_senado"),
+                **tse_files(base / "origin_tse"),
+                **normas_files(base / "origin_normas"),
+            }
         ),
         head_request=no_headers,
         per_item=100,
-        get=fake_get,
+        get=get_everything,
     )
     return {name: base / name for name in ("landed", "raw", "full")}
 

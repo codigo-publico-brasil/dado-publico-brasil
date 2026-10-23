@@ -84,3 +84,102 @@ datasets:
        IdentificacaoParlamentar__UrlFotoParlamentar, DadosBasicosParlamentar__DataNascimento,
        DadosBasicosParlamentar__Naturalidade, DadosBasicosParlamentar__UfNaturalidade]
 
+
+  normas:
+    # Catálogo de todas as normas federais (leis, decretos, medidas provisórias, emendas...), por ano de
+    # assinatura, de 1808 em diante. Só os metadados; o texto não vem desta API.
+    url: "{base_url}/legislacao/lista?ano={year}"
+    load: yearly
+    first_year: 1808
+    stable_after_years: 1
+    write: merge
+    records: ListaDocumento.documentos.documento
+    primary_key: [id]
+    columns:
+      [id, tipo, descricao, numero, norma, normaNome, ementa, dataassinatura, anoassinatura, apelido]
+
+  normas_detalhe:
+    # Por item: publicações no DOU e relações com outros atos (alteração, regulamentação, veto) das leis, leis
+    # complementares, emendas e medidas provisórias. ~25 mil normas: por amostra das mais recentes.
+    url: "{base_url}/legislacao/{item}"
+    load: foreach
+    write: merge
+    records: DetalheDocumento.documentos.documento
+    foreach:
+      from: normas
+      item: id
+      where: "tipo IN ('EMC-n', 'EMC-sn', 'LCP', 'LEI-n', 'LEI-sn', 'MPV-cs', 'MPV-ss')"
+      recent_by: anoassinatura
+      refresh_after_days: 90
+      batch_size: 200
+    primary_key: [_item]
+    columns:
+      [_item, id, identificacao__tipo, identificacao__descricao, identificacao__numero, identificacao__norma,
+       identificacao__normaNome, identificacao__dataassinatura, identificacao__apelido,
+       identificacao__urlDocumento, ementa, publicacoes__publicacao, vides__vide]
+    nested: &detalhe_listas [publicacoes__publicacao, vides__vide]
+
+  normas_detalhe_constituicao:
+    # A Constituição de 1988 (norma 579494) tem 641 relações (quem a alterou, regulamentou e interpretou):
+    # um documento só, fora da amostra do dataset por item (é de 1988, não é das mais recentes).
+    url: "{base_url}/legislacao/579494"
+    load: full
+    write: merge
+    records: DetalheDocumento.documentos.documento
+    primary_key: [id]
+    columns: [id, identificacao__tipo, identificacao__descricao, identificacao__numero, identificacao__norma,
+              identificacao__normaNome, identificacao__dataassinatura, identificacao__apelido,
+              identificacao__urlDocumento, ementa, publicacoes__publicacao, vides__vide]
+    nested: *detalhe_listas
+
+  vetos:
+    # Vetos presidenciais apreciados pelo Congresso, por ano, de 1994 em diante (antes disso a API não devolve).
+    url: "{base_url}/materia/vetos/{year}"
+    load: yearly
+    first_year: 1994
+    stable_after_years: 1
+    write: merge
+    records: ListaVetosAnoCN.Vetos.Veto
+    primary_key: [Codigo]
+    columns:
+      [Codigo, Materia__Codigo, Materia__Numero, Materia__Ano, Materia__EmTramitacao, MateriaVetada__Codigo,
+       MateriaVetada__Sigla, MateriaVetada__Numero, MateriaVetada__Ano, MateriaVetada__Ementa,
+       MateriaVetada__NormaGerada__CodigoNorma, MateriaVetada__NormaGerada__NomeNorma,
+       Mensagem__Sigla, Mensagem__Numero, Mensagem__Ano, Mensagem__UrlPlanalto, Total, Assunto,
+       DataRecebimentoCongresso, DataPublicacao, DataSobrestacaoPauta, SobrestandoPauta,
+       QuantidadeDispositivos]
+
+  vetos_dispositivos:
+    # Por item: cada dispositivo vetado (texto vetado, razão do veto, situação) e a data da sessão. O item é
+    # o código da matéria do veto (`_item`); o resultado do plenário é o da fonte, sem inferência.
+    url: "{base_url}/plenario/resultado/veto/materia/{item}"
+    load: foreach
+    write: merge
+    records: ResultadoVetoMateriaCN.Veto.Dispositivos.Dispositivo
+    foreach:
+      from: vetos
+      item: materia_codigo
+      recent_by: data_publicacao
+      refresh_after_days: 30
+      batch_size: 100
+    primary_key: [_item, Codigo]
+    columns:
+      [_item, Codigo, Identificador, Descricao, Conteudo, RazaoVeto, Situacao, PossuiVotos, TipoVotacao,
+       DataSessao]
+
+  vetos_votos:
+    # Por item: o voto nominal de cada deputado e senador num dispositivo vetado votado em painel. A fonte
+    # entrega nome, partido e UF, sem o código do parlamentar: não é ligado a pessoas (ADR 0013).
+    url: "{base_url}/plenario/resultado/veto/dispositivo/{item}"
+    load: foreach
+    write: merge
+    records: ResultadoVetoDispositivoCN.Votacao
+    foreach:
+      from: vetos_dispositivos
+      item: codigo
+      where: "possui_votos = 'Sim'"
+      recent_by: data_sessao
+      batch_size: 50
+    primary_key: [_item]
+    columns: [_item, ParteVetada, TipoVotacao, Sessao, Camara__Voto, Senado__Voto]
+    nested: [Camara__Voto, Senado__Voto]

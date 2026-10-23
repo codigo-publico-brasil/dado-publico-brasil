@@ -1,0 +1,23 @@
+source: constituicao
+power: legislativo
+level: federal
+description: Constituição de 1988, texto atualizado até a última emenda, como a Câmara dos Deputados publica
+access:
+  base_url: https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988
+  format: html
+
+datasets:
+  constituicao:
+    # O link do arquivo muda a cada emenda: o módulo próprio da fonte lê a página, acha o link atual e guarda o
+    # arquivo original com hash. Cada versão nova substitui a anterior no raw; as antigas ficam no landing.
+    url: "{base_url}?parte=constituicao"
+    load: full
+    write: replace
+    columns: [ordem, linha, emenda_do_arquivo]
+
+  adct:
+    # Ato das Disposições Constitucionais Transitórias, do mesmo site, atualizado em separado.
+    url: "{base_url}?parte=adct"
+    load: full
+    write: replace
+    columns: [ordem, linha, emenda_do_arquivo]

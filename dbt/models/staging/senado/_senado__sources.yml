@@ -38,3 +38,37 @@ sources:
         description: >
           Detalhe de cada senador, buscado por item na API (`_item` é o código do senador): nascimento, naturalidade
           e foto, só dos já buscados.
+      - name: normas
+        description: Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...), por ano de assinatura, só os metadados.
+        columns:
+          - name: id
+            tests: [unique, not_null]
+      - name: normas_detalhe
+        description: Detalhe, buscado por item na API, das leis, leis complementares, emendas e medidas provisórias já buscadas (`_item` é o código da norma).
+      - name: normas_detalhe__publicacoes_publicacao
+        description: Publicações de cada norma no Diário Oficial (lista `publicacoes.publicacao`).
+      - name: normas_detalhe__vides_vide
+        description: Relações de cada norma com atos posteriores (alteração, regulamentação, veto; lista `vides.vide`).
+      - name: normas_detalhe__vides_vide__itens__item
+        description: Dispositivos da norma a que cada relação se refere (lista `itens.item` de cada vide).
+      - name: normas_detalhe_constituicao
+        description: Detalhe da Constituição de 1988 (norma 579494), um documento só.
+      - name: normas_detalhe_constituicao__publicacoes_publicacao
+        description: Publicações da Constituição no Diário Oficial.
+      - name: normas_detalhe_constituicao__vides_vide
+        description: Relações da Constituição com atos posteriores (quem a alterou, regulamentou e interpretou).
+      - name: normas_detalhe_constituicao__vides_vide__itens__item
+        description: Dispositivos da Constituição a que cada relação se refere (lista `itens.item` de cada vide).
+      - name: vetos
+        description: Vetos presidenciais apreciados pelo Congresso, por ano, de 1994 em diante.
+        columns:
+          - name: codigo
+            tests: [unique, not_null]
+      - name: vetos_dispositivos
+        description: Dispositivos vetados de cada veto, buscados por item (`_item` é o código da matéria do veto), com razão do veto e situação.
+      - name: vetos_votos
+        description: Voto nominal em cada dispositivo votado em painel, buscado por item (`_item` é o código do dispositivo).
+      - name: vetos_votos__camara_voto
+        description: Votos dos deputados no dispositivo (nome, partido, UF e voto, sem código do parlamentar).
+      - name: vetos_votos__senado_voto
+        description: Votos dos senadores no dispositivo (nome, partido, UF e voto, sem código do parlamentar).

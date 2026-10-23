@@ -200,3 +200,16 @@ def test_foreach_needs_item_in_the_url_and_the_item_column_in_the_key(tmp_path: 
     file.write_text(text, encoding="utf-8")
     with pytest.raises(ValueError, match="foreach exige"):
         load_contract(file)
+
+
+def test_a_dataset_whose_source_has_not_been_loaded_yet_has_no_items_instead_of_failing(env: Env) -> None:
+    con, _, contract = env
+    con.execute(f"DROP TABLE {contract.schema}.pais")  # o raw da origem ainda não existe: não há o que buscar
+    assert foreach.pending(con, contract, "filhos") == []
+    assert foreach.coverage(con, contract, "filhos") == {
+        "esperados": 0,
+        "obtidos": 0,
+        "inexistentes": 0,
+        "falhas": 0,
+        "faltam": 0,
+    }

@@ -1,6 +1,6 @@
 # Catálogo de fontes de dados abertas
 
-Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas chamadas de teste; Câmara e Senado já estão carregados (ver [cobertura e lacunas](cobertura-e-lacunas.md)) e os termos de uso dos dois foram verificados em 21/10/2026. **Para as demais fontes, nada foi baixado em volume nem validado contra os dados.** Itens marcados "não confirmado" precisam ser checados antes de entrar em um pipeline. Páginas que a ferramenta de pesquisa não conseguiu abrir (robots.txt ou desafio de acesso) aparecem como "não verificado", o que não significa que a fonte não exista.
+Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas chamadas de teste; Câmara, Senado, TSE e a legislação federal (verificada em 23/10/2026) já estão carregados (ver [cobertura e lacunas](cobertura-e-lacunas.md)) e os termos de uso dos dois foram verificados em 21/10/2026. **Para as demais fontes, nada foi baixado em volume nem validado contra os dados.** Itens marcados "não confirmado" precisam ser checados antes de entrar em um pipeline. Páginas que a ferramenta de pesquisa não conseguiu abrir (robots.txt ou desafio de acesso) aparecem como "não verificado", o que não significa que a fonte não exista.
 
 ## Prioridade de consumo
 
@@ -57,9 +57,13 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 
 - **Acesso:** `https://sites.tcu.gov.br/dados-abertos/`, sem requisitos. Conjuntos confirmados: jurisprudência (acórdãos, jurisprudência selecionada, publicações, respostas a consultas, súmulas) e normativos. Certidões e contas irregulares: não apareceram. Formatos, API e licença: **não confirmados**.
 
-### Legislação (lead)
+### Legislação federal (verificado em 23/10/2026)
 
-- O Senado mantém o "acervo do portal LexML" (legislação federal, estadual e municipal). **Não verificado.** Pode servir para ligar proposição a lei.
+- **Normas, publicações e relações: API do Senado, `legislacao`** (`https://legis.senado.leg.br/dadosabertos/legislacao/...`, JSON). `lista?ano=` traz o catálogo por ano de assinatura (244.020 normas e atos distintos de 1808 a 2026, e as listas anuais repetem 511 entradas: 149 mil decretos numerados, 16,7 mil leis numeradas, 16 mil decretos sem número, 15,9 mil decretos legislativos, 12,4 mil decretos-lei, 7,5 mil medidas provisórias, 240 leis complementares, 190 emendas constitucionais). O detalhe por código traz as publicações no Diário Oficial (edição, página e coluna) e as relações com atos posteriores (alteração, regulamentação, veto, declaração de constitucionalidade). Não traz o texto da lei.
+- **Vetos: API do Senado e do Congresso.** `materia/vetos/{ano}` lista os vetos desde 1994 (1.350 até 2026; de 1988 a 1993 a API não devolve). `plenario/resultado/veto/materia/{código}` traz cada dispositivo vetado (texto vetado, razão do veto, situação: Mantido, Rejeitado, Prejudicado ou Não Apreciado). `plenario/resultado/veto/dispositivo/{código}` traz o voto nominal de deputados e senadores, **com nome, partido e UF, sem o código do parlamentar**.
+- **Constituição: Câmara dos Deputados.** A página `constituicao1988` publica o texto atualizado em HTML (atualizado até a EC 141/2026) e o ADCT (até a EC 136), um arquivo cada, e o nome muda a cada emenda. O Senado entrega as relações da Constituição (641: 332 alterações permanentes, 133 regulamentações, 102 legislações correlatas) na própria API `legislacao` (norma 579494).
+- **Limites e termos.** A API do Senado limita a 10 requisições por segundo (a plataforma usa 4) e pode devolver 429 e 503. O portal do Senado diz que o conteúdo "pode ser utilizado, desde que seja citada a fonte e para fins lícitos"; não nomeia licença. O `normas.leg.br` declara Creative Commons Atribuição 4.0 nos próprios metadados. O `robots.txt` da Câmara não restringe a página da Constituição.
+- **Não confirmado.** O texto integral das leis comuns: não vem na API documentada, o link de publicação devolve PDF vazio e a rota interna do `normas.leg.br` (`/api/public/normas`) não é documentada e respondeu 400. O Planalto não abre desta rede (conexão derrubada) e o LexML está atrás de verificação anti-robô; nenhum dos dois foi contornado. As Constituições de 1824 a 1967 estão no catálogo, sem texto.
 
 ## Município de São Paulo
 

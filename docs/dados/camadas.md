@@ -92,7 +92,7 @@ Três passos por dataset ([ADR 0011](../adr/0011-buscar-ler-custom-e-chave-por-f
 
 ## Datasets por item e auditoria
 
-Tramitação e situação só existem por item (uma chamada por proposição). Um dataset `load: foreach` busca, em lotes e a uma taxa educada, os itens que faltam ou mudaram, começando pelos mais recentes; roda só com `--foreach N` ou `--foreach all`. Cada lote guarda a resposta de cada item byte a byte, e dois comandos auditam: `plataforma verify` (hashes do landing e do índice `metadata.capture_items`) e `plataforma coverage` (itens esperados, obtidos, inexistentes, com falha e faltantes). Detalhes no [ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md).
+Tramitação e situação só existem por item (uma chamada por proposição). Um dataset `load: foreach` busca, em lotes e a uma taxa educada, os itens que faltam ou mudaram, começando pelos mais recentes; roda só com `--foreach N` ou `--foreach all`. Cada lote guarda a resposta de cada item byte a byte, e dois comandos auditam: `plataforma verify` (hashes do landing e do índice `metadata.capture_items`) e `plataforma coverage` (itens esperados, obtidos, inexistentes, com falha e faltantes). Detalhes no [ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md). Um dataset por item pode listar os itens de outro dataset por item (os dispositivos vetados saem dos vetos, e os votos saem dos dispositivos): na execução completa o raw é carregado depois de cada um, então a cadeia roda numa vez; pelos comandos `extract` e `load` em separado, uma etapa por rodada.
 
 ## Monitoramento das fontes
 
@@ -144,7 +144,7 @@ uv run plataforma run --incremental --foreach 300                 # + os 300 ite
 - **Incremental:** datasets completos mais o ano corrente e o anterior (anos antigos são estáveis). Antes de baixar, pergunta-se à fonte (`ETag`, `Last-Modified`, tamanho) se o arquivo mudou; se não mudou, só se atualiza a data da última verificação. Se nada novo foi carregado, o dbt nem roda.
 - **Histórico:** todos os anos do intervalo, para a primeira carga ou uma recarga.
 - Etapas separadas: `extract`, `load [--rebuild]`, `transform`, `identity`, `catalog`, `docs`, `query`.
-- **Datasets por item** (tramitação da Câmara, processo do Senado) só rodam com `--foreach N` ou `--foreach all`; a carga total é decisão de quem opera, por levar horas.
+- **Datasets por item** (tramitação da Câmara, processo e detalhe do senador, detalhe das normas, vetos) só rodam com `--foreach N` ou `--foreach all`; a carga total é decisão de quem opera, por levar horas.
 - O Dagster ainda não tem ativo para `--foreach`: os datasets por item rodam pela linha de comando.
 - **Auditoria:** `uv run plataforma verify` (hashes do landing e das respostas) e `uv run plataforma coverage` (o que já foi buscado e o que falta). Ver [auditoria](auditoria.md).
 - **Dagster** (interface, agendamento diário às 6h, linhagem entre ativos): `DAGSTER_HOME=<pasta absoluta> uv run dagster dev -m plataforma_dados.orchestration.definitions`, com interface em http://127.0.0.1:3000 (ou `DAGSTER_HOME` no `.env`). Os ativos de cada fonte (`landing_<fonte>`, `raw_<fonte>`) saem de `sources/`; o job `daily_pipeline` roda tudo, e os ativos `landing_*` recebem a configuração do modo (`incremental`, `historical`, `years`). Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez), e o resultado do dbt também vai para `metadata.dbt_results`, como na linha de comando. Rodar o dia a dia pelo Dagster leva cerca de 1 a 2 minutos quando nada mudou na fonte.

@@ -13,6 +13,7 @@ select
     try_cast(data_situacao_atual as date) as situacao_em,
     try_cast(data_inicio_efetivo as date) as iniciado_em,
     sigla_casa_iniciadora as casa_iniciadora,
+    try_cast(norma_gerada_codigo as bigint) as norma_id,
     norma_gerada_sigla_tipo as norma_sigla_tipo,
     norma_gerada_tipo as norma_tipo,
     try_cast(norma_gerada_numero as integer) as norma_numero,

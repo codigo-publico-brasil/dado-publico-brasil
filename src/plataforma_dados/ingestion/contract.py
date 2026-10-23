@@ -14,7 +14,7 @@ import yaml
 
 from plataforma_dados.core.settings import SOURCES_DIR
 
-FORMATS = {"csv", "json"}
+FORMATS = {"csv", "json", "html"}  # html não tem leitor padrão: exige `records` no módulo próprio da fonte
 POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
@@ -216,6 +216,12 @@ def load_contract(path: Path) -> SourceContract:
             raise InvalidContract(
                 f"{source}.{name}: foreach.from '{dataset.foreach.source}' não é um dataset"
             )
+    custom = _custom(data["power"], data["level"], source)
+    html = [n for n, d in datasets.items() if (d.format or access.get("format", "csv")) == "html"]
+    if html and not hasattr(custom, "records"):
+        raise InvalidContract(
+            f"{source}: {html} é html e não tem leitor padrão: defina `records` no módulo próprio"
+        )
     return SourceContract(
         source=source,
         power=data["power"],
@@ -227,7 +233,7 @@ def load_contract(path: Path) -> SourceContract:
         format=access.get("format", "csv"),
         rate_limit=float(access.get("rate_limit", 4)),
         headers=dict(access.get("headers", {})),
-        custom=_custom(data["power"], data["level"], source),
+        custom=custom,
         datasets=datasets,
     )
 

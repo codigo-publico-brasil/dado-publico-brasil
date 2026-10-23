@@ -292,6 +292,7 @@ models:
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Matéria (marts.proposicoes, junto com a fonte)."}
+      - {name: norma_id, data_type: bigint, description: "Código da norma no Senado (marts.normas)."}
       - {name: tipo, data_type: varchar, description: "Tipo da norma (lei, emenda constitucional, decreto legislativo etc.)."}
       - {name: numero, data_type: integer, description: "Número da norma."}
       - {name: ano, data_type: integer, description: "Ano de assinatura da norma."}
@@ -333,3 +334,146 @@ models:
       - {name: id_pessoa_sobrevivente, data_type: bigint, tests: [not_null], description: "Chave que a substituiu (marts.pessoas)."}
       - {name: metodo, data_type: varchar, description: "Regra que ligou as duas chaves."}
       - {name: fundida_em, data_type: timestamp, description: "Momento da fusão."}
+
+  - name: normas
+    description: Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...) desde 1808, só metadados; o texto integral não vem desta fonte. Uma linha por norma.
+    meta: {sensitivity: publico, grain: norma, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: norma_id, data_type: bigint, tests: [not_null], description: "Código da norma no Senado."}
+      - {name: tipo_sigla, data_type: varchar, description: "Sigla do tipo da norma na fonte (LEI-n, DEC-n, MPV-cs...)."}
+      - {name: tipo, data_type: varchar, description: "Tipo da norma (lei numerada, decreto numerado, decreto legislativo etc.)."}
+      - {name: numero, data_type: varchar, description: "Número da norma, como a fonte informa (pode ter letra)."}
+      - {name: ano, data_type: integer, description: "Ano de assinatura."}
+      - {name: assinada_em, data_type: date, description: "Data de assinatura; vazia quando a fonte não informa."}
+      - {name: nome, data_type: varchar, description: "Nome oficial (por exemplo, Lei nº 14.116 de 31/12/2020)."}
+      - {name: identificador, data_type: varchar, description: "Identificador curto da norma na fonte (LEI-14116-2020-12-31)."}
+      - {name: ementa, data_type: varchar, description: "Ementa com caixa padronizada."}
+      - {name: ementa_oficial, data_type: varchar, description: "Ementa exatamente como a fonte publica."}
+      - {name: apelido, data_type: varchar, description: "Apelido popular quando a fonte informa (por exemplo, Lei de Diretrizes Orçamentárias - LDO 2021)."}
+      - {name: fonte_url, data_type: varchar, description: "Página oficial da norma no Senado."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: normas_relacoes
+    description: Ligações de cada norma com atos posteriores, como o Senado declara (alteração, regulamentação, veto, declaração de constitucionalidade). Só das normas detalhadas (leis, leis complementares, emendas, medidas provisórias e a Constituição). Uma linha por norma, ato posterior e tipo de relação.
+    meta: {sensitivity: publico, grain: norma, ato posterior e relação, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: norma_id, data_type: bigint, tests: [not_null], description: "Norma de que se fala (marts.normas)."}
+      - {name: tipo_relacao, data_type: varchar, description: "Tipo da relação como a fonte declara (por exemplo, Declaração de Alteração Permanente)."}
+      - {name: norma_posterior_id, data_type: bigint, description: "Ato posterior que se relaciona com a norma."}
+      - {name: norma_posterior_nome, data_type: varchar, description: "Nome do ato posterior."}
+      - {name: norma_posterior_assinada_em, data_type: date, description: "Data de assinatura do ato posterior."}
+      - {name: publicada_em, data_type: date, description: "Data de publicação do ato posterior."}
+      - {name: publicacao, data_type: varchar, description: "Publicação do ato posterior no Diário Oficial."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: normas_publicacoes
+    description: Onde cada norma foi publicada no Diário Oficial (a original e, por exemplo, a do veto), com página e coluna. Só das normas detalhadas. Uma linha por norma e publicação.
+    meta: {sensitivity: publico, grain: norma e publicação, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: norma_id, data_type: bigint, tests: [not_null], description: "Norma publicada (marts.normas)."}
+      - {name: publicacao_id, data_type: bigint, description: "Código da publicação no Senado."}
+      - {name: tipo_sigla, data_type: varchar, description: "Tipo da publicação (PUB original, VEP veto parcialmente rejeitado etc.)."}
+      - {name: veiculo, data_type: varchar, description: "Veículo e edição, como a fonte informa."}
+      - {name: publicada_em, data_type: date, description: "Data da publicação."}
+      - {name: pagina, data_type: varchar, description: "Página da publicação."}
+      - {name: coluna, data_type: varchar, description: "Coluna da página."}
+      - {name: tem_texto, data_type: boolean, description: "A fonte informa que há o texto da publicação."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: vetos
+    description: Vetos presidenciais apreciados pelo Congresso, de 1994 em diante (antes disso a fonte não informa), com a matéria vetada, a norma gerada e as datas. Uma linha por veto.
+    meta: {sensitivity: publico, grain: veto, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: veto_id, data_type: bigint, tests: [not_null], description: "Código do veto no Senado."}
+      - {name: materia_veto_id, data_type: bigint, description: "Código da matéria do veto (a que tramita no Congresso)."}
+      - {name: numero, data_type: integer, description: "Número do veto no ano."}
+      - {name: ano, data_type: integer, description: "Ano do veto."}
+      - {name: materia_vetada_id, data_type: bigint, description: "Código da matéria vetada (o projeto aprovado)."}
+      - {name: materia_vetada_sigla, data_type: varchar, description: "Sigla da matéria vetada (PL, PLN, PLP...)."}
+      - {name: materia_vetada_numero, data_type: varchar, description: "Número da matéria vetada."}
+      - {name: materia_vetada_ano, data_type: integer, description: "Ano da matéria vetada."}
+      - {name: materia_vetada_ementa, data_type: varchar, description: "Ementa da matéria vetada, com caixa padronizada."}
+      - {name: norma_id, data_type: bigint, description: "Norma gerada pela matéria (marts.normas); vazia quando não houve."}
+      - {name: norma_nome, data_type: varchar, description: "Nome da norma gerada."}
+      - {name: mensagem_numero, data_type: integer, description: "Número da mensagem presidencial do veto."}
+      - {name: mensagem_ano, data_type: integer, description: "Ano da mensagem presidencial."}
+      - {name: mensagem_url, data_type: varchar, description: "Mensagem presidencial no Planalto, como a fonte informa."}
+      - {name: veto_total, data_type: boolean, description: "Veto total (verdadeiro) ou parcial (falso)."}
+      - {name: assunto, data_type: varchar, description: "Assunto do veto, como a fonte informa."}
+      - {name: recebido_em, data_type: date, description: "Data em que o Congresso recebeu o veto."}
+      - {name: publicado_em, data_type: date, description: "Data de publicação do veto."}
+      - {name: sobrestado_em, data_type: date, description: "Data em que o veto passou a trancar a pauta."}
+      - {name: sobrestando_pauta, data_type: boolean, description: "O veto tranca a pauta hoje."}
+      - {name: quantidade_dispositivos, data_type: integer, description: "Quantos dispositivos foram vetados."}
+      - {name: em_tramitacao, data_type: boolean, description: "O veto ainda tramita."}
+      - {name: fonte_url, data_type: varchar, description: "Página oficial da matéria do veto no Senado."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: dispositivos_vetados
+    description: Cada dispositivo vetado, com o texto vetado, a razão do veto escrita pela Presidência e o que o Congresso decidiu (situação como a fonte informa). Só dos vetos já buscados. Uma linha por dispositivo.
+    meta: {sensitivity: publico, grain: dispositivo vetado, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: dispositivo_id, data_type: bigint, tests: [not_null], description: "Código do dispositivo vetado no Senado."}
+      - {name: materia_veto_id, data_type: bigint, description: "Código da matéria do veto (marts.vetos)."}
+      - {name: veto_id, data_type: bigint, description: "Veto a que o dispositivo pertence (marts.vetos)."}
+      - {name: identificador, data_type: varchar, description: "Identificador do dispositivo no veto (veto.ano.item)."}
+      - {name: descricao, data_type: varchar, description: "Onde o dispositivo está na norma (por exemplo, art. 7º, § 4º, inciso II)."}
+      - {name: texto_vetado, data_type: varchar, description: "Texto que foi vetado, como a fonte publica."}
+      - {name: razao_veto, data_type: varchar, description: "Razão do veto escrita pela Presidência, como a fonte publica."}
+      - {name: situacao, data_type: varchar, description: "Situação como a fonte informa: Mantido (o veto vale), Rejeitado (o Congresso derrubou o veto), Prejudicado ou Não Apreciado."}
+      - {name: possui_votos, data_type: boolean, description: "Há voto nominal registrado para o dispositivo."}
+      - {name: tipo_votacao, data_type: varchar, description: "Forma da votação (painel ou cédula); vazia quando não foi apreciado."}
+      - {name: sessao_em, data_type: date, description: "Data da sessão do Congresso que apreciou o dispositivo."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: votos_em_vetos
+    description: Voto de deputados e senadores em cada dispositivo vetado votado, como a fonte entrega (nome, partido e UF, sem o código do parlamentar), por isso não ligado a pessoas. Só dos dispositivos já buscados. Uma linha por dispositivo e voto.
+    meta: {sensitivity: publico-agente-publico, grain: dispositivo e voto, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: dispositivo_id, data_type: bigint, tests: [not_null], description: "Dispositivo votado (marts.dispositivos_vetados)."}
+      - {name: casa, data_type: varchar, description: "Câmara ou Senado."}
+      - {name: nome_parlamentar, data_type: varchar, description: "Nome do parlamentar como a fonte informa, com caixa padronizada."}
+      - {name: partido, data_type: varchar, description: "Partido na sessão, como a fonte informa."}
+      - {name: uf, data_type: varchar, description: "UF do parlamentar."}
+      - {name: voto, data_type: varchar, description: "Voto como a fonte informa (Sim, Não, Branco, Abstenção...)."}
+      - {name: sessao, data_type: varchar, description: "Sessão do Congresso, como a fonte informa."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: constituicao_dispositivos
+    description: A Constituição de 1988 e o ADCT dispositivo a dispositivo, como a Câmara publica (texto atualizado até a emenda indicada). O tipo e o contexto saem da posição e do começo de cada linha; o texto não é reescrito. Uma linha por parágrafo do arquivo.
+    meta: {sensitivity: publico, grain: parágrafo do arquivo, owner: fundador do projeto, freshness: a cada emenda}
+    columns:
+      - {name: parte, data_type: varchar, description: "Constituição (parte permanente) ou ADCT."}
+      - {name: ordem, data_type: integer, tests: [not_null], description: "Posição do parágrafo no arquivo, a partir de 1."}
+      - {name: tipo, data_type: varchar, description: "Cabeçalho do arquivo, preâmbulo, título, capítulo, seção, subseção, artigo, parágrafo, inciso, alínea, item, texto ou assinaturas."}
+      - {name: identificador, data_type: varchar, description: "Caminho do dispositivo (Art. 5º, § 1º, I, a)); vazio em títulos, capítulos e linhas sem artigo."}
+      - {name: artigo, data_type: varchar, description: "Número do artigo a que a linha pertence."}
+      - {name: paragrafo, data_type: varchar, description: "Número do parágrafo (ou único) a que a linha pertence."}
+      - {name: inciso, data_type: varchar, description: "Inciso (algarismo romano) a que a linha pertence."}
+      - {name: alinea, data_type: varchar, description: "Alínea (letra) a que a linha pertence."}
+      - {name: titulo, data_type: varchar, description: "Título (cabeçalho) em que a linha está."}
+      - {name: capitulo, data_type: varchar, description: "Capítulo (cabeçalho) em que a linha está."}
+      - {name: secao, data_type: varchar, description: "Seção (cabeçalho) em que a linha está."}
+      - {name: texto, data_type: varchar, description: "A linha inteira como a Câmara publica, com a indicação da emenda que a alterou."}
+      - {name: atualizada_ate_emenda, data_type: integer, description: "Número da emenda constitucional até a qual o arquivo está atualizado."}
+      - {name: fonte_url, data_type: varchar, description: "Página oficial da Câmara com o texto atualizado."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: constituicao_alteracoes
+    description: Cada indicação de emenda que o texto da Constituição traz entre parênteses, por dispositivo (por exemplo, Redação dada pela Emenda Constitucional nº 45, de 2004). Uma linha por dispositivo e emenda citada.
+    meta: {sensitivity: publico, grain: dispositivo e emenda citada, owner: fundador do projeto, freshness: a cada emenda}
+    columns:
+      - {name: parte, data_type: varchar, description: "Constituição (parte permanente) ou ADCT."}
+      - {name: ordem, data_type: integer, tests: [not_null], description: "Posição do parágrafo no arquivo (marts.constituicao_dispositivos)."}
+      - {name: identificador, data_type: varchar, description: "Caminho do dispositivo (marts.constituicao_dispositivos)."}
+      - {name: tipo_alteracao, data_type: varchar, description: "Tirado das palavras da nota: redação dada, incluído, revogado, suprimido, renumerado, vide (só referência) ou outra."}
+      - {name: emenda_tipo, data_type: varchar, description: "Emenda Constitucional ou Emenda Constitucional de Revisão."}
+      - {name: emenda_numero, data_type: integer, description: "Número da emenda citada na nota."}
+      - {name: emenda_ano, data_type: integer, description: "Ano da emenda; só quando a nota cita uma emenda."}
+      - {name: nota, data_type: varchar, description: "A nota como o texto publica, sem os parênteses."}

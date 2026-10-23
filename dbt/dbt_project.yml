@@ -40,6 +40,8 @@ models:
         +tags: [pre_identity]
       tse:
         +tags: [pre_identity]
+      constituicao:
+        +tags: [pre_identity]
       metadata:
         +tags: [pre_identity]
     intermediate:

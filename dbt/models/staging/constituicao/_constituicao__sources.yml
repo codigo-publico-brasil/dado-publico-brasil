@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+  - name: constituicao
+    description: >
+      Constituição de 1988, texto atualizado como a Câmara dos Deputados publica (arquivo HTML guardado no landing).
+      Carregado em raw_federal_constituicao (declaração em sources/legislativo/federal/constituicao.yml): uma linha
+      por parágrafo de texto, na ordem do arquivo.
+    schema: raw_federal_constituicao
+    loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
+    freshness:
+      warn_after: {count: 120, period: day}
+      error_after: {count: 400, period: day}
+    meta:
+      origin: Câmara dos Deputados
+      sensitivity: publico
+      owner: fundador do projeto
+    tables:
+      - name: constituicao
+        description: Texto da Constituição (parte permanente), uma linha por parágrafo do arquivo.
+      - name: adct
+        description: Ato das Disposições Constitucionais Transitórias, uma linha por parágrafo do arquivo.
