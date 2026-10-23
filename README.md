@@ -27,7 +27,8 @@ As regras de apresentação (neutralidade, sem recomendação de voto) pertencem
 | Ingestão (Câmara e Senado) | Funcionando: captura com hash (CSV e JSON), carga no raw (dlt), monitoramento de disponibilidade, colunas e volume; datasets por item (tramitação, processos) em lotes auditáveis, por amostra até a carga total ser pedida; código próprio por fonte só quando preciso |
 | Transformação | Funcionando: dbt em camadas, identidade de pessoas, testes de qualidade, catálogo e dicionário de colunas |
 | Orquestração | Linha de comando e Dagster, com os ativos gerados a partir de `sources/` |
-| Documentos e vetores (esqueleto em `documents/`), camada de consumo em PostgreSQL, infraestrutura | A fazer |
+| PostgreSQL de serviço | Funcionando em desenvolvimento local: `plataforma publish` copia os marts e o papel `leitor` só lê; a identidade tem cópia imutável a cada execução ([ADR 0014](docs/adr/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)) |
+| Documentos e vetores (esqueleto em `documents/`), infraestrutura de produção | A fazer |
 
 Última carga real (2000 a 2026): 190 mil votações, 1,9 milhão de votos, 886 mil proposições, 7,9 mil pessoas.
 
@@ -68,7 +69,16 @@ uv run plataforma query --sql "SELECT * FROM marts.pessoas LIMIT 10"
 uv run plataforma docs
 ```
 
-O último abre o grafo de linhagem e o dicionário de colunas (dbt docs). Auditoria e datasets por item:
+O último abre o grafo de linhagem e o dicionário de colunas (dbt docs).
+
+**PostgreSQL de serviço (o que as aplicações leem).** Requer Docker. Defina no `.env` `PLATAFORMA_PG_PASSWORD`, `PLATAFORMA_PG_LEITOR_PASSWORD` e `PLATAFORMA_POSTGRES_DSN` (modelo em `.env.example`) e, a partir desta pasta:
+
+```bash
+docker compose up -d
+uv run --env-file .env plataforma publish
+```
+
+O `publish` copia todos os marts para o esquema `marts` do PostgreSQL numa troca atômica e dá leitura ao papel `leitor`. Os testes de integração rodam contra o banco `teste` (`PLATAFORMA_TEST_POSTGRES`); sem a variável, são pulados. Auditoria e datasets por item:
 
 ```bash
 uv run plataforma verify

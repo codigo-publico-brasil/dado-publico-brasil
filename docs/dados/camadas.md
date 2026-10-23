@@ -177,7 +177,11 @@ O [catálogo](catalogo.md) lista todas as tabelas, gerado do dbt (`uv run plataf
 
 ## Armazenamento
 
-Um único arquivo DuckDB, com um esquema por camada (`raw_<esfera>_<fonte>`, `staging`, `intermediate`, `marts`, `identity`, `metadata`). Limite do DuckDB em arquivo: um processo escritor por vez. Por isso o dbt roda em outro processo, com a conexão do chamador fechada, e a aplicação abre em modo somente leitura. No PostgreSQL do piloto troca-se o destino do dlt e o adaptador do dbt.
+Um único arquivo DuckDB, com um esquema por camada (`raw_<esfera>_<fonte>`, `staging`, `intermediate`, `marts`, `identity`, `metadata`). Limite do DuckDB em arquivo: um processo escritor por vez. Por isso o dbt roda em outro processo, com a conexão do chamador fechada, e a aplicação abre em modo somente leitura. 
+
+**PostgreSQL de serviço** ([ADR 0014](../adr/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)). O dbt roda só no DuckDB; o PostgreSQL só recebe os marts já prontos, pelo comando `publish`: as tabelas vão para um esquema de trabalho (`marts_novo`) e são trocadas por `marts` num único comando atômico, então quem lê vê os marts antigos ou os novos, nunca metade. Depois da troca o comando confere que cada tabela chegou com as mesmas linhas. O papel `leitor` (somente leitura) é criado pela infraestrutura (em desenvolvimento, por `docker/postgres-init.sh`); o código nunca cria papéis. Ainda não há índices: entram quando uma aplicação declarar como consulta cada mart. A extensão `postgres` do DuckDB é baixada na primeira execução (precisa de rede).
+
+**Cópia imutável da identidade.** A chave `id_pessoa` não pode mudar depois de entregue a uma aplicação, e reconstruir a partir do landing não garante as mesmas chaves. Cada execução da identidade grava `snapshots/identity/<data-hora>/` (um Parquet por tabela de `identity`) dentro da pasta de armazenamento; nunca se sobrescreve. `plataforma verify` confere se a cópia mais recente é igual à identidade do warehouse.
 
 ## Caixa dos textos
 

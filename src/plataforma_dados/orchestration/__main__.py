@@ -9,7 +9,8 @@ A pasta de armazenamento e o warehouse vêm de PLATAFORMA_STORAGE_ROOT e PLATAFO
     uv run plataforma run --years 2024 2025 2026 --extra-years 2019
 
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
-Auditoria: verify (hashes do landing) e coverage (itens obtidos nos datasets por item).
+Publicação: publish copia os marts para o PostgreSQL de serviço (PLATAFORMA_POSTGRES_DSN).
+Auditoria: verify (hashes do landing e cópia da identidade) e coverage (itens obtidos nos datasets por item).
 Datasets por item (tramitação, processos): `--foreach 200` busca os 200 mais recentes que faltam;
 `--foreach all` busca todos; `--dataset NOME` limita a um dataset.
 Modos de extração: --years (anos pedidos), --historical --from-year N (carga massiva) e
@@ -24,7 +25,7 @@ from plataforma_dados.core import settings as settings_module
 from plataforma_dados.core.settings import Settings
 from plataforma_dados.ingestion import contract, foreach, landing, loader
 from plataforma_dados.orchestration import pipeline
-from plataforma_dados.transformation import build, catalog, dbt
+from plataforma_dados.transformation import build, catalog, dbt, publish, snapshot
 
 COMMANDS = (
     "run",
@@ -32,6 +33,7 @@ COMMANDS = (
     "load",
     "transform",
     "identity",
+    "publish",
     "catalog",
     "docs",
     "query",
@@ -154,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
             print("dbt concluído (staging, intermediate, identidade e marts)")
         case "verify":
             con = migrations.open_warehouse(settings)
-            problems = foreach.verify(con, settings, args.source)
+            problems = foreach.verify(con, settings, args.source) + snapshot.problems(con, settings)
             con.close()
             print(chr(10).join(problems) or "landing íntegro: todos os hashes conferem")
             return 1 if problems else 0
@@ -162,6 +164,9 @@ def main(argv: list[str] | None = None) -> int:
             _coverage(settings, args.source)
         case "identity":
             print(f"{build.resolve_identity(settings)} pessoas novas")
+        case "publish":
+            published = publish.publish(settings)
+            print(f"{len(published)} marts publicados ({sum(published.values())} linhas)")
         case _:
             _ingest(settings, args)
     return 0

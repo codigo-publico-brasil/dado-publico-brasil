@@ -12,7 +12,7 @@ dos schemas `raw_*` e de `metadata.captures`.
 from plataforma_dados.core import runs, warehouse
 from plataforma_dados.core.settings import Settings
 from plataforma_dados.core.warehouse import Connection
-from plataforma_dados.transformation import dbt, identity
+from plataforma_dados.transformation import dbt, identity, snapshot
 from plataforma_dados.transformation.quality import record
 
 # `cautious`: um teste só roda quando todos os modelos de que depende já existem.
@@ -57,10 +57,12 @@ def check_freshness(settings: Settings) -> None:
 
 
 def resolve_identity(settings: Settings) -> int:
-    """Cria as pessoas novas. Devolve quantas foram criadas."""
+    """Cria as pessoas novas e guarda a cópia imutável da identidade. Devolve quantas foram criadas."""
     con = warehouse.connect(settings)
     try:
-        return identity.resolve(con)[1]
+        created = identity.resolve(con)[1]
+        snapshot.take(con, settings)
+        return created
     finally:
         con.close()
 
