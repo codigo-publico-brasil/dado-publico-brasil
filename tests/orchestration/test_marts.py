@@ -126,10 +126,14 @@ def test_every_warehouse_table_of_the_marts_has_a_declared_contract(
     con, _ = full
     assert tables(con, "marts") == [
         "autorias",
+        "bens_de_candidatos",
         "candidaturas",
         "constituicao_alteracoes",
         "constituicao_dispositivos",
         "dispositivos_vetados",
+        "emendas",
+        "emendas_convenios",
+        "emendas_favorecidos",
         "exercicios",
         "frentes",
         "fusoes_de_pessoas",
@@ -151,6 +155,7 @@ def test_every_warehouse_table_of_the_marts_has_a_declared_contract(
         "vetos",
         "votacoes",
         "votos",
+        "votos_de_candidatos",
         "votos_em_vetos",
     ]
     assert columns(con, "marts", "votos") == [

@@ -58,11 +58,21 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `votacoes` | Votações em plenário com resultado, totais e a matéria votada. | publico-agente-publico |  |
 | `votacoes__votos` | Voto de cada senador em cada votação nominal (lista `votos` da votação). | publico-agente-publico |  |
 
+## raw_federal_transparencia
+
+| Tabela | O que é | Sensibilidade | Grain |
+| --- | --- | --- | --- |
+| `emendas` | Emendas parlamentares por localidade, função, programa e ação, com os valores empenhado, liquidado e pago. | publico |  |
+| `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico |  |
+| `emendas_favorecidos` | Quem recebeu o dinheiro das emendas, só pessoa jurídica e unidade gestora. | publico |  |
+
 ## raw_federal_tse
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
+| `bens` | Bens declarados pelos candidatos de todos os cargos nas eleições gerais de 2006 em diante, uma linha por bem. | publico-agente-publico |  |
 | `candidaturas` | Candidaturas a deputado federal e senador (e suplentes) nas eleições gerais, uma linha por candidatura. | publico-agente-publico |  |
+| `votacao` | Votos de cada candidato (todos os cargos) por município e zona nas eleições gerais já carregadas, como o TSE publica. | publico-agente-publico |  |
 
 ## staging
 
@@ -102,7 +112,12 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `stg_senado__vetos_votos` | Voto nominal de cada deputado e senador num dispositivo vetado, sem o código do parlamentar. | publico-agente-publico |  |
 | `stg_senado__votacoes` | Votações em plenário com resultado, totais e a matéria votada. Votação secreta tem `secreta` verdadeiro. | publico-agente-publico |  |
 | `stg_senado__votos` | Voto de cada senador em cada votação nominal. Em votação secreta a sigla é "Votou". | publico-agente-publico |  |
+| `stg_transparencia__emendas` | Emendas parlamentares, uma linha por emenda, localidade, função, programa e ação. | publico-agente-publico |  |
+| `stg_transparencia__emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico-agente-publico |  |
+| `stg_transparencia__emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda (só pessoa jurídica e unidade gestora), por mês. | publico-agente-publico |  |
+| `stg_tse__bens` | Bens declarados pelos candidatos de todos os cargos, uma linha por bem. | publico-agente-publico |  |
 | `stg_tse__candidaturas` | Candidaturas ao Congresso (deputado federal e senador, com suplentes) nas eleições gerais, uma linha por candidatura e turno. | publico-agente-publico |  |
+| `stg_tse__votacao` | Votos de cada candidato (todos os cargos) por município e zona, como o TSE publica. | publico-agente-publico |  |
 
 ## intermediate
 
@@ -132,10 +147,14 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
 | `autorias` | Proposições de que cada pessoa é autora ou apoiadora, com a posição na assinatura e o total de autores. Uma linha por pessoa e proposição. | publico-agente-publico | pessoa e proposição |
+| `bens_de_candidatos` | Bens declarados à Justiça Eleitoral por candidatos que já são pessoa do projeto, de 2006 em diante, como o TSE publica (valor declarado, sem correção). Uma linha por bem. | publico-agente-publico | candidatura e bem |
 | `candidaturas` | Candidaturas ao Congresso (deputado federal e senador, com suplentes) de quem já é pessoa do projeto, com partido, situação e resultado. Uma linha por candidatura e turno. | publico-agente-publico | pessoa |
 | `constituicao_alteracoes` | Cada indicação de emenda que o texto da Constituição traz entre parênteses, por dispositivo (por exemplo, Redação dada pela Emenda Constitucional nº 45, de 2004). Uma linha por dispositivo e emenda citada. | publico | dispositivo e emenda citada |
 | `constituicao_dispositivos` | A Constituição de 1988 e o ADCT dispositivo a dispositivo, como a Câmara publica (texto atualizado até a emenda indicada). O tipo e o contexto saem da posição e do começo de cada linha; o texto não é reescrito. Uma linha por parágrafo do arquivo. | publico | parágrafo do arquivo |
 | `dispositivos_vetados` | Cada dispositivo vetado, com o texto vetado, a razão do veto escrita pela Presidência e o que o Congresso decidiu (situação como a fonte informa). Só dos vetos já buscados. Uma linha por dispositivo. | publico | dispositivo vetado |
+| `emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
+| `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
+| `emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Só pessoa jurídica e unidade gestora, a pessoa física, cidadão comum, nunca entra. Uma linha por emenda, favorecido e mês. | publico | emenda |
 | `exercicios` | Exercício oficial no cargo como o Senado informa (titular e suplentes), com início, fim e causa de afastamento. Só o Senado; a Câmara não publica. Uma linha por pessoa, mandato e exercício. | publico-agente-publico | pessoa |
 | `frentes` | Frentes parlamentares, com legislatura de criação e coordenador. Uma linha por frente. | publico | frente parlamentar |
 | `fusoes_de_pessoas` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa (por exemplo, deputado que virou senador). Uma linha por chave absorvida. | publico-agente-publico | chave absorvida |
@@ -157,6 +176,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `vetos` | Vetos presidenciais apreciados pelo Congresso, de 1994 em diante (antes disso a fonte não informa), com a matéria vetada, a norma gerada e as datas. Uma linha por veto. | publico | veto |
 | `votacoes` | Votações com resultado oficial, totais e proposições. Uma linha por votação. | publico | votação |
 | `votos` | Voto de cada pessoa em cada votação nominal, com partido e UF na data. Uma linha por pessoa e votação. | publico-agente-publico | pessoa e votação |
+| `votos_de_candidatos` | Votos de cada candidatura de quem já é pessoa do projeto, somados dos municípios e zonas, nas eleições gerais já carregadas. Uma linha por candidatura e turno. | publico-agente-publico | candidatura e turno |
 | `votos_em_vetos` | Voto de deputados e senadores em cada dispositivo vetado votado, como a fonte entrega (nome, partido e UF, sem o código do parlamentar), por isso não ligado a pessoas. Só dos dispositivos já buscados. Uma linha por dispositivo e voto. | publico-agente-publico | dispositivo e voto |
 
 ## identity
@@ -188,6 +208,21 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `qtd_autores` | bigint | Total de autores da proposição. |
 | `proponente` | integer | 1 quando consta como proponente; 0 caso contrário. |
 | `proposicao_fonte_url` | varchar | Endereço da proposição na fonte oficial. |
+
+### marts.bens_de_candidatos
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
+| `candidatura_id` | varchar | Candidatura (marts.candidaturas): ano da eleição e sequencial do candidato. |
+| `ano_eleicao` | integer | Ano da eleição. |
+| `ordem` | integer | Número do bem na declaração do candidato. |
+| `tipo` | varchar | Tipo do bem (imóvel, veículo, aplicação financeira etc.). |
+| `descricao` | varchar | Descrição do bem, como o candidato declarou. |
+| `valor` | decimal(18,2) | Valor declarado em reais, sem correção. |
+| `atualizado_em` | date | Data da última atualização do bem na declaração. |
+| `capturado_em` | date | Data da captura do arquivo de origem. |
 
 ### marts.candidaturas
 
@@ -257,6 +292,75 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `possui_votos` | boolean | Há voto nominal registrado para o dispositivo. |
 | `tipo_votacao` | varchar | Forma da votação (painel ou cédula); vazia quando não foi apreciado. |
 | `sessao_em` | date | Data da sessão do Congresso que apreciou o dispositivo. |
+| `capturado_em` | date | Data da captura do arquivo de origem. |
+
+### marts.emendas
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |
+| `emenda_codigo` | varchar | Código da emenda; vazio em registros antigos sem código. |
+| `ano` | integer | Ano da emenda. |
+| `tipo` | varchar | Tipo da emenda (individual, de bancada, de comissão, de relator). |
+| `autor_codigo` | varchar | Código orçamentário do autor; vazio quando a fonte não informa. |
+| `autor_nome` | varchar | Nome do autor (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada. |
+| `numero` | varchar | Número da emenda. |
+| `localidade` | varchar | Localidade de aplicação do recurso, como a fonte informa. |
+| `municipio_ibge` | integer | Código IBGE do município. |
+| `municipio` | varchar | Município de aplicação. |
+| `uf` | varchar | UF de aplicação, como a fonte informa. |
+| `regiao` | varchar | Região. |
+| `funcao` | varchar | Função orçamentária. |
+| `subfuncao` | varchar | Subfunção orçamentária. |
+| `programa_codigo` | varchar | Código do programa. |
+| `programa` | varchar | Programa. |
+| `acao_codigo` | varchar | Código da ação. |
+| `acao` | varchar | Ação orçamentária. |
+| `plano_orcamentario` | varchar | Plano orçamentário. |
+| `valor_empenhado` | decimal(18,2) | Valor empenhado em reais. |
+| `valor_liquidado` | decimal(18,2) | Valor liquidado em reais. |
+| `valor_pago` | decimal(18,2) | Valor pago em reais. |
+| `valor_restos_a_pagar_inscritos` | decimal(18,2) | Restos a pagar inscritos em reais. |
+| `valor_restos_a_pagar_cancelados` | decimal(18,2) | Restos a pagar cancelados em reais. |
+| `valor_restos_a_pagar_pagos` | decimal(18,2) | Restos a pagar pagos em reais. |
+| `capturado_em` | date | Data da captura do arquivo de origem. |
+
+### marts.emendas_convenios
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |
+| `emenda_codigo` | varchar | Código da emenda (marts.emendas). |
+| `funcao` | varchar | Função orçamentária. |
+| `subfuncao` | varchar | Subfunção orçamentária. |
+| `localidade` | varchar | Localidade do gasto, como a fonte informa. |
+| `tipo` | varchar | Tipo da emenda. |
+| `publicado_em` | date | Data de publicação do convênio. |
+| `convenente` | varchar | Quem firmou o convênio. |
+| `objeto` | varchar | Objeto do convênio. |
+| `convenio_numero` | varchar | Número do convênio. |
+| `valor` | decimal(18,2) | Valor do convênio em reais. |
+| `capturado_em` | date | Data da captura do arquivo de origem. |
+
+### marts.emendas_favorecidos
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |
+| `emenda_codigo` | varchar | Código da emenda (marts.emendas). |
+| `autor_codigo` | varchar | Código orçamentário do autor da emenda. |
+| `autor_nome` | varchar | Nome do autor da emenda, com caixa padronizada. |
+| `numero` | varchar | Número da emenda. |
+| `tipo` | varchar | Tipo da emenda. |
+| `ano` | integer | Ano do pagamento. |
+| `mes` | integer | Mês do pagamento. |
+| `favorecido_codigo` | varchar | CNPJ ou código da unidade gestora do favorecido. |
+| `favorecido` | varchar | Nome do favorecido. |
+| `natureza_juridica` | varchar | Natureza jurídica do favorecido. |
+| `tipo_favorecido` | varchar | Pessoa jurídica ou unidade gestora. |
+| `uf` | varchar | UF do favorecido. |
+| `municipio` | varchar | Município do favorecido. |
+| `valor` | decimal(18,2) | Valor recebido em reais. |
 | `capturado_em` | date | Data da captura do arquivo de origem. |
 
 ### marts.exercicios
@@ -582,6 +686,22 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `votou_em` | timestamp | Data e hora do voto. |
 | `partido` | varchar | Partido na data do voto. |
 | `uf` | varchar | UF na data do voto. |
+
+### marts.votos_de_candidatos
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
+| `candidatura_id` | varchar | Candidatura (marts.candidaturas). |
+| `ano_eleicao` | integer | Ano da eleição. |
+| `turno` | integer | Turno da eleição. |
+| `uf` | varchar | UF da candidatura. |
+| `cargo` | varchar | Cargo disputado. |
+| `votos_nominais` | bigint | Votos nominais recebidos, de qualquer destinação. |
+| `votos_validos` | bigint | Votos nominais válidos. |
+| `municipios` | bigint | Em quantos municípios o candidato teve votos. |
+| `capturado_em` | date | Data da captura do arquivo de origem. |
 
 ### marts.votos_em_vetos
 

@@ -117,9 +117,8 @@ def head(url: str, headers: dict[str, str] | None = None) -> dict[str, str | Non
 def downloader(contract: SourceContract, dataset: str) -> Downloader:
     """O `download` do módulo `custom` da fonte, se houver, ou o padrão com os cabeçalhos do YAML."""
     custom = getattr(contract.custom, "download", None)
-    return custom or partial(
-        download, headers=contract.headers_of(dataset), suffix=contract.format_of(dataset)
-    )
+    suffix = "zip" if contract.datasets[dataset].archive == "zip" else contract.format_of(dataset)
+    return custom or partial(download, headers=contract.headers_of(dataset), suffix=suffix)
 
 
 def head_request(contract: SourceContract, dataset: str) -> HeadRequest:

@@ -33,29 +33,34 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 - **Cobertura histórica:** a página não informa. **Não confirmado** a partir de que ano há votos nominais em formato aberto.
 - **Licença e limites (verificado em 21/10/2026):** os dados são "disponibilizados sob licença que permita sua livre utilização", sem nomear a licença; a política de uso do portal não pôde ser lida; sem cadastro e sem limite de requisições informado.
 
-### Diário Oficial da União (DOU)
+### Diário Oficial da União (DOU) (verificado em 23/10/2026)
 
-- **Acesso:** o projeto INLABS da Imprensa Nacional (`https://github.com/Imprensa-Nacional/inlabs`) disponibiliza as edições completas em PDF e XML, gratuitamente desde 01/01/2020. Se há cadastro e qual a cobertura anterior a 2020: **não verificado** (a página do `in.gov.br` bloqueou a consulta).
-- **Uso aqui:** ligar a decisão (lei, decreto, medida provisória) à publicação oficial.
+- **Acesso:** a Imprensa Nacional publica as edições em XML, compactadas em zips mensais por seção (`S01` atos normativos, `S02` atos de pessoal, `S03` contratos, editais e avisos), na estrutura Ano > Mês > arquivo.zip, na primeira terça-feira de cada mês com as edições do mês anterior. Os links diretos dos zips não aparecem na página (a lista é dinâmica). O INLABS (`https://inlabs.in.gov.br`) dá as edições completas em PDF e XML desde 2020, **exige cadastro** (e-mail e senha) e guarda só os últimos 4 meses; o dados.gov.br responde 401 sem token.
+- **Limites:** o XML aberto **não substitui a versão certificada** (o PDF). O dicionário de dados "será disponibilizado em data a ser definida": **não existe**. Cobertura anterior a 2020 e tamanho: **não confirmados**.
+- **Licença:** o site da Imprensa Nacional declara **Creative Commons Atribuição-SemDerivações 3.0 (CC BY-ND)**. Transformar o XML em tabelas pode contar como derivação; por isso o carregamento, quando houver, ficaria só nos metadados de identificação (tipo, órgão, data, título e link da página oficial), sem o corpo do texto. Decisão do fundador pendente.
+- **Uso aqui:** nomeações e exonerações (seção 2) e a publicação das normas (seção 1).
 
 ### TSE (dados abertos)
 
-- **Acesso:** `https://dadosabertos.tse.jus.br/` com 187 conjuntos em arquivos, principalmente CSV. Não há API.
-- **Conteúdo:** candidaturas (inclui bens e coligações), prestação de contas, resultados por município, zona e seção, eleitorado, dados processuais.
-- **Cobertura:** a página mostra 2018, 2020 e 2026; há marcações para 2022, 2024 e 2025. Séries mais antigas: **não confirmadas**. Filiação partidária: não apareceu na página.
+- **Acesso:** `https://dadosabertos.tse.jus.br/` com 187 conjuntos em arquivos, principalmente CSV, e catálogo CKAN (`/api/3/action/package_show?id=candidatos-2022`). Não há API de consulta.
+- **Conteúdo:** candidaturas (inclui bens, coligações, redes sociais, fotos e certidões criminais), prestação de contas, resultados por município, zona e seção, eleitorado, dados processuais.
 - **Licença (verificado em 21/10/2026):** cada conjunto declara Creative Commons Attribution (CC BY): citar a fonte. Os pacotes de candidaturas de cada eleição têm cerca de 3 a 5 MB; o arquivo `_BRASIL.csv` dentro do pacote reúne os estados.
-- **Cuidado:** são dados pessoais de candidatos (bens, redes sociais, fotos). Usar só o necessário e seguir a política de dados do projeto.
+- **Complementar (verificado em 23/10/2026):** `bem_candidato_{ano}.zip` (bens declarados, de 2006 a 2026, 31 MB no total; 1998 e 2002 não existem; 2006 e 2010 usam outros nomes de coluna) e `votacao_candidato_munzona_{ano}.zip` (votos de cada candidato por município e zona, de 1998 a 2026, **2,4 GB compactados**; 2022 sozinho tem 580 MB, 4,3 GB descompactados e 9,38 milhões de linhas, de todos os cargos). Os dois trazem `SQ_CANDIDATO`, a chave que liga à candidatura.
+- **Cuidado:** são dados pessoais de candidatos. O nome social e as certidões criminais não entram; CPF, título de eleitor e e-mail nunca entram. Fora da carga por enquanto: redes sociais, fotos, propostas, notas fiscais e prestação de contas.
 
-### Portal da Transparência (CGU)
+### Portal da Transparência (CGU) (verificado em 23/10/2026)
 
-- **Acesso:** API com token gratuito por e-mail. Limite informado: 400 requisições por minuto entre 6h e 23h59 e 700 por minuto entre 0h e 5h59. Download em lote em `/download-de-dados`.
-- **Conteúdo:** emendas parlamentares, despesas, contratos, convênios, licitações, benefícios (incluindo Bolsa Família), sanções, servidores, viagens.
-- **Licença:** livre utilização, conforme o Decreto 8.777/2016.
-- **Uso aqui:** fase posterior (ligar parlamentares a emendas e dinheiro).
+- **Acesso:** API com token gratuito (conta gov.br nível prata ou ouro; cabeçalho `chave-api-dados`). Limite informado: 400 requisições por minuto entre 6h e 23h59 e 700 por minuto entre 0h e 5h59. Download em lote em `/download-de-dados/...`, **sem token**.
+- **Emendas parlamentares:** `/download-de-dados/emendas-parlamentares/UNICO` devolve um zip nacional de 32,5 MB, atualizado todo dia (`ETag` e `Last-Modified`), com três tabelas em latin-1: emendas (94.736 linhas, de 2014 a 2026), convênios (85.403) e favorecidos (828.419). O autor vem pelo nome e por um código orçamentário (1.614 autores; 15.962 emendas sem autor, sobretudo as antigas), que não é o código do parlamentar: a emenda não se liga a `pessoas`.
+- **Privacidade:** 181.509 favorecidos são **pessoas físicas** (cidadãos comuns, com nome e CPF mascarado) e mais alguns milhares são "inscrição genérica": nunca entram; só pessoa jurídica (CNPJ) e unidade gestora.
+- **Conteúdo do portal:** despesas, contratos, convênios, licitações, benefícios (incluindo Bolsa Família), sanções, servidores, viagens. Despesas (empenhos) e o resto: tamanho **não medido**.
+- **Licença:** livre utilização, conforme o Decreto 8.777/2016. As páginas de dicionário de dados, termos de uso e origem dos dados pedem verificação anti-robô e **não foram lidas** (não foram contornadas).
 
-### TCU
+### TCU (verificado em 23/10/2026)
 
-- **Acesso:** `https://sites.tcu.gov.br/dados-abertos/`, sem requisitos. Conjuntos confirmados: jurisprudência (acórdãos, jurisprudência selecionada, publicações, respostas a consultas, súmulas) e normativos. Certidões e contas irregulares: não apareceram. Formatos, API e licença: **não confirmados**.
+- **Acesso:** `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/`, sem requisitos, com um manifesto legível por máquina (`arquivos/jurisprudencia-arquivos.csv`, atualizado em 02/10/2026) que lista cada arquivo CSV com ano e tamanho. Acórdãos de 1992 a 2026 (**7,65 GB**, de 15 MB a 500 MB por ano), jurisprudência selecionada (112 MB), respostas a consultas, súmulas, boletins e informativos (cerca de 20 MB). Há também "visões gerais" de acórdãos geradas com IA, que precisariam de rótulo próprio. Contas irregulares e certidões: não apareceram.
+- **Termos:** o portal reserva os direitos autorais (Lei 9.610/98), **proíbe uso comercial sem autorização** e exige citar fonte, título e autor; não nomeia licença aberta nem trata de acesso automatizado. A página de dados abertos e os termos do portal se contradizem na prática.
+- **Recomendação:** adiar. O ganho para o objetivo legislativo é pequeno e a licença não é aberta; antes de carregar, pedir autorização ao TCU.
 
 ### Legislação federal (verificado em 23/10/2026)
 

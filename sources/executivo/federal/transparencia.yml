@@ -1,0 +1,62 @@
+# Declaração da fonte: Portal da Transparência do Governo Federal (CGU), arquivos de dados abertos.
+# Emendas parlamentares: um pacote .zip nacional com três tabelas, atualizado todo dia. Os três datasets usam o
+# mesmo arquivo e se distinguem por um fragmento na URL (`#...`), que nunca vai ao servidor, só ao registro de
+# captura. Minimização: favorecido pessoa física (cidadão comum, com CPF mascarado) nunca entra; só pessoa
+# jurídica e unidade gestora. Licença: livre utilização pela política de dados abertos (Decreto 8.777/2016). As
+# páginas de termos de uso e de dicionário de dados do portal não puderam ser lidas (pedem verificação anti-robô).
+
+source: transparencia
+power: executivo
+level: federal
+description: Portal da Transparência (CGU), emendas parlamentares
+
+access:
+  base_url: https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares/UNICO
+  format: csv
+  delimiter: ";"
+  encoding: latin-1
+
+datasets:
+  emendas:
+    # Uma linha por emenda, localidade, função, programa e ação, com os valores empenhado, liquidado e pago.
+    url: "{base_url}#emendas"
+    load: full
+    archive: zip
+    member: "EmendasParlamentares.csv"
+    write: replace
+    primary_key: [_row_hash]
+    columns:
+      ["Código da Emenda", "Ano da Emenda", "Tipo de Emenda", "Código do Autor da Emenda", "Nome do Autor da Emenda",
+       "Número da emenda", "Localidade de aplicação do recurso", "Código Município IBGE", "Município",
+       "Código UF IBGE", "UF", "Região", "Código Função", "Nome Função", "Código Subfunção", "Nome Subfunção",
+       "Código Programa", "Nome Programa", "Código Ação", "Nome Ação", "Código Plano Orçamentário",
+       "Nome Plano Orçamentário", "Valor Empenhado", "Valor Liquidado", "Valor Pago",
+       "Valor Restos A Pagar Inscritos", "Valor Restos A Pagar Cancelados", "Valor Restos A Pagar Pagos"]
+
+  emendas_convenios:
+    # Convênios firmados com recursos de emenda: convenente, objeto e valor.
+    url: "{base_url}#convenios"
+    load: full
+    archive: zip
+    member: "EmendasParlamentares_Convenios.csv"
+    write: replace
+    primary_key: [_row_hash]
+    columns:
+      ["Código da Emenda", "Código Função", "Nome Função", "Código Subfunção", "Nome Subfunção",
+       "Localidade do gasto", "Tipo de Emenda", "Data Publicação Convênio", "Convenente", "Objeto Convênio",
+       "Número Convênio", "Valor Convênio"]
+
+  emendas_favorecidos:
+    # Quem recebeu o dinheiro de cada emenda. Só pessoa jurídica e unidade gestora: pessoa física não entra.
+    url: "{base_url}#favorecidos"
+    load: full
+    archive: zip
+    member: "EmendasParlamentares_PorFavorecido.csv"
+    write: replace
+    primary_key: [_row_hash]
+    only:
+      "Tipo Favorecido": ["Pessoa Jurídica", "Unidade Gestora"]
+    columns:
+      ["Código da Emenda", "Código do Autor da Emenda", "Nome do Autor da Emenda", "Número da emenda",
+       "Tipo de Emenda", "Ano/Mês", "Código do Favorecido", "Favorecido", "Natureza Jurídica", "Tipo Favorecido",
+       "UF Favorecido", "Município Favorecido", "Valor Recebido"]

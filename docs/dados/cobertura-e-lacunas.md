@@ -126,6 +126,27 @@ Lacunas conhecidas, medidas ou registradas:
 - **Constituição, emendas citadas:** o texto só cita a última emenda de cada trecho, então emendas que o Senado declara como alteração e o texto não cita são esperadas (13 em 23/10/2026). O inverso não pode acontecer: `emendas_do_texto_desconhecidas_do_senado` mede e `constituicao_cita_emenda_posterior_ao_arquivo` barra.
 - **Leitura do HTML da Câmara:** o arquivo vem do Word, um parágrafo por dispositivo; o tipo e o contexto saem do começo de cada linha. Notas com erro de digitação na própria fonte ("nº 41, 2003") e com o parêntese de fechamento faltando foram tratadas; `constituicao_artigo_repetido` barra uma leitura que se perca.
 
+## TSE complementar e emendas parlamentares
+
+| O que | Dataset | Cobertura em 23/10/2026 |
+| --- | --- | --- |
+| Bens declarados pelos candidatos (todos os cargos) | `bens` (por eleição) | 2006, 2010, 2014, 2018, 2022 e 2026: 461.128 bens no raw; 65.734 nos marts (2.233 pessoas, 5.099 candidaturas) |
+| Votos de cada candidato por município e zona (todos os cargos) | `votacao` (por eleição) | **só 2022**: 9.377.845 linhas e 26.237 candidaturas no raw; 1.017 candidaturas de pessoas do projeto nos marts |
+| Emendas parlamentares | `emendas` | 94.736 linhas, de 2014 a 2026 |
+| Convênios de emendas | `emendas_convenios` | 85.403 linhas |
+| Quem recebeu o dinheiro (só pessoa jurídica e unidade gestora) | `emendas_favorecidos` | 640.631 de 828.419 linhas; as 187.788 restantes são pessoa física e inscrições genéricas |
+
+Lacunas conhecidas, medidas ou registradas:
+
+- **Votos de 1998 a 2018 e de 2026:** não carregados (2,4 GB compactados no total; 2022 sozinho levou 49 minutos para entrar no raw). Pedir por ano: `--years ANO --dataset votacao`.
+- **Bens de 1998 e 2002:** a fonte não publica. Os de 2006 e 2010 usam outros nomes de coluna e entram por `aliases`.
+- **Candidaturas sem voto** (`candidaturas_sem_votos_carregados`, 23 em 2022): deputados e senadores sem votação na fonte (indeferidos ou renunciantes). Os suplentes de senador não têm voto próprio e ficam de fora do teste.
+- **Votos e bens de quem não é pessoa do projeto** (deputados estaduais, governadores e candidatos sem ligação): ficam no staging, não nos marts.
+- **Emenda sem ligação a pessoa:** o autor vem pelo nome e por um código orçamentário que não é o do parlamentar. 15.962 emendas (as antigas, sobretudo) vêm sem autor (`emendas_sem_autor_conhecido`).
+- **Favorecido pessoa física:** nunca entra (181.509 cidadãos comuns com CPF mascarado). `emendas_de_pessoa_fisica` barra qualquer um nos marts.
+- **Termos do portal:** as páginas de termos de uso e de dicionário de dados do Portal da Transparência pedem verificação anti-robô e não foram lidas; vale a licença de livre utilização do Decreto 8.777/2016.
+- **Despesas (empenhos), DOU e TCU:** não carregados. O DOU tem licença sem derivações e exige credencial; o TCU não tem licença aberta (ver o [catálogo de fontes](fontes-de-dados.md)).
+
 ## 3. O que a Câmara **não** tem e precisa vir de outra instância
 
 | Necessidade | Fonte provável | Por que a Câmara não basta |
@@ -136,7 +157,7 @@ Lacunas conhecidas, medidas ou registradas:
 | Filiação partidária por período | TSE | a Câmara só informa o partido **na data do voto**; mudanças de nome, fusões e incorporações dos partidos estão em `marts.linhagem_de_partidos` (curada, só o que foi conferido no TSE; faltam as siglas medidas por `partidos_encerrados_sem_linhagem`) |
 | Lei, decreto ou medida provisória que resultou da proposição | Diário Oficial da União, API de legislação do Senado | a Câmara termina no trâmite; a norma publicada é outro documento (o catálogo de normas já está em `marts.normas`; falta ligar as proposições da Câmara) |
 | Sanção, veto e derrubada de veto | Senado/Congresso, DOU | acontecem depois da votação na Câmara (vetos desde 1994 em `marts.vetos` e `marts.dispositivos_vetados`) |
-| Emendas parlamentares e dinheiro público | Portal da Transparência, TCU | outro assunto |
+| Emendas parlamentares e dinheiro público | Portal da Transparência, TCU | outro assunto (emendas já em `marts.emendas`; despesas e TCU não) |
 | Município de São Paulo | Câmara Municipal, Querido Diário | outro ente |
 | Decisões anteriores às séries digitais | curadoria manual, rotulada | não há dado estruturado |
 

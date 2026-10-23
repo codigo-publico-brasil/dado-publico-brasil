@@ -94,8 +94,77 @@ def _csv(linhas: Sequence[tuple[str, ...]]) -> bytes:
     return saida.getvalue().encode("latin-1")
 
 
+BENS_COLUNAS = (
+    "DT_GERACAO HH_GERACAO ANO_ELEICAO CD_TIPO_ELEICAO NM_TIPO_ELEICAO CD_ELEICAO DS_ELEICAO DT_ELEICAO SG_UF SG_UE "
+    "NM_UE SQ_CANDIDATO NR_ORDEM_BEM_CANDIDATO CD_TIPO_BEM_CANDIDATO DS_TIPO_BEM_CANDIDATO DS_BEM_CANDIDATO "
+    "VR_BEM_CANDIDATO DT_ULT_ATUAL_BEM_CANDIDATO HH_ULT_ATUAL_BEM_CANDIDATO"
+).split()
+#       sq, ordem, tipo, descrição, valor
+BENS = [
+    ("1001", "1", "Casa", "Casa na cidade", "150000,00"),
+    ("1001", "2", "Veículo automotor terrestre", "Carro popular", "30000,50"),
+    ("1002", "1", "Aplicação de renda fixa", "CDB", "5000,00"),
+    ("1006", "1", "Terreno", "Terreno de candidato estadual", "70000,00"),  # não liga a pessoa: só no staging
+]
+VOTACAO_COLUNAS = (
+    "DT_GERACAO HH_GERACAO ANO_ELEICAO CD_TIPO_ELEICAO NM_TIPO_ELEICAO NR_TURNO CD_ELEICAO DS_ELEICAO DT_ELEICAO "
+    "TP_ABRANGENCIA SG_UF SG_UE NM_UE CD_MUNICIPIO NM_MUNICIPIO NR_ZONA CD_CARGO DS_CARGO SQ_CANDIDATO NR_CANDIDATO "
+    "NM_CANDIDATO NM_URNA_CANDIDATO NM_SOCIAL_CANDIDATO DS_SITUACAO_CANDIDATURA DS_DETALHE_SITUACAO_CAND NR_PARTIDO "
+    "SG_PARTIDO SG_FEDERACAO ST_VOTO_EM_TRANSITO QT_VOTOS_NOMINAIS NM_TIPO_DESTINACAO_VOTOS "
+    "QT_VOTOS_NOMINAIS_VALIDOS DS_SIT_TOT_TURNO"
+).split()
+#         sq, cargo, uf, município, zona, nominais, válidos, destinação
+VOTOS = [
+    ("1001", "Deputado Federal", "RJ", "60011", "1", "1000", "1000", "Válido"),
+    ("1001", "Deputado Federal", "RJ", "60011", "2", "500", "500", "Válido"),
+    ("1001", "Deputado Federal", "RJ", "60012", "1", "250", "250", "Válido"),
+    ("1001", "Deputado Federal", "RJ", "60012", "2", "20", "0", "Anulado"),
+    ("1002", "Deputado Federal", "SP", "70011", "1", "700", "700", "Válido"),
+    ("1006", "Deputado Estadual", "SP", "70011", "1", "90", "90", "Válido"),
+]
+
+
+def _tabela(colunas: Sequence[str], linhas: Sequence[dict[str, str]]) -> bytes:
+    saida = io.StringIO()
+    escritor = csv.writer(saida, delimiter=";", quoting=csv.QUOTE_ALL)
+    escritor.writerow(colunas)
+    for linha in linhas:
+        valores = (
+            dict.fromkeys(colunas, "#NULO#") | {"ANO_ELEICAO": "2022", "DT_GERACAO": "23/10/2026"} | linha
+        )
+        escritor.writerow([valores[c] for c in colunas])
+    return saida.getvalue().encode("latin-1")
+
+
+def _bens() -> bytes:
+    return _tabela(
+        BENS_COLUNAS,
+        [
+            {"SQ_CANDIDATO": sq, "NR_ORDEM_BEM_CANDIDATO": ordem, "DS_TIPO_BEM_CANDIDATO": tipo,
+             "DS_BEM_CANDIDATO": descricao, "VR_BEM_CANDIDATO": valor, "SG_UF": "SP",
+             "DT_ULT_ATUAL_BEM_CANDIDATO": "06/09/2022"}
+            for sq, ordem, tipo, descricao, valor in BENS
+        ],
+    )  # fmt: skip
+
+
+def _votacao() -> bytes:
+    nomes = {linha[1]: (linha[2], linha[3]) for linha in LINHAS}  # sq -> (nome civil, nome de urna)
+    return _tabela(
+        VOTACAO_COLUNAS,
+        [
+            {"NR_TURNO": "1", "SQ_CANDIDATO": sq, "DS_CARGO": cargo, "SG_UF": uf, "CD_MUNICIPIO": municipio,
+             "NM_MUNICIPIO": f"MUNICIPIO {municipio}", "NR_ZONA": zona, "NM_CANDIDATO": nomes[sq][0],
+             "NM_URNA_CANDIDATO": nomes[sq][1], "NM_SOCIAL_CANDIDATO": "NOME SOCIAL SIGILOSO",
+             "QT_VOTOS_NOMINAIS": nominais, "QT_VOTOS_NOMINAIS_VALIDOS": validos, "NM_TIPO_DESTINACAO_VOTOS": destino,
+             "ST_VOTO_EM_TRANSITO": "N", "DS_SIT_TOT_TURNO": "ELEITO POR QP"}
+            for sq, cargo, uf, municipio, zona, nominais, validos, destino in VOTOS
+        ],
+    )  # fmt: skip
+
+
 def tse_files(pasta: Path) -> dict[str, Path]:
-    """O pacote sintético de 2022, pela URL oficial."""
+    """Os pacotes sintéticos de 2022 (candidaturas, bens e votos), pela URL oficial."""
     pasta.mkdir(parents=True, exist_ok=True)
     contrato = contracts.find("tse")
     destino = pasta / "consulta_cand_2022.zip"
@@ -116,4 +185,14 @@ def tse_files(pasta: Path) -> dict[str, Path]:
             "consulta_cand_2022_SP.csv", _csv([*LINHAS[:2], sentinela])
         )  # só o _BRASIL.csv é lido
         pacote.writestr("consulta_cand_2022_BRASIL.csv", _csv(LINHAS))
-    return {contrato.url("candidaturas", 2022): destino}
+    arquivos = {contrato.url("candidaturas", 2022): destino}
+    for dataset, nome, conteudo in (
+        ("bens", "bem_candidato_2022", _bens()),
+        ("votacao", "votacao_candidato_munzona_2022", _votacao()),
+    ):
+        pacote_destino = pasta / f"{nome}.zip"
+        with zipfile.ZipFile(pacote_destino, "w") as pacote:
+            pacote.writestr(f"{nome}_SP.csv", conteudo)  # o `_BRASIL.csv` é o único lido; este é só ruído
+            pacote.writestr(f"{nome}_BRASIL.csv", conteudo)
+        arquivos[contrato.url(dataset, 2022)] = pacote_destino
+    return arquivos

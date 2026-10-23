@@ -67,6 +67,9 @@ class Dataset:
     member: str = "*"  # padrão (glob) do nome do membro dentro do pacote
     step: int = 1  # (yearly) só os anos a cada N a partir de first_year (eleições gerais: 4)
     only: dict[str, tuple[str, ...]] = field(default_factory=dict)  # minimização: só linhas com estes valores
+    aliases: dict[str, str] = field(
+        default_factory=dict
+    )  # layout antigo: nome antigo da coluna -> nome em `columns`
 
     @property
     def yearly(self) -> bool:
@@ -137,6 +140,9 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         if column.lower().replace("_", "") in FORBIDDEN_COLUMNS:
             raise InvalidContract(f"{where}: '{column}' é documento pessoal e nunca é lido")
     key = tuple(data.get("primary_key", ()))
+    unknown = [new for new in data.get("aliases", {}).values() if new not in columns]
+    if unknown:
+        raise InvalidContract(f"{where}: aliases aponta para {unknown}, que não está em columns")
     stray = [c for c in data.get("nested", ()) if c not in columns]
     if stray:
         raise InvalidContract(f"{where}: nested {stray} não está em columns")
@@ -165,6 +171,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         member=str(data.get("member", "*")),
         step=int(data.get("step", 1)),
         only={k: tuple(v) for k, v in data.get("only", {}).items()},
+        aliases=dict(data.get("aliases", {})),
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
     )
 

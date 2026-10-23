@@ -8,3 +8,13 @@ models:
         tests: [not_null]
       - name: nome
         tests: [not_null]
+  - name: stg_tse__bens
+    description: Bens declarados pelos candidatos de todos os cargos, uma linha por bem.
+    columns:
+      - name: candidatura_id
+        tests: [not_null]
+  - name: stg_tse__votacao
+    description: Votos de cada candidato (todos os cargos) por município e zona, como o TSE publica.
+    columns:
+      - name: candidatura_id
+        tests: [not_null]

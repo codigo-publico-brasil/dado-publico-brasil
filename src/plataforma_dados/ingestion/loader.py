@@ -36,12 +36,16 @@ def read_rows(
 ) -> Iterator[dict[str, Any]]:
     """Linhas do arquivo, só com as colunas permitidas. Linhas sem a chave são rejeitadas."""
     names = {column: normalize(column) for column in dataset.columns}
+    legacy = {new: old for old, new in dataset.aliases.items()}  # nome atual -> nome no layout antigo
     key = [names.get(c, c) for c in dataset.primary_key]
     for record in read.records(file, contract, dataset):
         stats["read"] += 1
         if any(record.get(field) not in allowed for field, allowed in dataset.only.items()):
             continue  # minimização: fora do que a declaração diz que interessa
-        row: dict[str, Any] = {names[c]: _clean(record.get(c)) for c in dataset.columns}
+        row: dict[str, Any] = {
+            names[c]: _clean(record.get(c) if c in record else record.get(legacy.get(c, c)))
+            for c in dataset.columns
+        }
         row["_source_file_id"] = file_id
         if ROW_HASH in dataset.primary_key:
             joined = "".join(str(row[names[c]] or "") for c in dataset.columns)

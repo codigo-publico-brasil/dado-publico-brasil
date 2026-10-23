@@ -19,7 +19,7 @@ select
     nm_partido as partido_nome,
     try_strptime(dt_nascimento, '%d/%m/%Y')::date as nascimento,
     sentence_case(ds_genero) as genero,
-    sentence_case(nullif(ds_sit_tot_turno, '#NULO#')) as resultado,
+    sentence_case(nullif(nullif(ds_sit_tot_turno, '#NULO#'), '#NULO')) as resultado,
     _source_file_id as source_file_id
 
 from source

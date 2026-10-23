@@ -12,7 +12,8 @@ Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs,
 Publicação: publish copia os marts para o PostgreSQL de serviço (PLATAFORMA_POSTGRES_DSN).
 Auditoria: verify (hashes do landing e cópia da identidade) e coverage (itens obtidos nos datasets por item).
 Datasets por item (tramitação, processos): `--foreach 200` busca os 200 mais recentes que faltam;
-`--foreach all` busca todos; `--dataset NOME` limita a um dataset.
+`--foreach all` busca todos; `--dataset NOME` limita a um dataset (também nos anuais,
+como `--years 2022 --dataset votacao`).
 Modos de extração: --years (anos pedidos), --historical --from-year N (carga massiva) e
 --incremental (só o que pode ter mudado).
 """
@@ -43,11 +44,17 @@ COMMANDS = (
 
 
 def _plan(args: argparse.Namespace) -> pipeline.Plan:
-    if args.incremental:
-        return landing.plan_incremental
-    if args.historical:
-        return lambda c: landing.plan_historical(c, args.from_year, args.to_year, args.extra_years)
-    return lambda c: landing.plan(c, args.years, args.extra_years)
+    def plan(source: contract.SourceContract) -> list[landing.Item]:
+        if args.incremental:
+            items = landing.plan_incremental(source)
+        elif args.historical:
+            items = landing.plan_historical(source, args.from_year, args.to_year, args.extra_years)
+        else:
+            items = landing.plan(source, args.years, args.extra_years)
+        # `--dataset` limita a extração a um dataset (os pesados, como os votos do TSE, vão por ano)
+        return [item for item in items if args.dataset in (None, item[0])]
+
+    return plan
 
 
 def _per_item(args: argparse.Namespace) -> int:
@@ -105,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--foreach", help="itens por dataset por item (número ou all); sem isso, esses datasets não rodam"
     )
-    p.add_argument("--dataset", help="com --foreach: só este dataset por item")
+    p.add_argument("--dataset", help="só este dataset (anual, único ou, com --foreach, por item)")
     p.add_argument("--source", help="só esta fonte (padrão: todas as de sources/)")
     p.add_argument("--years", type=int, nargs="+", default=[], help="anos de votações e proposições")
     p.add_argument("--extra-years", type=int, nargs="*", default=[], help="anos só de proposições")

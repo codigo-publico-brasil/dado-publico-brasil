@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: stg_transparencia__emendas
+    description: Emendas parlamentares, uma linha por emenda, localidade, função, programa e ação.
+    columns:
+      - name: ano
+        tests: [not_null]
+  - name: stg_transparencia__emendas_convenios
+    description: Convênios firmados com recursos de emendas parlamentares.
+  - name: stg_transparencia__emendas_favorecidos
+    description: Quem recebeu o dinheiro de cada emenda (só pessoa jurídica e unidade gestora), por mês.
+    columns:
+      - name: tipo_favorecido
+        tests:
+          - accepted_values: {values: ['Pessoa Jurídica', 'Unidade Gestora']}

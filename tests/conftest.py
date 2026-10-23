@@ -12,6 +12,7 @@ from synthetic_camara import fake_downloader, no_headers, synthetic_files
 from synthetic_normas import normas_files, normas_get
 from synthetic_senado import senado_files
 from synthetic_tramitacao import fake_get
+from synthetic_transparencia import transparencia_files
 from synthetic_tse import tse_files
 
 from plataforma_dados.core import migrations
@@ -62,6 +63,7 @@ def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract
                 **senado_files(base / "origin_senado"),
                 **tse_files(base / "origin_tse"),
                 **normas_files(base / "origin_normas"),
+                **transparencia_files(base / "origin_transparencia"),
             }
         ),
         head_request=no_headers,

@@ -17,3 +17,7 @@ sources:
     tables:
       - name: candidaturas
         description: Candidaturas a deputado federal e senador (e suplentes) nas eleições gerais, uma linha por candidatura.
+      - name: bens
+        description: Bens declarados pelos candidatos de todos os cargos nas eleições gerais de 2006 em diante, uma linha por bem.
+      - name: votacao
+        description: Votos de cada candidato (todos os cargos) por município e zona nas eleições gerais já carregadas, como o TSE publica.

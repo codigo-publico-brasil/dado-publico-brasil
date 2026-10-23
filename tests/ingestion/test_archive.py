@@ -79,3 +79,30 @@ def test_step_needs_a_first_year_and_the_archive_must_be_known(tmp_path: Path) -
         contract(tmp_path, YAML.replace("    first_year: 1998\n", ""))
     with pytest.raises(InvalidContract, match="archive"):
         contract(tmp_path, YAML.replace("archive: zip", "archive: rar"))
+
+
+def test_a_legacy_layout_is_read_through_aliases_to_the_current_column_names(tmp_path: Path) -> None:
+    text = YAML.replace(
+        "    columns: [id, nome, cargo]", "    aliases: {nome_antigo: nome}\n    columns: [id, nome, cargo]"
+    )
+    c = contract(tmp_path, text)
+    file = tmp_path / "cand_2006.zip"
+    with zipfile.ZipFile(file, "w") as z:
+        z.writestr("cand_2006_TUDO.csv", "id;nome_antigo;cargo\n1;ANTIGO;FEDERAL\n".encode("latin-1"))
+    settings = Settings(storage_root=tmp_path / "store")
+    con = migrations.open_warehouse(settings)
+    stats = loader.load_file(settings, c, c.datasets["eleicoes"], file, 1, con)
+    assert stats == {"read": 1, "loaded": 1, "rejected": 0}
+    found = rows(con, f"SELECT id, nome FROM {c.schema}.eleicoes")
+    assert [(r["id"], r["nome"]) for r in found] == [("1", "ANTIGO")]
+
+
+def test_an_alias_must_point_to_a_declared_column(tmp_path: Path) -> None:
+    with pytest.raises(InvalidContract, match="aliases"):
+        contract(
+            tmp_path,
+            YAML.replace(
+                "    columns: [id, nome, cargo]",
+                "    aliases: {x: inexistente}\n    columns: [id, nome, cargo]",
+            ),
+        )

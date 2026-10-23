@@ -1,0 +1,25 @@
+"""`--dataset` limita a extração a um dataset: os pesados (votos do TSE) vão por ano, sem baixar os outros."""
+
+import argparse
+
+from plataforma_dados.ingestion import contract
+from plataforma_dados.orchestration.__main__ import _plan
+
+
+def args(**kw: object) -> argparse.Namespace:
+    base = {"incremental": False, "historical": False, "years": [2022], "extra_years": [], "dataset": None}
+    return argparse.Namespace(**{**base, **kw})
+
+
+def test_without_dataset_the_plan_has_every_yearly_dataset_of_the_source() -> None:
+    items = _plan(args())(contract.find("tse"))
+    assert {name for name, _ in items} == {"candidaturas", "bens", "votacao"}
+
+
+def test_with_dataset_only_that_one_is_planned() -> None:
+    assert _plan(args(dataset="bens"))(contract.find("tse")) == [("bens", 2022)]
+    assert _plan(args(dataset="bens", years=[2006, 2010, 2022]))(contract.find("tse")) == [
+        ("bens", 2006),
+        ("bens", 2010),
+        ("bens", 2022),
+    ]
