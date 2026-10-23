@@ -4,6 +4,7 @@
 """
 
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -70,9 +71,13 @@ def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract
     return {name: base / name for name in ("landed", "raw", "full")}
 
 
-def _copy(snapshots: dict[str, Path], name: str, target: Path) -> tuple[Connection, Settings]:
+def _copy(snapshots: dict[str, Path], name: str, target: Path) -> Iterator[tuple[Connection, Settings]]:
+    """Cópia de um snapshot para o teste; some quando o teste acaba (o `full` tem dezenas de MB e são muitos testes)."""
     shutil.copytree(snapshots[name], target / "store")
-    return _open(target / "store")
+    env = _open(target / "store")
+    yield env
+    env[0].close()
+    shutil.rmtree(target / "store", ignore_errors=True)
 
 
 @pytest.fixture
@@ -87,15 +92,15 @@ def settings(tmp_path: Path) -> Settings:
 
 
 @pytest.fixture
-def landed(snapshots: dict[str, Path], tmp_path: Path) -> tuple[Connection, Settings]:
-    return _copy(snapshots, "landed", tmp_path)
+def landed(snapshots: dict[str, Path], tmp_path: Path) -> Iterator[tuple[Connection, Settings]]:
+    yield from _copy(snapshots, "landed", tmp_path)
 
 
 @pytest.fixture
-def raw(snapshots: dict[str, Path], tmp_path: Path) -> tuple[Connection, Settings]:
-    return _copy(snapshots, "raw", tmp_path)
+def raw(snapshots: dict[str, Path], tmp_path: Path) -> Iterator[tuple[Connection, Settings]]:
+    yield from _copy(snapshots, "raw", tmp_path)
 
 
 @pytest.fixture
-def full(snapshots: dict[str, Path], tmp_path: Path) -> tuple[Connection, Settings]:
-    return _copy(snapshots, "full", tmp_path)
+def full(snapshots: dict[str, Path], tmp_path: Path) -> Iterator[tuple[Connection, Settings]]:
+    yield from _copy(snapshots, "full", tmp_path)
