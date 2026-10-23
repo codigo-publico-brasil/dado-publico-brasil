@@ -55,6 +55,28 @@ models:
       - {name: legislatura_inicio, data_type: date, description: "Início oficial da legislatura (não do mandato da pessoa)."}
       - {name: legislatura_fim, data_type: date, description: "Fim oficial da legislatura (não do mandato da pessoa)."}
 
+  - name: exercicios
+    description: Exercício oficial no cargo como o Senado informa (titular e suplentes), com início, fim e causa de afastamento. Só o Senado; a Câmara não publica. Uma linha por pessoa, mandato e exercício.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, mandato e exercício, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - name: id_pessoa
+        data_type: bigint
+        description: "Chave da pessoa (marts.pessoas)."
+        tests:
+          - not_null
+          - relationships: {to: ref('pessoas'), field: id_pessoa}
+      - {name: mandato_id, data_type: varchar, description: "Código do mandato no Senado (titular e suplentes compartilham o mesmo)."}
+      - {name: exercicio_id, data_type: varchar, description: "Código do período de exercício no Senado."}
+      - {name: participacao, data_type: varchar, description: "Titular, 1º suplente ou 2º suplente."}
+      - {name: uf, data_type: varchar, description: "UF que o mandato representa."}
+      - {name: mandato_inicio, data_type: date, description: "Início do mandato (da primeira legislatura que ele cobre)."}
+      - {name: mandato_fim, data_type: date, description: "Fim do mandato (da última legislatura que ele cobre)."}
+      - {name: inicio, data_type: date, description: "Início deste período de exercício."}
+      - {name: fim, data_type: date, description: "Fim deste período; vazio enquanto está em exercício."}
+      - {name: causa_afastamento_sigla, data_type: varchar, description: "Sigla da causa do fim do período (licença, renúncia, fim do mandato); vazia se não informada."}
+      - {name: causa_afastamento, data_type: varchar, description: "Descrição da causa do fim do período."}
+
   - name: ocupacoes
     description: Ocupações anteriores declaradas. Uma linha por pessoa e ocupação.
     meta: {sensitivity: publico-agente-publico, grain: pessoa e ocupação, owner: fundador do projeto, freshness: diário}
@@ -158,6 +180,18 @@ models:
       - {name: partido_id, data_type: bigint, tests: [unique, not_null], description: "Identificador do partido na fonte."}
       - {name: sigla, data_type: varchar, description: "Sigla do partido."}
       - {name: nome, data_type: varchar, description: "Nome do partido, com caixa padronizada."}
+
+  - name: linhagem_de_partidos
+    description: Mudanças de nome, fusões e incorporações de partidos, conforme o TSE, com a página oficial de cada evento. Curada à mão; só o que foi conferido. Uma linha por partido de origem e evento.
+    meta: {sensitivity: publico, grain: partido de origem e evento, owner: fundador do projeto, freshness: manual}
+    columns:
+      - {name: sigla_anterior, data_type: varchar, tests: [not_null], description: "Sigla do partido antes do evento, como aparece nos votos."}
+      - {name: sigla_posterior, data_type: varchar, tests: [not_null], description: "Sigla depois do evento (a do partido resultante, em fusão e incorporação)."}
+      - {name: tipo, data_type: varchar, tests: [{accepted_values: {values: ['mudança de nome', 'fusão', 'incorporação']}}], description: "Mudança de nome, fusão ou incorporação."}
+      - {name: aprovado_em, data_type: date, description: "Data da aprovação pelo TSE; vazia quando só o mês é conhecido."}
+      - {name: ano, data_type: integer, tests: [not_null], description: "Ano do evento."}
+      - {name: fonte_url, data_type: varchar, tests: [not_null], description: "Página oficial do TSE que registra o evento."}
+      - {name: observacao, data_type: varchar, description: "Divergência de data, resolução ou ressalva da fonte."}
 
   - name: orgaos
     description: Órgãos da Câmara (comissões, plenário, mesa diretora, conselhos), com tipo e situação. Uma linha por órgão.

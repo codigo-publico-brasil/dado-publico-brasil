@@ -54,6 +54,15 @@ models:
       +contract:
         enforced: true
 
+seeds:
+  quem_decidiu:
+    +schema: intermediate
+    +tags: [pre_identity]
+    vinculos_aprovados:
+      +column_types: {origem_id: varchar, destino_id: varchar, aprovado_em: date}
+    eventos_de_partidos:
+      +column_types: {aprovado_em: date, ano: integer}
+
 data_tests:
   quem_decidiu:
     +severity: error

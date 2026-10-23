@@ -28,7 +28,7 @@ Os números abaixo são da carga histórica de 21/10/2026 (Câmara: `run --histo
 | Processos do Senado (amostra por item: 300 das 2.738 matérias votadas) | 300 processos, 75 normas geradas |
 | Pessoas hoje (depois da fusão deputado e senador) | 8.535, das quais 218 estão nas duas casas |
 | Candidaturas ao Congresso no TSE (eleições gerais de 1998 a 2026) | 53.626 no staging; 6.709 ligadas a uma pessoa; 3.456 eleitas ligadas (1.900 pessoas) |
-| Detalhe de senadores (nascimento, naturalidade, foto) | 842 de 843 buscados (779 com nascimento, 472 com foto) |
+| Detalhe de senadores (nascimento, naturalidade, foto) | 843 de 843 buscados |
 | Testes do dbt do tipo erro que falharam | 0 |
 
 ## 1. O que a Câmara entrega e o projeto já usa
@@ -77,7 +77,8 @@ Lacunas conhecidas, medidas ou registradas:
 - **Totais de Sim, Não e Abstenção** vêm vazios em parte das votações antigas. O teste `votacoes_com_total_sim_divergente` compara o total oficial com a contagem dos votos individuais, deixando de fora a votação secreta (não há Sim a contar): 13 votações, todas da Câmara.
 - **Sem nascimento, foto e redes** dos senadores: o arquivo de legislatura não as traz.
 - **Sem autoria nem situação das matérias**: exigem uma chamada por matéria; `autorias` e `situacao` ficam vazios para o Senado, e `pessoas.qtd_propostas` é vazio (não zero) para senadores.
-- **Mandatos oficiais** (titular, suplente, períodos de exercício, causas de afastamento) estão no raw, mas ainda não nos marts: `marts.mandatos` do Senado vem dos votos observados, como na Câmara.
+- **Siglas de partidos sem evento conferido** (teste `partidos_encerrados_sem_linhagem`, 5 em 2026-10-23): PRTB, PSDC (o TSE deferiu a troca para Democracia Cristã, mas a data da decisão não foi encontrada), PTC, SD e SDD. A tabela só tem o que foi conferido numa página do TSE.
+- **Mandatos oficiais:** `marts.exercicios` traz titular e suplentes do Senado, com início, fim e causa de afastamento de cada período, como o Senado informa. `marts.mandatos` continua vindo dos votos observados, nas duas casas; a Câmara não publica o exercício.
 - **Quem foi deputado e senador tem duas chaves de pessoa**: a regra conservadora liga só por identificador oficial da própria fonte, nunca por nome.
 
 ## Datasets por item (amostra)
@@ -95,8 +96,8 @@ Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada 
 | Candidaturas a deputado federal e senador (com suplentes), com partido, situação e resultado | `candidaturas` (um pacote por eleição) | eleições gerais de 1998, 2002, 2006, 2010, 2014, 2018, 2022 e 2026 |
 
 - **Ligação** por nome civil e nascimento iguais e únicos ([ADR 0013](../adr/0013-tse-ligacao-por-nome-civil-e-nascimento.md)): 6.709 candidaturas ligadas. As demais (candidatos de fora do Congresso e quem não foi eleito) ficam no staging.
-- **Eleitos sem vínculo:** 363 candidaturas marcadas como eleitas não foram ligadas (teste `eleitos_federais_sem_vinculo`): nome civil diferente entre as fontes, nascimento ausente ou homônimo. A curadoria manual resolve.
-- **Nascimento ausente:** 972 pessoas sem data de nascimento (sobretudo senadores sem o detalhe, o que impede a ligação por esta regra). Uma busca do detalhe que falhou (503) é repetida na próxima execução com `--foreach`.
+- **Eleitos sem vínculo:** 363 candidaturas marcadas como eleitas não foram ligadas (teste `eleitos_federais_sem_vinculo`). Medido em 2026-10-23: 194 são da eleição de 2026, cujos eleitos ainda não tomaram posse (não há registro na Câmara nem no Senado, então não é falha de ligação); 130 têm alguém com a mesma data de nascimento mas nome civil diferente (candidatos à aprovação manual em `vinculos_aprovados`); 5 têm nome e data iguais a mais de um registro (homônimo); 34 não têm ninguém com a mesma data (por exemplo, eleitos de 1998 que não aparecem nas séries digitais).
+- **Nascimento ausente:** 971 pessoas sem data de nascimento, o que impede a ligação por esta regra. O detalhe de todos os 843 senadores foi obtido; o que falta não vem na fonte.
 - **Ambiguidade:** o teste `pessoas_ambiguas_entre_fontes` mede nome civil e nascimento repetidos dentro de uma fonte.
 - **Resultado da eleição de 2026:** vem como a fonte informa na data da carga; uma eleição recente pode ter resultado ainda não consolidado.
 - **Ainda não carregados:** bens declarados, redes sociais, fotos, certidões, coligações, vagas e votação por candidato.
@@ -108,7 +109,7 @@ Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada 
 | Senadores, votos e matérias do Senado | Senado Federal, dados abertos | outra casa legislativa |
 | Presidente, vice e ministros | TSE (candidaturas e eleitos), Planalto, DOU | pertencem ao Executivo |
 | Candidaturas, eleições e resultados | TSE | a Câmara só conhece quem tomou posse |
-| Filiação partidária por período | TSE | a Câmara só informa o partido **na data do voto** |
+| Filiação partidária por período | TSE | a Câmara só informa o partido **na data do voto**; mudanças de nome, fusões e incorporações dos partidos estão em `marts.linhagem_de_partidos` (curada, só o que foi conferido no TSE; faltam as siglas medidas por `partidos_encerrados_sem_linhagem`) |
 | Lei, decreto ou medida provisória que resultou da proposição | Diário Oficial da União, LexML | a Câmara termina no trâmite; a norma publicada é outro documento |
 | Sanção, veto e derrubada de veto | Senado/Congresso, DOU | acontecem depois da votação na Câmara |
 | Emendas parlamentares e dinheiro público | Portal da Transparência, TCU | outro assunto |

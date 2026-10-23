@@ -17,6 +17,10 @@ sources:
     tables:
       - name: senadores
         description: Senadores por legislatura (o mesmo senador aparece em várias), com os mandatos em tabelas filhas.
+      - name: senadores__mandatos_mandato
+        description: Mandatos de cada senador na legislatura (titular ou suplente), lista `Mandatos.Mandato`.
+      - name: senadores__mandatos_mandato__exercicios__exercicio
+        description: Períodos de exercício de cada mandato, com a causa de afastamento (lista `Exercicios.Exercicio`).
       - name: votacoes
         description: Votações em plenário com resultado, totais e a matéria votada.
         columns:

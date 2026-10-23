@@ -99,7 +99,32 @@ def test_senate_mandates_come_from_observed_votes_with_the_official_legislature_
     assert str(row[5]) == "2023-02-01"
 
 
+def test_official_exercises_come_from_the_senate_with_the_reason_each_period_ended(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    rows = con.execute(
+        "SELECT p.nome, e.participacao, e.uf, e.mandato_inicio, e.mandato_fim, e.inicio, e.fim, e.causa_afastamento "
+        "FROM marts.exercicios e JOIN marts.pessoas p USING (id_pessoa) ORDER BY e.exercicio_id"
+    ).fetchall()
+    assert len(rows) == 3  # um por senador do cadastro; quem só aparece nos votos não tem exercício
+    nome, participacao, uf, mandato_inicio, mandato_fim, inicio, fim, causa = rows[0]
+    assert (participacao, uf, causa) == ("Titular", "SP", "Licença")
+    assert (str(mandato_inicio), str(mandato_fim), str(inicio), str(fim)) == (
+        "2019-02-01",
+        "2027-01-31",
+        "2019-02-01",
+        "2020-05-01",
+    )
+
+
 def test_raw_keeps_the_lists_as_child_tables(full: tuple[Connection, Settings]) -> None:
     con, _ = full
     assert scalar(con, "SELECT COUNT(*) FROM raw_federal_senado.votacoes__votos") == 4
     assert scalar(con, "SELECT COUNT(*) FROM raw_federal_senado.senadores__mandatos_mandato") == 3
+    assert (
+        scalar(
+            con, "SELECT COUNT(*) FROM raw_federal_senado.senadores__mandatos_mandato__exercicios__exercicio"
+        )
+        == 3
+    )

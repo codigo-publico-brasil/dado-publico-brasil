@@ -3,7 +3,9 @@
 --    mesma data não liga) e, numa eleição, só uma candidatura tem aquele nome e nascimento.
 --  - Câmara e Senado ligados entre si dão a mesma pessoa (a identidade funde as duas chaves).
 --  - A candidatura do TSE liga-se à pessoa (a âncora é o registro da Câmara, ou do Senado se não houver).
--- Quem não passa na regra não é ligado; os testes `vinculos_ambiguos` e `eleitos_federais_sem_vinculo` medem isso.
+-- Quem não passa na regra não é ligado; os testes `pessoas_ambiguas_entre_fontes` e `eleitos_federais_sem_vinculo` medem isso.
+--  - Os casos que a regra não resolve (homônimo, nome diferente entre as fontes) entram por `vinculos_aprovados`,
+--    conferidos por uma pessoa, com a evidência escrita.
 with pessoas as (
 
     select *
@@ -74,3 +76,16 @@ select distinct
 from candidaturas as c
 
 inner join chaves as k on k.nome_chave = c.nome_chave and k.nascimento = c.nascimento
+
+union all
+
+select
+    origem_fonte,
+    origem_tipo,
+    origem_id,
+    destino_fonte,
+    destino_tipo,
+    destino_id,
+    'vínculo aprovado por ' || aprovado_por || ' em ' || aprovado_em
+
+from {{ ref('vinculos_aprovados') }}

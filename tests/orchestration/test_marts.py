@@ -127,9 +127,11 @@ def test_every_warehouse_table_of_the_marts_has_a_declared_contract(
     assert tables(con, "marts") == [
         "autorias",
         "candidaturas",
+        "exercicios",
         "frentes",
         "fusoes_de_pessoas",
         "legislaturas",
+        "linhagem_de_partidos",
         "mandatos",
         "membros_de_frentes",
         "membros_de_orgaos",
@@ -205,3 +207,21 @@ def test_photo_comes_from_the_fronts_when_the_person_has_no_vote_photo(
 ) -> None:
     con, _ = full
     assert scalar(con, "SELECT foto_url FROM marts.pessoas WHERE nome = 'Bia'") == "http://foto/11.jpg"
+
+
+def test_party_lineage_comes_from_the_curated_table_and_every_event_cites_the_official_page(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    found = con.execute(
+        "SELECT sigla_anterior, sigla_posterior, tipo, ano FROM marts.linhagem_de_partidos "
+        "WHERE sigla_anterior = 'PMDB'"
+    ).fetchall()
+    assert found == [("PMDB", "MDB", "mudança de nome", 2018)]
+    assert (
+        scalar(
+            con,
+            "SELECT COUNT(*) FROM marts.linhagem_de_partidos WHERE fonte_url NOT LIKE 'https://%tse.jus.br/%'",
+        )
+        == 0
+    )

@@ -31,6 +31,8 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `processos` | Processo de cada matéria votada, buscado por item na API (`_item` é o id do processo), só das já buscadas: situação atual e norma gerada. | publico-agente-publico |  |
 | `processos__autoria_iniciativa` | Autoria de cada processo (lista `autoriaIniciativa`). | publico-agente-publico |  |
 | `senadores` | Senadores por legislatura (o mesmo senador aparece em várias), com os mandatos em tabelas filhas. | publico-agente-publico |  |
+| `senadores__mandatos_mandato` | Mandatos de cada senador na legislatura (titular ou suplente), lista `Mandatos.Mandato`. | publico-agente-publico |  |
+| `senadores__mandatos_mandato__exercicios__exercicio` | Períodos de exercício de cada mandato, com a causa de afastamento (lista `Exercicios.Exercicio`). | publico-agente-publico |  |
 | `senadores_detalhe` | Detalhe de cada senador, buscado por item na API (`_item` é o código do senador): nascimento, naturalidade e foto, só dos já buscados. | publico-agente-publico |  |
 | `votacoes` | Votações em plenário com resultado, totais e a matéria votada. | publico-agente-publico |  |
 | `votacoes__votos` | Voto de cada senador em cada votação nominal (lista `votos` da votação). | publico-agente-publico |  |
@@ -66,6 +68,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `stg_identity__pessoa_identificadores` | Identificadores de cada pessoa em cada fonte. | publico-agente-publico |  |
 | `stg_identity__pessoas` | Pessoas do projeto (chave própria). | publico-agente-publico |  |
 | `stg_metadata__captures` | Capturas dos arquivos da fonte (um arquivo, uma linha). `source_file_id` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
+| `stg_senado__exercicios` | Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento. | publico-agente-publico |  |
 | `stg_senado__processos` | Processo de cada matéria votada (só as já buscadas), com a situação atual e a norma gerada. | publico-agente-publico |  |
 | `stg_senado__senadores` | Senadores, uma linha por senador (o mais recente dos arquivos de legislatura), com nomes padronizados. | publico-agente-publico |  |
 | `stg_senado__senadores_detalhe` | Detalhe de cada senador (só os já buscados), com nome civil, nascimento, naturalidade e foto. | publico-agente-publico |  |
@@ -102,9 +105,11 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | --- | --- | --- | --- |
 | `autorias` | Proposições de que cada pessoa é autora ou apoiadora, com a posição na assinatura e o total de autores. Uma linha por pessoa e proposição. | publico-agente-publico | pessoa e proposição |
 | `candidaturas` | Candidaturas ao Congresso (deputado federal e senador, com suplentes) de quem já é pessoa do projeto, com partido, situação e resultado. Uma linha por candidatura e turno. | publico-agente-publico | pessoa |
+| `exercicios` | Exercício oficial no cargo como o Senado informa (titular e suplentes), com início, fim e causa de afastamento. Só o Senado; a Câmara não publica. Uma linha por pessoa, mandato e exercício. | publico-agente-publico | pessoa |
 | `frentes` | Frentes parlamentares, com legislatura de criação e coordenador. Uma linha por frente. | publico | frente parlamentar |
 | `fusoes_de_pessoas` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa (por exemplo, deputado que virou senador). Uma linha por chave absorvida. | publico-agente-publico | chave absorvida |
 | `legislaturas` | Legislaturas da Câmara, com datas oficiais de início e fim. Uma linha por legislatura. | publico | legislatura |
+| `linhagem_de_partidos` | Mudanças de nome, fusões e incorporações de partidos, conforme o TSE, com a página oficial de cada evento. Curada à mão; só o que foi conferido. Uma linha por partido de origem e evento. | publico | partido de origem e evento |
 | `mandatos` | Mandatos por legislatura, a partir de votos observados (início e fim oficiais vazios). Uma linha por pessoa e legislatura. | publico-agente-publico | pessoa e legislatura |
 | `membros_de_frentes` | Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título. | publico-agente-publico | pessoa |
 | `membros_de_orgaos` | Participação de pessoas em órgãos da Câmara, com cargo e período. Uma linha por pessoa, órgão, cargo e período informado. | publico-agente-publico | pessoa |
@@ -167,6 +172,23 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `resultado` | varchar | Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado. |
 | `capturado_em` | date | Data da captura do arquivo de origem. |
 
+### marts.exercicios
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
+| `mandato_id` | varchar | Código do mandato no Senado (titular e suplentes compartilham o mesmo). |
+| `exercicio_id` | varchar | Código do período de exercício no Senado. |
+| `participacao` | varchar | Titular, 1º suplente ou 2º suplente. |
+| `uf` | varchar | UF que o mandato representa. |
+| `mandato_inicio` | date | Início do mandato (da primeira legislatura que ele cobre). |
+| `mandato_fim` | date | Fim do mandato (da última legislatura que ele cobre). |
+| `inicio` | date | Início deste período de exercício. |
+| `fim` | date | Fim deste período; vazio enquanto está em exercício. |
+| `causa_afastamento_sigla` | varchar | Sigla da causa do fim do período (licença, renúncia, fim do mandato); vazia se não informada. |
+| `causa_afastamento` | varchar | Descrição da causa do fim do período. |
+
 ### marts.frentes
 
 | Coluna | Tipo | Descrição |
@@ -197,6 +219,18 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `inicio` | date | Início oficial da legislatura. |
 | `fim` | date | Fim oficial da legislatura. |
 | `ano_eleicao` | integer | Ano da eleição que a formou. |
+
+### marts.linhagem_de_partidos
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `sigla_anterior` | varchar | Sigla do partido antes do evento, como aparece nos votos. |
+| `sigla_posterior` | varchar | Sigla depois do evento (a do partido resultante, em fusão e incorporação). |
+| `tipo` | varchar | Mudança de nome, fusão ou incorporação. |
+| `aprovado_em` | date | Data da aprovação pelo TSE; vazia quando só o mês é conhecido. |
+| `ano` | integer | Ano do evento. |
+| `fonte_url` | varchar | Página oficial do TSE que registra o evento. |
+| `observacao` | varchar | Divergência de data, resolução ou ressalva da fonte. |
 
 ### marts.mandatos
 

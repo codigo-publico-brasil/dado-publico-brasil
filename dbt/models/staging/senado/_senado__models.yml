@@ -29,6 +29,11 @@ models:
         tests: [unique, not_null]
       - name: materia_id
         tests: [not_null]
+  - name: stg_senado__exercicios
+    description: Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento.
+    columns:
+      - name: exercicio_id
+        tests: [not_null]
   - name: stg_senado__senadores_detalhe
     description: Detalhe de cada senador (só os já buscados), com nome civil, nascimento, naturalidade e foto.
     columns:

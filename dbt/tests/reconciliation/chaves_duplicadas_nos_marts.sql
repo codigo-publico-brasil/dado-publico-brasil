@@ -11,3 +11,8 @@ union all
 
 select 'votos', fonte, votacao_id || '/' || id_pessoa from {{ ref('votos') }}
 group by fonte, votacao_id, id_pessoa having count(*) > 1
+
+union all
+
+select 'exercicios', fonte, mandato_id || '/' || exercicio_id || '/' || id_pessoa from {{ ref('exercicios') }}
+group by fonte, mandato_id, exercicio_id, id_pessoa having count(*) > 1

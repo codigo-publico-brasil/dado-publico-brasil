@@ -30,6 +30,22 @@ def _parlamentar(codigo: str, nome: str, civil: str, sexo: str) -> dict[str, obj
                         "DataInicio": "2019-02-01",
                         "DataFim": "2023-01-31",
                     },
+                    "SegundaLegislaturaDoMandato": {
+                        "NumeroLegislatura": "57",
+                        "DataInicio": "2023-02-01",
+                        "DataFim": "2027-01-31",
+                    },
+                    "Exercicios": {
+                        "Exercicio": [
+                            {
+                                "CodigoExercicio": f"e{codigo}",
+                                "DataInicio": "2019-02-01",
+                                "DataFim": "2020-05-01",
+                                "SiglaCausaAfastamento": "LIC",
+                                "DescricaoCausaAfastamento": "Licença",
+                            }
+                        ]
+                    },
                 }
             ]
         },
