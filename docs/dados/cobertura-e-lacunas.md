@@ -26,6 +26,9 @@ Os números abaixo são da carga histórica de 21/10/2026 (Câmara: `run --histo
 | Mandatos (votos observados) do Senado | 989 |
 | Tramitação da Câmara (amostra por item: os 300 mais recentes dos 96.134 alvos) | 300 proposições, 338 andamentos |
 | Processos do Senado (amostra por item: 300 das 2.738 matérias votadas) | 300 processos, 75 normas geradas |
+| Pessoas hoje (depois da fusão deputado e senador) | 8.535, das quais 218 estão nas duas casas |
+| Candidaturas ao Congresso no TSE (eleições gerais de 1998 a 2026) | 53.626 no staging; 6.709 ligadas a uma pessoa; 3.456 eleitas ligadas (1.900 pessoas) |
+| Detalhe de senadores (nascimento, naturalidade, foto) | 842 de 843 buscados (779 com nascimento, 472 com foto) |
 | Testes do dbt do tipo erro que falharam | 0 |
 
 ## 1. O que a Câmara entrega e o projeto já usa
@@ -84,6 +87,19 @@ Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada 
 - **Câmara, tramitação:** só proposições que podem virar norma (PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC: 96.134). Estão buscadas 300; o teste `proposicoes_alvo_sem_tramitacao` mede as que faltam, e `plataforma coverage` mostra o quadro por dataset. A fonte não tem a norma resultante nesse endpoint: `normas_geradas` vem só do Senado por enquanto.
 - **Senado, processo:** estão buscados 300 das 2.738 matérias votadas. Em metade das respostas (150) a fonte não informa `situacaoAtual`; fica vazia (nada é inferido). A autoria está no raw (`processos__autoria_iniciativa`) e o corpo completo no landing, mas ainda não nos marts, para não publicar contagens parciais por senador. A tramitação do Senado (`autuacoes`) está só no landing.
 - **Auditoria:** `plataforma verify` confere os hashes de todos os arquivos do landing e das respostas dentro dos lotes (landing íntegro na última conferência).
+
+## TSE: candidaturas e ligação entre fontes
+
+| Dado | Fonte | Cobertura carregada |
+| --- | --- | --- |
+| Candidaturas a deputado federal e senador (com suplentes), com partido, situação e resultado | `candidaturas` (um pacote por eleição) | eleições gerais de 1998, 2002, 2006, 2010, 2014, 2018, 2022 e 2026 |
+
+- **Ligação** por nome civil e nascimento iguais e únicos ([ADR 0013](../adr/0013-tse-ligacao-por-nome-civil-e-nascimento.md)): 6.709 candidaturas ligadas. As demais (candidatos de fora do Congresso e quem não foi eleito) ficam no staging.
+- **Eleitos sem vínculo:** 363 candidaturas marcadas como eleitas não foram ligadas (teste `eleitos_federais_sem_vinculo`): nome civil diferente entre as fontes, nascimento ausente ou homônimo. A curadoria manual resolve.
+- **Nascimento ausente:** 972 pessoas sem data de nascimento (sobretudo senadores sem o detalhe, o que impede a ligação por esta regra). Uma busca do detalhe que falhou (503) é repetida na próxima execução com `--foreach`.
+- **Ambiguidade:** o teste `pessoas_ambiguas_entre_fontes` mede nome civil e nascimento repetidos dentro de uma fonte.
+- **Resultado da eleição de 2026:** vem como a fonte informa na data da carga; uma eleição recente pode ter resultado ainda não consolidado.
+- **Ainda não carregados:** bens declarados, redes sociais, fotos, certidões, coligações, vagas e votação por candidato.
 
 ## 3. O que a Câmara **não** tem e precisa vir de outra instância
 

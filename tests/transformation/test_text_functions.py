@@ -70,3 +70,10 @@ def test_standardize_summary_leaves_mixed_case_alone_and_capitalizes_lowercase(
     assert one(db, "SELECT standardize_summary(?, []::varchar[])", lower) == (
         "Requer o desarquivamento de proposições."
     )
+
+
+def test_name_key_compares_names_across_sources(db: duckdb.DuckDBPyConnection) -> None:
+    assert one(db, "SELECT name_key(?)", "  José   da  SILVA ") == "jose da silva"
+    assert one(db, "SELECT name_key(?)", "Jose da Silva") == one(db, "SELECT name_key(?)", "JOSÉ DA SILVA")
+    assert one(db, "SELECT name_key(NULL)") is None
+    assert one(db, "SELECT name_key('   ')") is None

@@ -24,3 +24,5 @@ sources:
               - relationships:
                   to: source('identity', 'pessoa')
                   field: id_pessoa
+      - name: pessoa_fusao
+        description: Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa.

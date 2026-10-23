@@ -66,6 +66,35 @@ def _senado_corpo() -> bytes:
     return json.dumps(processo).encode()
 
 
+def _detalhe(codigo: str, civil: str, nascimento: str, foto: str) -> bytes:
+    corpo = {
+        "DetalheParlamentar": {
+            "Parlamentar": {
+                "IdentificacaoParlamentar": {
+                    "CodigoParlamentar": codigo,
+                    "NomeCompletoParlamentar": civil,
+                    "UrlFotoParlamentar": foto,
+                    "EmailParlamentar": "nao.entra@exemplo.gov.br",
+                },
+                "DadosBasicosParlamentar": {
+                    "DataNascimento": nascimento,
+                    "Naturalidade": "Santos",
+                    "UfNaturalidade": "SP",
+                    "EnderecoParlamentar": "Anexo 2, gabinete 5",
+                },
+            }
+        }
+    }
+    return json.dumps(corpo).encode()
+
+
+DETALHES = {
+    "5000": ("Roberto Barreiras", "1970-05-05", "http://foto/s5000.jpg"),
+    "5001": ("Ana Aparecida da Silva", "1975-06-06", "http://foto/s5001.jpg"),
+    "5003": ("Bia Souza", "1990-01-01", "http://foto/s5003.jpg"),
+}
+
+
 def fake_get(url: str) -> tuple[int, bytes]:
     """Substitui a chamada à API: 100 e 101 têm tramitação, 102 não existe na fonte (404)."""
     for item in ("100", "101"):
@@ -73,4 +102,7 @@ def fake_get(url: str) -> tuple[int, bytes]:
             return 200, _camara_corpo(item)
     if url == SENADO.format("1"):
         return 200, _senado_corpo()
+    for codigo, (civil, nascimento, foto) in DETALHES.items():
+        if url == f"https://legis.senado.leg.br/dadosabertos/senador/{codigo}":
+            return 200, _detalhe(codigo, civil, nascimento, foto)
     return 404, b""

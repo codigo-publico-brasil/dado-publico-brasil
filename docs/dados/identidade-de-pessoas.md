@@ -38,10 +38,15 @@ O que **liga** os identificadores é a regra de ligação, e ela é o ponto deli
 
 Decidida na spec 008: um erro de ligação (juntar duas pessoas diferentes, ou separar uma só) distorce quem votou em quê, e isso é pior do que deixar duas pessoas separadas por um tempo. Por isso:
 
-1. **Ligação automática** só quando uma chave oficial constar nas duas fontes (por exemplo, um identificador que o TSE e o Senado publiquem para a mesma pessoa).
-2. **Sugestão para revisão humana** quando houver coincidência de nome e data de nascimento sem chave oficial em comum. Uma pessoa confirma; o nome de quem confirmou fica em `confirmado_por`.
-3. **Nunca** ligar só por nome. Há homônimos, e nomes de urna se repetem.
-4. Toda ligação é registrada com método e data, e pode ser desfeita.
+1. **Ligação automática por identificador oficial:** só quando uma chave oficial constar nas duas fontes.
+2. **Ligação por nome civil e data de nascimento** ([ADR 0013](../adr/0013-tse-ligacao-por-nome-civil-e-nascimento.md)): só quando os dois são **iguais e únicos**. Nome sem acento, em minúsculas e com espaços únicos; "único" quer dizer que, dentro de cada fonte, só um registro tem aquele par (homônimo com a mesma data não liga) e, numa eleição, só uma candidatura o tem. É o que liga a candidatura do TSE à pessoa e o deputado ao senador que são a mesma pessoa.
+3. **Nunca** ligar só por nome, nem por nome e ano de nascimento. Há homônimos, e nomes de urna se repetem.
+4. Caso ambíguo ou sem correspondência (nome grafado diferente entre as fontes, nascimento ausente) **não liga**, é medido por teste e a curadoria manual decide.
+5. Toda ligação é registrada com método e data (`identity.pessoa_identificador`), e uma fusão entre casas fica em `identity.pessoa_fusao`.
+
+### Fusão de chaves
+
+Quando a regra mostra que um deputado e um senador são a mesma pessoa, a chave mais **nova** é absorvida pela mais **antiga**: os identificadores passam a apontar para a sobrevivente, a chave absorvida sai de `identity.pessoa` e **nunca é reaproveitada**, e a fusão fica em `identity.pessoa_fusao` (mart `fusoes_de_pessoas`) para quem guardou a chave antiga resolver a atual. `marts.pessoas` tem uma linha por pessoa (dados da Câmara quando está nas duas casas; coluna `fontes` com todas).
 
 Hoje só existe a fonte Câmara, então toda ligação é a automática "identificador oficial da própria fonte". O código está em [`identity.py`](../../src/plataforma_dados/transformation/identity.py) e as tabelas são criadas por [migração](../../ddl/0002_identity.sql). Os dados da pessoa (nome, foto, nascimento) e o mandato são modelos SQL do dbt ([`int_pessoas_unidas_ao_cadastro`](../../dbt/models/intermediate/int_pessoas_unidas_ao_cadastro.sql) e [`mandatos`](../../dbt/models/marts/legislativo/mandatos.sql)).
 

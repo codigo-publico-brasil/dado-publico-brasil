@@ -24,3 +24,5 @@ exposures:
       - ref('membros_de_frentes')
       - ref('tramitacoes')
       - ref('normas_geradas')
+      - ref('candidaturas')
+      - ref('fusoes_de_pessoas')

@@ -1,0 +1,33 @@
+# Declaração da fonte: Tribunal Superior Eleitoral (Justiça Eleitoral), dados abertos. Os arquivos são pacotes
+# .zip com um CSV por UF e um `_BRASIL.csv` que reúne todos (por isso só ele é lido).
+# Minimização: CPF, título de eleitor, e-mail e nome social não estão em `columns` (nunca entram no raw), e
+# `only` deixa passar só as candidaturas ao Congresso (deputado federal e senador, com suplentes).
+# O landing guarda o pacote original, com hash.
+
+source: tse
+power: judiciario
+level: federal
+description: Tribunal Superior Eleitoral, dados abertos (CKAN; pacotes .zip com CSV)
+
+access:
+  base_url: https://cdn.tse.jus.br/estatistica/sead/odsele
+  format: csv
+  delimiter: ";"
+  encoding: latin-1
+
+datasets:
+  candidaturas:
+    url: "{base_url}/consulta_cand/consulta_cand_{year}.zip"
+    load: yearly
+    first_year: 1998                # primeira eleição geral cujos votos a plataforma tem
+    step: 4                         # só as eleições gerais (1998, 2002, ... 2022, 2026)
+    stable_after_years: 4           # o incremental confere a eleição corrente e a anterior
+    archive: zip
+    member: "*_BRASIL.csv"
+    write: merge
+    primary_key: [ANO_ELEICAO, SQ_CANDIDATO, NR_TURNO]
+    only:
+      DS_CARGO: ["DEPUTADO FEDERAL", "SENADOR", "1º SUPLENTE", "2º SUPLENTE", "1º SUPLENTE SENADOR", "2º SUPLENTE SENADOR"]
+    columns:
+      [ANO_ELEICAO, NR_TURNO, SG_UF, DS_CARGO, SQ_CANDIDATO, NR_CANDIDATO, NM_CANDIDATO, NM_URNA_CANDIDATO,
+       DS_SITUACAO_CANDIDATURA, SG_PARTIDO, NM_PARTIDO, DT_NASCIMENTO, DS_GENERO, DS_SIT_TOT_TURNO]

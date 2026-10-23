@@ -67,3 +67,20 @@ datasets:
        normaGerada__dataPublicacao, normaGerada__siglaVeiculoPublicacao, autoriaIniciativa]
     nested: [autoriaIniciativa]
 
+  senadores_detalhe:
+    # Por item: uma chamada por senador, para a data de nascimento, a naturalidade e a foto. E-mail, telefone e
+    # endereço do gabinete que a resposta traz não estão em `columns` e nunca entram no raw.
+    url: "{base_url}/senador/{item}"
+    load: foreach
+    write: merge
+    records: DetalheParlamentar.Parlamentar
+    foreach:
+      from: senadores
+      item: identificacao_parlamentar_codigo_parlamentar
+      batch_size: 200
+    primary_key: [_item]
+    columns:
+      [_item, IdentificacaoParlamentar__CodigoParlamentar, IdentificacaoParlamentar__NomeCompletoParlamentar,
+       IdentificacaoParlamentar__UrlFotoParlamentar, DadosBasicosParlamentar__DataNascimento,
+       DadosBasicosParlamentar__Naturalidade, DadosBasicosParlamentar__UfNaturalidade]
+

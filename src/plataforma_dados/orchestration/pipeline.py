@@ -39,6 +39,7 @@ def run_all(
     only: str | None = None,
     per_item: int | None = None,
     get: foreach.Get | None = None,
+    dataset_name: str | None = None,
 ) -> Summary:
     """Roda a cadeia inteira para todas as fontes (ou só `only`). `plan` diz o que extrair de cada uma.
 
@@ -57,7 +58,7 @@ def run_all(
                 captures, rows = loader.load_pending(con, settings, source, rebuild)
                 if per_item:
                     for name, dataset in source.datasets.items():
-                        if dataset.foreach:
+                        if dataset.foreach and dataset_name in (None, name):
                             summary.items += foreach.capture(con, settings, source, name, per_item, get)
                     more_captures, more_rows = loader.load_pending(con, settings, source)
                     captures, rows = captures + more_captures, rows + more_rows

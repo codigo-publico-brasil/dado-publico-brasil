@@ -32,11 +32,11 @@ def _items(con: Connection, contract: SourceContract, name: str) -> list[tuple[s
     f = contract.datasets[name].foreach
     assert f
     version = f"max(CAST({f.version} AS VARCHAR))" if f.version else "NULL"
-    recent = f"max({f.recent_by})" if f.recent_by else "NULL"
+    recent = f"max({f.recent_by}) DESC NULLS LAST, " if f.recent_by else ""
     found = con.execute(
         f"SELECT CAST({f.item} AS VARCHAR) AS item, {version} AS version "
         f"FROM {contract.schema}.{normalize(f.source)} WHERE ({f.where}) AND {f.item} IS NOT NULL "
-        f"GROUP BY 1 ORDER BY {recent} DESC NULLS LAST, 1 DESC"
+        f"GROUP BY 1 ORDER BY {recent}1 DESC"
     ).fetchall()
     return [(str(i), v) for i, v in found]
 

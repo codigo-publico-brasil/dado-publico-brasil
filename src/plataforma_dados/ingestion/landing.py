@@ -101,7 +101,12 @@ def legislature_of(year: int) -> int:
 
 def partitions(dataset: Dataset, years: list[int] | set[int]) -> list[int]:
     """Valores de partição de um dataset para os anos pedidos: os próprios anos ou suas legislaturas."""
-    valid = [y for y in years if dataset.first_year is None or y >= dataset.first_year]
+    first = dataset.first_year
+    valid = [
+        y
+        for y in years
+        if (first is None or y >= first) and (first is None or (y - first) % dataset.step == 0)
+    ]
     if dataset.partition == "legislature":
         return sorted({legislature_of(y) for y in valid})
     return sorted(valid)

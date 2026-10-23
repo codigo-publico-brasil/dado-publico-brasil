@@ -8,7 +8,8 @@ models:
     meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário}
     columns:
       - {name: id_pessoa, data_type: bigint, tests: [unique, not_null], description: "Chave própria e estável da pessoa (schema identity)."}
-      - {name: fonte, data_type: varchar, description: "Fonte do cadastro da pessoa (camara ou senado)."}
+      - {name: fonte, data_type: varchar, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
+      - {name: fontes, data_type: varchar, description: "Todas as fontes em que a pessoa aparece (por exemplo, camara, senado)."}
       - {name: nome, data_type: varchar, tests: [not_null], description: "Nome parlamentar, com caixa padronizada."}
       - {name: nome_civil, data_type: varchar, description: "Nome civil, com caixa padronizada."}
       - {name: nome_ordem, data_type: varchar, description: "Nome sem acento e em minúsculas, para ordenar."}
@@ -265,3 +266,36 @@ models:
       - {name: descricao, data_type: varchar, description: "Descrição oficial da norma."}
       - {name: veiculo_publicacao, data_type: varchar, description: "Veículo de publicação (por exemplo, DOU)."}
       - {name: capturado_em, data_type: date, description: "Data da captura do lote de origem."}
+
+  - name: candidaturas
+    description: Candidaturas ao Congresso (deputado federal e senador, com suplentes) de quem já é pessoa do projeto, com partido, situação e resultado. Uma linha por candidatura e turno.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, eleição e turno, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - name: id_pessoa
+        data_type: bigint
+        description: "Chave da pessoa (marts.pessoas), ligada por nome civil e data de nascimento iguais e únicos."
+        tests:
+          - not_null
+          - relationships: {to: ref('pessoas'), field: id_pessoa}
+      - {name: candidatura_id, data_type: varchar, tests: [not_null], description: "Identificador da candidatura na fonte: ano da eleição e sequencial do candidato."}
+      - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
+      - {name: turno, data_type: integer, description: "Turno da votação."}
+      - {name: uf, data_type: varchar, description: "UF da candidatura (BR para cargos nacionais)."}
+      - {name: cargo, data_type: varchar, description: "Cargo disputado."}
+      - {name: numero, data_type: varchar, description: "Número do candidato na urna."}
+      - {name: nome_urna, data_type: varchar, description: "Nome de urna, com caixa padronizada."}
+      - {name: partido, data_type: varchar, description: "Sigla do partido na eleição."}
+      - {name: partido_nome, data_type: varchar, description: "Nome do partido na eleição."}
+      - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura segundo a fonte (por exemplo, deferido)."}
+      - {name: resultado, data_type: varchar, description: "Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado."}
+      - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: fusoes_de_pessoas
+    description: Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa (por exemplo, deputado que virou senador). Uma linha por chave absorvida.
+    meta: {sensitivity: publico-agente-publico, grain: chave absorvida, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: id_pessoa_absorvida, data_type: bigint, tests: [unique, not_null], description: "Chave que deixou de existir."}
+      - {name: id_pessoa_sobrevivente, data_type: bigint, tests: [not_null], description: "Chave que a substituiu (marts.pessoas)."}
+      - {name: metodo, data_type: varchar, description: "Regra que ligou as duas chaves."}
+      - {name: fundida_em, data_type: timestamp, description: "Momento da fusão."}

@@ -43,6 +43,6 @@ Leia `README.md` e `docs/dados/camadas.md`. Não contrarie um ADR de `docs/adr/`
 | ordem das etapas, agendamento | `src/plataforma_dados/orchestration/` |
 | ambiente (pasta de dados, warehouse) | variáveis `PLATAFORMA_STORAGE_ROOT`, `PLATAFORMA_WAREHOUSE` |
 
-`src/plataforma_dados/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português (`pessoas`, `proposicoes`, `votos`). Comando: `uv run plataforma` (`run`, `extract`, `load`, `transform`, `identity`, `catalog`, `docs`, `query`, `verify`, `coverage`; `--foreach N` roda os datasets por item).
+`src/plataforma_dados/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português (`pessoas`, `proposicoes`, `votos`). Comando: `uv run plataforma` (`run`, `extract`, `load`, `transform`, `identity`, `catalog`, `docs`, `query`, `verify`, `coverage`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
 
 O fundador usa o projeto para aprender arquitetura de dados e de sistemas: explique decisões e alternativas em poucas linhas e aponte o que merece ADR.

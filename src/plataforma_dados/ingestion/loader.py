@@ -39,6 +39,8 @@ def read_rows(
     key = [names.get(c, c) for c in dataset.primary_key]
     for record in read.records(file, contract, dataset):
         stats["read"] += 1
+        if any(record.get(field) not in allowed for field, allowed in dataset.only.items()):
+            continue  # minimização: fora do que a declaração diz que interessa
         row: dict[str, Any] = {names[c]: _clean(record.get(c)) for c in dataset.columns}
         row["_source_file_id"] = file_id
         if ROW_HASH in dataset.primary_key:

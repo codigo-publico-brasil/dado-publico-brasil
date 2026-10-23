@@ -126,7 +126,9 @@ def test_every_warehouse_table_of_the_marts_has_a_declared_contract(
     con, _ = full
     assert tables(con, "marts") == [
         "autorias",
+        "candidaturas",
         "frentes",
+        "fusoes_de_pessoas",
         "legislaturas",
         "mandatos",
         "membros_de_frentes",

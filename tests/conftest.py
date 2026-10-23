@@ -10,6 +10,7 @@ import pytest
 from synthetic_camara import fake_downloader, no_headers, synthetic_files
 from synthetic_senado import senado_files
 from synthetic_tramitacao import fake_get
+from synthetic_tse import tse_files
 
 from plataforma_dados.core import migrations
 from plataforma_dados.core.settings import Settings
@@ -46,8 +47,10 @@ def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract
     con.close()
     pipeline.run_all(
         Settings(storage_root=base / "full"),
-        lambda c: landing.plan(c, [2024], []),
-        downloader=fake_downloader({**files, **senado_files(base / "origin_senado")}),
+        lambda c: landing.plan(c, [2022] if c.source == "tse" else [2024], []),  # TSE: só eleição geral
+        downloader=fake_downloader(
+            {**files, **senado_files(base / "origin_senado"), **tse_files(base / "origin_tse")}
+        ),
         head_request=no_headers,
         per_item=100,
         get=fake_get,

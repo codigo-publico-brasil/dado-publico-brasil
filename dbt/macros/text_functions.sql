@@ -12,9 +12,12 @@
                                    (partículas em minúsculas; algarismos romanos e siglas sem vogal, como JHC,
                                    em maiúsculas)
     standardize_summary(x, siglas) caixa de frase para ementas, mantendo em maiúsculas as palavras de `siglas`
+    name_key(x)                    chave para comparar nomes entre fontes: sem acento, minúsculas e espaços únicos
 #}
 {% macro create_text_functions() %}
 create or replace macro clean_text(x) as trim(regexp_replace(x, '\s+', ' ', 'g'));
+
+create or replace macro name_key(x) as nullif(lower(strip_accents(clean_text(x))), '');
 
 create or replace macro is_single_case(x) as (x = upper(x) or x = lower(x));
 

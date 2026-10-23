@@ -18,6 +18,8 @@ vars:
   id_type_camara: deputado
   source_senado: senado
   id_type_senado: senador
+  source_tse: tse
+  id_type_tse: candidato
   url_proposicao_camara: "https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao="
   url_materia_senado: "https://www25.senado.leg.br/web/atividade/materias/-/materia/"
 
@@ -35,6 +37,8 @@ models:
       camara:
         +tags: [pre_identity]
       senado:
+        +tags: [pre_identity]
+      tse:
         +tags: [pre_identity]
       metadata:
         +tags: [pre_identity]

@@ -30,3 +30,7 @@ sources:
           buscadas: situação atual e norma gerada.
       - name: processos__autoria_iniciativa
         description: Autoria de cada processo (lista `autoriaIniciativa`).
+      - name: senadores_detalhe
+        description: >
+          Detalhe de cada senador, buscado por item na API (`_item` é o código do senador): nascimento, naturalidade
+          e foto, só dos já buscados.
