@@ -15,13 +15,13 @@ from synthetic_tramitacao import fake_get
 from synthetic_transparencia import transparencia_files
 from synthetic_tse import tse_files
 
-from plataforma_dados.core import migrations
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection
-from plataforma_dados.ingestion import contract as contracts
-from plataforma_dados.ingestion import landing, loader
-from plataforma_dados.ingestion.contract import SourceContract
-from plataforma_dados.orchestration import pipeline
+from dado_publico_brasil.core import migrations
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection
+from dado_publico_brasil.ingestion import contract as contracts
+from dado_publico_brasil.ingestion import landing, loader
+from dado_publico_brasil.ingestion.contract import SourceContract
+from dado_publico_brasil.orchestration import pipeline
 
 
 @pytest.fixture(scope="session")

@@ -85,14 +85,14 @@ Uma chamada para cada linha de outro dataset da mesma fonte. Exemplo (tramitaç�
     columns: [_item, sequencia, dataHora, ...]
 ```
 
-Roda só com `--foreach N` (os N mais recentes que faltam) ou `--foreach all`. Cada lote vai ao landing com a resposta de cada item byte a byte, e `metadata.capture_items` registra status e hash ([ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md)). Conferir com `plataforma verify` e `plataforma coverage`. A taxa é `access.rate_limit` (padrão 4 por segundo).
+Roda só com `--foreach N` (os N mais recentes que faltam) ou `--foreach all`. Cada lote vai ao landing com a resposta de cada item byte a byte, e `metadata.capture_items` registra status e hash ([ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md)). Conferir com `dado-publico verify` e `dado-publico coverage`. A taxa é `access.rate_limit` (padrão 4 por segundo).
 
 ## Credenciais, arquivo compactado, SOAP, robô
 
 O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósito. Os pontos de extensão existem:
 
 - **Credencial:** coloque `${VARIAVEL}` no `headers` do YAML e a variável no `.env` (nunca o valor no YAML).
-- **Qualquer outro jeito de obter ou ler** (pacote `.zip`, XML, SOAP, robô): crie `src/plataforma_dados/ingestion/custom/<poder>/<esfera>/<fonte>.py` com `download(url, folder)` (devolve o arquivo, o hash e o tamanho), `head(url)` e/ou `records(file, dataset)`. O que não definir segue o padrão, e o landing continua guardando o arquivo original com hash.
+- **Qualquer outro jeito de obter ou ler** (pacote `.zip`, XML, SOAP, robô): crie `src/dado_publico_brasil/ingestion/custom/<poder>/<esfera>/<fonte>.py` com `download(url, folder)` (devolve o arquivo, o hash e o tamanho), `head(url)` e/ou `records(file, dataset)`. O que não definir segue o padrão, e o landing continua guardando o arquivo original com hash.
 
 ## Regras
 
@@ -111,7 +111,7 @@ O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósi
 
 **Mudar a URL da fonte:** `access.base_url` (ou o `url` do dataset). A captura antiga continua no landing e em `metadata.captures`.
 
-**Mudar a pasta dos dados ou o warehouse:** variáveis `PLATAFORMA_STORAGE_ROOT` e `PLATAFORMA_WAREHOUSE`.
+**Mudar a pasta dos dados ou o warehouse:** variáveis `DADO_PUBLICO_STORAGE_ROOT` e `DADO_PUBLICO_WAREHOUSE`.
 
 **Fonte nova:**
 

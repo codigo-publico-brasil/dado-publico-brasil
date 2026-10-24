@@ -1,7 +1,7 @@
 """Normas, vetos e Constituição: catálogo, relações, dispositivos vetados, votos sem ligação a pessoas e o texto classificado."""
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, columns, rows, scalar
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, columns, rows, scalar
 
 Env = tuple[Connection, Settings]
 

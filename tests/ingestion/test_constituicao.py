@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from plataforma_dados.ingestion import contract as contracts
-from plataforma_dados.ingestion import fetch
-from plataforma_dados.ingestion.contract import InvalidContract, load_contract
-from plataforma_dados.ingestion.custom.legislativo.federal import constituicao
+from dado_publico_brasil.ingestion import contract as contracts
+from dado_publico_brasil.ingestion import fetch
+from dado_publico_brasil.ingestion.contract import InvalidContract, load_contract
+from dado_publico_brasil.ingestion.custom.legislativo.federal import constituicao
 
 PAGE = """<a href="/x/arquivos/ConstituicaoTextoAtualizado_EC%20139.html">139</a>
 <a href="/x/arquivos/ConstituicaoTextoAtualizado_EC%20141.html">141</a>

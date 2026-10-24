@@ -16,8 +16,8 @@ Tramitação, autoria e situação atual das proposições só existem por item:
 4. **Retomável e idempotente:** cada lote é gravado e registrado ao terminar; uma execução interrompida continua do próximo. Item novo, item cuja `version` (coluna do dataset de origem) mudou, item com falha (5xx ou sem resposta) e item mais velho que `refresh_after_days` são buscados de novo; resposta 404 não é repetida enquanto a versão não mudar.
 5. **Educação com a fonte:** `access.rate_limit` (padrão 4 chamadas por segundo), identificação no `User-Agent` e nova tentativa só em 5xx e falha de rede. A Câmara informa que a API serve para consultas selecionadas, "um pouco de cada vez", e os arquivos em lote para conjuntos grandes; por isso a API só é usada onde não há arquivo.
 6. **Auditoria e qualidade:**
-   - `plataforma verify` confere o hash de cada arquivo do landing, o de cada resposta dentro dos lotes e o índice `capture_items`;
-   - `plataforma coverage` mostra, por dataset, itens esperados, obtidos, inexistentes (404), com falha e faltantes; a cobertura também é gravada em `metadata.source_checks`;
+   - `dado-publico verify` confere o hash de cada arquivo do landing, o de cada resposta dentro dos lotes e o índice `capture_items`;
+   - `dado-publico coverage` mostra, por dataset, itens esperados, obtidos, inexistentes (404), com falha e faltantes; a cobertura também é gravada em `metadata.source_checks`;
    - testes do dbt medem as lacunas (proposições-alvo sem tramitação) e conferem o staging contra os marts.
 
 ## Termos de uso verificados (21/10/2026)

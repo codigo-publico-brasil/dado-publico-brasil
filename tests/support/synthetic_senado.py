@@ -8,7 +8,7 @@ pessoas de fontes diferentes nunca são ligadas por nome.
 import json
 from pathlib import Path
 
-from plataforma_dados.ingestion import contract as contracts
+from dado_publico_brasil.ingestion import contract as contracts
 
 
 def _parlamentar(codigo: str, nome: str, civil: str, sexo: str) -> dict[str, object]:

@@ -1,8 +1,8 @@
 """Cópia imutável da identidade: grava, nunca sobrescreve e denuncia qualquer divergência."""
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, scalar
-from plataforma_dados.transformation import snapshot
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, scalar
+from dado_publico_brasil.transformation import snapshot
 
 
 def add_person(con: Connection) -> None:
@@ -10,7 +10,7 @@ def add_person(con: Connection) -> None:
 
 
 def test_without_a_snapshot_the_check_asks_for_one(con: Connection, settings: Settings) -> None:
-    assert snapshot.problems(con, settings) == ["identidade sem snapshot: rode `plataforma identity`"]
+    assert snapshot.problems(con, settings) == ["identidade sem snapshot: rode `dado-publico identity`"]
 
 
 def test_snapshot_has_every_identity_table_and_matches_the_warehouse_right_after(

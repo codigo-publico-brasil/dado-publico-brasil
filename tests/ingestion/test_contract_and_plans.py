@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from plataforma_dados.ingestion import landing
-from plataforma_dados.ingestion.contract import InvalidContract, SourceContract, load_contract
+from dado_publico_brasil.ingestion import landing
+from dado_publico_brasil.ingestion.contract import InvalidContract, SourceContract, load_contract
 
 TEMPLATE = """
 source: teste

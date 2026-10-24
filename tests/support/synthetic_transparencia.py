@@ -10,7 +10,7 @@ import io
 import zipfile
 from pathlib import Path
 
-from plataforma_dados.ingestion import contract as contracts
+from dado_publico_brasil.ingestion import contract as contracts
 
 EMENDAS = [
     "Código da Emenda;Ano da Emenda;Tipo de Emenda;Código do Autor da Emenda;Nome do Autor da Emenda;Número da emenda;"

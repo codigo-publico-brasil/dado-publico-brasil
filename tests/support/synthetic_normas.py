@@ -8,7 +8,7 @@ do arquivo da Câmara: um parágrafo por dispositivo.
 import json
 from pathlib import Path
 
-from plataforma_dados.ingestion import contract as contracts
+from dado_publico_brasil.ingestion import contract as contracts
 
 BASE = "https://legis.senado.leg.br/dadosabertos"
 CONSTITUICAO_ID = "579494"

@@ -4,11 +4,11 @@ import urllib.error
 import zipfile
 from pathlib import Path
 
-from plataforma_dados.core import runs
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection
-from plataforma_dados.ingestion import landing, monitoring
-from plataforma_dados.ingestion.contract import SourceContract
+from dado_publico_brasil.core import runs
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection
+from dado_publico_brasil.ingestion import landing, monitoring
+from dado_publico_brasil.ingestion.contract import SourceContract
 
 
 def checks(con: Connection, name: str) -> list[tuple[str, str]]:
@@ -74,7 +74,7 @@ def test_a_different_column_order_is_not_a_schema_change(
 def test_json_that_omits_an_empty_field_is_a_warning_and_csv_missing_a_column_stays_an_error(
     con: Connection, tmp_path: Path
 ) -> None:
-    from plataforma_dados.ingestion import contract as contracts
+    from dado_publico_brasil.ingestion import contract as contracts
 
     senado = contracts.find("senado")
     file = tmp_path / "lista.json"
@@ -99,7 +99,7 @@ def test_the_column_change_is_measured_against_the_same_partition_not_against_an
 
 
 def test_an_old_name_declared_as_alias_counts_as_the_current_column(con: Connection, tmp_path: Path) -> None:
-    from plataforma_dados.ingestion import contract as contracts
+    from dado_publico_brasil.ingestion import contract as contracts
 
     tse = contracts.find("tse")
     bens = tse.datasets["bens"]

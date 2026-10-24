@@ -1,5 +1,5 @@
 """Publicação dos marts no PostgreSQL de serviço (ADR 0014). Precisa de um PostgreSQL de testes:
-`docker compose up -d` e PLATAFORMA_TEST_POSTGRES apontando para o banco `teste` (nunca o de desenvolvimento,
+`docker compose up -d` e DADO_PUBLICO_TEST_POSTGRES apontando para o banco `teste` (nunca o de desenvolvimento,
 que o teste sobrescreve). Sem a variável, os testes são pulados; o CI sobe o serviço."""
 
 import os
@@ -8,12 +8,12 @@ from dataclasses import replace
 import duckdb
 import pytest
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, tables
-from plataforma_dados.transformation import publish
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, tables
+from dado_publico_brasil.transformation import publish
 
-DSN = os.environ.get("PLATAFORMA_TEST_POSTGRES")
-needs_postgres = pytest.mark.skipif(not DSN, reason="PLATAFORMA_TEST_POSTGRES não definida")
+DSN = os.environ.get("DADO_PUBLICO_TEST_POSTGRES")
+needs_postgres = pytest.mark.skipif(not DSN, reason="DADO_PUBLICO_TEST_POSTGRES não definida")
 
 
 @pytest.fixture
@@ -75,5 +75,5 @@ def test_publishing_again_replaces_the_marts_without_duplicating_rows(
 
 
 def test_publish_without_a_connection_string_explains_what_is_missing(settings: Settings) -> None:
-    with pytest.raises(ValueError, match="PLATAFORMA_POSTGRES_DSN"):
+    with pytest.raises(ValueError, match="DADO_PUBLICO_POSTGRES_DSN"):
         publish.publish(settings)

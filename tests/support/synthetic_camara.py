@@ -9,7 +9,7 @@ import hashlib
 from collections.abc import Callable
 from pathlib import Path
 
-from plataforma_dados.ingestion import contract as contracts
+from dado_publico_brasil.ingestion import contract as contracts
 
 BASE = "https://dadosabertos.camara.leg.br/api/v2"
 

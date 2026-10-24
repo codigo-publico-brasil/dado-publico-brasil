@@ -339,6 +339,64 @@ wheels = [
 ]
 
 [[package]]
+name = "dado-publico-brasil"
+version = "0.0.0"
+source = { editable = "." }
+dependencies = [
+    { name = "duckdb" },
+    { name = "pyyaml" },
+]
+
+[package.optional-dependencies]
+ingestion = [
+    { name = "dlt", extra = ["duckdb"] },
+]
+orchestration = [
+    { name = "dagster" },
+    { name = "dagster-dbt" },
+    { name = "dagster-dlt" },
+    { name = "dagster-webserver" },
+    { name = "dbt-core" },
+    { name = "dbt-duckdb" },
+    { name = "dlt", extra = ["duckdb"] },
+]
+transformation = [
+    { name = "dbt-core" },
+    { name = "dbt-duckdb" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "ruff" },
+    { name = "types-pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dado-publico-brasil", extras = ["ingestion", "transformation"], marker = "extra == 'orchestration'" },
+    { name = "dagster", marker = "extra == 'orchestration'", specifier = ">=1.9" },
+    { name = "dagster-dbt", marker = "extra == 'orchestration'", specifier = ">=0.25" },
+    { name = "dagster-dlt", marker = "extra == 'orchestration'", specifier = ">=0.25" },
+    { name = "dagster-webserver", marker = "extra == 'orchestration'", specifier = ">=1.9" },
+    { name = "dbt-core", marker = "extra == 'transformation'", specifier = ">=1.9" },
+    { name = "dbt-duckdb", marker = "extra == 'transformation'", specifier = ">=1.9" },
+    { name = "dlt", extras = ["duckdb"], marker = "extra == 'ingestion'", specifier = ">=1.5" },
+    { name = "duckdb", specifier = ">=1.1" },
+    { name = "pyyaml", specifier = ">=6.0" },
+]
+provides-extras = ["ingestion", "transformation", "orchestration"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.13" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "ruff", specifier = ">=0.8" },
+    { name = "types-pyyaml", specifier = ">=6.0" },
+]
+
+[[package]]
 name = "daff"
 version = "1.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1736,64 +1794,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/70/00/bddac0418227afb8dcf3cd5fe9a3e5265f6faa1d7ec1426257dc4778a2c3/pendulum-3.3.0-cp315-cp315t-musllinux_1_1_x86_64.whl", hash = "sha256:e9214fc9b1e2aff5cde8c4d29c6f48e961a003f6c866ecba46594d6beee46045", size = 553674, upload-time = "2026-10-12T20:53:54.602Z" },
     { url = "https://files.pythonhosted.org/packages/e2/d1/c73c5eb59c7b404d068e58ee9b067165da645b1ebe77c17846064452a294/pendulum-3.3.0-cp315-cp315t-win_arm64.whl", hash = "sha256:9a4c7da841666c50e9c70e363d7d94c61e32558255ca282ba66bef48fbf5c16f", size = 252245, upload-time = "2026-10-12T20:53:56.216Z" },
     { url = "https://files.pythonhosted.org/packages/af/d8/2733a7d2533a61bd3f94a996f5ce2a0784d6ed3636dc2d4adb0c1f9fbb0f/pendulum-3.3.0-py3-none-any.whl", hash = "sha256:3a89816a1aaa6f068fe17f30ddd6c5d9a4a8dad62f8612da28c29a8810773fd4", size = 116287, upload-time = "2026-10-12T20:54:10.052Z" },
-]
-
-[[package]]
-name = "plataforma-dados"
-version = "0.0.0"
-source = { editable = "." }
-dependencies = [
-    { name = "duckdb" },
-    { name = "pyyaml" },
-]
-
-[package.optional-dependencies]
-ingestion = [
-    { name = "dlt", extra = ["duckdb"] },
-]
-orchestration = [
-    { name = "dagster" },
-    { name = "dagster-dbt" },
-    { name = "dagster-dlt" },
-    { name = "dagster-webserver" },
-    { name = "dbt-core" },
-    { name = "dbt-duckdb" },
-    { name = "dlt", extra = ["duckdb"] },
-]
-transformation = [
-    { name = "dbt-core" },
-    { name = "dbt-duckdb" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "ruff" },
-    { name = "types-pyyaml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "dagster", marker = "extra == 'orchestration'", specifier = ">=1.9" },
-    { name = "dagster-dbt", marker = "extra == 'orchestration'", specifier = ">=0.25" },
-    { name = "dagster-dlt", marker = "extra == 'orchestration'", specifier = ">=0.25" },
-    { name = "dagster-webserver", marker = "extra == 'orchestration'", specifier = ">=1.9" },
-    { name = "dbt-core", marker = "extra == 'transformation'", specifier = ">=1.9" },
-    { name = "dbt-duckdb", marker = "extra == 'transformation'", specifier = ">=1.9" },
-    { name = "dlt", extras = ["duckdb"], marker = "extra == 'ingestion'", specifier = ">=1.5" },
-    { name = "duckdb", specifier = ">=1.1" },
-    { name = "plataforma-dados", extras = ["ingestion", "transformation"], marker = "extra == 'orchestration'" },
-    { name = "pyyaml", specifier = ">=6.0" },
-]
-provides-extras = ["ingestion", "transformation", "orchestration"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mypy", specifier = ">=1.13" },
-    { name = "pytest", specifier = ">=8.3" },
-    { name = "ruff", specifier = ">=0.8" },
-    { name = "types-pyyaml", specifier = ">=6.0" },
 ]
 
 [[package]]

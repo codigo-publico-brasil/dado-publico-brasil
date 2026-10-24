@@ -1,7 +1,7 @@
 """Emendas parlamentares (Portal da Transparência): valores, "sem informação" vazio e favorecido pessoa física descartado."""
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, columns, scalar
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, columns, scalar
 
 Env = tuple[Connection, Settings]
 
@@ -56,8 +56,8 @@ def test_every_favored_party_enters_as_published_and_the_rows_that_identify_a_pe
 def test_the_table_with_personal_data_of_third_parties_is_classified_and_its_columns_are_marked(
     full: Env,
 ) -> None:
-    from plataforma_dados.core.settings import Settings
-    from plataforma_dados.transformation import catalog
+    from dado_publico_brasil.core.settings import Settings
+    from dado_publico_brasil.transformation import catalog
 
     settings = Settings()
     sensitivity = {t["name"]: t["sensitivity"] for t in catalog.tables(settings) if t["schema"] == "marts"}

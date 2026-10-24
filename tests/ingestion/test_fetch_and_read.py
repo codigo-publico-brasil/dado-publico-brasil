@@ -13,13 +13,13 @@ from pathlib import Path
 
 import pytest
 
-from plataforma_dados.core import migrations
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import rows
-from plataforma_dados.ingestion import fetch, loader, read
-from plataforma_dados.ingestion.contract import SourceContract, load_contract
+from dado_publico_brasil.core import migrations
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import rows
+from dado_publico_brasil.ingestion import fetch, loader, read
+from dado_publico_brasil.ingestion.contract import SourceContract, load_contract
 
-CUSTOM = "plataforma_dados.ingestion.custom.legislativo.federal.teste"
+CUSTOM = "dado_publico_brasil.ingestion.custom.legislativo.federal.teste"
 YAML = """
 source: teste
 power: legislativo

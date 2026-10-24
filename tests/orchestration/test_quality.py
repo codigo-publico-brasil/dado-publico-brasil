@@ -2,16 +2,16 @@
 
 import pytest
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, scalar
-from plataforma_dados.transformation import build
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, scalar
+from dado_publico_brasil.transformation import build
 
 
 def failures(con: Connection, test_name: str) -> int | None:
     row = con.execute(
         "SELECT failures FROM metadata.dbt_results WHERE kind = 'test' AND unique_id LIKE ? "
         "ORDER BY recorded_at DESC LIMIT 1",
-        (f"test.quem_decidiu.{test_name}%",),
+        (f"test.dado_publico_brasil.{test_name}%",),
     ).fetchone()
     assert row is not None, test_name
     return None if row[0] is None else int(row[0])
@@ -28,7 +28,7 @@ def test_known_gaps_are_recorded_as_warnings_with_their_size(
     assert failures(con, "pessoas_com_nome_em_maiusculas") == 0
     status = scalar(
         con,
-        "SELECT status FROM metadata.dbt_results WHERE unique_id LIKE 'test.quem_decidiu.proposicoes_sem_situacao%'",
+        "SELECT status FROM metadata.dbt_results WHERE unique_id LIKE 'test.dado_publico_brasil.proposicoes_sem_situacao%'",
     )
     assert status == "warn"
 

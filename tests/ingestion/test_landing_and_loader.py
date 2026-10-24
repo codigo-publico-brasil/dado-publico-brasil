@@ -5,10 +5,10 @@ from pathlib import Path
 import duckdb
 from synthetic_camara import fake_downloader, no_headers, synthetic_files
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, columns, scalar, tables
-from plataforma_dados.ingestion import landing, loader
-from plataforma_dados.ingestion.contract import SourceContract, load_contract
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, columns, scalar, tables
+from dado_publico_brasil.ingestion import landing, loader
+from dado_publico_brasil.ingestion.contract import SourceContract, load_contract
 
 
 def test_extract_keeps_the_original_with_hash_and_registers_the_capture(
@@ -244,7 +244,7 @@ def test_a_natural_key_that_joins_different_rows_is_counted_as_a_collision_and_i
 def test_the_load_registers_one_balance_that_is_an_error_for_collisions_and_rejections_and_ok_otherwise(
     con: Connection,
 ) -> None:
-    from plataforma_dados.ingestion import monitoring
+    from dado_publico_brasil.ingestion import monitoring
 
     monitoring.check_load(
         con, "teste", "ds", 2006, {"read": 10, "filtered": 3, "loaded": 6, "rejected": 1, "conflicting": 2}

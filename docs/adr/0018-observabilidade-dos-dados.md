@@ -12,8 +12,8 @@ Os testes do dbt só pegam o que alguém previu. Precisamos achar de forma autom
 1. **Elementary (Apache-2.0), como pacote dbt**, nos marts: `volume_anomalies`, `schema_changes` e `all_columns_anomalies` (nulos), todos com `severity: warn` para não bloquear o pipeline. O resultado de cada teste vai para `metadata.dbt_results`, e o Elementary guarda o histórico no esquema `elementary` do warehouse. Os testes entram uma vez por mart, no YAML, por âncora.
 2. **Relatório HTML do Elementary sob demanda** com o `edr`, rodado por `uvx` (sem entrar nas dependências do projeto: ele traz bibliotecas de nuvem que não usamos, cerca de 600 linhas no `uv.lock`).
 3. **Duas camadas nossas**, porque o Elementary só enxerga o que o dbt constrói: o monitor das fontes (disponibilidade, cabeçalho, volume) e o balanço de cada carga (`carga`), ambos em `metadata.source_checks`.
-4. **`plataforma observe`** junta tudo (fontes e carga, testes do dbt, anomalias dos marts) e falha com código 1 se houver problema.
-5. **Alerta por e-mail** por SMTP, configurado no `.env` (`PLATAFORMA_SMTP_*`, `PLATAFORMA_ALERT_*`), enviado ao fim da fase de marts se houver problema. O Elementary só alerta por Slack e Teams; e-mail é nosso, com `smtplib` da biblioteca padrão, sem dependência nova.
+4. **`dado-publico observe`** junta tudo (fontes e carga, testes do dbt, anomalias dos marts) e falha com código 1 se houver problema.
+5. **Alerta por e-mail** por SMTP, configurado no `.env` (`DADO_PUBLICO_SMTP_*`, `DADO_PUBLICO_ALERT_*`), enviado ao fim da fase de marts se houver problema. O Elementary só alerta por Slack e Teams; e-mail é nosso, com `smtplib` da biblioteca padrão, sem dependência nova.
 
 ## Alternativas consideradas
 

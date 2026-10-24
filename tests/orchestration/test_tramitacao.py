@@ -1,8 +1,8 @@
 """Tramitação (Câmara) e processo (Senado) buscados por item: dados nos marts e auditoria do landing."""
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, scalar
-from plataforma_dados.ingestion import contract, foreach
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, scalar
+from dado_publico_brasil.ingestion import contract, foreach
 
 Env = tuple[Connection, Settings]
 

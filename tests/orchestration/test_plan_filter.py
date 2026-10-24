@@ -2,8 +2,8 @@
 
 import argparse
 
-from plataforma_dados.ingestion import contract
-from plataforma_dados.orchestration.__main__ import _plan
+from dado_publico_brasil.ingestion import contract
+from dado_publico_brasil.orchestration.__main__ import _plan
 
 
 def args(**kw: object) -> argparse.Namespace:

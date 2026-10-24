@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.transformation import catalog, dbt
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.transformation import catalog, dbt
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / "docs" / "dados" / "catalogo.md"
@@ -17,7 +17,7 @@ DOC = ROOT / "docs" / "dados" / "catalogo.md"
 
 def test_catalog_document_is_up_to_date_with_the_dbt_project() -> None:
     assert DOC.read_text(encoding="utf-8") == catalog.markdown(Settings()), (
-        "docs/dados/catalogo.md desatualizado: rode `uv run plataforma catalog`"
+        "docs/dados/catalogo.md desatualizado: rode `uv run dado-publico catalog`"
     )
 
 
@@ -62,7 +62,7 @@ ALLOWED = {
     "documents": {"core"},
     "orchestration": {"core", "ingestion", "transformation", "documents"},
 }
-SRC = ROOT / "src" / "plataforma_dados"
+SRC = ROOT / "src" / "dado_publico_brasil"
 
 
 def _imports(folder: Path) -> set[str]:
@@ -78,7 +78,7 @@ def _imports(folder: Path) -> set[str]:
 
 @pytest.mark.parametrize("package", sorted(ALLOWED))
 def test_subpackages_only_import_what_the_architecture_allows(package: str) -> None:
-    prefix = "plataforma_dados."
+    prefix = "dado_publico_brasil."
     imported = {m.split(".")[1] for m in _imports(SRC / package) if m.startswith(prefix)} - {package}
     assert imported <= ALLOWED[package], f"{package} importa {sorted(imported - ALLOWED[package])}"
 
@@ -91,12 +91,12 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
     settings = Settings(storage_root=tmp_path / "store")
     dbt.invoke(settings, "parse")  # gera o manifesto que o Dagster lê
     code = (
-        "from plataforma_dados.orchestration.definitions import defs;"
+        "from dado_publico_brasil.orchestration.definitions import defs;"
         "keys = {k.to_user_string() for k in defs.resolve_asset_graph().get_all_asset_keys()};"
         "print(len(keys), 'marts/pessoas' in keys or 'pessoas' in keys, 'identity/pessoa' in keys, {'landing/camara', 'landing/senado'} <= keys,"
         " [s.name for s in defs.schedules or []])"
     )
-    env = {**os.environ, "PLATAFORMA_STORAGE_ROOT": str(settings.storage_root)}
+    env = {**os.environ, "DADO_PUBLICO_STORAGE_ROOT": str(settings.storage_root)}
     result = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, env=env, cwd=ROOT, check=False
     )

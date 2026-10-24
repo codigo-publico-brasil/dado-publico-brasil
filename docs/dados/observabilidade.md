@@ -10,15 +10,15 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 | Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`) | `metadata.source_checks` |
 | Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.dbt_results` |
 | Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam | `metadata.dbt_results` e esquema `elementary` |
-| Relatório e alerta | Junta tudo, falha se houver problema e envia por e-mail | `plataforma observe` |
+| Relatório e alerta | Junta tudo, falha se houver problema e envia por e-mail | `dado-publico observe` |
 
 ## Como usar
 
-1. **Automático:** ao fim de cada fase de marts (`plataforma transform` ou o Dagster), se houver problema, o relatório sai por e-mail. Configure no `.env` as variáveis `PLATAFORMA_SMTP_*` e `PLATAFORMA_ALERT_TO` (modelo em `.env.example`).
-2. **Sob demanda:** `plataforma observe` imprime o relatório (código 1 se houver problema); `plataforma observe --email` também envia, útil para testar o SMTP.
+1. **Automático:** ao fim de cada fase de marts (`dado-publico transform` ou o Dagster), se houver problema, o relatório sai por e-mail. Configure no `.env` as variáveis `DADO_PUBLICO_SMTP_*` e `DADO_PUBLICO_ALERT_TO` (modelo em `.env.example`).
+2. **Sob demanda:** `dado-publico observe` imprime o relatório (código 1 se houver problema); `dado-publico observe --email` também envia, útil para testar o SMTP.
 3. **Relatório HTML do Elementary** (histórico dos testes, gráficos de anomalia), com o pipeline parado:
    `uvx --from "elementary-data[duckdb]" edr report --profiles-dir dbt --file-path data_store/.state/observabilidade/report.html`
-   (rodar de `plataforma-dados/`, com `PLATAFORMA_WAREHOUSE_FILE` apontando para o warehouse).
+   (rodar da raiz do repositório, com `DADO_PUBLICO_WAREHOUSE_FILE` apontando para o warehouse).
 4. **Erro:** investigar antes de publicar. **Aviso:** ler; muitas vezes é fato da fonte (por exemplo, arquivos antigos do Senado sem campos opcionais).
 
 ## Limites conhecidos

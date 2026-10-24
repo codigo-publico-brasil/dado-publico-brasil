@@ -37,12 +37,12 @@ Leia `README.md` e `docs/dados/camadas.md`. Não contrarie um ADR de `docs/adr/`
 | Para... | Edite |
 | --- | --- |
 | fonte (URL, colunas, chaves, credenciais por `${VARIAVEL}`) | `sources/<poder>/<esfera>/<fonte>.yml` |
-| jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/plataforma_dados/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
+| jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/dado_publico_brasil/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
 | regra de transformação, teste de dado, descrição de coluna | `dbt/` (modelos, YAML ao lado) |
 | tabela própria (metadata, identity) | `ddl/` |
-| ordem das etapas, agendamento | `src/plataforma_dados/orchestration/` |
-| ambiente (pasta de dados, warehouse) | variáveis `PLATAFORMA_STORAGE_ROOT`, `PLATAFORMA_WAREHOUSE` |
+| ordem das etapas, agendamento | `src/dado_publico_brasil/orchestration/` |
+| ambiente (pasta de dados, warehouse) | variáveis `DADO_PUBLICO_STORAGE_ROOT`, `DADO_PUBLICO_WAREHOUSE` |
 
-`src/plataforma_dados/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português (`pessoas`, `proposicoes`, `votos`). Comando: `uv run plataforma` (`run`, `extract`, `load`, `transform`, `identity`, `publish`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
+`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português (`pessoas`, `proposicoes`, `votos`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `publish`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
 
 O fundador usa o projeto para aprender arquitetura de dados e de sistemas: explique decisões e alternativas em poucas linhas e aponte o que merece ADR.

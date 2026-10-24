@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from plataforma_dados.core import migrations
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import rows
-from plataforma_dados.ingestion import landing, loader, read
-from plataforma_dados.ingestion.contract import InvalidContract, SourceContract, load_contract
+from dado_publico_brasil.core import migrations
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import rows
+from dado_publico_brasil.ingestion import landing, loader, read
+from dado_publico_brasil.ingestion.contract import InvalidContract, SourceContract, load_contract
 
 YAML = """
 source: teste

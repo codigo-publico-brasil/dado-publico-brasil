@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, rows, scalar
-from plataforma_dados.ingestion import contract as contracts
-from plataforma_dados.ingestion import fetch, landing, loader
-from plataforma_dados.ingestion.custom.executivo.federal import dou
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, rows, scalar
+from dado_publico_brasil.ingestion import contract as contracts
+from dado_publico_brasil.ingestion import fetch, landing, loader
+from dado_publico_brasil.ingestion.custom.executivo.federal import dou
 
 LINK = "https://www.in.gov.br/documents/49035712/740172584/S01102026_Atualizado185748.zip/668c-0b48?version=1.0&amp;t=1&amp;download=true"
 PAGE = f"""<a href="{LINK}">S01</a>

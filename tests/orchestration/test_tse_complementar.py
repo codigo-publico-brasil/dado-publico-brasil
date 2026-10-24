@@ -1,7 +1,7 @@
 """TSE complementar: bens declarados e votos por candidato (todos os cargos no raw; marts só de quem é pessoa)."""
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, columns, scalar
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, columns, scalar
 
 Env = tuple[Connection, Settings]
 

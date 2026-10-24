@@ -60,7 +60,7 @@ O que ainda falta: o agendamento. As etapas já são idempotentes e registram ex
 
 ## 5. Linhagem e auditoria
 
-Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta para a execução que a trouxe. Toda execução registra versão do código, linhas lidas e gravadas e resultado. Nos datasets por item, a captura também aponta para cada resposta (`metadata.capture_items`: status HTTP e hash do corpo), e `plataforma verify` confere os hashes de todo o landing. O passo a passo de como provar a origem de um dado está em [auditoria](auditoria.md); mais detalhes em [camadas](camadas.md).
+Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta para a execução que a trouxe. Toda execução registra versão do código, linhas lidas e gravadas e resultado. Nos datasets por item, a captura também aponta para cada resposta (`metadata.capture_items`: status HTTP e hash do corpo), e `dado-publico verify` confere os hashes de todo o landing. O passo a passo de como provar a origem de um dado está em [auditoria](auditoria.md); mais detalhes em [camadas](camadas.md).
 
 ## 6. Segurança
 

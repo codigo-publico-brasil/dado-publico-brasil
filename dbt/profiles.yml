@@ -1,11 +1,11 @@
-# O arquivo do warehouse vem da configuração central (PLATAFORMA_WAREHOUSE_FILE, definido pelo
+# O arquivo do warehouse vem da configuração central (DADO_PUBLICO_WAREHOUSE_FILE, definido pelo
 # pipeline).
-quem_decidiu:
+dado_publico_brasil:
   target: local
   outputs:
     local:
       type: duckdb
-      path: "{{ env_var('PLATAFORMA_WAREHOUSE_FILE', '../data_store/warehouse.duckdb') }}"
+      path: "{{ env_var('DADO_PUBLICO_WAREHOUSE_FILE', '../data_store/warehouse.duckdb') }}"
       schema: main
 
 # O `edr` (relatório do Elementary) lê o esquema do perfil como o esquema do Elementary.
@@ -14,5 +14,5 @@ elementary:
   outputs:
     local:
       type: duckdb
-      path: "{{ env_var('PLATAFORMA_WAREHOUSE_FILE', '../data_store/warehouse.duckdb') }}"
+      path: "{{ env_var('DADO_PUBLICO_WAREHOUSE_FILE', '../data_store/warehouse.duckdb') }}"
       schema: elementary

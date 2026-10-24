@@ -1,7 +1,7 @@
 """TSE e ligação entre fontes: candidaturas ao Congresso, regra de nome civil e nascimento únicos, fusão e privacidade."""
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, columns, rows, scalar
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, columns, rows, scalar
 
 Env = tuple[Connection, Settings]
 
@@ -94,7 +94,7 @@ def test_senator_detail_gives_birth_naturality_and_photo_but_not_email_or_addres
 
 
 def test_linking_again_changes_nothing(full: Env) -> None:
-    from plataforma_dados.transformation import identity
+    from dado_publico_brasil.transformation import identity
 
     con, _ = full
     before = scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador")
@@ -104,7 +104,7 @@ def test_linking_again_changes_nothing(full: Env) -> None:
 
 
 def test_a_derived_tse_link_that_is_no_longer_proposed_is_removed_and_the_valid_ones_stay(full: Env) -> None:
-    from plataforma_dados.transformation import identity
+    from dado_publico_brasil.transformation import identity
 
     con, _ = full
     valid = scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador WHERE source = 'tse'")

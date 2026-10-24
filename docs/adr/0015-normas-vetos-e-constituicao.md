@@ -31,5 +31,5 @@ Para ligar a decisão à lei, e a emenda ao artigo que ela mudou, a plataforma p
 
 - Os marts `normas`, `normas_relacoes`, `normas_publicacoes`, `vetos`, `dispositivos_vetados`, `votos_em_vetos`, `constituicao_dispositivos` e `constituicao_alteracoes` entram, e `normas_geradas` ganha `norma_id` (ligação ao catálogo).
 - A carga total do detalhe (cerca de 25 mil normas, umas 7 horas) e dos vetos (dispositivos e votos) é decisão de quem opera; até lá o banco tem amostra dos mais recentes.
-- Uma emenda constitucional nova atualiza o arquivo da Câmara; o próximo `plataforma run` baixa a versão nova, o raw a substitui e o landing guarda as anteriores.
+- Uma emenda constitucional nova atualiza o arquivo da Câmara; o próximo `dado-publico run` baixa a versão nova, o raw a substitui e o landing guarda as anteriores.
 - Se a Câmara mudar a formatação do arquivo, a leitura pode perder dispositivos; os testes de reconciliação existem para denunciar isso.

@@ -20,7 +20,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
     env:
-      PLATAFORMA_TEST_POSTGRES: postgresql://postgres:ci@localhost:5432/postgres
+      DADO_PUBLICO_TEST_POSTGRES: postgresql://postgres:ci@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

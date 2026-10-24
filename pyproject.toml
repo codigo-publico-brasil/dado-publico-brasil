@@ -1,5 +1,5 @@
 [project]
-name = "plataforma-dados"
+name = "dado-publico-brasil"
 version = "0.0.0"
 description = "Plataforma de dados públicos abertos: captura das fontes oficiais, transformação em camadas, identidade de pessoas, documentos e vetores."
 requires-python = ">=3.13"
@@ -10,7 +10,7 @@ dependencies = ["pyyaml>=6.0", "duckdb>=1.1"]
 ingestion = ["dlt[duckdb]>=1.5"]
 transformation = ["dbt-core>=1.9", "dbt-duckdb>=1.9"]
 orchestration = [
-    "plataforma-dados[ingestion,transformation]",
+    "dado-publico-brasil[ingestion,transformation]",
     "dagster>=1.9",
     "dagster-dbt>=0.25",
     "dagster-dlt>=0.25",
@@ -18,7 +18,7 @@ orchestration = [
 ]
 
 [project.scripts]
-plataforma = "plataforma_dados.orchestration.__main__:main"
+dado-publico = "dado_publico_brasil.orchestration.__main__:main"
 
 [dependency-groups]
 dev = ["mypy>=1.13", "pytest>=8.3", "ruff>=0.8", "types-pyyaml>=6.0"]
@@ -28,7 +28,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/plataforma_dados"]
+packages = ["src/dado_publico_brasil"]
 
 [tool.ruff]
 line-length = 110

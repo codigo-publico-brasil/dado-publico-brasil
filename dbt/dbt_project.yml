@@ -2,9 +2,9 @@
 #   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
 #   marts         entidades prontas para consumo, uma por grain, com contrato de colunas.
-name: quem_decidiu
+name: dado_publico_brasil
 version: "0.1.0"
-profile: quem_decidiu
+profile: dado_publico_brasil
 model-paths: ["models"]
 macro-paths: ["macros"]
 test-paths: ["tests"]
@@ -26,7 +26,7 @@ vars:
 models:
   elementary:
     +schema: elementary
-  quem_decidiu:
+  dado_publico_brasil:
     +persist_docs:
       relation: true
       columns: true
@@ -59,7 +59,7 @@ models:
         enforced: true
 
 seeds:
-  quem_decidiu:
+  dado_publico_brasil:
     +schema: intermediate
     +tags: [pre_identity]
     vinculos_aprovados:
@@ -68,5 +68,5 @@ seeds:
       +column_types: {aprovado_em: date, ano: integer}
 
 data_tests:
-  quem_decidiu:
+  dado_publico_brasil:
     +severity: error

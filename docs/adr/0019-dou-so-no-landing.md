@@ -13,7 +13,7 @@ A Imprensa Nacional publica o DOU em XML, em zips mensais por seção (S01 atos 
 1. **Só o landing:** o zip original, sem alteração, com hash, URL e data de captura. Sem tabela no raw nem modelo no dbt (`raw: false` no dataset). Guardar e ler o arquivo é livre; o que a licença restringe é redistribuir trecho modificado, e nada disso é publicado.
 2. **Fonte própria** `executivo/federal/dou`, com três datasets (`secao1`, `secao2`, `secao3`), partição por **mês** (`partition: month`, valor `AAAAMM`) e `first_month` para limitar o histórico. Por ora, de agosto de 2026 em diante (3 meses, 9 zips, 620 MB).
 3. **Download por HTTP simples:** a página do mês (`?ano=2026&mes=Outubro`) traz os links dos zips no HTML, e o robô não precisa de navegador. O pedido precisa de `Accept: */*`; o `User-Agent` continua identificando o projeto.
-4. **Fora do plano incremental diário:** o zip do mês corrente é reescrito todo dia (o nome traz `_AtualizadoHHMMSS`) e cada versão ocuparia centenas de MB; o mês entra só quando pedido (`plataforma extract --source dou --years 2026`).
+4. **Fora do plano incremental diário:** o zip do mês corrente é reescrito todo dia (o nome traz `_AtualizadoHHMMSS`) e cada versão ocuparia centenas de MB; o mês entra só quando pedido (`dado-publico extract --source dou --years 2026`).
 5. **Uso futuro (RAG):** índice privado do texto, sempre com o link da fonte e a data; resposta gerada por IA é rotulada como tal. O XML aberto não substitui a versão certificada (PDF).
 
 ## Alternativas consideradas

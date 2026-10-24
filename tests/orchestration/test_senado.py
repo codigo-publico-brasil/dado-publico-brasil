@@ -1,7 +1,7 @@
 """O Senado no warehouse: pessoas, votações, votos, matérias e mandatos, sempre identificados pela fonte."""
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, scalar
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, scalar
 
 
 def test_senators_become_people_with_standardized_names_and_empty_fields_the_source_does_not_give(

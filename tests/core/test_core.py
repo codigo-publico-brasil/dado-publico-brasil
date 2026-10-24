@@ -5,9 +5,9 @@ from pathlib import Path
 import duckdb
 import pytest
 
-from plataforma_dados.core import migrations, runs, warehouse
-from plataforma_dados.core.settings import Settings, load_settings
-from plataforma_dados.core.warehouse import Connection
+from dado_publico_brasil.core import migrations, runs, warehouse
+from dado_publico_brasil.core.settings import Settings, load_settings
+from dado_publico_brasil.core.warehouse import Connection
 
 
 @pytest.fixture
@@ -54,11 +54,11 @@ def test_reading_in_read_only_mode_refuses_writes(tmp_path: Path) -> None:
 def test_settings_come_from_the_environment_and_explicit_arguments_win(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("PLATAFORMA_STORAGE_ROOT", raising=False)
-    monkeypatch.delenv("PLATAFORMA_WAREHOUSE", raising=False)
+    monkeypatch.delenv("DADO_PUBLICO_STORAGE_ROOT", raising=False)
+    monkeypatch.delenv("DADO_PUBLICO_WAREHOUSE", raising=False)
     assert load_settings().storage_root == Path("data_store")
-    monkeypatch.setenv("PLATAFORMA_STORAGE_ROOT", "from_env")
-    monkeypatch.setenv("PLATAFORMA_WAREHOUSE", "{root}/my.duckdb")
+    monkeypatch.setenv("DADO_PUBLICO_STORAGE_ROOT", "from_env")
+    monkeypatch.setenv("DADO_PUBLICO_WAREHOUSE", "{root}/my.duckdb")
     settings = load_settings()
     assert settings.warehouse == Path("from_env/my.duckdb")
     assert load_settings(storage_root=Path("explicit")).storage_root == Path("explicit")

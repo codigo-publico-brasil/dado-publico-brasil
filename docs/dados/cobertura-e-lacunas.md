@@ -34,7 +34,7 @@ Os números abaixo são da carga histórica de 21/10/2026 (Câmara: `run --histo
 
 ## Relatório de pendências de dados
 
-Retrato de 24/10/2026 do que **falta** no banco: histórico incompleto, tabelas que não existem e qualidade a resolver. É um inventário de dados, para saber o que a plataforma ainda não tem; o andamento de cada trabalho fica no quadro do GitHub. `plataforma coverage` e `plataforma observe` mostram os números atuais.
+Retrato de 24/10/2026 do que **falta** no banco: histórico incompleto, tabelas que não existem e qualidade a resolver. É um inventário de dados, para saber o que a plataforma ainda não tem; o andamento de cada trabalho fica no quadro do GitHub. `dado-publico coverage` e `dado-publico observe` mostram os números atuais.
 
 ### Histórico incompleto (a fonte tem, o banco ainda não)
 
@@ -143,9 +143,9 @@ Lacunas conhecidas, medidas ou registradas:
 
 Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada um, e **só rodam sob pedido** (`--foreach N`). Até a carga total ser pedida, o banco tem uma amostra dos itens mais recentes:
 
-- **Câmara, tramitação:** só proposições que podem virar norma (PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC: 96.134). Estão buscadas 300; o teste `proposicoes_alvo_sem_tramitacao` mede as que faltam, e `plataforma coverage` mostra o quadro por dataset. A fonte não tem a norma resultante nesse endpoint: `normas_geradas` vem só do Senado por enquanto.
+- **Câmara, tramitação:** só proposições que podem virar norma (PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC: 96.134). Estão buscadas 300; o teste `proposicoes_alvo_sem_tramitacao` mede as que faltam, e `dado-publico coverage` mostra o quadro por dataset. A fonte não tem a norma resultante nesse endpoint: `normas_geradas` vem só do Senado por enquanto.
 - **Senado, processo:** estão buscados 300 das 2.738 matérias votadas. Em metade das respostas (150) a fonte não informa `situacaoAtual`; fica vazia (nada é inferido). A autoria está no raw (`processos__autoria_iniciativa`) e o corpo completo no landing, mas ainda não nos marts, para não publicar contagens parciais por senador. A tramitação do Senado (`autuacoes`) está só no landing.
-- **Auditoria:** `plataforma verify` confere os hashes de todos os arquivos do landing e das respostas dentro dos lotes (landing íntegro na última conferência).
+- **Auditoria:** `dado-publico verify` confere os hashes de todos os arquivos do landing e das respostas dentro dos lotes (landing íntegro na última conferência).
 
 ## TSE: candidaturas e ligação entre fontes
 

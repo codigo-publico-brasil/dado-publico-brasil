@@ -1,20 +1,22 @@
 # PostgreSQL de serviço para desenvolvimento local (ADR 0014): o que as aplicações leem.
 # Subir: `docker compose up -d` (lê o `.env` desta pasta). Senhas vêm do `.env`; nenhuma fica neste arquivo.
+name: dado-publico-brasil
+
 services:
   postgres:
     image: pgvector/pgvector:pg17
     environment:
-      POSTGRES_USER: plataforma
-      POSTGRES_PASSWORD: ${PLATAFORMA_PG_PASSWORD:?defina PLATAFORMA_PG_PASSWORD no .env}
-      POSTGRES_DB: plataforma
-      LEITOR_PASSWORD: ${PLATAFORMA_PG_LEITOR_PASSWORD:?defina PLATAFORMA_PG_LEITOR_PASSWORD no .env}
+      POSTGRES_USER: dado_publico
+      POSTGRES_PASSWORD: ${DADO_PUBLICO_PG_PASSWORD:?defina DADO_PUBLICO_PG_PASSWORD no .env}
+      POSTGRES_DB: dado_publico
+      LEITOR_PASSWORD: ${DADO_PUBLICO_PG_LEITOR_PASSWORD:?defina DADO_PUBLICO_PG_LEITOR_PASSWORD no .env}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U plataforma -d plataforma"]
+      test: ["CMD-SHELL", "pg_isready -U dado_publico -d dado_publico"]
       interval: 5s
       retries: 10
 

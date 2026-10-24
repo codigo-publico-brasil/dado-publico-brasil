@@ -17,7 +17,7 @@ import zipfile
 from collections.abc import Sequence
 from pathlib import Path
 
-from plataforma_dados.ingestion import contract as contracts
+from dado_publico_brasil.ingestion import contract as contracts
 
 COLUNAS = (
     "DT_GERACAO HH_GERACAO ANO_ELEICAO CD_TIPO_ELEICAO NM_TIPO_ELEICAO NR_TURNO CD_ELEICAO DS_ELEICAO DT_ELEICAO "

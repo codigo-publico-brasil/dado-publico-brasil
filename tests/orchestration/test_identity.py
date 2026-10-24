@@ -1,9 +1,9 @@
 """Identidade de pessoas: chave própria, ponte de identificadores e estabilidade da chave."""
 
-from plataforma_dados.core import warehouse
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, scalar
-from plataforma_dados.transformation import build, identity
+from dado_publico_brasil.core import warehouse
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, scalar
+from dado_publico_brasil.transformation import build, identity
 
 
 def bridge(con: Connection) -> list[tuple[object, ...]]:

@@ -49,22 +49,22 @@ O dbt, por padrão, grava em `<schema do perfil>_<schema do modelo>`; aqui a mac
 
 Cada tabela e coluna dos marts é descrita **uma vez**, no YAML do dbt (`_legislativo__models.yml`). Daí saem:
 
-- o [catálogo e o dicionário de colunas](catalogo.md), gerados por `uv run plataforma catalog`;
+- o [catálogo e o dicionário de colunas](catalogo.md), gerados por `uv run dado-publico catalog`;
 - os comentários gravados no próprio banco (`persist_docs`), visíveis em `duckdb_tables()` e `duckdb_columns()` e em ferramentas como o DBeaver;
-- o site navegável do dbt, com o **grafo de linhagem**: `uv run plataforma docs` (abre em http://127.0.0.1:8080; pipeline parado).
+- o site navegável do dbt, com o **grafo de linhagem**: `uv run dado-publico docs` (abre em http://127.0.0.1:8080; pipeline parado).
 
 Um teste falha se alguma coluna dos marts ficar sem descrição.
 
 ## Estrutura do repositório
 
 ```text
-src/plataforma_dados/       um só pacote Python, com extras por motor (`uv sync --all-extras`)
+src/dado_publico_brasil/       um só pacote Python, com extras por motor (`uv sync --all-extras`)
   documents/                trilha de documentos e vetores (a fazer; só o esqueleto)
   core/                     configuração, warehouse, execuções, migrações
   ingestion/                MOTOR DE INGESTÃO: fetch (buscar), landing (guardar), read (ler), loader (raw), monitoring;
                             custom/<poder>/<esfera>/<fonte>.py só para o que o padrão não cobre
   transformation/           MOTOR DE TRANSFORMAÇÃO: identidade, qualidade, catálogo, execução do dbt
-  orchestration/            liga os motores: comando `plataforma` e Dagster
+  orchestration/            liga os motores: comando `dado-publico` e Dagster
 sources/<poder>/<esfera>/   declaração das fontes (YAML)
 dbt/                        projeto dbt: models/{staging,intermediate,marts}, tests/, macros/
 ddl/                        migrações SQL das tabelas próprias (metadata, identity)
@@ -92,27 +92,27 @@ Três passos por dataset ([ADR 0011](../adr/0011-buscar-ler-custom-e-chave-por-f
 
 ## Datasets por item e auditoria
 
-Tramitação e situação só existem por item (uma chamada por proposição). Um dataset `load: foreach` busca, em lotes e a uma taxa educada, os itens que faltam ou mudaram, começando pelos mais recentes; roda só com `--foreach N` ou `--foreach all`. Cada lote guarda a resposta de cada item byte a byte, e dois comandos auditam: `plataforma verify` (hashes do landing e do índice `metadata.capture_items`) e `plataforma coverage` (itens esperados, obtidos, inexistentes, com falha e faltantes). Detalhes no [ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md). Um dataset por item pode listar os itens de outro dataset por item (os dispositivos vetados saem dos vetos, e os votos saem dos dispositivos): na execução completa o raw é carregado depois de cada um, então a cadeia roda numa vez; pelos comandos `extract` e `load` em separado, uma etapa por rodada.
+Tramitação e situação só existem por item (uma chamada por proposição). Um dataset `load: foreach` busca, em lotes e a uma taxa educada, os itens que faltam ou mudaram, começando pelos mais recentes; roda só com `--foreach N` ou `--foreach all`. Cada lote guarda a resposta de cada item byte a byte, e dois comandos auditam: `dado-publico verify` (hashes do landing e do índice `metadata.capture_items`) e `dado-publico coverage` (itens esperados, obtidos, inexistentes, com falha e faltantes). Detalhes no [ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md). Um dataset por item pode listar os itens de outro dataset por item (os dispositivos vetados saem dos vetos, e os votos saem dos dispositivos): na execução completa o raw é carregado depois de cada um, então a cadeia roda numa vez; pelos comandos `extract` e `load` em separado, uma etapa por rodada.
 
 ## Monitoramento das fontes
 
 Cada captura grava em `metadata.source_checks` (status `ok`, `warn` ou `error`): `availability` (a fonte respondeu?), `schema` (coluna do contrato ausente é erro; coluna nova ou removida é aviso) e `volume` (menos de 80% das linhas da carga anterior é aviso). O frescor do dado carregado é medido pelo `freshness` do dbt. Nada interrompe o pipeline; a execução devolve `source_errors`. Consulta:
 
 ```bash
-uv run plataforma query --sql "SELECT * FROM metadata.source_checks WHERE status <> 'ok' ORDER BY id DESC LIMIT 20"
+uv run dado-publico query --sql "SELECT * FROM metadata.source_checks WHERE status <> 'ok' ORDER BY id DESC LIMIT 20"
 ```
 
 Onde mudar cada coisa:
 
 | Quero mudar... | Edito... |
 | --- | --- |
-| a pasta dos dados ou o arquivo do warehouse | variáveis `PLATAFORMA_STORAGE_ROOT` e `PLATAFORMA_WAREHOUSE` |
+| a pasta dos dados ou o arquivo do warehouse | variáveis `DADO_PUBLICO_STORAGE_ROOT` e `DADO_PUBLICO_WAREHOUSE` |
 | a URL de uma fonte, ou as colunas que se carregam | `sources/<poder>/<esfera>/<fonte>.yml` |
-| um jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/plataforma_dados/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
+| um jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/dado_publico_brasil/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
 | uma regra de transformação (nome, tipo, caixa, junção) | o modelo SQL em `dbt/models/` |
 | uma regra de limpeza de texto | `dbt/macros/text_functions.sql` |
 | um teste de dados | `schema.yml` do modelo ou SQL em `dbt/tests/` |
-| a ordem das etapas ou o agendamento | `src/plataforma_dados/orchestration/` (Dagster ou `pipeline.py`) |
+| a ordem das etapas ou o agendamento | `src/dado_publico_brasil/orchestration/` (Dagster ou `pipeline.py`) |
 
 ## O dbt seguindo as práticas da dbt Labs
 
@@ -131,14 +131,14 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 
 ## Como executar
 
-A pasta de armazenamento (`data_store/`, fora do git) vem de `PLATAFORMA_STORAGE_ROOT` (padrão `data_store`). Tudo a partir da raiz do repositório:
+A pasta de armazenamento (`data_store/`, fora do git) vem de `DADO_PUBLICO_STORAGE_ROOT` (padrão `data_store`). Tudo a partir da raiz do repositório:
 
 ```bash
-uv run plataforma run --incremental                               # só o que pode ter mudado
-uv run plataforma run --historical --from-year 2000   # carga massiva
-uv run plataforma run --years 2024 2025 2026 --extra-years 2019   # anos escolhidos
-uv run plataforma run --incremental --source senado               # só uma fonte
-uv run plataforma run --incremental --foreach 300                 # + os 300 itens mais recentes que faltam nos datasets por item
+uv run dado-publico run --incremental                               # só o que pode ter mudado
+uv run dado-publico run --historical --from-year 2000   # carga massiva
+uv run dado-publico run --years 2024 2025 2026 --extra-years 2019   # anos escolhidos
+uv run dado-publico run --incremental --source senado               # só uma fonte
+uv run dado-publico run --incremental --foreach 300                 # + os 300 itens mais recentes que faltam nos datasets por item
 ```
 
 - **Incremental:** datasets completos mais o ano corrente e o anterior (anos antigos são estáveis). Antes de baixar, pergunta-se à fonte (`ETag`, `Last-Modified`, tamanho) se o arquivo mudou; se não mudou, só se atualiza a data da última verificação. Se nada novo foi carregado, o dbt nem roda.
@@ -146,20 +146,19 @@ uv run plataforma run --incremental --foreach 300                 # + os 300 ite
 - Etapas separadas: `extract`, `load [--rebuild]`, `transform`, `identity`, `catalog`, `docs`, `query`.
 - **Datasets por item** (tramitação da Câmara, processo e detalhe do senador, detalhe das normas, vetos) só rodam com `--foreach N` ou `--foreach all`; a carga total é decisão de quem opera, por levar horas.
 - O Dagster ainda não tem ativo para `--foreach`: os datasets por item rodam pela linha de comando.
-- **Auditoria:** `uv run plataforma verify` (hashes do landing e das respostas) e `uv run plataforma coverage` (o que já foi buscado e o que falta). Ver [auditoria](auditoria.md).
-- **Dagster** (interface, agendamento diário às 6h, linhagem entre ativos): `DAGSTER_HOME=<pasta absoluta> uv run dagster dev -m plataforma_dados.orchestration.definitions`, com interface em http://127.0.0.1:3000 (ou `DAGSTER_HOME` no `.env`). Os ativos de cada fonte (`landing_<fonte>`, `raw_<fonte>`) saem de `sources/`; o job `daily_pipeline` roda tudo, e os ativos `landing_*` recebem a configuração do modo (`incremental`, `historical`, `years`). Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez), e o resultado do dbt também vai para `metadata.dbt_results`, como na linha de comando. Rodar o dia a dia pelo Dagster leva cerca de 1 a 2 minutos quando nada mudou na fonte.
+- **Auditoria:** `uv run dado-publico verify` (hashes do landing e das respostas) e `uv run dado-publico coverage` (o que já foi buscado e o que falta). Ver [auditoria](auditoria.md).
+- **Dagster** (interface, agendamento diário às 6h, linhagem entre ativos): `DAGSTER_HOME=<pasta absoluta> uv run dagster dev -m dado_publico_brasil.orchestration.definitions`, com interface em http://127.0.0.1:3000 (ou `DAGSTER_HOME` no `.env`). Os ativos de cada fonte (`landing_<fonte>`, `raw_<fonte>`) saem de `sources/`; o job `daily_pipeline` roda tudo, e os ativos `landing_*` recebem a configuração do modo (`incremental`, `historical`, `years`). Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez), e o resultado do dbt também vai para `metadata.dbt_results`, como na linha de comando. Rodar o dia a dia pelo Dagster leva cerca de 1 a 2 minutos quando nada mudou na fonte.
 
 ## Como acessar os dados
 
 O warehouse é `data_store/warehouse.duckdb`. Um arquivo DuckDB aceita um escritor por vez; com o pipeline parado, qualquer um dos três serve:
 
 ```bash
-cd ../quem-decidiu && uv run python -m quem_decidiu_app.explorer   # explorador da aplicação, em http://127.0.0.1:8000
-uv run plataforma query --sql "SELECT * FROM marts.pessoas WHERE nome_busca LIKE '%reginaldo%'"
+uv run dado-publico query --sql "SELECT * FROM marts.pessoas WHERE nome_busca LIKE '%reginaldo%'"
 uv run python -c "import duckdb; print(duckdb.connect('data_store/warehouse.duckdb', read_only=True).sql('SELECT COUNT(*) FROM marts.votos'))"
 ```
 
-O [catálogo](catalogo.md) lista todas as tabelas, gerado do dbt (`uv run plataforma catalog`).
+O [catálogo](catalogo.md) lista todas as tabelas, gerado do dbt (`uv run dado-publico catalog`).
 
 ## Propriedades que o pipeline garante
 
@@ -181,7 +180,7 @@ Um único arquivo DuckDB, com um esquema por camada (`raw_<esfera>_<fonte>`, `st
 
 **PostgreSQL de serviço** ([ADR 0014](../adr/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)). O dbt roda só no DuckDB; o PostgreSQL só recebe os marts já prontos, pelo comando `publish`: as tabelas vão para um esquema de trabalho (`marts_novo`) e são trocadas por `marts` num único comando atômico, então quem lê vê os marts antigos ou os novos, nunca metade. Depois da troca o comando confere que cada tabela chegou com as mesmas linhas. O papel `leitor` (somente leitura) é criado pela infraestrutura (em desenvolvimento, por `docker/postgres-init.sh`); o código nunca cria papéis. Ainda não há índices: entram quando uma aplicação declarar como consulta cada mart. A extensão `postgres` do DuckDB é baixada na primeira execução (precisa de rede).
 
-**Cópia imutável da identidade.** A chave `id_pessoa` não pode mudar depois de entregue a uma aplicação, e reconstruir a partir do landing não garante as mesmas chaves. Cada execução da identidade grava `snapshots/identity/<data-hora>/` (um Parquet por tabela de `identity`) dentro da pasta de armazenamento; nunca se sobrescreve. `plataforma verify` confere se a cópia mais recente é igual à identidade do warehouse.
+**Cópia imutável da identidade.** A chave `id_pessoa` não pode mudar depois de entregue a uma aplicação, e reconstruir a partir do landing não garante as mesmas chaves. Cada execução da identidade grava `snapshots/identity/<data-hora>/` (um Parquet por tabela de `identity`) dentro da pasta de armazenamento; nunca se sobrescreve. `dado-publico verify` confere se a cópia mais recente é igual à identidade do warehouse.
 
 ## Caixa dos textos
 

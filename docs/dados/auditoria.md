@@ -19,9 +19,9 @@ Toda execução (`metadata.runs`) registra a versão do código (commit), linhas
 
 | Pergunta | Como responder |
 | --- | --- |
-| O arquivo guardado é o que a fonte entregou? | `uv run plataforma verify`: recalcula o hash de todo arquivo do landing e compara com `metadata.captures` |
+| O arquivo guardado é o que a fonte entregou? | `uv run dado-publico verify`: recalcula o hash de todo arquivo do landing e compara com `metadata.captures` |
 | Cada resposta de um dataset por item continua igual? | o mesmo `verify` confere o hash de cada resposta dentro dos lotes e o índice `metadata.capture_items` |
-| Quanto já foi buscado e quanto falta? | `uv run plataforma coverage`: itens esperados, obtidos, inexistentes (404), com falha e faltantes, por dataset |
+| Quanto já foi buscado e quanto falta? | `uv run dado-publico coverage`: itens esperados, obtidos, inexistentes (404), com falha e faltantes, por dataset |
 | A fonte respondeu, mudou de colunas, encolheu? | `metadata.source_checks` (`availability`, `schema`, `volume`, `coverage`) |
 | O dado está fresco? | `freshness` do dbt, em `metadata.dbt_results`; atraso por arquivo na página de qualidade do explorador |
 | Alguma linha se perdeu entre as camadas? | testes de reconciliação do dbt (severidade erro), por exemplo `votos_perdidos_do_staging_aos_marts` |

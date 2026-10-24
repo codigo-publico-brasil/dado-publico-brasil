@@ -27,7 +27,7 @@ As regras de apresentação (neutralidade, sem recomendação de voto) pertencem
 | Ingestão (Câmara e Senado) | Funcionando: captura com hash (CSV e JSON), carga no raw (dlt), monitoramento de disponibilidade, colunas e volume; datasets por item (tramitação, processos) em lotes auditáveis, por amostra até a carga total ser pedida; código próprio por fonte só quando preciso |
 | Transformação | Funcionando: dbt em camadas, identidade de pessoas, testes de qualidade, catálogo e dicionário de colunas |
 | Orquestração | Linha de comando e Dagster, com os ativos gerados a partir de `sources/` |
-| PostgreSQL de serviço | Funcionando em desenvolvimento local: `plataforma publish` copia os marts e o papel `leitor` só lê; a identidade tem cópia imutável a cada execução ([ADR 0014](docs/adr/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)) |
+| PostgreSQL de serviço | Funcionando em desenvolvimento local: `dado-publico publish` copia os marts e o papel `leitor` só lê; a identidade tem cópia imutável a cada execução ([ADR 0014](docs/adr/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)) |
 | Documentos e vetores (esqueleto em `documents/`), infraestrutura de produção | A fazer |
 
 Última carga real (2000 a 2026): 190 mil votações, 1,9 milhão de votos, 886 mil proposições, 7,9 mil pessoas.
@@ -35,7 +35,7 @@ As regras de apresentação (neutralidade, sem recomendação de voto) pertencem
 ## Estrutura
 
 ```text
-src/plataforma_dados/   core (base), ingestion, transformation, orchestration; um só pacote com extras
+src/dado_publico_brasil/   core (base), ingestion, transformation, orchestration; um só pacote com extras
 sources/                declaração das fontes: sources/<poder>/<esfera>/<fonte>.yml
 dbt/                    projeto dbt: staging, intermediate, marts
 ddl/                    migrações SQL das tabelas próprias (metadata, identity)
@@ -47,49 +47,49 @@ O fluxo: fonte oficial → `landing` (arquivos com hash) → `raw_<esfera>_<font
 
 ## Como subir o ambiente
 
-Requisitos: Python 3.13 e [uv](https://docs.astral.sh/uv/). A partir desta pasta (`plataforma-dados/`):
+Requisitos: Python 3.13 e [uv](https://docs.astral.sh/uv/). Na raiz do repositório:
 
 ```bash
 uv sync --all-extras
 ```
 
 ```bash
-uv run plataforma run --years 2025 2026
+uv run dado-publico run --years 2025 2026
 ```
 
 Outros modos: `--incremental` (só o que pode ter mudado) e `--historical --from-year 2000` (carga massiva). Os dados ficam em `data_store/` (fora do git).
 
-**Conexões e segredos** vão em variáveis de ambiente: copie `.env.example` para `.env` (fora do git) e use `uv run --env-file .env plataforma ...` (o `dagster dev` já carrega o `.env` da pasta). Em produção, a infraestrutura injeta as variáveis, de preferência a partir de um gerenciador de segredos.
+**Conexões e segredos** vão em variáveis de ambiente: copie `.env.example` para `.env` (fora do git) e use `uv run --env-file .env dado-publico ...` (o `dagster dev` já carrega o `.env` da pasta). Em produção, a infraestrutura injeta as variáveis, de preferência a partir de um gerenciador de segredos.
 
 ```bash
-uv run plataforma query --sql "SELECT * FROM marts.pessoas LIMIT 10"
+uv run dado-publico query --sql "SELECT * FROM marts.pessoas LIMIT 10"
 ```
 
 ```bash
-uv run plataforma docs
+uv run dado-publico docs
 ```
 
 O último abre o grafo de linhagem e o dicionário de colunas (dbt docs).
 
-**PostgreSQL de serviço (o que as aplicações leem).** Requer Docker. Defina no `.env` `PLATAFORMA_PG_PASSWORD`, `PLATAFORMA_PG_LEITOR_PASSWORD` e `PLATAFORMA_POSTGRES_DSN` (modelo em `.env.example`) e, a partir desta pasta:
+**PostgreSQL de serviço (o que as aplicações leem).** Requer Docker. Defina no `.env` `DADO_PUBLICO_PG_PASSWORD`, `DADO_PUBLICO_PG_LEITOR_PASSWORD` e `DADO_PUBLICO_POSTGRES_DSN` (modelo em `.env.example`) e, a partir desta pasta:
 
 ```bash
 docker compose up -d
-uv run --env-file .env plataforma publish
+uv run --env-file .env dado-publico publish
 ```
 
-O `publish` copia todos os marts para o esquema `marts` do PostgreSQL numa troca atômica e dá leitura ao papel `leitor`. Os testes de integração rodam contra o banco `teste` (`PLATAFORMA_TEST_POSTGRES`); sem a variável, são pulados. Auditoria e datasets por item:
+O `publish` copia todos os marts para o esquema `marts` do PostgreSQL numa troca atômica e dá leitura ao papel `leitor`. Os testes de integração rodam contra o banco `teste` (`DADO_PUBLICO_TEST_POSTGRES`); sem a variável, são pulados. Auditoria e datasets por item:
 
 ```bash
-uv run plataforma verify
-uv run plataforma coverage
-uv run plataforma run --incremental --foreach 300
+uv run dado-publico verify
+uv run dado-publico coverage
+uv run dado-publico run --incremental --foreach 300
 ```
 
 `verify` confere os hashes de todo o landing; `coverage` mostra o que já foi buscado nos datasets por item (tramitação, processos); `--foreach N` busca os N itens mais recentes que faltam (a carga total só quando pedida). Para a interface do Dagster (guarde o estado dele em uma pasta absoluta, por exemplo `data_store/.state/dagster`, em `DAGSTER_HOME`):
 
 ```bash
-uv run dagster dev -m plataforma_dados.orchestration.definitions
+uv run dagster dev -m dado_publico_brasil.orchestration.definitions
 ```
 
 Antes de abrir um PR:

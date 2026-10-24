@@ -1,6 +1,6 @@
 # Catálogo de dados
 
-Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descrição e o `meta` do modelo ou da fonte e gere de novo.
+Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a descrição e o `meta` do modelo ou da fonte e gere de novo.
 
 ## raw_federal_camara
 

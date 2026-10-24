@@ -1,7 +1,7 @@
 """Marts (entidades prontas para consumo) e o que as camadas anteriores entregam a eles."""
 
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, columns, scalar, tables
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, columns, scalar, tables
 
 
 def person_id(con: Connection, name: str) -> int:

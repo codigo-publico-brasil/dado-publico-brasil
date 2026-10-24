@@ -5,9 +5,9 @@ from typing import Any
 
 import pytest
 
-from plataforma_dados.core import alert, runs
-from plataforma_dados.core.warehouse import Connection
-from plataforma_dados.transformation import observability, quality
+from dado_publico_brasil.core import alert, runs
+from dado_publico_brasil.core.warehouse import Connection
+from dado_publico_brasil.transformation import observability, quality
 
 
 def build_run(con: Connection, results: list[dict[str, Any]]) -> None:
@@ -20,7 +20,7 @@ def result(unique_id: str, status: str) -> dict[str, Any]:
 
 
 def test_a_clean_state_is_not_a_problem(con: Connection) -> None:
-    build_run(con, [result("test.quem_decidiu.not_null_pessoas_id_pessoa.abc", "pass")])
+    build_run(con, [result("test.dado_publico_brasil.not_null_pessoas_id_pessoa.abc", "pass")])
     lines, failed = observability.report(con)
     assert not failed and "Anomalias nos marts (Elementary): 0" in lines
 
@@ -29,8 +29,8 @@ def test_an_elementary_anomaly_is_a_problem_but_a_warning_of_our_own_gap_test_is
     build_run(
         con,
         [
-            result("test.quem_decidiu.elementary_volume_anomalies_votos_.abc", "warn"),
-            result("test.quem_decidiu.autorias_de_proposicao_nao_carregada.abc", "warn"),
+            result("test.dado_publico_brasil.elementary_volume_anomalies_votos_.abc", "warn"),
+            result("test.dado_publico_brasil.autorias_de_proposicao_nao_carregada.abc", "warn"),
         ],
     )
     lines, failed = observability.report(con)
@@ -40,7 +40,7 @@ def test_an_elementary_anomaly_is_a_problem_but_a_warning_of_our_own_gap_test_is
 
 
 def test_a_failing_dbt_test_is_a_problem(con: Connection) -> None:
-    build_run(con, [result("test.quem_decidiu.unique_pessoas_id_pessoa.abc", "fail")])
+    build_run(con, [result("test.dado_publico_brasil.unique_pessoas_id_pessoa.abc", "fail")])
     assert observability.report(con)[1]
 
 
@@ -54,9 +54,9 @@ def test_the_alert_goes_out_only_when_there_is_a_problem(
         return True
 
     monkeypatch.setattr(alert, "send", send)
-    build_run(con, [result("test.quem_decidiu.not_null_pessoas_id_pessoa.abc", "pass")])
+    build_run(con, [result("test.dado_publico_brasil.not_null_pessoas_id_pessoa.abc", "pass")])
     assert not observability.notify(con) and not sent
-    build_run(con, [result("test.quem_decidiu.elementary_schema_changes_pessoas_.abc", "warn")])
+    build_run(con, [result("test.dado_publico_brasil.elementary_schema_changes_pessoas_.abc", "warn")])
     assert observability.notify(con) and "elementary_schema_changes" in sent[0]
 
 
@@ -67,14 +67,14 @@ def test_an_smtp_failure_does_not_break_the_pipeline(
         raise smtplib.SMTPException("fora do ar")
 
     monkeypatch.setattr(alert, "send", broken)
-    build_run(con, [result("test.quem_decidiu.unique_pessoas_id_pessoa.abc", "fail")])
+    build_run(con, [result("test.dado_publico_brasil.unique_pessoas_id_pessoa.abc", "fail")])
     assert observability.notify(con) is False
 
 
 def test_the_email_needs_smtp_and_a_recipient_and_uses_starttls_with_login(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("PLATAFORMA_SMTP_HOST", raising=False)
+    monkeypatch.delenv("DADO_PUBLICO_SMTP_HOST", raising=False)
     assert alert.send("assunto", "corpo") is False
     calls: list[str] = []
 
@@ -99,10 +99,10 @@ def test_the_email_needs_smtp_and_a_recipient_and_uses_starttls_with_login(
 
     monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
     for key, value in {
-        "PLATAFORMA_SMTP_HOST": "smtp.exemplo.org",
-        "PLATAFORMA_SMTP_USER": "alerta@exemplo.org",
-        "PLATAFORMA_SMTP_PASSWORD": "segredo",
-        "PLATAFORMA_ALERT_TO": "equipe@exemplo.org",
+        "DADO_PUBLICO_SMTP_HOST": "smtp.exemplo.org",
+        "DADO_PUBLICO_SMTP_USER": "alerta@exemplo.org",
+        "DADO_PUBLICO_SMTP_PASSWORD": "segredo",
+        "DADO_PUBLICO_ALERT_TO": "equipe@exemplo.org",
     }.items():
         monkeypatch.setenv(key, value)
     assert alert.send("assunto", "corpo") is True

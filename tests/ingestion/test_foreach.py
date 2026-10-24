@@ -9,11 +9,11 @@ from pathlib import Path
 
 import pytest
 
-from plataforma_dados.core import migrations
-from plataforma_dados.core.settings import Settings
-from plataforma_dados.core.warehouse import Connection, rows, scalar
-from plataforma_dados.ingestion import batch, foreach, loader
-from plataforma_dados.ingestion.contract import SourceContract, load_contract
+from dado_publico_brasil.core import migrations
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, rows, scalar
+from dado_publico_brasil.ingestion import batch, foreach, loader
+from dado_publico_brasil.ingestion.contract import SourceContract, load_contract
 
 YAML = """
 source: teste
