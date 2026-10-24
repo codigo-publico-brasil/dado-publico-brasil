@@ -37,7 +37,7 @@ def tables(settings: Settings) -> list[dict[str, str]]:
         meta = {**source.get("source_meta", {}), **source.get("meta", {})}
         found.append(_entry(source["schema"], source["name"], source, meta))
     for node in data["nodes"].values():
-        if node["resource_type"] == "model":
+        if node["resource_type"] == "model" and node["package_name"] == data["metadata"]["project_name"]:
             found.append(_entry(node["schema"], node.get("alias") or node["name"], node, node["meta"]))
     return sorted(found, key=lambda t: (_rank(t["schema"]), t["schema"], t["name"]))
 

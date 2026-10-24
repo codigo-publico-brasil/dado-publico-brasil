@@ -1,0 +1,38 @@
+source: dou
+power: executivo
+level: federal
+description: Diário Oficial da União, arquivos XML mensais por seção, como a Imprensa Nacional publica
+access:
+  # A página do mês lista um zip por seção. Licença CC BY-ND 3.0: guardar e ler é livre; redistribuir
+  # trecho modificado não (ver docs/dados/fontes-de-dados.md). Sem tabela no raw: só o landing.
+  base_url: https://www.in.gov.br/acesso-a-informacao/dados-abertos/base-de-dados
+  headers:
+    Accept: "*/*"
+
+datasets:
+  secao1:
+    # Seção 1: atos normativos (leis, decretos, portarias, resoluções). A partição é o mês (AAAAMM).
+    url: "{base_url}?ano={year}&secao=1"
+    load: yearly
+    partition: month
+    first_month: 202608
+    archive: zip
+    raw: false
+
+  secao2:
+    # Seção 2: atos de pessoal (nomeações, exonerações, aposentadorias).
+    url: "{base_url}?ano={year}&secao=2"
+    load: yearly
+    partition: month
+    first_month: 202608
+    archive: zip
+    raw: false
+
+  secao3:
+    # Seção 3: contratos, licitações, editais e outros avisos.
+    url: "{base_url}?ano={year}&secao=3"
+    load: yearly
+    partition: month
+    first_month: 202608
+    archive: zip
+    raw: false

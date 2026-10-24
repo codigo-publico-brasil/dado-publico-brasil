@@ -35,10 +35,8 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
         with runs.track(con, stage, "dbt") as run:
             record(con, run.id, outcome.results)
             run.rows_in, run.rows_out = len(outcome.results), len(outcome.failures)
-            if (
-                stage == "transform_post"
-            ):  # os marts estão prontos: fotografa e compara com a execução anterior
-                observability.run(con, run.id)
+            if stage == "transform_post":  # os marts estão prontos: avisa por e-mail se algo está errado
+                observability.notify(con)
             if outcome.returncode != 0:
                 names = "; ".join(
                     f"{r['unique_id']}: {r['status']} {(r['message'] or '')[:1500]}" for r in outcome.failures

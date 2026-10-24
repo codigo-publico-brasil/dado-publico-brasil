@@ -1,111 +1,114 @@
-"""Observabilidade: a fotografia de cada execução e os achados da comparação com a anterior."""
+"""Relatório de saúde dos dados e alerta por e-mail."""
 
-from plataforma_dados.core.warehouse import Connection, rows, scalar
-from plataforma_dados.transformation import observability
+import smtplib
+from typing import Any
 
+import pytest
 
-def snap(
-    con: Connection, run_id: int, table_rows: dict[str, int], nulls: float = 0.0, distinct: int = 100
-) -> None:
-    for table, n in table_rows.items():
-        con.execute("INSERT INTO metadata.table_profile VALUES (?, 'marts', ?, ?)", (run_id, table, n))
-        con.execute(
-            "INSERT INTO metadata.column_profile VALUES (?, 'marts', ?, 'id', 'BIGINT', ?, ?)",
-            (run_id, table, nulls, distinct),
-        )
+from plataforma_dados.core import alert, runs
+from plataforma_dados.core.warehouse import Connection
+from plataforma_dados.transformation import observability, quality
 
 
-def found(con: Connection, run_id: int) -> set[tuple[str, str, str | None]]:
-    return {
-        (r["status"], r["check_name"], r["table_name"])
-        for r in rows(
-            con, "SELECT status, check_name, table_name FROM metadata.data_checks WHERE run_id = ?", (run_id,)
-        )
-    }
+def build_run(con: Connection, results: list[dict[str, Any]]) -> None:
+    with runs.track(con, "transform_post", "dbt") as run:
+        quality.record(con, run.id, results)
 
 
-def test_the_first_snapshot_has_nothing_to_compare_and_says_so(con: Connection) -> None:
-    snap(con, 1, {"votos": 1000})
-    assert observability.compare(con, 1) == 0
-    assert found(con, 1) == {("ok", "primeira_fotografia", None)}
+def result(unique_id: str, status: str) -> dict[str, Any]:
+    return {"unique_id": unique_id, "status": status, "failures": 1, "message": "Got 1 result"}
 
 
-def test_a_stable_run_has_no_findings(con: Connection) -> None:
-    snap(con, 1, {"votos": 1000})
-    snap(con, 2, {"votos": 1010})
-    assert observability.compare(con, 2) == 0
-
-
-def test_volume_that_collapses_or_explodes_is_reported_with_the_right_severity(con: Connection) -> None:
-    snap(con, 1, {"a": 1000, "b": 1000, "c": 1000, "pequena": 10})
-    snap(con, 2, {"a": 700, "b": 400, "c": 2500, "pequena": 1})
-    assert observability.compare(con, 2) == 3
-    assert found(con, 2) == {
-        ("warn", "volume_caiu", "a"),
-        ("error", "volume_caiu", "b"),
-        ("warn", "volume_explodiu", "c"),
-    }
-
-
-def test_a_table_that_disappears_is_an_error_and_a_new_one_is_information(con: Connection) -> None:
-    snap(con, 1, {"velha": 500})
-    snap(con, 2, {"nova": 500})
-    assert observability.compare(con, 2) == 1
-    assert found(con, 2) == {("error", "tabela_sumiu", "velha"), ("ok", "tabela_nova", "nova")}
-
-
-def test_nulls_that_grow_in_a_mart_column_and_distinct_values_that_collapse_are_reported(
-    con: Connection,
-) -> None:
-    snap(con, 1, {"votos": 1000}, nulls=0.01, distinct=1000)
-    snap(con, 2, {"votos": 1000}, nulls=0.45, distinct=300)
-    observability.compare(con, 2)
-    assert found(con, 2) == {
-        ("error", "nulos_aumentaram", "votos"),
-        ("warn", "valores_distintos_cairam", "votos"),
-    }
-
-
-def test_a_column_removed_from_a_mart_is_an_error_and_a_new_one_is_information(con: Connection) -> None:
-    snap(con, 1, {"votos": 1000})
-    snap(con, 2, {"votos": 1000})
-    con.execute("DELETE FROM metadata.column_profile WHERE run_id = 2")
-    con.execute("INSERT INTO metadata.column_profile VALUES (2, 'marts', 'votos', 'novo', 'BIGINT', 0.0, 5)")
-    observability.compare(con, 2)
-    assert found(con, 2) == {("error", "coluna_removida", "votos"), ("ok", "coluna_nova", "votos")}
-
-
-def test_profile_counts_rows_everywhere_and_profiles_columns_only_in_the_marts(con: Connection) -> None:
-    con.execute("CREATE SCHEMA marts")
-    con.execute("CREATE TABLE marts.t (id BIGINT, nome VARCHAR)")
-    con.execute("INSERT INTO marts.t VALUES (1, 'a'), (2, NULL), (3, NULL), (4, 'd')")
-    con.execute("CREATE SCHEMA staging")
-    con.execute("CREATE TABLE staging.s (x INTEGER)")
-    assert observability.profile(con, 9) == 5  # as 3 tabelas de identity e as 2 criadas aqui
-    assert (
-        scalar(con, "SELECT row_count FROM metadata.table_profile WHERE run_id = 9 AND table_name = 't'") == 4
-    )
-    nulls = scalar(
-        con, "SELECT null_rate FROM metadata.column_profile WHERE run_id = 9 AND column_name = 'nome'"
-    )
-    assert nulls == 0.5
-    assert (
-        scalar(con, "SELECT null_rate FROM metadata.column_profile WHERE run_id = 9 AND table_name = 's'")
-        is None
-    )
-    assert "metadata" not in {
-        r[0] for r in con.execute("SELECT schema_name FROM metadata.table_profile").fetchall()
-    }
-
-
-def test_the_report_says_what_changed_and_fails_only_when_there_is_an_error(con: Connection) -> None:
-    snap(con, 1, {"votos": 1000})
-    snap(con, 2, {"votos": 400})
-    con.execute(
-        "INSERT INTO metadata.runs (id, stage, started_at, status) VALUES (2, 'transform_post', '2026-10-24', 'ok')"
-    )
-    observability.compare(con, 2)
+def test_a_clean_state_is_not_a_problem(con: Connection) -> None:
+    build_run(con, [result("test.quem_decidiu.not_null_pessoas_id_pessoa.abc", "pass")])
     lines, failed = observability.report(con)
-    assert failed and any("volume_caiu" in line and "de 1000 para 400" in line for line in lines)
-    clean = observability.report(con)[0]
-    assert clean[0].startswith("Execução 2")
+    assert not failed and "Anomalias nos marts (Elementary): 0" in lines
+
+
+def test_an_elementary_anomaly_is_a_problem_but_a_warning_of_our_own_gap_test_is_not(con: Connection) -> None:
+    build_run(
+        con,
+        [
+            result("test.quem_decidiu.elementary_volume_anomalies_votos_.abc", "warn"),
+            result("test.quem_decidiu.autorias_de_proposicao_nao_carregada.abc", "warn"),
+        ],
+    )
+    lines, failed = observability.report(con)
+    assert failed
+    assert any("elementary_volume_anomalies_votos_" in line for line in lines)
+    assert not any("autorias_de_proposicao" in line for line in lines)
+
+
+def test_a_failing_dbt_test_is_a_problem(con: Connection) -> None:
+    build_run(con, [result("test.quem_decidiu.unique_pessoas_id_pessoa.abc", "fail")])
+    assert observability.report(con)[1]
+
+
+def test_the_alert_goes_out_only_when_there_is_a_problem(
+    con: Connection, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sent: list[str] = []
+
+    def send(subject: str, body: str) -> bool:
+        sent.append(body)
+        return True
+
+    monkeypatch.setattr(alert, "send", send)
+    build_run(con, [result("test.quem_decidiu.not_null_pessoas_id_pessoa.abc", "pass")])
+    assert not observability.notify(con) and not sent
+    build_run(con, [result("test.quem_decidiu.elementary_schema_changes_pessoas_.abc", "warn")])
+    assert observability.notify(con) and "elementary_schema_changes" in sent[0]
+
+
+def test_an_smtp_failure_does_not_break_the_pipeline(
+    con: Connection, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(subject: str, body: str) -> bool:
+        raise smtplib.SMTPException("fora do ar")
+
+    monkeypatch.setattr(alert, "send", broken)
+    build_run(con, [result("test.quem_decidiu.unique_pessoas_id_pessoa.abc", "fail")])
+    assert observability.notify(con) is False
+
+
+def test_the_email_needs_smtp_and_a_recipient_and_uses_starttls_with_login(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("PLATAFORMA_SMTP_HOST", raising=False)
+    assert alert.send("assunto", "corpo") is False
+    calls: list[str] = []
+
+    class FakeSMTP:
+        def __init__(self, host: str, port: int) -> None:
+            calls.append(f"conectou {host}:{port}")
+
+        def __enter__(self) -> "FakeSMTP":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def starttls(self, context: object) -> None:
+            calls.append("starttls")
+
+        def login(self, user: str, password: str) -> None:
+            calls.append(f"login {user}")
+
+        def send_message(self, message: Any) -> None:
+            calls.append(f"enviou {message['To']} {message['Subject']}")
+
+    monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
+    for key, value in {
+        "PLATAFORMA_SMTP_HOST": "smtp.exemplo.org",
+        "PLATAFORMA_SMTP_USER": "alerta@exemplo.org",
+        "PLATAFORMA_SMTP_PASSWORD": "segredo",
+        "PLATAFORMA_ALERT_TO": "equipe@exemplo.org",
+    }.items():
+        monkeypatch.setenv(key, value)
+    assert alert.send("assunto", "corpo") is True
+    assert calls == [
+        "conectou smtp.exemplo.org:587",
+        "starttls",
+        "login alerta@exemplo.org",
+        "enviou equipe@exemplo.org assunto",
+    ]

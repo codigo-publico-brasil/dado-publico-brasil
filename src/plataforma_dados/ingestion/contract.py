@@ -19,7 +19,7 @@ POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
 ARCHIVES = {"zip"}
-PARTITIONS = {"year", "legislature"}
+PARTITIONS = {"year", "legislature", "month"}  # month: o valor da partição é AAAAMM
 WRITES = {"merge", "replace"}
 # Documentos pessoais nunca são lidos de nenhuma fonte (princípio IX da constituição do projeto).
 # Chave "linha inteira": identifica a linha pelo conteúdo, para arquivos sem chave natural.
@@ -65,6 +65,8 @@ class Dataset:
     foreach: ForEach | None = None
     archive: str | None = None  # "zip": o arquivo guardado é um pacote; `member` diz qual membro ler
     member: str = "*"  # padrão (glob) do nome do membro dentro do pacote
+    raw: bool = True  # false: só o landing (arquivos guardados para uso futuro), sem tabela no raw
+    first_month: int | None = None  # (partition: month) primeiro mês pedido, como AAAAMM
     step: int = 1  # (yearly) só os anos a cada N a partir de first_year (eleições gerais: 4)
     only: dict[str, tuple[str, ...]] = field(default_factory=dict)  # minimização: só linhas com estes valores
     aliases: dict[str, str] = field(
@@ -120,22 +122,25 @@ class SourceContract:
 
 def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
     where = f"{source}.{name}"
-    for required in ("url", "load", "write", "columns"):
+    raw = bool(data.get("raw", True))
+    for required in ("url", "load", "write", "columns") if raw else ("url", "load"):
         if required not in data:
             raise InvalidContract(f"{where}: falta '{required}'")
     if data["load"] not in LOADS:
         raise InvalidContract(f"{where}: load '{data['load']}' inválido ({sorted(LOADS)})")
     if data.get("partition", "year") not in PARTITIONS:
         raise InvalidContract(f"{where}: partition '{data['partition']}' inválido ({sorted(PARTITIONS)})")
-    if data["write"] not in WRITES:
+    if data.get("write", "replace") not in WRITES:
         raise InvalidContract(f"{where}: write '{data['write']}' inválido ({sorted(WRITES)})")
+    if data.get("first_month") and data.get("partition") != "month":
+        raise InvalidContract(f"{where}: first_month exige partition: month")
     if data.get("archive") is not None and data["archive"] not in ARCHIVES:
         raise InvalidContract(f"{where}: archive deve ser um de {sorted(ARCHIVES)}")
     if int(data.get("step", 1)) > 1 and data.get("first_year") is None:
         raise InvalidContract(f"{where}: step exige first_year")
     if data.get("format", "csv") not in FORMATS:
         raise InvalidContract(f"{where}: format deve ser um de {sorted(FORMATS)}")
-    columns = tuple(data["columns"])
+    columns = tuple(data.get("columns", ()))
     for column in columns:
         if column.lower().replace("_", "") in FORBIDDEN_COLUMNS:
             raise InvalidContract(f"{where}: '{column}' é documento pessoal e nunca é lido")
@@ -150,13 +155,13 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
     missing = [c for c in key if c not in columns and c != ROW_HASH]
     if missing:
         raise InvalidContract(f"{where}: chave {missing} não está em columns")
-    if data["write"] == "merge" and not key:
+    if data.get("write") == "merge" and not key:
         raise InvalidContract(f"{where}: write merge exige primary_key")
     return Dataset(
         name=name,
         url=data["url"],
         load=data["load"],
-        write=data["write"],
+        write=data.get("write", "replace"),
         columns=columns,
         primary_key=key,
         stable_after_years=int(data.get("stable_after_years", 1)),
@@ -169,6 +174,8 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         foreach=foreach,
         archive=data.get("archive"),
         member=str(data.get("member", "*")),
+        raw=raw,
+        first_month=int(data["first_month"]) if data.get("first_month") else None,
         step=int(data.get("step", 1)),
         only={k: tuple(v) for k, v in data.get("only", {}).items()},
         aliases=dict(data.get("aliases", {})),

@@ -71,7 +71,9 @@ def _plan(config: ExtractionConfig) -> pipeline.Plan:
 
 def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
     captured = AssetKey(["landing", source.source])
-    raw_tables = [AssetKey([source.source, loader.normalize(name)]) for name in source.datasets]
+    raw_tables = [
+        AssetKey([source.source, loader.normalize(name)]) for name, d in source.datasets.items() if d.raw
+    ]
 
     @asset(key=captured, group_name="landing")
     def landing_asset(config: ExtractionConfig) -> MaterializeResult[Any]:
@@ -109,7 +111,7 @@ def _record_dbt(stage: str, target: Path) -> None:
             quality.record(con, run.id, results)
             run.rows_in = len(results)
             if stage == "transform_post":
-                observability.run(con, run.id)
+                observability.notify(con)
     finally:
         con.close()
 

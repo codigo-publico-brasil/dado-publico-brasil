@@ -24,6 +24,8 @@ vars:
   url_materia_senado: "https://www25.senado.leg.br/web/atividade/materias/-/materia/"
 
 models:
+  elementary:
+    +schema: elementary
   quem_decidiu:
     +persist_docs:
       relation: true

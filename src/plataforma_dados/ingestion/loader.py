@@ -150,7 +150,7 @@ def load_pending(
     """
     captures = rows = 0
     for capture in landing.current_captures(con, contract.source):
-        if only_dataset not in (None, capture["dataset"]):
+        if only_dataset not in (None, capture["dataset"]) or not contract.datasets[capture["dataset"]].raw:
             continue
         if capture["loaded_at"] is not None and not rebuild:
             continue

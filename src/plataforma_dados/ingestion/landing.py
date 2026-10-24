@@ -109,6 +109,10 @@ def partitions(dataset: Dataset, years: list[int] | set[int]) -> list[int]:
     ]
     if dataset.partition == "legislature":
         return sorted({legislature_of(y) for y in valid})
+    if dataset.partition == "month":
+        today = datetime.now(UTC)
+        months = (y * 100 + m for y in valid for m in range(1, 13))
+        return sorted(v for v in months if (dataset.first_month or 0) <= v <= today.year * 100 + today.month)
     return sorted(valid)
 
 
@@ -149,7 +153,7 @@ def plan_incremental(contract: SourceContract, current: int | None = None) -> li
     current = current or current_year()
     items: list[Item] = []
     for d in contract.datasets.values():
-        if d.foreach:
+        if d.foreach or d.partition == "month":  # por mês: só quando pedido (o do mês corrente muda todo dia)
             continue
         if not d.yearly:
             items.append((d.name, None))
@@ -195,7 +199,8 @@ def extract(
             monitoring.record(con, contract.source, dataset, year, "availability", "error", str(error))
             return -1
         monitoring.record(con, contract.source, dataset, year, "availability", "ok", f"{size} bytes")
-        monitoring.check_header(con, contract, contract.datasets[dataset], year, file)
+        if contract.datasets[dataset].raw:
+            monitoring.check_header(con, contract, contract.datasets[dataset], year, file)
         run.rows_in = run.rows_out = 1
         relative = file.relative_to(settings.storage_root).as_posix()
         return register_capture(

@@ -27,9 +27,67 @@ Os números abaixo são da carga histórica de 21/10/2026 (Câmara: `run --histo
 | Tramitação da Câmara (amostra por item: os 300 mais recentes dos 96.134 alvos) | 300 proposições, 338 andamentos |
 | Processos do Senado (amostra por item: 300 das 2.738 matérias votadas) | 300 processos, 75 normas geradas |
 | Pessoas hoje (depois da fusão deputado e senador) | 8.535, das quais 218 estão nas duas casas |
-| Candidaturas ao Congresso no TSE (eleições gerais de 1998 a 2026) | 53.626 no staging; 6.709 ligadas a uma pessoa; 3.456 eleitas ligadas (1.900 pessoas) |
+| Candidaturas no TSE (eleições gerais de 1998 a 2026, todos os cargos; medido em 24/10/2026) | 180.970 no staging; 10.997 candidaturas de 3.201 pessoas do projeto no mart |
+| Diário Oficial da União (landing, ago a out de 2026) | 9 zips, 620 MB, sem tabelas |
 | Detalhe de senadores (nascimento, naturalidade, foto) | 843 de 843 buscados |
 | Testes do dbt do tipo erro que falharam | 0 |
+
+## Relatório de pendências de dados
+
+Retrato de 24/10/2026 do que **falta** no banco: histórico incompleto, tabelas que não existem e qualidade a resolver. É um inventário de dados, para saber o que a plataforma ainda não tem; o andamento de cada trabalho fica no quadro do GitHub. `plataforma coverage` e `plataforma observe` mostram os números atuais.
+
+### Histórico incompleto (a fonte tem, o banco ainda não)
+
+| Dado | Tem hoje | Falta | Observação |
+| --- | --- | --- | --- |
+| Tramitação da Câmara | 300 de 96.134 proposições | 95.834 | carga de cerca de 49 horas; **sempre a última coisa a rodar** |
+| Processos do Senado | 330 de 2.738 matérias | 2.408 | por item |
+| Detalhe das normas (publicações e relações) | 30 de 24.812 | 24.782 | por item; a Constituição inteira já está |
+| Dispositivos vetados | 150 de 1.350 vetos | 1.200 | por item |
+| Voto nominal em vetos | 20 de 318 | 298 | por item; não ligado a pessoas |
+| Votos de candidatos (TSE) | só 2022 | 1998 a 2018 e 2026 | 2,4 GB compactados; por ano, quando pedido |
+| Candidaturas e bens (TSE) | eleições gerais de 1998 e 2006 em diante (bens) | eleições municipais; anteriores a 1998 | municipais e anteriores a 1998 não foram verificadas |
+| Diário Oficial da União | ago a out de 2026 (9 zips, 620 MB) | jan a jul de 2026 (cerca de 3,5 GB) e anos anteriores | anteriores a 2026 não verificados; histórico quando o fundador pedir |
+| Proposições da Câmara | 2000 a 2026 | anteriores a 2000 | a fonte cobre só alguns tipos; decidir o que mostrar |
+| Normas, vetos | normas desde 1808; vetos desde 1994 | vetos antes de 1994 | a API não devolve |
+
+### Tabelas e dados que ainda não existem
+
+| Dado | Por que falta | O que destrava |
+| --- | --- | --- |
+| Texto das leis comuns | não está na API documentada do Senado | escolher a fonte (Planalto e LexML bloquearam acesso automático) |
+| DOU em índice para busca (RAG) | o fundador quer RAG, sem vetores por enquanto | trilha de documentos, com link da fonte e IA rotulada |
+| Despesas e empenhos do Portal da Transparência | não pedidas | pesquisa de fonte e termos |
+| TCU | sem licença aberta | autorização do TCU |
+| Redes sociais, fotos, certidões, coligações e vagas dos candidatos; prestação de contas | fora do primeiro corte | decidir escopo e privacidade |
+| Autoria e situação das matérias do Senado | exigem uma chamada por matéria | carga por item |
+| Voto nominal dos vetos ligado a pessoas | a fonte traz só nome, partido e UF | regra nova de identidade |
+| Emenda ligada ao parlamentar autor | o código orçamentário não é o do parlamentar | regra nova de identidade |
+| Filiação partidária por período | só o TSE tem | fonte e modelo |
+| Presença em sessões, mesas diretoras, temas (Câmara) | volume e escopo | decisão do primeiro entregável |
+| Presidente, vice e ministros | pertencem ao Executivo | TSE, Planalto e DOU |
+| Estados e municípios (por exemplo, São Paulo) | fora do escopo federal | fontes por ente |
+
+### Qualidade e ligação a resolver
+
+| Pendência | Situação |
+| --- | --- |
+| Vínculos manuais de candidatos a pessoas | 135 candidatos propostos aguardam aprovação do fundador (o arquivo precisa ser regenerado com os ids novos de candidatura) |
+| Eleitos sem vínculo | 398: 194 de 2026 (ainda sem posse), 33 de 2002 e 22 de 2006 sem registro digital, e o restante com homônimos ou sem data de nascimento igual |
+| Siglas de partidos sem evento conferido | 5 (PRTB, PSDC, PTC, SD e SDD) |
+| Linha removida pela fonte | o `merge` do dlt não apaga; falta o teste que a aponte |
+| Termos do Portal da Transparência | páginas bloqueadas por verificação anti-robô; vale o Decreto 8.777/2016 |
+| Alertas de anomalia (Elementary) | só valem depois de cerca de 7 execuções de histórico |
+| E-mail de alerta | falta configurar o SMTP no `.env` |
+| Postgres de produção | aguarda a escolha da hospedagem |
+
+### Melhorias da plataforma a planejar (pedidas em 24/10/2026, não executadas)
+
+| Melhoria | Situação |
+| --- | --- |
+| Organizar o landing | hoje cada fonte tem uma pasta única com todos os arquivos misturados; definir padrão por fonte, dataset e data de referência ou de extração, para identificar origem e data pelo caminho |
+| Landing do DOU por data de referência | os zips do DOU são por mês (`AAAAMM`) e seção; guardar em pastas por mês, o que depende do padrão geral do landing |
+| Aproveitar melhor o Elementary | as páginas Catalog, Data health, Environment, Alert rules e Pull requests do relatório aparecem desabilitadas; verificar quais são recursos só da versão em nuvem e como cobrir o resto (catálogo próprio, alertas por e-mail, regras por tabela) |
 
 ## 1. O que a Câmara entrega e o projeto já usa
 
@@ -131,22 +189,22 @@ Lacunas conhecidas, medidas ou registradas:
 
 | O que | Dataset | Cobertura em 23/10/2026 |
 | --- | --- | --- |
-| Bens declarados pelos candidatos (todos os cargos) | `bens` (por eleição) | 2006, 2010, 2014, 2018, 2022 e 2026: 461.128 bens no raw; 65.734 nos marts (2.233 pessoas, 5.099 candidaturas) |
-| Votos de cada candidato por município e zona (todos os cargos) | `votacao` (por eleição) | **só 2022**: 9.377.845 linhas e 26.237 candidaturas no raw; 1.017 candidaturas de pessoas do projeto nos marts |
+| Bens declarados pelos candidatos (todos os cargos) | `bens` (por eleição) | 2006, 2010, 2014, 2018, 2022 e 2026: 510.172 bens no raw; 92.242 nos marts (2.682 pessoas, 7.584 candidaturas); medido em 24/10/2026 |
+| Votos de cada candidato por município e zona (todos os cargos) | `votacao` (por eleição) | **só 2022**: 9.377.845 linhas e 26.237 candidaturas no raw; 1.221 linhas de 1.206 pessoas do projeto nos marts |
 | Emendas parlamentares | `emendas` | 94.736 linhas, de 2014 a 2026 |
 | Convênios de emendas | `emendas_convenios` | 85.403 linhas |
-| Quem recebeu o dinheiro (só pessoa jurídica e unidade gestora) | `emendas_favorecidos` | 640.631 de 828.419 linhas; as 187.788 restantes são pessoa física e inscrições genéricas |
+| Quem recebeu o dinheiro, como o portal publica (com sinalização de dado pessoal) | `emendas_favorecidos` | 828.419 linhas, todas; `contem_dado_pessoal` marca as de pessoa física e de CPF mascarado |
 
 Lacunas conhecidas, medidas ou registradas:
 
 - **Votos de 1998 a 2018 e de 2026:** não carregados (2,4 GB compactados no total; 2022 sozinho levou 49 minutos para entrar no raw). Pedir por ano: `--years ANO --dataset votacao`.
 - **Bens de 1998 e 2002:** a fonte não publica. Os de 2006 e 2010 usam outros nomes de coluna e entram por `aliases`.
-- **Candidaturas sem voto** (`candidaturas_sem_votos_carregados`, 23 em 2022): deputados e senadores sem votação na fonte (indeferidos ou renunciantes). Os suplentes de senador não têm voto próprio e ficam de fora do teste.
+- **Candidaturas sem voto** (`candidaturas_sem_votos_carregados`, 26 em 2022): resultados em branco ou candidaturas sem votação na fonte. Suplentes de senador e vices não têm voto próprio e ficam de fora do teste.
 - **Votos e bens de quem não é pessoa do projeto** (deputados estaduais, governadores e candidatos sem ligação): ficam no staging, não nos marts.
 - **Emenda sem ligação a pessoa:** o autor vem pelo nome e por um código orçamentário que não é o do parlamentar. 15.962 emendas (as antigas, sobretudo) vêm sem autor (`emendas_sem_autor_conhecido`).
-- **Favorecido pessoa física:** nunca entra (181.509 cidadãos comuns com CPF mascarado). `emendas_de_pessoa_fisica` barra qualquer um nos marts.
+- **Favorecido pessoa física:** entra como o portal publica, com CPF mascarado ([ADR 0017](../adr/0017-revisao-de-filtros-e-dados-pessoais.md)); a tabela, as colunas `favorecido` e `favorecido_codigo` e cada linha (`contem_dado_pessoal`) são sinalizadas como dado pessoal. Quem consome precisa tratar assim (LGPD).
 - **Termos do portal:** as páginas de termos de uso e de dicionário de dados do Portal da Transparência pedem verificação anti-robô e não foram lidas; vale a licença de livre utilização do Decreto 8.777/2016.
-- **Despesas (empenhos), DOU e TCU:** não carregados. O DOU tem licença sem derivações e exige credencial; o TCU não tem licença aberta (ver o [catálogo de fontes](fontes-de-dados.md)).
+- **Despesas (empenhos) e TCU:** não carregados. O DOU está só no landing, de ago a out de 2026 ([ADR 0019](../adr/0019-dou-so-no-landing.md)); o TCU não tem licença aberta (ver o [catálogo de fontes](fontes-de-dados.md)).
 
 ## 3. O que a Câmara **não** tem e precisa vir de outra instância
 

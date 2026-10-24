@@ -51,9 +51,15 @@ def _retrying[T](call: Callable[[], T]) -> T:
 
 
 def download(
-    url: str, folder: Path, headers: dict[str, str] | None = None, suffix: str = "csv"
+    url: str,
+    folder: Path,
+    headers: dict[str, str] | None = None,
+    suffix: str = "csv",
+    name: str | None = None,
 ) -> tuple[Path, str, int]:
-    """Baixa sem alterar. Devolve o caminho (com o hash no nome), o SHA-256 e o tamanho em bytes."""
+    """Baixa sem alterar. Devolve o caminho (com o hash no nome), o SHA-256 e o tamanho em bytes.
+
+    O nome do arquivo vem do fim da URL, ou de `name` quando a URL não termina no nome do arquivo."""
     folder.mkdir(parents=True, exist_ok=True)
     temporary = folder / "download.tmp"
 
@@ -70,7 +76,7 @@ def download(
         return sha.hexdigest(), size
 
     digest, size = _retrying(attempt)
-    name = re.sub(r"[^\w.-]+", "_", url.rsplit("/", 1)[-1])
+    name = re.sub(r"[^\w.-]+", "_", name or url.rsplit("/", 1)[-1])
     stem, dot, extension = name.rpartition(".")
     stem, extension = (
         (stem, extension) if dot and extension in ("csv", "json", "zip", "xml") else (name, suffix)

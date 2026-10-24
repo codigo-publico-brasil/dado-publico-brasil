@@ -35,10 +35,11 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 
 ### Diário Oficial da União (DOU) (verificado em 23/10/2026)
 
-- **Acesso:** a Imprensa Nacional publica as edições em XML, compactadas em zips mensais por seção (`S01` atos normativos, `S02` atos de pessoal, `S03` contratos, editais e avisos), na estrutura Ano > Mês > arquivo.zip, na primeira terça-feira de cada mês com as edições do mês anterior. Os links diretos dos zips não aparecem na página (a lista é dinâmica). O INLABS (`https://inlabs.in.gov.br`) dá as edições completas em PDF e XML desde 2020, **exige cadastro** (e-mail e senha) e guarda só os últimos 4 meses; o dados.gov.br responde 401 sem token.
-- **Limites:** o XML aberto **não substitui a versão certificada** (o PDF). O dicionário de dados "será disponibilizado em data a ser definida": **não existe**. Cobertura anterior a 2020 e tamanho: **não confirmados**.
-- **Licença:** o site da Imprensa Nacional declara **Creative Commons Atribuição-SemDerivações 3.0 (CC BY-ND)**. Transformar o XML em tabelas pode contar como derivação; por isso o carregamento, quando houver, ficaria só nos metadados de identificação (tipo, órgão, data, título e link da página oficial), sem o corpo do texto. Decisão do fundador pendente.
-- **Uso aqui:** nomeações e exonerações (seção 2) e a publicação das normas (seção 1).
+- **Acesso (verificado em 24/10/2026):** a página `https://www.in.gov.br/acesso-a-informacao/dados-abertos/base-de-dados?ano=2026&mes=Outubro` traz, no HTML, os links diretos de um zip por seção (`S01` atos normativos, `S02` atos de pessoal, `S03` contratos, editais e avisos). No mês corrente o nome muda a cada atualização (`S01102026_Atualizado185748.zip`); nos meses fechados é fixo (`S01082026.zip`). O pedido precisa do cabeçalho `Accept: */*` (sem ele, a página responde 403). O INLABS (credencial) estava em manutenção e o dados.gov.br respondeu 401.
+- **Conteúdo medido (ago a out de 2026):** cada zip tem um XML por matéria (`<edição>_<AAAAMMDD>_<id>.xml`, com tipo, órgão, data, ementa e texto) e imagens. Agosto: 8.590, 16.368 e 49.642 XMLs nas seções 1, 2 e 3; setembro: 8.927, 16.454 e 47.698; outubro até o dia 23: 6.287, 11.474 e 36.900. Os dias cobertos batem com os dias úteis (mais edições extras na seção 1).
+- **Limites:** o XML aberto **não substitui a versão certificada** (o PDF). O dicionário de dados **não existe**. Cobertura anterior a 2026 e tamanho do histórico: de janeiro a outubro de 2026 são cerca de 4,1 GB em 30 zips; os anos anteriores não foram verificados.
+- **Licença:** o site declara **Creative Commons Atribuição-SemDerivações 3.0 (CC BY-ND)**. Guardar o arquivo original e lê-lo é livre; redistribuir trecho modificado, não. Por isso o projeto guarda só o landing e não transforma o texto em tabelas ([ADR 0019](../adr/0019-dou-so-no-landing.md)).
+- **Uso aqui:** só o landing, por mês, de agosto de 2026 em diante. Depois, índice privado para busca semântica (RAG), sempre com o link da fonte e a data, e resposta de IA rotulada como tal.
 
 ### TSE (dados abertos)
 

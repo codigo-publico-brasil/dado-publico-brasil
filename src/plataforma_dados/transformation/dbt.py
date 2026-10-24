@@ -51,11 +51,23 @@ def _command(settings: Settings, *args: str) -> tuple[list[str], dict[str, str]]
     return command, {**os.environ, "PLATAFORMA_WAREHOUSE_FILE": str(settings.warehouse.resolve())}
 
 
+def install_packages(settings: Settings) -> None:
+    """Baixa os pacotes do dbt (`packages.yml`) na primeira vez; depois não precisa de rede."""
+    if (DBT_DIR / "dbt_packages").exists():
+        return
+    project = str(DBT_DIR)
+    command = [sys.executable, "-c", "from dbt.cli.main import cli; cli()", "deps"]
+    command += ["--project-dir", project, "--profiles-dir", project]
+    command += ["--log-path", str(settings.state_dir / "dbt" / "logs")]
+    subprocess.run(command, check=True, capture_output=True)
+
+
 def serve_docs(settings: Settings, port: int = 8080) -> int:
     """Gera e serve a documentação navegável do dbt (grafo de linhagem, tabelas e colunas).
 
     Bloqueia até o usuário interromper. A geração lê o warehouse: o pipeline precisa estar parado.
     """
+    install_packages(settings)
     for args in (("docs", "generate"), ("docs", "serve", "--port", str(port))):
         command, env = _command(settings, *args)
         code = subprocess.call(command, env=env)
@@ -84,6 +96,7 @@ def read_results(
 
 def invoke(settings: Settings, *args: str, results_file: str = "run_results.json") -> Outcome:
     """Roda `dbt <args>` no projeto da camada de dados e lê o arquivo de resultados."""
+    install_packages(settings)
     command, env = _command(settings, *args)
     process = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
     results = read_results(settings, results_file)

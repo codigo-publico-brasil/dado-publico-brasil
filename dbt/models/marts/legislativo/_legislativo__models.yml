@@ -6,6 +6,10 @@ models:
   - name: pessoas
     description: Pessoas (agentes públicos) com perfil, contagens e último partido. Uma linha por pessoa.
     meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário}
+    data_tests: &monitoramento
+      - elementary.volume_anomalies: {config: {severity: warn}}
+      - elementary.schema_changes: {config: {severity: warn}}
+      - elementary.all_columns_anomalies: {column_anomalies: [null_percent], config: {severity: warn}}
     columns:
       - {name: id_pessoa, data_type: bigint, tests: [unique, not_null], description: "Chave própria e estável da pessoa (schema identity)."}
       - {name: fonte, data_type: varchar, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
@@ -35,6 +39,7 @@ models:
   - name: mandatos
     description: Mandatos por legislatura, a partir de votos observados (início e fim oficiais vazios). Uma linha por pessoa e legislatura.
     meta: {sensitivity: publico-agente-publico, grain: pessoa e legislatura, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: \"Fonte oficial do registro.\"}
       - name: id_pessoa
@@ -58,6 +63,7 @@ models:
   - name: exercicios
     description: Exercício oficial no cargo como o Senado informa (titular e suplentes), com início, fim e causa de afastamento. Só o Senado; a Câmara não publica. Uma linha por pessoa, mandato e exercício.
     meta: {sensitivity: publico-agente-publico, grain: pessoa, mandato e exercício, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - name: id_pessoa
@@ -80,6 +86,7 @@ models:
   - name: ocupacoes
     description: Ocupações anteriores declaradas. Uma linha por pessoa e ocupação.
     meta: {sensitivity: publico-agente-publico, grain: pessoa e ocupação, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - name: id_pessoa
         data_type: bigint
@@ -98,6 +105,7 @@ models:
   - name: proposicoes
     description: Proposições com ementa padronizada, ementa oficial, situação atual e URL da fonte. Uma linha por proposição.
     meta: {sensitivity: publico, grain: proposição, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte oficial do registro (por exemplo, camara)."}
       - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Identificador da proposição na fonte."}
@@ -114,6 +122,7 @@ models:
   - name: autorias
     description: Autores de cada proposição (deputados e também comissão, Senado, Executivo e outros), com a posição na assinatura e o total de autores; id_pessoa só existe quando o autor é deputado. Uma linha por autor e proposição.
     meta: {sensitivity: publico-agente-publico, grain: autor e proposição, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - name: id_pessoa
         data_type: bigint
@@ -132,6 +141,7 @@ models:
   - name: votacoes
     description: Votações com resultado oficial, totais e proposições. Uma linha por votação.
     meta: {sensitivity: publico, grain: votação, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: votacao_id, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}
@@ -149,6 +159,7 @@ models:
   - name: votos
     description: Voto de cada pessoa em cada votação nominal, com partido e UF na data. Uma linha por pessoa e votação.
     meta: {sensitivity: publico-agente-publico, grain: pessoa e votação, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - name: id_pessoa
@@ -168,6 +179,7 @@ models:
   - name: legislaturas
     description: Legislaturas da Câmara, com datas oficiais de início e fim. Uma linha por legislatura.
     meta: {sensitivity: publico, grain: legislatura, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: legislatura_id, data_type: integer, tests: [unique, not_null], description: "Número da legislatura."}
@@ -178,6 +190,7 @@ models:
   - name: partidos
     description: Partidos com sigla e nome oficiais. Uma linha por partido.
     meta: {sensitivity: publico, grain: partido, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: partido_id, data_type: bigint, tests: [unique, not_null], description: "Identificador do partido na fonte."}
@@ -187,6 +200,7 @@ models:
   - name: linhagem_de_partidos
     description: Mudanças de nome, fusões e incorporações de partidos, conforme o TSE, com a página oficial de cada evento. Curada à mão; só o que foi conferido. Uma linha por partido de origem e evento.
     meta: {sensitivity: publico, grain: partido de origem e evento, owner: fundador do projeto, freshness: manual}
+    data_tests: *monitoramento
     columns:
       - {name: sigla_anterior, data_type: varchar, tests: [not_null], description: "Sigla do partido antes do evento, como aparece nos votos."}
       - {name: sigla_posterior, data_type: varchar, tests: [not_null], description: "Sigla depois do evento (a do partido resultante, em fusão e incorporação)."}
@@ -199,6 +213,7 @@ models:
   - name: orgaos
     description: Órgãos da Câmara (comissões, plenário, mesa diretora, conselhos), com tipo e situação. Uma linha por órgão.
     meta: {sensitivity: publico, grain: órgão, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: orgao_id, data_type: bigint, tests: [unique, not_null], description: "Identificador do órgão na fonte."}
@@ -216,6 +231,7 @@ models:
   - name: membros_de_orgaos
     description: Participação de pessoas em órgãos da Câmara, com cargo e período. Uma linha por pessoa, órgão, cargo e período informado.
     meta: {sensitivity: publico-agente-publico, grain: pessoa, órgão, cargo e período, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - name: orgao_id
@@ -243,6 +259,7 @@ models:
   - name: frentes
     description: Frentes parlamentares, com legislatura de criação e coordenador. Uma linha por frente.
     meta: {sensitivity: publico, grain: frente parlamentar, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: frente_id, data_type: bigint, tests: [unique, not_null], description: "Identificador da frente na fonte."}
@@ -255,6 +272,7 @@ models:
   - name: membros_de_frentes
     description: Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título.
     meta: {sensitivity: publico-agente-publico, grain: pessoa, frente e legislatura, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - name: frente_id
@@ -277,6 +295,7 @@ models:
   - name: tramitacoes
     description: Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição e sequência.
     meta: {sensitivity: publico, grain: proposição e sequência, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Proposição (marts.proposicoes, junto com a fonte)."}
@@ -292,6 +311,7 @@ models:
   - name: normas_geradas
     description: Norma jurídica que resultou de uma matéria, com número, datas e veículo de publicação. Só o Senado informa por enquanto. Uma linha por matéria.
     meta: {sensitivity: publico, grain: matéria, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Matéria (marts.proposicoes, junto com a fonte)."}
@@ -308,6 +328,7 @@ models:
   - name: candidaturas
     description: Candidaturas ao Congresso (deputado federal e senador, com suplentes) de quem já é pessoa do projeto, com partido, situação e resultado. Uma linha por candidatura e turno.
     meta: {sensitivity: publico-agente-publico, grain: pessoa, eleição e turno, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
       - name: id_pessoa
@@ -332,6 +353,7 @@ models:
   - name: fusoes_de_pessoas
     description: Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa (por exemplo, deputado que virou senador). Uma linha por chave absorvida.
     meta: {sensitivity: publico-agente-publico, grain: chave absorvida, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: id_pessoa_absorvida, data_type: bigint, tests: [unique, not_null], description: "Chave que deixou de existir."}
       - {name: id_pessoa_sobrevivente, data_type: bigint, tests: [not_null], description: "Chave que a substituiu (marts.pessoas)."}
@@ -341,6 +363,7 @@ models:
   - name: normas
     description: Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...) desde 1808, só metadados; o texto integral não vem desta fonte. Uma linha por norma.
     meta: {sensitivity: publico, grain: norma, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: norma_id, data_type: bigint, tests: [not_null], description: "Código da norma no Senado."}
@@ -360,6 +383,7 @@ models:
   - name: normas_relacoes
     description: Ligações de cada norma com atos posteriores, como o Senado declara (alteração, regulamentação, veto, declaração de constitucionalidade). Só das normas detalhadas (leis, leis complementares, emendas, medidas provisórias e a Constituição). Uma linha por norma, ato posterior e tipo de relação.
     meta: {sensitivity: publico, grain: norma, ato posterior e relação, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: norma_id, data_type: bigint, tests: [not_null], description: "Norma de que se fala (marts.normas)."}
@@ -374,6 +398,7 @@ models:
   - name: normas_publicacoes
     description: Onde cada norma foi publicada no Diário Oficial (a original e, por exemplo, a do veto), com página e coluna. Só das normas detalhadas. Uma linha por norma e publicação.
     meta: {sensitivity: publico, grain: norma e publicação, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: norma_id, data_type: bigint, tests: [not_null], description: "Norma publicada (marts.normas)."}
@@ -389,6 +414,7 @@ models:
   - name: vetos
     description: Vetos presidenciais apreciados pelo Congresso, de 1994 em diante (antes disso a fonte não informa), com a matéria vetada, a norma gerada e as datas. Uma linha por veto.
     meta: {sensitivity: publico, grain: veto, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: veto_id, data_type: bigint, tests: [not_null], description: "Código do veto no Senado."}
@@ -419,6 +445,7 @@ models:
   - name: dispositivos_vetados
     description: Cada dispositivo vetado, com o texto vetado, a razão do veto escrita pela Presidência e o que o Congresso decidiu (situação como a fonte informa). Só dos vetos já buscados. Uma linha por dispositivo.
     meta: {sensitivity: publico, grain: dispositivo vetado, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: dispositivo_id, data_type: bigint, tests: [not_null], description: "Código do dispositivo vetado no Senado."}
@@ -437,6 +464,7 @@ models:
   - name: votos_em_vetos
     description: Voto de deputados e senadores em cada dispositivo vetado votado, como a fonte entrega (nome, partido e UF, sem o código do parlamentar), por isso não ligado a pessoas. Só dos dispositivos já buscados. Uma linha por dispositivo e voto.
     meta: {sensitivity: publico-agente-publico, grain: dispositivo e voto, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: dispositivo_id, data_type: bigint, tests: [not_null], description: "Dispositivo votado (marts.dispositivos_vetados)."}
@@ -451,6 +479,7 @@ models:
   - name: constituicao_dispositivos
     description: A Constituição de 1988 e o ADCT dispositivo a dispositivo, como a Câmara publica (texto atualizado até a emenda indicada). O tipo e o contexto saem da posição e do começo de cada linha; o texto não é reescrito. Uma linha por parágrafo do arquivo.
     meta: {sensitivity: publico, grain: parágrafo do arquivo, owner: fundador do projeto, freshness: a cada emenda}
+    data_tests: *monitoramento
     columns:
       - {name: parte, data_type: varchar, description: "Constituição (parte permanente) ou ADCT."}
       - {name: ordem, data_type: integer, tests: [not_null], description: "Posição do parágrafo no arquivo, a partir de 1."}
@@ -471,6 +500,7 @@ models:
   - name: constituicao_alteracoes
     description: Cada indicação de emenda que o texto da Constituição traz entre parênteses, por dispositivo (por exemplo, Redação dada pela Emenda Constitucional nº 45, de 2004). Uma linha por dispositivo e emenda citada.
     meta: {sensitivity: publico, grain: dispositivo e emenda citada, owner: fundador do projeto, freshness: a cada emenda}
+    data_tests: *monitoramento
     columns:
       - {name: parte, data_type: varchar, description: "Constituição (parte permanente) ou ADCT."}
       - {name: ordem, data_type: integer, tests: [not_null], description: "Posição do parágrafo no arquivo (marts.constituicao_dispositivos)."}
@@ -483,6 +513,7 @@ models:
   - name: bens_de_candidatos
     description: Bens declarados à Justiça Eleitoral por candidatos que já são pessoa do projeto, de 2006 em diante, como o TSE publica (valor declarado, sem correção). Uma linha por bem.
     meta: {sensitivity: publico-agente-publico, grain: candidatura e bem, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - name: id_pessoa
@@ -503,6 +534,7 @@ models:
   - name: votos_de_candidatos
     description: Votos de cada candidatura de quem já é pessoa do projeto, somados dos municípios e zonas, nas eleições gerais já carregadas. Uma linha por candidatura e turno.
     meta: {sensitivity: publico-agente-publico, grain: candidatura e turno, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - name: id_pessoa
@@ -524,6 +556,7 @@ models:
   - name: emendas
     description: Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação.
     meta: {sensitivity: publico, grain: emenda, localidade, função, programa e ação, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: emenda_codigo, data_type: varchar, description: "Código da emenda; vazio em registros antigos sem código."}
@@ -555,6 +588,7 @@ models:
   - name: emendas_convenios
     description: Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda.
     meta: {sensitivity: publico, grain: convênio e emenda, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: emenda_codigo, data_type: varchar, description: "Código da emenda (marts.emendas)."}
@@ -572,6 +606,7 @@ models:
   - name: emendas_favorecidos
     description: Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês.
     meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: emenda, favorecido e mês, owner: fundador do projeto, freshness: diário}
+    data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: emenda_codigo, data_type: varchar, description: "Código da emenda (marts.emendas)."}
