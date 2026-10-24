@@ -32,62 +32,9 @@ Os números abaixo são da carga histórica de 21/10/2026 (Câmara: `run --histo
 | Detalhe de senadores (nascimento, naturalidade, foto) | 843 de 843 buscados |
 | Testes do dbt do tipo erro que falharam | 0 |
 
-## Relatório de pendências de dados
+## Pendências de dados
 
-Retrato de 24/10/2026 do que **falta** no banco: histórico incompleto, tabelas que não existem e qualidade a resolver. É um inventário de dados, para saber o que a plataforma ainda não tem; o andamento de cada trabalho fica no quadro do GitHub. `dado-publico coverage` e `dado-publico observe` mostram os números atuais.
-
-### Histórico incompleto (a fonte tem, o banco ainda não)
-
-| Dado | Tem hoje | Falta | Observação |
-| --- | --- | --- | --- |
-| Tramitação da Câmara | 300 de 96.134 proposições | 95.834 | carga de cerca de 49 horas; **sempre a última coisa a rodar** |
-| Processos do Senado | 330 de 2.738 matérias | 2.408 | por item |
-| Detalhe das normas (publicações e relações) | 30 de 24.812 | 24.782 | por item; a Constituição inteira já está |
-| Dispositivos vetados | 150 de 1.350 vetos | 1.200 | por item |
-| Voto nominal em vetos | 20 de 318 | 298 | por item; não ligado a pessoas |
-| Votos de candidatos (TSE) | só 2022 | 1998 a 2018 e 2026 | 2,4 GB compactados; por ano, quando pedido |
-| Candidaturas e bens (TSE) | eleições gerais de 1998 e 2006 em diante (bens) | eleições municipais; anteriores a 1998 | municipais e anteriores a 1998 não foram verificadas |
-| Diário Oficial da União | ago a out de 2026 (9 zips, 620 MB) | jan a jul de 2026 (cerca de 3,5 GB) e anos anteriores | anteriores a 2026 não verificados; histórico quando o fundador pedir |
-| Proposições da Câmara | 2000 a 2026 | anteriores a 2000 | a fonte cobre só alguns tipos; decidir o que mostrar |
-| Normas, vetos | normas desde 1808; vetos desde 1994 | vetos antes de 1994 | a API não devolve |
-
-### Tabelas e dados que ainda não existem
-
-| Dado | Por que falta | O que destrava |
-| --- | --- | --- |
-| Texto das leis comuns | não está na API documentada do Senado | escolher a fonte (Planalto e LexML bloquearam acesso automático) |
-| DOU em índice para busca (RAG) | o fundador quer RAG, sem vetores por enquanto | trilha de documentos, com link da fonte e IA rotulada |
-| Despesas e empenhos do Portal da Transparência | não pedidas | pesquisa de fonte e termos |
-| TCU | sem licença aberta | autorização do TCU |
-| Redes sociais, fotos, certidões, coligações e vagas dos candidatos; prestação de contas | fora do primeiro corte | decidir escopo e privacidade |
-| Autoria e situação das matérias do Senado | exigem uma chamada por matéria | carga por item |
-| Voto nominal dos vetos ligado a pessoas | a fonte traz só nome, partido e UF | regra nova de identidade |
-| Emenda ligada ao parlamentar autor | o código orçamentário não é o do parlamentar | regra nova de identidade |
-| Filiação partidária por período | só o TSE tem | fonte e modelo |
-| Presença em sessões, mesas diretoras, temas (Câmara) | volume e escopo | decisão do primeiro entregável |
-| Presidente, vice e ministros | pertencem ao Executivo | TSE, Planalto e DOU |
-| Estados e municípios (por exemplo, São Paulo) | fora do escopo federal | fontes por ente |
-
-### Qualidade e ligação a resolver
-
-| Pendência | Situação |
-| --- | --- |
-| Vínculos manuais de candidatos a pessoas | 135 candidatos propostos aguardam aprovação do fundador (o arquivo precisa ser regenerado com os ids novos de candidatura) |
-| Eleitos sem vínculo | 398: 194 de 2026 (ainda sem posse), 33 de 2002 e 22 de 2006 sem registro digital, e o restante com homônimos ou sem data de nascimento igual |
-| Siglas de partidos sem evento conferido | 5 (PRTB, PSDC, PTC, SD e SDD) |
-| Linha removida pela fonte | o `merge` do dlt não apaga; falta o teste que a aponte |
-| Termos do Portal da Transparência | páginas bloqueadas por verificação anti-robô; vale o Decreto 8.777/2016 |
-| Alertas de anomalia (Elementary) | só valem depois de cerca de 7 execuções de histórico |
-| E-mail de alerta | falta configurar o SMTP no `.env` |
-| Postgres de produção | aguarda a escolha da hospedagem |
-
-### Melhorias da plataforma a planejar (pedidas em 24/10/2026, não executadas)
-
-| Melhoria | Situação |
-| --- | --- |
-| Organizar o landing | hoje cada fonte tem uma pasta única com todos os arquivos misturados; definir padrão por fonte, dataset e data de referência ou de extração, para identificar origem e data pelo caminho |
-| Landing do DOU por data de referência | os zips do DOU são por mês (`AAAAMM`) e seção; guardar em pastas por mês, o que depende do padrão geral do landing |
-| Aproveitar melhor o Elementary | as páginas Catalog, Data health, Environment, Alert rules e Pull requests do relatório aparecem desabilitadas; verificar quais são recursos só da versão em nuvem e como cobrir o resto (catálogo próprio, alertas por e-mail, regras por tabela) |
+O que falta no banco (histórico incompleto, tabelas que não existem, qualidade a resolver e melhorias da plataforma) fica nas [issues do repositório](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues), com os rótulos `dados-historico`, `tabela-nova`, `qualidade` e `plataforma`. Dependências de decisão levam `decisao-do-fundador`; cargas longas, `carga-pesada`. As tabelas deste documento mostram o que há hoje; `dado-publico coverage` e `dado-publico observe` mostram os números atuais.
 
 ## 1. O que a Câmara entrega e o projeto já usa
 
