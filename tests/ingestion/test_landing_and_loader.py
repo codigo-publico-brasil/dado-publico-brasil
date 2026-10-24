@@ -8,7 +8,7 @@ from synthetic_camara import fake_downloader, no_headers, synthetic_files
 
 from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.settings import Settings
-from dado_publico_brasil.core.warehouse import Connection, columns, scalar, tables
+from dado_publico_brasil.core.warehouse import Connection, columns, rows, scalar, tables
 from dado_publico_brasil.ingestion import landing, loader
 from dado_publico_brasil.ingestion.contract import SourceContract, load_contract
 
@@ -276,3 +276,29 @@ def test_the_load_registers_one_balance_that_is_an_error_for_collisions_and_reje
         con, "teste", "limpo", None, {"read": 5, "filtered": 0, "loaded": 5, "rejected": 0, "conflicting": 0}
     )
     assert scalar(con, "SELECT status FROM metadata.source_checks WHERE dataset = 'limpo'") == "ok"
+
+
+def test_rows_that_a_previous_capture_had_and_the_current_one_lacks_are_a_warning(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+
+    def capture(text: str, sha: str) -> dict[str, object]:
+        file = settings.storage_root / f"landing/{sha}.csv"
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(text, encoding="utf-8")
+        url = contract.url("pessoas")
+        landing.register_capture(con, "teste", "pessoas", None, url, sha, len(text), f"landing/{sha}.csv", 1)
+        return rows(con, "SELECT * FROM metadata.captures WHERE sha256 = ?", (sha,))[0]
+
+    def checks() -> list[tuple[str, str]]:
+        return con.execute(
+            "SELECT status, detail FROM metadata.source_checks WHERE check_name = 'linhas_removidas' ORDER BY id"
+        ).fetchall()
+
+    loader.load_capture(con, settings, contract, capture("codigo,nome\n1,Ana\n2,Bia\n", "a"))
+    assert checks() == []  # primeira captura: nada a comparar
+    loader.load_capture(con, settings, contract, capture("codigo,nome\n1,Ana\n", "b"))
+    assert [(s, d[:8]) for s, d in checks()] == [("warn", "1 linhas")]
+    loader.load_capture(con, settings, contract, capture("codigo,nome\n1,Ana\n3,Cid\n", "c"))
+    assert [s for s, _ in checks()][-1] == "warn"  # a linha 2 continua no raw, de uma captura antiga

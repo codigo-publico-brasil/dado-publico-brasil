@@ -8,6 +8,7 @@ quebrou, não parar o que ainda funciona. O frescor (idade do dado carregado) é
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.warehouse import Connection
@@ -83,6 +84,24 @@ def check_volume(con: Connection, source: str, dataset: str, partition: int | No
         record(con, source, dataset, partition, "volume", "warn", f"de {previous[0]} para {rows} linhas")
     else:
         record(con, source, dataset, partition, "volume", "ok", f"{rows} linhas")
+
+
+def check_removed(
+    con: Connection, source: str, dataset: str, partition: int | None, table: str, capture: dict[str, Any]
+) -> None:
+    """Avisa se o raw guarda linhas de capturas anteriores do mesmo arquivo que a captura atual não traz.
+
+    O `merge` do dlt não apaga: uma linha que a fonte removeu (ou, em dataset de chave por conteúdo, alterou)
+    continua no raw com o id da captura antiga. Só se mede quando o arquivo já foi capturado antes.
+    """
+    older = "SELECT id FROM metadata.captures WHERE url = ? AND id <> ?"
+    args = (capture["url"], capture["id"])
+    if not con.execute(older, args).fetchone():
+        return
+    n = con.execute(f"SELECT count(*) FROM {table} WHERE _source_file_id IN ({older})", args).fetchone()
+    count = int(n[0]) if n else 0
+    detail = f"{count} linhas de capturas anteriores que a atual não traz (removidas ou alteradas pela fonte)"
+    record(con, source, dataset, partition, "linhas_removidas", "warn" if count else "ok", detail)
 
 
 def check_load(

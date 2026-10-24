@@ -7,7 +7,7 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 | Camada | O que pega | Onde fica |
 | --- | --- | --- |
 | Monitor da fonte | Fonte fora do ar, coluna que sumiu ou apareceu (`schema`, `schema_mudou`), queda de volume | `metadata.source_checks` |
-| Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`) | `metadata.source_checks` |
+| Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`); linhas de capturas anteriores que a atual não traz (`linhas_removidas`) | `metadata.source_checks` |
 | Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.dbt_results` |
 | Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam | `metadata.dbt_results` e esquema `elementary` |
 | Relatório e alerta | Junta tudo, falha se houver problema e envia por e-mail | `dado-publico observe` |
@@ -24,8 +24,21 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 ## Limites conhecidos
 
 - A anomalia de volume só começa a valer depois de cerca de 7 execuções de histórico.
+- O `merge` do dlt não apaga: uma linha que a fonte removeu continua no raw. O aviso `linhas_removidas` conta as que vieram de capturas anteriores do mesmo arquivo e a atual não traz; decidir o que fazer com elas é manual.
 - Uma coluna nova legítima gera um aviso do `schema_changes` uma vez; depois vira a nova referência.
 - O Elementary não enxerga o `raw`: ali valem o balanço da carga e o monitor da fonte.
+
+## O que o Elementary aberto cobre
+
+Pela página de comparação do Elementary (consultada em 24/10/2026), a versão aberta traz os resultados dos testes do dbt, a linhagem entre tabelas, a cobertura de testes, os testes de anomalia como testes do dbt, o painel de qualidade e alertas básicos por Slack e Teams. A versão em nuvem acrescenta linhagem por coluna, gestão de incidentes, governança e vários projetos. As páginas Catalog, Data health, Environment, Alert rules e Pull requests do relatório aparecem desabilitadas; não consegui ler a documentação de cada uma, e tudo indica que são da nuvem (não confirmado). O projeto cobre a necessidade de cada uma por conta própria:
+
+| Página desabilitada | O que cobre aqui |
+| --- | --- |
+| Catalog | `docs/dados/catalogo.md`, gerado do dbt (`dado-publico catalog`) |
+| Data health | `dado-publico observe` |
+| Alert rules | alerta por e-mail do `observe` (o Elementary aberto só alerta por Slack e Teams) |
+| Environment | não se aplica: há um ambiente |
+| Pull requests | o próprio GitHub |
 
 ## Amostragem manual
 

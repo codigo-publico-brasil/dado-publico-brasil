@@ -177,7 +177,7 @@ Lacunas conhecidas, medidas ou registradas:
 - **Referências a proposições de anos não carregados.** Votações e autorias podem citar proposições de anos que não foram baixados. Elas aparecem como "ano ainda não carregado", com o link para a ficha oficial, sem inventar dados. Testes `autoria_de_proposicao_nao_carregada` e `votacao_de_proposicao_nao_carregada` contam os casos.
 - **Muitas proposições sem situação.** Nos arquivos da Câmara, uma parte grande das proposições vem sem a última situação. A página mostra o campo vazio.
 - **Divergência entre fontes oficiais.** A data de falecimento de um deputado consta no arquivo em lote e não na API de detalhe. As duas fontes são oficiais; o projeto usa o arquivo em lote e registra a divergência.
-- **O `merge` do dlt não apaga.** Se a Câmara remover uma linha de um arquivo, o raw mantém a linha antiga. O landing guarda os dois arquivos, então o caso é detectável; falta o teste que o aponte.
+- **O `merge` do dlt não apaga.** Se a Câmara remover uma linha de um arquivo, o raw mantém a linha antiga. O landing guarda os dois arquivos e o aviso `linhas_removidas` (`dado-publico observe`) conta as linhas de capturas anteriores que a atual não traz.
 - **Siglas em ementas.** A lista de siglas para preservar a caixa é aprendida de todas as ementas de caixa mista carregadas (modelo `int_siglas_em_ementas_extraidas`, mínimo de 3 ocorrências). Uma sigla que só apareça em ementas de caixa alta pode ser minusculizada.
 
 ## 5. Onde estão os números atuais
