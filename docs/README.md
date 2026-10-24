@@ -17,4 +17,4 @@
 3. **Uma decisão aceita não é editada**: vira um ADR novo que a substitui.
 4. **Todo documento começa dizendo para quem é e o que responde.**
 5. **O catálogo (`catalogo.md`) é gerado** (`uv run plataforma catalog`); um teste falha se estiver desatualizado.
-6. Documentos de produto da aplicação ficam em [`../../quem-decidiu/docs/`](../../quem-decidiu/docs/README.md). Os specs antigos estão fora dos repositórios (a refazer).
+6. Documentos de produto da aplicação ficam no repositório [quem-decidiu](https://github.com/codigo-publico-brasil/quem-decidiu). Os specs antigos estão fora dos repositórios (a refazer).

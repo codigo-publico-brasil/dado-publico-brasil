@@ -1,0 +1,27 @@
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+
+# Segredos e conexões locais (modelo em .env.example)
+.env
+.env.*
+!.env.example
+
+# Dados e estado local (nunca versionar dado)
+data_store/
+
+# Ferramentas de dados (estado local)
+.dagster/
+dagster_home/
+
+# Artefatos do dbt (o estado fica em data_store/.state)
+**/dbt/target/
+**/dbt/logs/
+**/dbt/dbt_packages/
+
+# Saída do `edr report` (Elementary), se rodado de dentro do projeto
+**/edr_target/
