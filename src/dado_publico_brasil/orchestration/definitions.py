@@ -14,24 +14,31 @@ from pathlib import Path
 from typing import Any
 
 from dagster import (
+    AssetCheckResult,
+    AssetCheckSeverity,
+    AssetCheckSpec,
     AssetExecutionContext,
     AssetKey,
     AssetsDefinition,
     AssetSpec,
     Config,
+    DefaultSensorStatus,
     Definitions,
     MaterializeResult,
+    RunFailureSensorContext,
     ScheduleDefinition,
     asset,
     define_asset_job,
     in_process_executor,
     multi_asset,
+    multi_asset_check,
+    run_failure_sensor,
 )
 from dagster_dbt import DbtCliResource, DbtProject, dbt_assets
 
-from dado_publico_brasil.core import migrations, runs, warehouse
+from dado_publico_brasil.core import alert, migrations, runs, warehouse
 from dado_publico_brasil.core.settings import DBT_DIR, load_settings
-from dado_publico_brasil.ingestion import contract, landing, loader
+from dado_publico_brasil.ingestion import contract, landing, loader, monitoring
 from dado_publico_brasil.orchestration import pipeline
 from dado_publico_brasil.transformation import build, observability, quality
 from dado_publico_brasil.transformation import dbt as dbt_runner
@@ -71,9 +78,8 @@ def _plan(config: ExtractionConfig) -> pipeline.Plan:
 
 def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
     captured = AssetKey(["landing", source.source])
-    raw_tables = [
-        AssetKey([source.source, loader.normalize(name)]) for name, d in source.datasets.items() if d.raw
-    ]
+    raw = {AssetKey([source.source, loader.normalize(n)]): n for n, d in source.datasets.items() if d.raw}
+    raw_tables = list(raw)
 
     @asset(key=captured, group_name="landing")
     def landing_asset(config: ExtractionConfig) -> MaterializeResult[Any]:
@@ -99,7 +105,27 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
         for key in raw_tables:
             yield MaterializeResult(asset_key=key, metadata={"captures": captures, "rows_total": rows})
 
-    return [landing_asset, raw_asset]
+    @multi_asset_check(
+        specs=[AssetCheckSpec("saude_da_fonte", asset=key) for key in raw_tables],
+        name=f"saude_{source.source}",
+    )
+    def source_health() -> Iterator[AssetCheckResult]:
+        """O último monitor da fonte e o balanço da carga de cada tabela (`metadata.source_checks`)."""
+        con = warehouse.connect(SETTINGS, read_only=True)
+        try:
+            for key, name in raw.items():
+                status, details = monitoring.latest_status(con, source.source, name)
+                yield AssetCheckResult(
+                    check_name="saude_da_fonte",
+                    asset_key=key,
+                    passed=status == "ok",
+                    severity=AssetCheckSeverity.ERROR if status == "error" else AssetCheckSeverity.WARN,
+                    metadata={"detalhes": chr(10).join(details) or "sem alertas"},
+                )
+        finally:
+            con.close()
+
+    return [landing_asset, raw_asset, source_health]
 
 
 def _record_dbt(stage: str, target: Path) -> None:
@@ -144,6 +170,15 @@ def dbt_post_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> It
     _record_dbt("transform_post", invocation.target_path)
 
 
+@run_failure_sensor(name="falha_de_execucao", default_status=DefaultSensorStatus.RUNNING)
+def failure_email(context: RunFailureSensorContext) -> None:
+    """Avisa por e-mail quando qualquer execução falha (o e-mail da fase de marts só sai se ela chegar lá)."""
+    run, base = context.dagster_run, os.environ.get("DADO_PUBLICO_DAGSTER_URL")
+    steps = [e.step_key for e in context.get_step_failure_events() if e.step_key]
+    url = f"{base.rstrip('/')}/runs/{run.run_id}" if base else None
+    alert.notify_failure(run.job_name, run.run_id, steps, context.failure_event.message or "", url)
+
+
 daily = define_asset_job("daily_pipeline", selection="*")
 
 defs = Definitions(
@@ -154,6 +189,7 @@ defs = Definitions(
         dbt_post_identity,
     ],
     jobs=[daily],
+    sensors=[failure_email],
     schedules=[ScheduleDefinition(job=daily, cron_schedule="0 6 * * *", name="daily_incremental")],
     # O DuckDB em arquivo aceita um escritor por vez: os passos rodam em sequência, num processo só.
     executor=in_process_executor,

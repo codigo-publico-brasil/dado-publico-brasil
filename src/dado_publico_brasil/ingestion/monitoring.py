@@ -86,6 +86,22 @@ def check_volume(con: Connection, source: str, dataset: str, partition: int | No
         record(con, source, dataset, partition, "volume", "ok", f"{rows} linhas")
 
 
+def latest_status(con: Connection, source: str, dataset: str) -> tuple[str, list[str]]:
+    """O pior estado (`error`, `warn` ou `ok`) de um dataset e os detalhes das verificações fora de `ok`.
+
+    Cada verificação (por partição e nome) vale pelo registro mais recente: erro já corrigido não conta.
+    """
+    found = con.execute(
+        "SELECT status, check_name, partition, detail FROM metadata.source_checks "
+        "WHERE source = ? AND dataset = ? AND status <> 'ok' AND id IN ("
+        "SELECT max(id) FROM metadata.source_checks WHERE source = ? AND dataset = ? "
+        "GROUP BY partition, check_name) ORDER BY status DESC, check_name, partition",
+        (source, dataset, source, dataset),
+    ).fetchall()
+    details = [f"[{s}] {name}{f' ({p})' if p is not None else ''}: {d}" for s, name, p, d in found]
+    return ("error" if any(f[0] == "error" for f in found) else "warn" if found else "ok"), details
+
+
 def check_removed(
     con: Connection, source: str, dataset: str, partition: int | None, table: str, capture: dict[str, Any]
 ) -> None:

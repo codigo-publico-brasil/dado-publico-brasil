@@ -111,3 +111,14 @@ def test_an_old_name_declared_as_alias_counts_as_the_current_column(con: Connect
         z.writestr("bem_candidato_2006_BRASIL.csv", header + chr(10) + row + chr(10))
     monitoring.check_header(con, tse, bens, 2006, file)
     assert [s for s, _ in checks(con, "schema")] == ["ok"]
+
+
+def test_the_source_health_is_the_worst_of_the_latest_record_of_each_check(con: Connection) -> None:
+    assert monitoring.latest_status(con, "camara", "votos") == ("ok", [])
+    monitoring.record(con, "camara", "votos", 2024, "availability", "error", "404")
+    assert monitoring.latest_status(con, "camara", "votos")[0] == "error"
+    monitoring.record(con, "camara", "votos", 2024, "availability", "ok", "100 bytes")  # corrigido
+    monitoring.record(con, "camara", "votos", 2023, "volume", "warn", "de 100 para 50 linhas")
+    status, details = monitoring.latest_status(con, "camara", "votos")
+    assert status == "warn" and details == ["[warn] volume (2023): de 100 para 50 linhas"]
+    assert monitoring.latest_status(con, "camara", "outro") == ("ok", [])

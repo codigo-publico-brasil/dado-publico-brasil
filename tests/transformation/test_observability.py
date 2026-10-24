@@ -172,3 +172,27 @@ def test_the_email_can_carry_the_html_report(tmp_path: Path, monkeypatch: pytest
     assert alert.send("assunto", "corpo", report) is True
     [attachment] = list(sent[0].iter_attachments())
     assert attachment.get_filename() == "report.html" and b"relat" in attachment.get_payload(decode=True)
+
+
+def test_a_failed_run_sends_one_email_with_the_steps_and_the_link_and_a_broken_smtp_does_not_raise(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent: list[tuple[str, str]] = []
+
+    def send(subject: str, body: str, attachment: Path | None = None) -> bool:
+        sent.append((subject, body))
+        return True
+
+    monkeypatch.setattr(alert, "send", send)
+    assert alert.notify_failure(
+        "daily_pipeline", "abc123", ["raw_camara", "dbt"], "Passos falharam", "http://x/runs/abc123"
+    )
+    subject, body = sent[0]
+    assert "daily_pipeline" in subject
+    assert "raw_camara, dbt" in body and "Execução: http://x/runs/abc123" in body
+
+    def broken(subject: str, body: str, attachment: Path | None = None) -> bool:
+        raise smtplib.SMTPException("fora do ar")
+
+    monkeypatch.setattr(alert, "send", broken)
+    assert alert.notify_failure("daily_pipeline", "abc123", [], "x") is False
