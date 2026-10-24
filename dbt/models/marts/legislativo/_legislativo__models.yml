@@ -105,7 +105,11 @@ models:
   - name: proposicoes
     description: Proposições com ementa padronizada, ementa oficial, situação atual e URL da fonte. Uma linha por proposição.
     meta: {sensitivity: publico, grain: proposição, owner: fundador do projeto, freshness: diário}
-    data_tests: *monitoramento
+    data_tests:
+      - elementary.volume_anomalies: {timestamp_column: apresentada_em, seasonality: day_of_week, config: {severity: warn}}
+      - elementary.freshness_anomalies: {timestamp_column: apresentada_em, config: {severity: warn}}
+      - elementary.schema_changes: {config: {severity: warn}}
+      - elementary.all_columns_anomalies: {column_anomalies: [null_percent], config: {severity: warn}}
     columns:
       - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte oficial do registro (por exemplo, camara)."}
       - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Identificador da proposição na fonte."}
@@ -141,7 +145,11 @@ models:
   - name: votacoes
     description: Votações com resultado oficial, totais e proposições. Uma linha por votação.
     meta: {sensitivity: publico, grain: votação, owner: fundador do projeto, freshness: diário}
-    data_tests: *monitoramento
+    data_tests:
+      - elementary.volume_anomalies: {timestamp_column: data, seasonality: day_of_week, config: {severity: warn}}
+      - elementary.freshness_anomalies: {timestamp_column: data, config: {severity: warn}}
+      - elementary.schema_changes: {config: {severity: warn}}
+      - elementary.all_columns_anomalies: {column_anomalies: [null_percent], config: {severity: warn}}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: votacao_id, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}
@@ -159,7 +167,11 @@ models:
   - name: votos
     description: Voto de cada pessoa em cada votação nominal, com partido e UF na data. Uma linha por pessoa e votação.
     meta: {sensitivity: publico-agente-publico, grain: pessoa e votação, owner: fundador do projeto, freshness: diário}
-    data_tests: *monitoramento
+    data_tests:
+      - elementary.volume_anomalies: {timestamp_column: votou_em, seasonality: day_of_week, config: {severity: warn}}
+      - elementary.freshness_anomalies: {timestamp_column: votou_em, config: {severity: warn}}
+      - elementary.schema_changes: {config: {severity: warn}}
+      - elementary.all_columns_anomalies: {column_anomalies: [null_percent], config: {severity: warn}}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - name: id_pessoa
@@ -363,7 +375,11 @@ models:
   - name: normas
     description: Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...) desde 1808, só metadados; o texto integral não vem desta fonte. Uma linha por norma.
     meta: {sensitivity: publico, grain: norma, owner: fundador do projeto, freshness: diário}
-    data_tests: *monitoramento
+    data_tests:
+      - elementary.volume_anomalies: {timestamp_column: assinada_em, seasonality: day_of_week, config: {severity: warn}}
+      - elementary.freshness_anomalies: {timestamp_column: assinada_em, config: {severity: warn}}
+      - elementary.schema_changes: {config: {severity: warn}}
+      - elementary.all_columns_anomalies: {column_anomalies: [null_percent], config: {severity: warn}}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: norma_id, data_type: bigint, tests: [not_null], description: "Código da norma no Senado."}
@@ -588,7 +604,11 @@ models:
   - name: emendas_convenios
     description: Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda.
     meta: {sensitivity: publico, grain: convênio e emenda, owner: fundador do projeto, freshness: diário}
-    data_tests: *monitoramento
+    data_tests:
+      - elementary.volume_anomalies: {timestamp_column: publicado_em, seasonality: day_of_week, config: {severity: warn}}
+      - elementary.freshness_anomalies: {timestamp_column: publicado_em, config: {severity: warn}}
+      - elementary.schema_changes: {config: {severity: warn}}
+      - elementary.all_columns_anomalies: {column_anomalies: [null_percent], config: {severity: warn}}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: emenda_codigo, data_type: varchar, description: "Código da emenda (marts.emendas)."}

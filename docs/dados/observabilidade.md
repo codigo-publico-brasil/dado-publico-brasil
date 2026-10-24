@@ -9,21 +9,20 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 | Monitor da fonte | Fonte fora do ar, coluna que sumiu ou apareceu (`schema`, `schema_mudou`), queda de volume | `metadata.source_checks` |
 | Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`); linhas de capturas anteriores que a atual não traz (`linhas_removidas`) | `metadata.source_checks` |
 | Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.dbt_results` |
-| Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam | `metadata.dbt_results` e esquema `elementary` |
+| Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam; nas marts com data de evento (`votacoes`, `votos`, `proposicoes`, `normas`, `emendas_convenios`), volume por dia com sazonalidade de dia da semana e frescor (a fonte parou de atualizar) | `metadata.dbt_results` e esquema `elementary` |
 | Relatório e alerta | Junta tudo, falha se houver problema e envia por e-mail | `dado-publico observe` |
 
 ## Como usar
 
 1. **Automático:** ao fim de cada fase de marts (`dado-publico transform` ou o Dagster), se houver problema, o relatório sai por e-mail. Configure no `.env` as variáveis `DADO_PUBLICO_SMTP_*` e `DADO_PUBLICO_ALERT_TO` (modelo em `.env.example`).
 2. **Sob demanda:** `dado-publico observe` imprime o relatório (código 1 se houver problema); `dado-publico observe --email` também envia, útil para testar o SMTP.
-3. **Relatório HTML do Elementary** (histórico dos testes, gráficos de anomalia), com o pipeline parado:
-   `uvx --from "elementary-data[duckdb]" edr report --profiles-dir dbt --file-path data_store/.state/observabilidade/report.html`
-   (rodar da raiz do repositório, com `DADO_PUBLICO_WAREHOUSE_FILE` apontando para o warehouse).
+3. **Relatório HTML do Elementary** (histórico dos testes, gráficos de anomalia), com o pipeline parado: `dado-publico observe --html` roda o `edr report` por `uvx` (precisa do [uv](https://docs.astral.sh/uv/)) e grava em `data_store/.state/observabilidade/report.html` (cerca de 13 MB). Com `--email`, o arquivo vai anexado. O alerta automático do fim da fase de marts não anexa o relatório, porque o `edr` precisa do warehouse livre.
 4. **Erro:** investigar antes de publicar. **Aviso:** ler; muitas vezes é fato da fonte (por exemplo, arquivos antigos do Senado sem campos opcionais).
 
 ## Limites conhecidos
 
-- A anomalia de volume só começa a valer depois de cerca de 7 execuções de histórico.
+- Nas marts sem data de evento, a anomalia de volume só começa a valer depois de cerca de 7 execuções de histórico. Nas cinco com data, o histórico vem do próprio dado.
+- Recesso do Congresso (julho e dezembro a janeiro) pode gerar aviso de volume e de frescor: é esperado, e o aviso é só informação.
 - O `merge` do dlt não apaga: uma linha que a fonte removeu continua no raw. O aviso `linhas_removidas` conta as que vieram de capturas anteriores do mesmo arquivo e a atual não traz; decidir o que fazer com elas é manual.
 - Uma coluna nova legítima gera um aviso do `schema_changes` uma vez; depois vira a nova referência.
 - O Elementary não enxerga o `raw`: ali valem o balanço da carga e o monitor da fonte.

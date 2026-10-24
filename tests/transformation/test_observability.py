@@ -1,11 +1,14 @@
 """Relatório de saúde dos dados e alerta por e-mail."""
 
 import smtplib
+import subprocess
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from dado_publico_brasil.core import alert, runs
+from dado_publico_brasil.core.settings import DBT_DIR, Settings
 from dado_publico_brasil.core.warehouse import Connection
 from dado_publico_brasil.transformation import observability, quality
 
@@ -112,3 +115,60 @@ def test_the_email_needs_smtp_and_a_recipient_and_uses_starttls_with_login(
         "login alerta@exemplo.org",
         "enviou equipe@exemplo.org assunto",
     ]
+
+
+def test_the_html_report_runs_edr_through_uvx_in_the_state_folder_and_needs_uv(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    with pytest.raises(RuntimeError, match="uvx"):
+        observability.html_report(settings)
+    called: dict[str, Any] = {}
+
+    def fake_run(command: list[str], **kwargs: Any) -> None:
+        called.update(command=command, **kwargs)
+
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/uvx")
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    file = observability.html_report(settings)
+    assert file == settings.state_dir / "observabilidade" / "report.html"
+    assert called["command"][:5] == [
+        "/usr/bin/uvx",
+        "--from",
+        "elementary-data[duckdb]==0.26.1",
+        "edr",
+        "report",
+    ]
+    assert called["command"][5:] == ["--profiles-dir", str(DBT_DIR), "--file-path", str(file)]
+    assert called["cwd"] == file.parent  # o edr cria `edr_target` na pasta de trabalho
+    assert called["env"]["DADO_PUBLICO_WAREHOUSE_FILE"] == str(settings.warehouse.resolve())
+
+
+def test_the_email_can_carry_the_html_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    sent: list[Any] = []
+
+    class FakeSMTP:
+        def __init__(self, host: str, port: int) -> None:
+            pass
+
+        def __enter__(self) -> "FakeSMTP":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def starttls(self, context: object) -> None:
+            pass
+
+        def send_message(self, message: Any) -> None:
+            sent.append(message)
+
+    monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
+    monkeypatch.setenv("DADO_PUBLICO_SMTP_HOST", "smtp.exemplo.org")
+    monkeypatch.setenv("DADO_PUBLICO_ALERT_TO", "equipe@exemplo.org")
+    monkeypatch.delenv("DADO_PUBLICO_SMTP_USER", raising=False)
+    report = tmp_path / "report.html"
+    report.write_text("<html>relatório</html>", encoding="utf-8")
+    assert alert.send("assunto", "corpo", report) is True
+    [attachment] = list(sent[0].iter_attachments())
+    assert attachment.get_filename() == "report.html" and b"relat" in attachment.get_payload(decode=True)

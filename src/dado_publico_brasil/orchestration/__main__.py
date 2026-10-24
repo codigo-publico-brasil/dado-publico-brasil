@@ -12,7 +12,7 @@ Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs,
 Publicação: publish copia os marts para o PostgreSQL de serviço (DADO_PUBLICO_POSTGRES_DSN).
 Auditoria: verify (hashes do landing e cópia da identidade) e coverage (itens obtidos nos datasets por item).
 Observabilidade: observe resume a saúde dos dados (fontes, carga, testes, anomalias) e falha se houver
-problema; com --email, envia o relatório.
+problema; --email envia o relatório e --html gera o do Elementary (anexo, se houver --email).
 Datasets por item (tramitação, processos): `--foreach 200` busca os 200 mais recentes que faltam;
 `--foreach all` busca todos; `--dataset NOME` limita a um dataset (também nos anuais,
 como `--years 2022 --dataset votacao`).
@@ -126,6 +126,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--force", action="store_true", help="baixa mesmo que a fonte diga que não mudou")
     p.add_argument("--rebuild", action="store_true", help="carrega tudo de novo no raw")
     p.add_argument("--email", action="store_true", help="envia o relatório do comando observe por e-mail")
+    p.add_argument("--html", action="store_true", help="gera o relatório HTML do Elementary (observe)")
     p.add_argument("--sql", help="consulta para o comando query (somente leitura)")
     p.add_argument("--output", type=Path, help="arquivo de saída do comando catalog")
     p.add_argument("--port", type=int, default=8080, help="porta do comando docs")
@@ -176,12 +177,12 @@ def main(argv: list[str] | None = None) -> int:
             lines, failed = observability.report(con)
             con.close()
             print(chr(10).join(lines))
+            html = observability.html_report(settings) if args.html else None
+            if html:
+                print(f"Relatório HTML do Elementary: {html}")
             if args.email:
-                print(
-                    "e-mail enviado"
-                    if alert.send("Plataforma de dados: relatório", chr(10).join(lines))
-                    else "SMTP não configurado"
-                )
+                sent = alert.send("Plataforma de dados: relatório", chr(10).join(lines), html)
+                print("e-mail enviado" if sent else "SMTP não configurado")
             return 1 if failed else 0
         case "coverage":
             _coverage(settings, args.source)
