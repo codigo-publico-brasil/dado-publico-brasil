@@ -1,5 +1,4 @@
--- Quem recebeu o dinheiro de cada emenda, por mês. Só pessoa jurídica e unidade gestora: a pessoa física é
--- descartada na leitura (ver a declaração da fonte).
+-- Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica. Inclui pessoa física, com o CPF mascarado.
 select
     nullif(nullif(c_digo_da_emenda, 'Sem informação'), 'S/I') as emenda_codigo,
     nullif(nullif(c_digo_do_autor_da_emenda, 'Sem informação'), 'S/I') as autor_codigo,

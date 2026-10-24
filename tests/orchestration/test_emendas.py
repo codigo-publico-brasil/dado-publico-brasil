@@ -10,7 +10,7 @@ def test_the_three_tables_come_from_the_same_package(full: Env) -> None:
     con, _ = full
     assert scalar(con, "SELECT COUNT(*) FROM marts.emendas") == 3
     assert scalar(con, "SELECT COUNT(*) FROM marts.emendas_convenios") == 1
-    assert scalar(con, "SELECT COUNT(*) FROM marts.emendas_favorecidos") == 2
+    assert scalar(con, "SELECT COUNT(*) FROM marts.emendas_favorecidos") == 4  # como a fonte publica
 
 
 def test_values_become_numbers_and_no_information_becomes_empty(full: Env) -> None:
@@ -31,24 +31,41 @@ def test_amendments_are_not_linked_to_people_because_the_author_has_no_parliamen
     assert "id_pessoa" not in columns(con, "marts", "emendas")
 
 
-def test_only_companies_and_management_units_receive_money_in_the_data_and_citizens_never_enter(
+def test_every_favored_party_enters_as_published_and_the_rows_that_identify_a_person_are_flagged(
     full: Env,
 ) -> None:
     con, _ = full
-    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.emendas_favorecidos") == 2
-    types = {
-        r[0] for r in con.execute("SELECT DISTINCT tipo_favorecido FROM marts.emendas_favorecidos").fetchall()
+    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.emendas_favorecidos") == 4
+    found = {
+        r[0]: r[1]
+        for r in con.execute(
+            "SELECT tipo_favorecido, contem_dado_pessoal FROM marts.emendas_favorecidos"
+        ).fetchall()
     }
-    assert types == {"Pessoa Jurídica", "Unidade Gestora"}
+    assert found == {
+        "Pessoa Jurídica": False,
+        "Unidade Gestora": False,
+        "Pessoa Fisica": True,  # CPF mascarado: cidadão comum
+        "Inscrição Genérica": True,
+    }
     assert (
-        scalar(con, "SELECT COUNT(*) FROM marts.emendas_favorecidos WHERE favorecido_codigo LIKE '%*%'") == 0
+        scalar(con, "SELECT COUNT(*) FROM marts.emendas_favorecidos WHERE favorecido_codigo LIKE '%*%'") == 1
     )
-    assert (
-        scalar(
-            con, "SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%emendas_de_pessoa_fisica%'"
-        )
-        == 0
-    )
+
+
+def test_the_table_with_personal_data_of_third_parties_is_classified_and_its_columns_are_marked(
+    full: Env,
+) -> None:
+    from plataforma_dados.core.settings import Settings
+    from plataforma_dados.transformation import catalog
+
+    settings = Settings()
+    sensitivity = {t["name"]: t["sensitivity"] for t in catalog.tables(settings) if t["schema"] == "marts"}
+    assert sensitivity["emendas_favorecidos"] == "publico-dados-pessoais-de-terceiros"
+    marked = {
+        c["name"] for c in catalog.columns(settings) if c["table"] == "emendas_favorecidos" and c["pii"]
+    }
+    assert marked == {"favorecido", "favorecido_codigo"}
 
 
 def test_the_missing_author_is_measured_as_a_gap(full: Env) -> None:

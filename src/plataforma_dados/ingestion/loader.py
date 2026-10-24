@@ -38,21 +38,31 @@ def read_rows(
     names = {column: normalize(column) for column in dataset.columns}
     legacy = {new: old for old, new in dataset.aliases.items()}  # nome atual -> nome no layout antigo
     key = [names.get(c, c) for c in dataset.primary_key]
+    natural_key = bool(key) and ROW_HASH not in dataset.primary_key
+    seen: dict[tuple[Any, ...], str] = {}  # chave natural -> conteúdo da linha, para achar colisões
     for record in read.records(file, contract, dataset):
         stats["read"] += 1
         if any(record.get(field) not in allowed for field, allowed in dataset.only.items()):
+            stats["filtered"] += 1
             continue  # minimização: fora do que a declaração diz que interessa
         row: dict[str, Any] = {
             names[c]: _clean(record.get(c) if c in record else record.get(legacy.get(c, c)))
             for c in dataset.columns
         }
         row["_source_file_id"] = file_id
+        digest = hashlib.sha256(
+            "".join(str(row[names[c]] or "") for c in dataset.columns).encode()
+        ).hexdigest()
         if ROW_HASH in dataset.primary_key:
-            joined = "".join(str(row[names[c]] or "") for c in dataset.columns)
-            row[ROW_HASH] = hashlib.sha256(joined.encode()).hexdigest()
+            row[ROW_HASH] = digest
         if any(row[k] is None for k in key):
             stats["rejected"] += 1
             continue
+        if (
+            natural_key
+        ):  # a chave natural tem de identificar a linha: mesma chave com conteúdo diferente é perda
+            if seen.setdefault(tuple(row[k] for k in key), digest) != digest:
+                stats["conflicting"] += 1
         stats["loaded"] += 1
         yield row
 
@@ -103,8 +113,9 @@ def load_file(
     file_id: int,
     con: Connection | None = None,
 ) -> dict[str, int]:
-    """Carrega um arquivo no raw. Devolve as contagens (lidas, carregadas, rejeitadas)."""
-    stats = {"read": 0, "loaded": 0, "rejected": 0}
+    """Carrega um arquivo no raw. Devolve as contagens: lidas, filtradas (`only`), carregadas, rejeitadas (sem
+    chave) e em colisão (mesma chave, conteúdo diferente)."""
+    stats = {"read": 0, "filtered": 0, "loaded": 0, "rejected": 0, "conflicting": 0}
     pipeline(settings, contract, con).run(resource(file, contract, dataset, file_id, stats))
     return stats
 
@@ -118,6 +129,7 @@ def load_capture(
         stats = load_file(
             settings, contract, dataset, settings.storage_root / capture["path"], capture["id"], con
         )
+        monitoring.check_load(con, contract.source, dataset.name, capture["year"], stats)
         if not dataset.foreach:  # lotes têm tamanhos diferentes por natureza
             monitoring.check_volume(con, contract.source, dataset.name, capture["year"], stats["read"])
         run.rows_in, run.rows_out = stats["read"], stats["loaded"]
@@ -126,14 +138,20 @@ def load_capture(
 
 
 def load_pending(
-    con: Connection, settings: Settings, contract: SourceContract, rebuild: bool = False
+    con: Connection,
+    settings: Settings,
+    contract: SourceContract,
+    rebuild: bool = False,
+    only_dataset: str | None = None,
 ) -> tuple[int, int]:
-    """Carrega as capturas vigentes ainda não carregadas (todas, com `rebuild`).
+    """Carrega as capturas vigentes não carregadas (todas com `rebuild`; um dataset com `only_dataset`).
 
     Devolve (capturas carregadas, linhas carregadas).
     """
     captures = rows = 0
     for capture in landing.current_captures(con, contract.source):
+        if only_dataset not in (None, capture["dataset"]):
+            continue
         if capture["loaded_at"] is not None and not rebuild:
             continue
         rows += load_capture(con, settings, contract, capture)

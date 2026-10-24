@@ -36,26 +36,38 @@ def record(
 def check_header(
     con: Connection, contract: SourceContract, dataset: Dataset, partition: int | None, file: Path
 ) -> None:
-    """Compara os campos do arquivo com o contrato e com o arquivo anterior do mesmo dataset."""
+    """Compara os campos do arquivo com o contrato e com a captura anterior do mesmo dataset e partição.
+
+    Coluna do contrato ausente é erro em CSV (o layout mudou) e aviso em JSON (a API omite campo vazio, então
+    ausente quer dizer vazio no arquivo todo). Nome antigo declarado em `aliases` vale como a coluna atual. A
+    mudança de colunas só se mede contra o mesmo arquivo capturado antes: um ano antigo ter menos campos que o
+    seguinte é a natureza do dado, não alerta.
+    """
     header = read.fields(file, contract, dataset)
     source, name = contract.source, dataset.name
-    missing = [c for c in dataset.columns if c not in header]
+    if not header:  # sem registros não há o que comparar (o volume é medido à parte)
+        record(con, source, name, partition, "schema", "ok", "arquivo sem registros")
+        return
+    present = set(header) | {new for old, new in dataset.aliases.items() if old in header}
+    missing = [c for c in dataset.columns if c not in present]
     previous = con.execute(
-        "SELECT detail FROM metadata.source_checks "
-        "WHERE source = ? AND dataset = ? AND check_name = 'header' ORDER BY id DESC LIMIT 1",
-        (source, name),
+        "SELECT detail FROM metadata.source_checks WHERE source = ? AND dataset = ? "
+        "AND partition IS NOT DISTINCT FROM ? AND check_name = 'header' ORDER BY id DESC LIMIT 1",
+        (source, name, partition),
     ).fetchone()
     old = json.loads(previous[0]) if previous else None
     changed = old is not None and set(old) != set(header)
     if missing:
-        record(con, source, name, partition, "schema", "error", f"colunas do contrato ausentes: {missing}")
+        severity = "warn" if contract.format_of(name) == "json" else "error"
+        record(con, source, name, partition, "schema", severity, f"colunas do contrato ausentes: {missing}")
     if changed:
         added, removed = sorted(set(header) - set(old or [])), sorted(set(old or []) - set(header))
-        record(
-            con, source, name, partition, "schema", "warn", f"colunas novas: {added}; removidas: {removed}"
-        )
-    if not missing and not changed:
+        detail = f"colunas novas: {added}; removidas: {removed}"
+        record(con, source, name, partition, "schema_mudou", "warn", detail)
+    if not missing:
         record(con, source, name, partition, "schema", "ok")
+    if not changed:
+        record(con, source, name, partition, "schema_mudou", "ok")
     if old is None or changed:
         record(con, source, name, partition, "header", "ok", json.dumps(header))
 
@@ -71,6 +83,23 @@ def check_volume(con: Connection, source: str, dataset: str, partition: int | No
         record(con, source, dataset, partition, "volume", "warn", f"de {previous[0]} para {rows} linhas")
     else:
         record(con, source, dataset, partition, "volume", "ok", f"{rows} linhas")
+
+
+def check_load(
+    con: Connection, source: str, dataset: str, partition: int | None, stats: dict[str, int]
+) -> None:
+    """Registra o balanço da carga: o que foi lido, filtrado pelo `only`, carregado, rejeitado e em colisão.
+
+    Linha rejeitada (sem valor na chave) e chave que junta linhas diferentes são perda de dado e valem erro. O
+    filtro `only` da declaração fica no detalhe, para nunca ser invisível. Um registro por carga: o mais
+    recente substitui o anterior no relatório.
+    """
+    lost = stats["rejected"] or stats["conflicting"]
+    detail = (
+        f"lidas {stats['read']}, filtradas pelo only {stats['filtered']}, carregadas {stats['loaded']}, "
+        f"rejeitadas {stats['rejected']}, colisões de chave {stats['conflicting']}"
+    )
+    record(con, source, dataset, partition, "carga", "error" if lost else "ok", detail)
 
 
 def errors_since(con: Connection, moment: datetime) -> int:

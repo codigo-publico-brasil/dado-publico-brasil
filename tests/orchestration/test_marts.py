@@ -70,6 +70,10 @@ def test_authorship_counts_the_authors_and_leaves_out_authors_that_are_not_peopl
         "WHERE proposicao_id = 100 AND id_pessoa IS NULL AND nome_autor = 'Senado Federal'"
     ).fetchone()
     assert senate == (1,)
+    kept = con.execute(
+        "SELECT COUNT(*) FROM marts.autorias WHERE proposicao_id = '100' AND id_pessoa IS NULL AND nome_autor = 'Senado Federal'"
+    ).fetchone()
+    assert kept == (1,)  # o autor que não é pessoa fica no mart, sem id_pessoa
 
 
 def test_voting_lists_the_propositions_and_the_official_result(

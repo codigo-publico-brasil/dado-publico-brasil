@@ -21,9 +21,9 @@ def test_assets_are_exposed_only_for_candidates_who_are_people_with_the_declared
         "JOIN marts.pessoas p USING (id_pessoa) ORDER BY b.candidatura_id, b.ordem"
     ).fetchall()
     assert [(f[0], f[1], f[2], f[3], float(f[4])) for f in found] == [
-        ("Bia", "2022:1001", 1, "Casa", 150000.0),
-        ("Bia", "2022:1001", 2, "Veículo automotor terrestre", 30000.5),
-        ("Ana Árvore", "2022:1002", 1, "Aplicação de renda fixa", 5000.0),
+        ("Bia", "2022:RJ:1001", 1, "Casa", 150000.0),
+        ("Bia", "2022:RJ:1001", 2, "Veículo automotor terrestre", 30000.5),
+        ("Ana Árvore", "2022:SP:1002", 1, "Aplicação de renda fixa", 5000.0),
     ]  # o terreno do candidato estadual (1006) fica só no staging
     assert scalar(con, "SELECT COUNT(*) FROM staging.stg_tse__bens") == 4
 

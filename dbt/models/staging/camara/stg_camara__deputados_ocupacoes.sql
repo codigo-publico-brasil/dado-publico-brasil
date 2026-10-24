@@ -13,7 +13,9 @@ renamed as (
         entidade_uf,
         entidade_pais,
         try_cast(ano_inicio as integer) as ano_inicio,
+        ano_inicio as ano_inicio_original,
         try_cast(ano_fim as integer) as ano_fim,
+        ano_fim as ano_fim_original,
         _source_file_id as source_file_id
 
     from source

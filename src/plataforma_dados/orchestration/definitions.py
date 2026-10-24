@@ -33,7 +33,7 @@ from plataforma_dados.core import migrations, runs, warehouse
 from plataforma_dados.core.settings import DBT_DIR, load_settings
 from plataforma_dados.ingestion import contract, landing, loader
 from plataforma_dados.orchestration import pipeline
-from plataforma_dados.transformation import build, quality
+from plataforma_dados.transformation import build, observability, quality
 from plataforma_dados.transformation import dbt as dbt_runner
 
 SETTINGS = load_settings()
@@ -108,6 +108,8 @@ def _record_dbt(stage: str, target: Path) -> None:
             results = dbt_runner.read_results(SETTINGS, target=target)
             quality.record(con, run.id, results)
             run.rows_in = len(results)
+            if stage == "transform_post":
+                observability.run(con, run.id)
     finally:
         con.close()
 

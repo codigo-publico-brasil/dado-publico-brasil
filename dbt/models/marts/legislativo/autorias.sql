@@ -1,4 +1,4 @@
--- Uma linha por pessoa e proposição de que é autora ou apoiadora (autor que não é pessoa fica fora).
+-- Uma linha por autor e proposição. O autor que não é deputado (comissão, Senado, Executivo...) fica, sem id_pessoa.
 with totais as (
 
     select proposicao_id, count(*) as qtd_autores
@@ -15,11 +15,11 @@ select
     cast(a.proposicao_id as varchar) as proposicao_id,
     a.ordem_assinatura,
     t.qtd_autores,
+    a.nome_autor,
+    a.tipo_autor,
     a.proponente,
     '{{ var("url_proposicao_camara") }}' || cast(a.proposicao_id as varchar) as proposicao_fonte_url
 
 from {{ ref('int_autorias_ligadas_a_pessoas') }} as a
 
 inner join totais as t on t.proposicao_id = a.proposicao_id
-
-where a.id_pessoa is not null

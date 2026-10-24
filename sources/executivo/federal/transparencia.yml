@@ -1,8 +1,8 @@
 # Declaração da fonte: Portal da Transparência do Governo Federal (CGU), arquivos de dados abertos.
 # Emendas parlamentares: um pacote .zip nacional com três tabelas, atualizado todo dia. Os três datasets usam o
 # mesmo arquivo e se distinguem por um fragmento na URL (`#...`), que nunca vai ao servidor, só ao registro de
-# captura. Minimização: favorecido pessoa física (cidadão comum, com CPF mascarado) nunca entra; só pessoa
-# jurídica e unidade gestora. Licença: livre utilização pela política de dados abertos (Decreto 8.777/2016). As
+# captura. Os favorecidos entram como a fonte publica, inclusive pessoa física (cidadão comum, com CPF mascarado):
+# o marts sinaliza o dado pessoal por coluna e por linha (ADR 0017). Licença: livre utilização pela política de dados abertos (Decreto 8.777/2016). As
 # páginas de termos de uso e de dicionário de dados do portal não puderam ser lidas (pedem verificação anti-robô).
 
 source: transparencia
@@ -47,15 +47,13 @@ datasets:
        "Número Convênio", "Valor Convênio"]
 
   emendas_favorecidos:
-    # Quem recebeu o dinheiro de cada emenda. Só pessoa jurídica e unidade gestora: pessoa física não entra.
+    # Quem recebeu o dinheiro de cada emenda, como a fonte publica (inclui pessoa física, com CPF mascarado).
     url: "{base_url}#favorecidos"
     load: full
     archive: zip
     member: "EmendasParlamentares_PorFavorecido.csv"
     write: replace
     primary_key: [_row_hash]
-    only:
-      "Tipo Favorecido": ["Pessoa Jurídica", "Unidade Gestora"]
     columns:
       ["Código da Emenda", "Código do Autor da Emenda", "Nome do Autor da Emenda", "Número da emenda",
        "Tipo de Emenda", "Ano/Mês", "Código do Favorecido", "Favorecido", "Natureza Jurídica", "Tipo Favorecido",

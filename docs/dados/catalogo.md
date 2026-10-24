@@ -62,9 +62,9 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
-| `emendas` | Emendas parlamentares por localidade, função, programa e ação, com os valores empenhado, liquidado e pago. | publico |  |
-| `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico |  |
-| `emendas_favorecidos` | Quem recebeu o dinheiro das emendas, só pessoa jurídica e unidade gestora. | publico |  |
+| `emendas` | Emendas parlamentares por localidade, função, programa e ação, com os valores empenhado, liquidado e pago. | publico-dados-pessoais-de-terceiros |  |
+| `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico-dados-pessoais-de-terceiros |  |
+| `emendas_favorecidos` | Quem recebeu o dinheiro das emendas, como a fonte publica (inclui pessoa física, com CPF mascarado). | publico-dados-pessoais-de-terceiros |  |
 
 ## raw_federal_tse
 
@@ -114,7 +114,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `stg_senado__votos` | Voto de cada senador em cada votação nominal. Em votação secreta a sigla é "Votou". | publico-agente-publico |  |
 | `stg_transparencia__emendas` | Emendas parlamentares, uma linha por emenda, localidade, função, programa e ação. | publico-agente-publico |  |
 | `stg_transparencia__emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico-agente-publico |  |
-| `stg_transparencia__emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda (só pessoa jurídica e unidade gestora), por mês. | publico-agente-publico |  |
+| `stg_transparencia__emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica (inclui pessoa física, com CPF mascarado). | publico-agente-publico |  |
 | `stg_tse__bens` | Bens declarados pelos candidatos de todos os cargos, uma linha por bem. | publico-agente-publico |  |
 | `stg_tse__candidaturas` | Candidaturas ao Congresso (deputado federal e senador, com suplentes) nas eleições gerais, uma linha por candidatura e turno. | publico-agente-publico |  |
 | `stg_tse__votacao` | Votos de cada candidato (todos os cargos) por município e zona, como o TSE publica. | publico-agente-publico |  |
@@ -146,7 +146,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
-| `autorias` | Proposições de que cada pessoa é autora ou apoiadora, com a posição na assinatura e o total de autores. Uma linha por pessoa e proposição. | publico-agente-publico | pessoa e proposição |
+| `autorias` | Autores de cada proposição (deputados e também comissão, Senado, Executivo e outros), com a posição na assinatura e o total de autores; id_pessoa só existe quando o autor é deputado. Uma linha por autor e proposição. | publico-agente-publico | autor e proposição |
 | `bens_de_candidatos` | Bens declarados à Justiça Eleitoral por candidatos que já são pessoa do projeto, de 2006 em diante, como o TSE publica (valor declarado, sem correção). Uma linha por bem. | publico-agente-publico | candidatura e bem |
 | `candidaturas` | Candidaturas ao Congresso (deputado federal e senador, com suplentes) de quem já é pessoa do projeto, com partido, situação e resultado. Uma linha por candidatura e turno. | publico-agente-publico | pessoa |
 | `constituicao_alteracoes` | Cada indicação de emenda que o texto da Constituição traz entre parênteses, por dispositivo (por exemplo, Redação dada pela Emenda Constitucional nº 45, de 2004). Uma linha por dispositivo e emenda citada. | publico | dispositivo e emenda citada |
@@ -154,7 +154,7 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 | `dispositivos_vetados` | Cada dispositivo vetado, com o texto vetado, a razão do veto escrita pela Presidência e o que o Congresso decidiu (situação como a fonte informa). Só dos vetos já buscados. Uma linha por dispositivo. | publico | dispositivo vetado |
 | `emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
 | `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
-| `emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Só pessoa jurídica e unidade gestora, a pessoa física, cidadão comum, nunca entra. Uma linha por emenda, favorecido e mês. | publico | emenda |
+| `emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês. | publico-dados-pessoais-de-terceiros | emenda |
 | `exercicios` | Exercício oficial no cargo como o Senado informa (titular e suplentes), com início, fim e causa de afastamento. Só o Senado; a Câmara não publica. Uma linha por pessoa, mandato e exercício. | publico-agente-publico | pessoa |
 | `frentes` | Frentes parlamentares, com legislatura de criação e coordenador. Uma linha por frente. | publico | frente parlamentar |
 | `fusoes_de_pessoas` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa (por exemplo, deputado que virou senador). Uma linha por chave absorvida. | publico-agente-publico | chave absorvida |
@@ -199,520 +199,525 @@ Gerado do projeto dbt (`plataforma catalog`). Não edite à mão: edite a descri
 
 ### marts.autorias
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `proposicao_id` | varchar | Identificador da proposição na fonte. |
-| `ordem_assinatura` | integer | Posição na assinatura. |
-| `qtd_autores` | bigint | Total de autores da proposição. |
-| `proponente` | integer | 1 quando consta como proponente; 0 caso contrário. |
-| `proposicao_fonte_url` | varchar | Endereço da proposição na fonte oficial. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas); vazia quando o autor não é deputado. |  |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `proposicao_id` | varchar | Identificador da proposição na fonte. |  |
+| `ordem_assinatura` | integer | Posição na assinatura. |  |
+| `qtd_autores` | bigint | Total de autores da proposição. |  |
+| `nome_autor` | varchar | Nome do autor como a fonte informa (deputado, comissão, Senado, Executivo...). |  |
+| `tipo_autor` | varchar | Tipo do autor na fonte (deputado, órgão, outro). |  |
+| `proponente` | integer | 1 quando consta como proponente; 0 caso contrário. |  |
+| `proposicao_fonte_url` | varchar | Endereço da proposição na fonte oficial. |  |
 
 ### marts.bens_de_candidatos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `candidatura_id` | varchar | Candidatura (marts.candidaturas): ano da eleição e sequencial do candidato. |
-| `ano_eleicao` | integer | Ano da eleição. |
-| `ordem` | integer | Número do bem na declaração do candidato. |
-| `tipo` | varchar | Tipo do bem (imóvel, veículo, aplicação financeira etc.). |
-| `descricao` | varchar | Descrição do bem, como o candidato declarou. |
-| `valor` | decimal(18,2) | Valor declarado em reais, sem correção. |
-| `atualizado_em` | date | Data da última atualização do bem na declaração. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |  |
+| `candidatura_id` | varchar | Candidatura (marts.candidaturas): ano da eleição e sequencial do candidato. |  |
+| `ano_eleicao` | integer | Ano da eleição. |  |
+| `ordem` | integer | Número do bem na declaração do candidato. |  |
+| `tipo` | varchar | Tipo do bem (imóvel, veículo, aplicação financeira etc.). |  |
+| `descricao` | varchar | Descrição do bem, como o candidato declarou. |  |
+| `valor` | decimal(18,2) | Valor declarado em reais, sem correção. |  |
+| `atualizado_em` | date | Data da última atualização do bem na declaração. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.candidaturas
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro (tse). |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas), ligada por nome civil e data de nascimento iguais e únicos. |
-| `candidatura_id` | varchar | Identificador da candidatura na fonte: ano da eleição e sequencial do candidato. |
-| `ano_eleicao` | integer | Ano da eleição. |
-| `turno` | integer | Turno da votação. |
-| `uf` | varchar | UF da candidatura (BR para cargos nacionais). |
-| `cargo` | varchar | Cargo disputado. |
-| `numero` | varchar | Número do candidato na urna. |
-| `nome_urna` | varchar | Nome de urna, com caixa padronizada. |
-| `partido` | varchar | Sigla do partido na eleição. |
-| `partido_nome` | varchar | Nome do partido na eleição. |
-| `situacao_candidatura` | varchar | Situação da candidatura segundo a fonte (por exemplo, deferido). |
-| `resultado` | varchar | Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas), ligada por nome civil e data de nascimento iguais e únicos. |  |
+| `candidatura_id` | varchar | Identificador da candidatura na fonte: ano da eleição e sequencial do candidato. |  |
+| `ano_eleicao` | integer | Ano da eleição. |  |
+| `turno` | integer | Turno da votação. |  |
+| `uf` | varchar | UF da candidatura (BR para cargos nacionais). |  |
+| `cargo` | varchar | Cargo disputado. |  |
+| `numero` | varchar | Número do candidato na urna. |  |
+| `nome_urna` | varchar | Nome de urna, com caixa padronizada. |  |
+| `partido` | varchar | Sigla do partido na eleição. |  |
+| `partido_nome` | varchar | Nome do partido na eleição. |  |
+| `situacao_candidatura` | varchar | Situação da candidatura segundo a fonte (por exemplo, deferido). |  |
+| `resultado` | varchar | Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.constituicao_alteracoes
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `parte` | varchar | Constituição (parte permanente) ou ADCT. |
-| `ordem` | integer | Posição do parágrafo no arquivo (marts.constituicao_dispositivos). |
-| `identificador` | varchar | Caminho do dispositivo (marts.constituicao_dispositivos). |
-| `tipo_alteracao` | varchar | Tirado das palavras da nota: redação dada, incluído, revogado, suprimido, renumerado, vide (só referência) ou outra. |
-| `emenda_tipo` | varchar | Emenda Constitucional ou Emenda Constitucional de Revisão. |
-| `emenda_numero` | integer | Número da emenda citada na nota. |
-| `emenda_ano` | integer | Ano da emenda; só quando a nota cita uma emenda. |
-| `nota` | varchar | A nota como o texto publica, sem os parênteses. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `parte` | varchar | Constituição (parte permanente) ou ADCT. |  |
+| `ordem` | integer | Posição do parágrafo no arquivo (marts.constituicao_dispositivos). |  |
+| `identificador` | varchar | Caminho do dispositivo (marts.constituicao_dispositivos). |  |
+| `tipo_alteracao` | varchar | Tirado das palavras da nota: redação dada, incluído, revogado, suprimido, renumerado, vide (só referência) ou outra. |  |
+| `emenda_tipo` | varchar | Emenda Constitucional ou Emenda Constitucional de Revisão. |  |
+| `emenda_numero` | integer | Número da emenda citada na nota. |  |
+| `emenda_ano` | integer | Ano da emenda; só quando a nota cita uma emenda. |  |
+| `nota` | varchar | A nota como o texto publica, sem os parênteses. |  |
 
 ### marts.constituicao_dispositivos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `parte` | varchar | Constituição (parte permanente) ou ADCT. |
-| `ordem` | integer | Posição do parágrafo no arquivo, a partir de 1. |
-| `tipo` | varchar | Cabeçalho do arquivo, preâmbulo, título, capítulo, seção, subseção, artigo, parágrafo, inciso, alínea, item, texto ou assinaturas. |
-| `identificador` | varchar | Caminho do dispositivo (Art. 5º, § 1º, I, a)); vazio em títulos, capítulos e linhas sem artigo. |
-| `artigo` | varchar | Número do artigo a que a linha pertence. |
-| `paragrafo` | varchar | Número do parágrafo (ou único) a que a linha pertence. |
-| `inciso` | varchar | Inciso (algarismo romano) a que a linha pertence. |
-| `alinea` | varchar | Alínea (letra) a que a linha pertence. |
-| `titulo` | varchar | Título (cabeçalho) em que a linha está. |
-| `capitulo` | varchar | Capítulo (cabeçalho) em que a linha está. |
-| `secao` | varchar | Seção (cabeçalho) em que a linha está. |
-| `texto` | varchar | A linha inteira como a Câmara publica, com a indicação da emenda que a alterou. |
-| `atualizada_ate_emenda` | integer | Número da emenda constitucional até a qual o arquivo está atualizado. |
-| `fonte_url` | varchar | Página oficial da Câmara com o texto atualizado. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `parte` | varchar | Constituição (parte permanente) ou ADCT. |  |
+| `ordem` | integer | Posição do parágrafo no arquivo, a partir de 1. |  |
+| `tipo` | varchar | Cabeçalho do arquivo, preâmbulo, título, capítulo, seção, subseção, artigo, parágrafo, inciso, alínea, item, texto ou assinaturas. |  |
+| `identificador` | varchar | Caminho do dispositivo (Art. 5º, § 1º, I, a)); vazio em títulos, capítulos e linhas sem artigo. |  |
+| `artigo` | varchar | Número do artigo a que a linha pertence. |  |
+| `paragrafo` | varchar | Número do parágrafo (ou único) a que a linha pertence. |  |
+| `inciso` | varchar | Inciso (algarismo romano) a que a linha pertence. |  |
+| `alinea` | varchar | Alínea (letra) a que a linha pertence. |  |
+| `titulo` | varchar | Título (cabeçalho) em que a linha está. |  |
+| `capitulo` | varchar | Capítulo (cabeçalho) em que a linha está. |  |
+| `secao` | varchar | Seção (cabeçalho) em que a linha está. |  |
+| `texto` | varchar | A linha inteira como a Câmara publica, com a indicação da emenda que a alterou. |  |
+| `atualizada_ate_emenda` | integer | Número da emenda constitucional até a qual o arquivo está atualizado. |  |
+| `fonte_url` | varchar | Página oficial da Câmara com o texto atualizado. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.dispositivos_vetados
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `dispositivo_id` | bigint | Código do dispositivo vetado no Senado. |
-| `materia_veto_id` | bigint | Código da matéria do veto (marts.vetos). |
-| `veto_id` | bigint | Veto a que o dispositivo pertence (marts.vetos). |
-| `identificador` | varchar | Identificador do dispositivo no veto (veto.ano.item). |
-| `descricao` | varchar | Onde o dispositivo está na norma (por exemplo, art. 7º, § 4º, inciso II). |
-| `texto_vetado` | varchar | Texto que foi vetado, como a fonte publica. |
-| `razao_veto` | varchar | Razão do veto escrita pela Presidência, como a fonte publica. |
-| `situacao` | varchar | Situação como a fonte informa: Mantido (o veto vale), Rejeitado (o Congresso derrubou o veto), Prejudicado ou Não Apreciado. |
-| `possui_votos` | boolean | Há voto nominal registrado para o dispositivo. |
-| `tipo_votacao` | varchar | Forma da votação (painel ou cédula); vazia quando não foi apreciado. |
-| `sessao_em` | date | Data da sessão do Congresso que apreciou o dispositivo. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `dispositivo_id` | bigint | Código do dispositivo vetado no Senado. |  |
+| `materia_veto_id` | bigint | Código da matéria do veto (marts.vetos). |  |
+| `veto_id` | bigint | Veto a que o dispositivo pertence (marts.vetos). |  |
+| `identificador` | varchar | Identificador do dispositivo no veto (veto.ano.item). |  |
+| `descricao` | varchar | Onde o dispositivo está na norma (por exemplo, art. 7º, § 4º, inciso II). |  |
+| `texto_vetado` | varchar | Texto que foi vetado, como a fonte publica. |  |
+| `razao_veto` | varchar | Razão do veto escrita pela Presidência, como a fonte publica. |  |
+| `situacao` | varchar | Situação como a fonte informa: Mantido (o veto vale), Rejeitado (o Congresso derrubou o veto), Prejudicado ou Não Apreciado. |  |
+| `possui_votos` | boolean | Há voto nominal registrado para o dispositivo. |  |
+| `tipo_votacao` | varchar | Forma da votação (painel ou cédula); vazia quando não foi apreciado. |  |
+| `sessao_em` | date | Data da sessão do Congresso que apreciou o dispositivo. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.emendas
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `emenda_codigo` | varchar | Código da emenda; vazio em registros antigos sem código. |
-| `ano` | integer | Ano da emenda. |
-| `tipo` | varchar | Tipo da emenda (individual, de bancada, de comissão, de relator). |
-| `autor_codigo` | varchar | Código orçamentário do autor; vazio quando a fonte não informa. |
-| `autor_nome` | varchar | Nome do autor (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada. |
-| `numero` | varchar | Número da emenda. |
-| `localidade` | varchar | Localidade de aplicação do recurso, como a fonte informa. |
-| `municipio_ibge` | integer | Código IBGE do município. |
-| `municipio` | varchar | Município de aplicação. |
-| `uf` | varchar | UF de aplicação, como a fonte informa. |
-| `regiao` | varchar | Região. |
-| `funcao` | varchar | Função orçamentária. |
-| `subfuncao` | varchar | Subfunção orçamentária. |
-| `programa_codigo` | varchar | Código do programa. |
-| `programa` | varchar | Programa. |
-| `acao_codigo` | varchar | Código da ação. |
-| `acao` | varchar | Ação orçamentária. |
-| `plano_orcamentario` | varchar | Plano orçamentário. |
-| `valor_empenhado` | decimal(18,2) | Valor empenhado em reais. |
-| `valor_liquidado` | decimal(18,2) | Valor liquidado em reais. |
-| `valor_pago` | decimal(18,2) | Valor pago em reais. |
-| `valor_restos_a_pagar_inscritos` | decimal(18,2) | Restos a pagar inscritos em reais. |
-| `valor_restos_a_pagar_cancelados` | decimal(18,2) | Restos a pagar cancelados em reais. |
-| `valor_restos_a_pagar_pagos` | decimal(18,2) | Restos a pagar pagos em reais. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `emenda_codigo` | varchar | Código da emenda; vazio em registros antigos sem código. |  |
+| `ano` | integer | Ano da emenda. |  |
+| `tipo` | varchar | Tipo da emenda (individual, de bancada, de comissão, de relator). |  |
+| `autor_codigo` | varchar | Código orçamentário do autor; vazio quando a fonte não informa. |  |
+| `autor_nome` | varchar | Nome do autor (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada. |  |
+| `numero` | varchar | Número da emenda. |  |
+| `localidade` | varchar | Localidade de aplicação do recurso, como a fonte informa. |  |
+| `municipio_ibge` | integer | Código IBGE do município. |  |
+| `municipio` | varchar | Município de aplicação. |  |
+| `uf` | varchar | UF de aplicação, como a fonte informa. |  |
+| `regiao` | varchar | Região. |  |
+| `funcao` | varchar | Função orçamentária. |  |
+| `subfuncao` | varchar | Subfunção orçamentária. |  |
+| `programa_codigo` | varchar | Código do programa. |  |
+| `programa` | varchar | Programa. |  |
+| `acao_codigo` | varchar | Código da ação. |  |
+| `acao` | varchar | Ação orçamentária. |  |
+| `plano_orcamentario` | varchar | Plano orçamentário. |  |
+| `valor_empenhado` | decimal(18,2) | Valor empenhado em reais. |  |
+| `valor_liquidado` | decimal(18,2) | Valor liquidado em reais. |  |
+| `valor_pago` | decimal(18,2) | Valor pago em reais. |  |
+| `valor_restos_a_pagar_inscritos` | decimal(18,2) | Restos a pagar inscritos em reais. |  |
+| `valor_restos_a_pagar_cancelados` | decimal(18,2) | Restos a pagar cancelados em reais. |  |
+| `valor_restos_a_pagar_pagos` | decimal(18,2) | Restos a pagar pagos em reais. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.emendas_convenios
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `emenda_codigo` | varchar | Código da emenda (marts.emendas). |
-| `funcao` | varchar | Função orçamentária. |
-| `subfuncao` | varchar | Subfunção orçamentária. |
-| `localidade` | varchar | Localidade do gasto, como a fonte informa. |
-| `tipo` | varchar | Tipo da emenda. |
-| `publicado_em` | date | Data de publicação do convênio. |
-| `convenente` | varchar | Quem firmou o convênio. |
-| `objeto` | varchar | Objeto do convênio. |
-| `convenio_numero` | varchar | Número do convênio. |
-| `valor` | decimal(18,2) | Valor do convênio em reais. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `emenda_codigo` | varchar | Código da emenda (marts.emendas). |  |
+| `funcao` | varchar | Função orçamentária. |  |
+| `subfuncao` | varchar | Subfunção orçamentária. |  |
+| `localidade` | varchar | Localidade do gasto, como a fonte informa. |  |
+| `tipo` | varchar | Tipo da emenda. |  |
+| `publicado_em` | date | Data de publicação do convênio. |  |
+| `convenente` | varchar | Quem firmou o convênio. |  |
+| `objeto` | varchar | Objeto do convênio. |  |
+| `convenio_numero` | varchar | Número do convênio. |  |
+| `valor` | decimal(18,2) | Valor do convênio em reais. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.emendas_favorecidos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `emenda_codigo` | varchar | Código da emenda (marts.emendas). |
-| `autor_codigo` | varchar | Código orçamentário do autor da emenda. |
-| `autor_nome` | varchar | Nome do autor da emenda, com caixa padronizada. |
-| `numero` | varchar | Número da emenda. |
-| `tipo` | varchar | Tipo da emenda. |
-| `ano` | integer | Ano do pagamento. |
-| `mes` | integer | Mês do pagamento. |
-| `favorecido_codigo` | varchar | CNPJ ou código da unidade gestora do favorecido. |
-| `favorecido` | varchar | Nome do favorecido. |
-| `natureza_juridica` | varchar | Natureza jurídica do favorecido. |
-| `tipo_favorecido` | varchar | Pessoa jurídica ou unidade gestora. |
-| `uf` | varchar | UF do favorecido. |
-| `municipio` | varchar | Município do favorecido. |
-| `valor` | decimal(18,2) | Valor recebido em reais. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `emenda_codigo` | varchar | Código da emenda (marts.emendas). |  |
+| `autor_codigo` | varchar | Código orçamentário do autor da emenda. |  |
+| `autor_nome` | varchar | Nome do autor da emenda, com caixa padronizada. |  |
+| `numero` | varchar | Número da emenda. |  |
+| `tipo` | varchar | Tipo da emenda. |  |
+| `ano` | integer | Ano do pagamento. |  |
+| `mes` | integer | Mês do pagamento. |  |
+| `favorecido_codigo` | varchar | CNPJ, código da unidade gestora ou CPF mascarado do favorecido, como a fonte informa. | sim |
+| `favorecido` | varchar | Nome do favorecido (pessoa física inclusive). | sim |
+| `natureza_juridica` | varchar | Natureza jurídica do favorecido. |  |
+| `tipo_favorecido` | varchar | Pessoa jurídica ou unidade gestora. |  |
+| `uf` | varchar | UF do favorecido. |  |
+| `municipio` | varchar | Município do favorecido. |  |
+| `valor` | decimal(18,2) | Valor recebido em reais. |  |
+| `contem_dado_pessoal` | boolean | Verdadeiro quando a linha identifica uma pessoa física (CPF mascarado, tipo pessoa física ou inscrição genérica). |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.exercicios
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `mandato_id` | varchar | Código do mandato no Senado (titular e suplentes compartilham o mesmo). |
-| `exercicio_id` | varchar | Código do período de exercício no Senado. |
-| `participacao` | varchar | Titular, 1º suplente ou 2º suplente. |
-| `uf` | varchar | UF que o mandato representa. |
-| `mandato_inicio` | date | Início do mandato (da primeira legislatura que ele cobre). |
-| `mandato_fim` | date | Fim do mandato (da última legislatura que ele cobre). |
-| `inicio` | date | Início deste período de exercício. |
-| `fim` | date | Fim deste período; vazio enquanto está em exercício. |
-| `causa_afastamento_sigla` | varchar | Sigla da causa do fim do período (licença, renúncia, fim do mandato); vazia se não informada. |
-| `causa_afastamento` | varchar | Descrição da causa do fim do período. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |  |
+| `mandato_id` | varchar | Código do mandato no Senado (titular e suplentes compartilham o mesmo). |  |
+| `exercicio_id` | varchar | Código do período de exercício no Senado. |  |
+| `participacao` | varchar | Titular, 1º suplente ou 2º suplente. |  |
+| `uf` | varchar | UF que o mandato representa. |  |
+| `mandato_inicio` | date | Início do mandato (da primeira legislatura que ele cobre). |  |
+| `mandato_fim` | date | Fim do mandato (da última legislatura que ele cobre). |  |
+| `inicio` | date | Início deste período de exercício. |  |
+| `fim` | date | Fim deste período; vazio enquanto está em exercício. |  |
+| `causa_afastamento_sigla` | varchar | Sigla da causa do fim do período (licença, renúncia, fim do mandato); vazia se não informada. |  |
+| `causa_afastamento` | varchar | Descrição da causa do fim do período. |  |
 
 ### marts.frentes
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `frente_id` | bigint | Identificador da frente na fonte. |
-| `titulo` | varchar | Título da frente. |
-| `criada_em` | date | Data de criação. |
-| `legislatura_id` | integer | Legislatura em que foi criada. |
-| `situacao` | varchar | Situação informada pela fonte. |
-| `id_pessoa_coordenador` | bigint | Pessoa coordenadora (marts.pessoas); vazia se a fonte não informa ou não é deputado. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `frente_id` | bigint | Identificador da frente na fonte. |  |
+| `titulo` | varchar | Título da frente. |  |
+| `criada_em` | date | Data de criação. |  |
+| `legislatura_id` | integer | Legislatura em que foi criada. |  |
+| `situacao` | varchar | Situação informada pela fonte. |  |
+| `id_pessoa_coordenador` | bigint | Pessoa coordenadora (marts.pessoas); vazia se a fonte não informa ou não é deputado. |  |
 
 ### marts.fusoes_de_pessoas
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `id_pessoa_absorvida` | bigint | Chave que deixou de existir. |
-| `id_pessoa_sobrevivente` | bigint | Chave que a substituiu (marts.pessoas). |
-| `metodo` | varchar | Regra que ligou as duas chaves. |
-| `fundida_em` | timestamp | Momento da fusão. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_pessoa_absorvida` | bigint | Chave que deixou de existir. |  |
+| `id_pessoa_sobrevivente` | bigint | Chave que a substituiu (marts.pessoas). |  |
+| `metodo` | varchar | Regra que ligou as duas chaves. |  |
+| `fundida_em` | timestamp | Momento da fusão. |  |
 
 ### marts.legislaturas
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `legislatura_id` | integer | Número da legislatura. |
-| `inicio` | date | Início oficial da legislatura. |
-| `fim` | date | Fim oficial da legislatura. |
-| `ano_eleicao` | integer | Ano da eleição que a formou. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `legislatura_id` | integer | Número da legislatura. |  |
+| `inicio` | date | Início oficial da legislatura. |  |
+| `fim` | date | Fim oficial da legislatura. |  |
+| `ano_eleicao` | integer | Ano da eleição que a formou. |  |
 
 ### marts.linhagem_de_partidos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `sigla_anterior` | varchar | Sigla do partido antes do evento, como aparece nos votos. |
-| `sigla_posterior` | varchar | Sigla depois do evento (a do partido resultante, em fusão e incorporação). |
-| `tipo` | varchar | Mudança de nome, fusão ou incorporação. |
-| `aprovado_em` | date | Data da aprovação pelo TSE; vazia quando só o mês é conhecido. |
-| `ano` | integer | Ano do evento. |
-| `fonte_url` | varchar | Página oficial do TSE que registra o evento. |
-| `observacao` | varchar | Divergência de data, resolução ou ressalva da fonte. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `sigla_anterior` | varchar | Sigla do partido antes do evento, como aparece nos votos. |  |
+| `sigla_posterior` | varchar | Sigla depois do evento (a do partido resultante, em fusão e incorporação). |  |
+| `tipo` | varchar | Mudança de nome, fusão ou incorporação. |  |
+| `aprovado_em` | date | Data da aprovação pelo TSE; vazia quando só o mês é conhecido. |  |
+| `ano` | integer | Ano do evento. |  |
+| `fonte_url` | varchar | Página oficial do TSE que registra o evento. |  |
+| `observacao` | varchar | Divergência de data, resolução ou ressalva da fonte. |  |
 
 ### marts.mandatos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | \"Fonte oficial do registro.\" |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `cargo` | varchar | Cargo exercido. |
-| `casa` | varchar | Casa legislativa. |
-| `legislatura_id` | integer | Número da legislatura. |
-| `uf` | varchar | UF de eleição ou representação nos votos da legislatura. |
-| `inicio` | date | Início oficial do mandato; vazio quando a fonte não informa. |
-| `fim` | date | Fim oficial do mandato; vazio quando a fonte não informa. |
-| `primeiro_voto_observado_em` | timestamp | Primeiro voto registrado na legislatura. |
-| `ultimo_voto_observado_em` | timestamp | Último voto registrado na legislatura. |
-| `base` | varchar | Origem do período: votos observados, não ato oficial. |
-| `legislatura_inicio` | date | Início oficial da legislatura (não do mandato da pessoa). |
-| `legislatura_fim` | date | Fim oficial da legislatura (não do mandato da pessoa). |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | \"Fonte oficial do registro.\" |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |  |
+| `cargo` | varchar | Cargo exercido. |  |
+| `casa` | varchar | Casa legislativa. |  |
+| `legislatura_id` | integer | Número da legislatura. |  |
+| `uf` | varchar | UF de eleição ou representação nos votos da legislatura. |  |
+| `inicio` | date | Início oficial do mandato; vazio quando a fonte não informa. |  |
+| `fim` | date | Fim oficial do mandato; vazio quando a fonte não informa. |  |
+| `primeiro_voto_observado_em` | timestamp | Primeiro voto registrado na legislatura. |  |
+| `ultimo_voto_observado_em` | timestamp | Último voto registrado na legislatura. |  |
+| `base` | varchar | Origem do período: votos observados, não ato oficial. |  |
+| `legislatura_inicio` | date | Início oficial da legislatura (não do mandato da pessoa). |  |
+| `legislatura_fim` | date | Fim oficial da legislatura (não do mandato da pessoa). |  |
 
 ### marts.membros_de_frentes
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `frente_id` | bigint | Frente (marts.frentes). |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `titulo` | varchar | Título na frente (coordenador, membro etc.). |
-| `legislatura_id` | integer | Legislatura do registro. |
-| `inicio` | date | Início da participação, quando a fonte informa. |
-| `fim` | date | Fim da participação, quando a fonte informa. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `frente_id` | bigint | Frente (marts.frentes). |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |  |
+| `titulo` | varchar | Título na frente (coordenador, membro etc.). |  |
+| `legislatura_id` | integer | Legislatura do registro. |  |
+| `inicio` | date | Início da participação, quando a fonte informa. |  |
+| `fim` | date | Fim da participação, quando a fonte informa. |  |
 
 ### marts.membros_de_orgaos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `orgao_id` | bigint | Órgão (marts.orgaos). Parte dos órgãos citados (Congresso, comissões especiais) não consta da lista de órgãos da fonte; o teste de relação mede essa lacuna. |
-| `orgao_sigla` | varchar | Sigla do órgão como informada na própria linha de composição. |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `cargo` | varchar | Cargo no órgão (titular, suplente, presidente etc.). |
-| `partido` | varchar | Partido informado no registro. |
-| `uf` | varchar | UF informada no registro. |
-| `inicio` | date | Início da participação. |
-| `fim` | date | Fim da participação; vazio se a fonte não informa. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `orgao_id` | bigint | Órgão (marts.orgaos). Parte dos órgãos citados (Congresso, comissões especiais) não consta da lista de órgãos da fonte; o teste de relação mede essa lacuna. |  |
+| `orgao_sigla` | varchar | Sigla do órgão como informada na própria linha de composição. |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |  |
+| `cargo` | varchar | Cargo no órgão (titular, suplente, presidente etc.). |  |
+| `partido` | varchar | Partido informado no registro. |  |
+| `uf` | varchar | UF informada no registro. |  |
+| `inicio` | date | Início da participação. |  |
+| `fim` | date | Fim da participação; vazio se a fonte não informa. |  |
 
 ### marts.normas
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `norma_id` | bigint | Código da norma no Senado. |
-| `tipo_sigla` | varchar | Sigla do tipo da norma na fonte (LEI-n, DEC-n, MPV-cs...). |
-| `tipo` | varchar | Tipo da norma (lei numerada, decreto numerado, decreto legislativo etc.). |
-| `numero` | varchar | Número da norma, como a fonte informa (pode ter letra). |
-| `ano` | integer | Ano de assinatura. |
-| `assinada_em` | date | Data de assinatura; vazia quando a fonte não informa. |
-| `nome` | varchar | Nome oficial (por exemplo, Lei nº 14.116 de 31/12/2020). |
-| `identificador` | varchar | Identificador curto da norma na fonte (LEI-14116-2020-12-31). |
-| `ementa` | varchar | Ementa com caixa padronizada. |
-| `ementa_oficial` | varchar | Ementa exatamente como a fonte publica. |
-| `apelido` | varchar | Apelido popular quando a fonte informa (por exemplo, Lei de Diretrizes Orçamentárias - LDO 2021). |
-| `fonte_url` | varchar | Página oficial da norma no Senado. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `norma_id` | bigint | Código da norma no Senado. |  |
+| `tipo_sigla` | varchar | Sigla do tipo da norma na fonte (LEI-n, DEC-n, MPV-cs...). |  |
+| `tipo` | varchar | Tipo da norma (lei numerada, decreto numerado, decreto legislativo etc.). |  |
+| `numero` | varchar | Número da norma, como a fonte informa (pode ter letra). |  |
+| `ano` | integer | Ano de assinatura. |  |
+| `assinada_em` | date | Data de assinatura; vazia quando a fonte não informa. |  |
+| `nome` | varchar | Nome oficial (por exemplo, Lei nº 14.116 de 31/12/2020). |  |
+| `identificador` | varchar | Identificador curto da norma na fonte (LEI-14116-2020-12-31). |  |
+| `ementa` | varchar | Ementa com caixa padronizada. |  |
+| `ementa_oficial` | varchar | Ementa exatamente como a fonte publica. |  |
+| `apelido` | varchar | Apelido popular quando a fonte informa (por exemplo, Lei de Diretrizes Orçamentárias - LDO 2021). |  |
+| `fonte_url` | varchar | Página oficial da norma no Senado. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.normas_geradas
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `proposicao_id` | varchar | Matéria (marts.proposicoes, junto com a fonte). |
-| `norma_id` | bigint | Código da norma no Senado (marts.normas). |
-| `tipo` | varchar | Tipo da norma (lei, emenda constitucional, decreto legislativo etc.). |
-| `numero` | integer | Número da norma. |
-| `ano` | integer | Ano de assinatura da norma. |
-| `assinada_em` | date | Data de assinatura. |
-| `publicada_em` | date | Data de publicação. |
-| `descricao` | varchar | Descrição oficial da norma. |
-| `veiculo_publicacao` | varchar | Veículo de publicação (por exemplo, DOU). |
-| `capturado_em` | date | Data da captura do lote de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `proposicao_id` | varchar | Matéria (marts.proposicoes, junto com a fonte). |  |
+| `norma_id` | bigint | Código da norma no Senado (marts.normas). |  |
+| `tipo` | varchar | Tipo da norma (lei, emenda constitucional, decreto legislativo etc.). |  |
+| `numero` | integer | Número da norma. |  |
+| `ano` | integer | Ano de assinatura da norma. |  |
+| `assinada_em` | date | Data de assinatura. |  |
+| `publicada_em` | date | Data de publicação. |  |
+| `descricao` | varchar | Descrição oficial da norma. |  |
+| `veiculo_publicacao` | varchar | Veículo de publicação (por exemplo, DOU). |  |
+| `capturado_em` | date | Data da captura do lote de origem. |  |
 
 ### marts.normas_publicacoes
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `norma_id` | bigint | Norma publicada (marts.normas). |
-| `publicacao_id` | bigint | Código da publicação no Senado. |
-| `tipo_sigla` | varchar | Tipo da publicação (PUB original, VEP veto parcialmente rejeitado etc.). |
-| `veiculo` | varchar | Veículo e edição, como a fonte informa. |
-| `publicada_em` | date | Data da publicação. |
-| `pagina` | varchar | Página da publicação. |
-| `coluna` | varchar | Coluna da página. |
-| `tem_texto` | boolean | A fonte informa que há o texto da publicação. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `norma_id` | bigint | Norma publicada (marts.normas). |  |
+| `publicacao_id` | bigint | Código da publicação no Senado. |  |
+| `tipo_sigla` | varchar | Tipo da publicação (PUB original, VEP veto parcialmente rejeitado etc.). |  |
+| `veiculo` | varchar | Veículo e edição, como a fonte informa. |  |
+| `publicada_em` | date | Data da publicação. |  |
+| `pagina` | varchar | Página da publicação. |  |
+| `coluna` | varchar | Coluna da página. |  |
+| `tem_texto` | boolean | A fonte informa que há o texto da publicação. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.normas_relacoes
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `norma_id` | bigint | Norma de que se fala (marts.normas). |
-| `tipo_relacao` | varchar | Tipo da relação como a fonte declara (por exemplo, Declaração de Alteração Permanente). |
-| `norma_posterior_id` | bigint | Ato posterior que se relaciona com a norma. |
-| `norma_posterior_nome` | varchar | Nome do ato posterior. |
-| `norma_posterior_assinada_em` | date | Data de assinatura do ato posterior. |
-| `publicada_em` | date | Data de publicação do ato posterior. |
-| `publicacao` | varchar | Publicação do ato posterior no Diário Oficial. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `norma_id` | bigint | Norma de que se fala (marts.normas). |  |
+| `tipo_relacao` | varchar | Tipo da relação como a fonte declara (por exemplo, Declaração de Alteração Permanente). |  |
+| `norma_posterior_id` | bigint | Ato posterior que se relaciona com a norma. |  |
+| `norma_posterior_nome` | varchar | Nome do ato posterior. |  |
+| `norma_posterior_assinada_em` | date | Data de assinatura do ato posterior. |  |
+| `publicada_em` | date | Data de publicação do ato posterior. |  |
+| `publicacao` | varchar | Publicação do ato posterior no Diário Oficial. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.ocupacoes
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `titulo` | varchar | Ocupação declarada. |
-| `entidade` | varchar | Entidade em que exerceu a ocupação. |
-| `entidade_uf` | varchar | UF da entidade. |
-| `ano_inicio` | integer | Ano de início. |
-| `ano_fim` | integer | Ano de fim. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |  |
+| `titulo` | varchar | Ocupação declarada. |  |
+| `entidade` | varchar | Entidade em que exerceu a ocupação. |  |
+| `entidade_uf` | varchar | UF da entidade. |  |
+| `ano_inicio` | integer | Ano de início; vazio quando a fonte escreve outra coisa que um ano (por exemplo, 1999a2002). |  |
+| `ano_inicio_original` | varchar | Ano de início exatamente como a fonte escreve. |  |
+| `ano_fim` | integer | Ano de fim; vazio quando a fonte escreve outra coisa que um ano. |  |
+| `ano_fim_original` | varchar | Ano de fim exatamente como a fonte escreve. |  |
 
 ### marts.orgaos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `orgao_id` | bigint | Identificador do órgão na fonte. |
-| `sigla` | varchar | Sigla do órgão. |
-| `apelido` | varchar | Nome curto do órgão. |
-| `nome` | varchar | Nome oficial do órgão. |
-| `tipo` | varchar | Tipo do órgão segundo a fonte. |
-| `inicio` | date | Início do órgão, quando a fonte informa. |
-| `instalado_em` | date | Data de instalação, quando a fonte informa. |
-| `fim` | date | Fim do órgão, quando a fonte informa. |
-| `situacao` | varchar | Situação do órgão segundo a fonte. |
-| `casa` | varchar | Casa legislativa informada pela fonte; vazia quando não informa. |
-| `fonte_url` | varchar | Endereço do órgão na fonte oficial. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `orgao_id` | bigint | Identificador do órgão na fonte. |  |
+| `sigla` | varchar | Sigla do órgão. |  |
+| `apelido` | varchar | Nome curto do órgão. |  |
+| `nome` | varchar | Nome oficial do órgão. |  |
+| `tipo` | varchar | Tipo do órgão segundo a fonte. |  |
+| `inicio` | date | Início do órgão, quando a fonte informa. |  |
+| `instalado_em` | date | Data de instalação, quando a fonte informa. |  |
+| `fim` | date | Fim do órgão, quando a fonte informa. |  |
+| `situacao` | varchar | Situação do órgão segundo a fonte. |  |
+| `casa` | varchar | Casa legislativa informada pela fonte; vazia quando não informa. |  |
+| `fonte_url` | varchar | Endereço do órgão na fonte oficial. |  |
 
 ### marts.partidos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `partido_id` | bigint | Identificador do partido na fonte. |
-| `sigla` | varchar | Sigla do partido. |
-| `nome` | varchar | Nome do partido, com caixa padronizada. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `partido_id` | bigint | Identificador do partido na fonte. |  |
+| `sigla` | varchar | Sigla do partido. |  |
+| `nome` | varchar | Nome do partido, com caixa padronizada. |  |
 
 ### marts.pessoas
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `id_pessoa` | bigint | Chave própria e estável da pessoa (schema identity). |
-| `fonte` | varchar | Fonte principal do cadastro da pessoa (camara ou senado). |
-| `fontes` | varchar | Todas as fontes em que a pessoa aparece (por exemplo, camara, senado). |
-| `nome` | varchar | Nome parlamentar, com caixa padronizada. |
-| `nome_civil` | varchar | Nome civil, com caixa padronizada. |
-| `nome_ordem` | varchar | Nome sem acento e em minúsculas, para ordenar. |
-| `nome_busca` | varchar | Nome e nome civil sem acento, para buscar. |
-| `sexo` | varchar | Sexo registrado no cadastro da fonte. |
-| `data_nascimento` | date | Data de nascimento informada pela fonte. |
-| `data_falecimento` | date | Data de falecimento informada pela fonte. |
-| `municipio_nascimento` | varchar | Município de nascimento informado pela fonte. |
-| `uf_nascimento` | varchar | UF de nascimento informada pela fonte. |
-| `foto_url` | varchar | Endereço da foto oficial. |
-| `rede_social_url` | varchar | Primeira rede social informada no cadastro. |
-| `site_url` | varchar | Site informado no cadastro. |
-| `primeira_legislatura_com_voto` | integer | Primeira legislatura em que há voto registrado. |
-| `ultima_legislatura_com_voto` | integer | Última legislatura em que há voto registrado. |
-| `profissoes` | varchar | Profissões declaradas, separadas por ponto e vírgula. |
-| `ultimo_partido` | varchar | Partido no voto mais recente. |
-| `ultima_uf` | varchar | UF no voto mais recente. |
-| `ultimo_voto_em` | timestamp | Data e hora do voto mais recente. |
-| `qtd_propostas` | bigint | Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado). |
-| `qtd_votos` | bigint | Quantidade de votos nominais registrados. |
-| `capturado_em` | date | Data da captura do cadastro de deputados. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_pessoa` | bigint | Chave própria e estável da pessoa (schema identity). |  |
+| `fonte` | varchar | Fonte principal do cadastro da pessoa (camara ou senado). |  |
+| `fontes` | varchar | Todas as fontes em que a pessoa aparece (por exemplo, camara, senado). |  |
+| `nome` | varchar | Nome parlamentar, com caixa padronizada. |  |
+| `nome_civil` | varchar | Nome civil, com caixa padronizada. |  |
+| `nome_ordem` | varchar | Nome sem acento e em minúsculas, para ordenar. |  |
+| `nome_busca` | varchar | Nome e nome civil sem acento, para buscar. |  |
+| `sexo` | varchar | Sexo registrado no cadastro da fonte. |  |
+| `data_nascimento` | date | Data de nascimento informada pela fonte. |  |
+| `data_falecimento` | date | Data de falecimento informada pela fonte. |  |
+| `municipio_nascimento` | varchar | Município de nascimento informado pela fonte. |  |
+| `uf_nascimento` | varchar | UF de nascimento informada pela fonte. |  |
+| `foto_url` | varchar | Endereço da foto oficial. |  |
+| `rede_social_url` | varchar | Primeira rede social informada no cadastro. |  |
+| `site_url` | varchar | Site informado no cadastro. |  |
+| `primeira_legislatura_com_voto` | integer | Primeira legislatura em que há voto registrado. |  |
+| `ultima_legislatura_com_voto` | integer | Última legislatura em que há voto registrado. |  |
+| `profissoes` | varchar | Profissões declaradas, separadas por ponto e vírgula. |  |
+| `ultimo_partido` | varchar | Partido no voto mais recente. |  |
+| `ultima_uf` | varchar | UF no voto mais recente. |  |
+| `ultimo_voto_em` | timestamp | Data e hora do voto mais recente. |  |
+| `qtd_propostas` | bigint | Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado). |  |
+| `qtd_votos` | bigint | Quantidade de votos nominais registrados. |  |
+| `capturado_em` | date | Data da captura do cadastro de deputados. |  |
 
 ### marts.proposicoes
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro (por exemplo, camara). |
-| `proposicao_id` | varchar | Identificador da proposição na fonte. |
-| `sigla` | varchar | Sigla do tipo da proposição, número e ano. |
-| `ementa` | varchar | Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista. |
-| `ementa_oficial` | varchar | Texto oficial, exatamente como veio. |
-| `apresentada_em` | date | Data de apresentação. |
-| `situacao` | varchar | Situação atual segundo a fonte. |
-| `orgao_ultimo_status` | varchar | Órgão do último andamento. |
-| `ultimo_status_em` | date | Data do último andamento. |
-| `fonte_url` | varchar | Endereço da proposição na fonte oficial. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (por exemplo, camara). |  |
+| `proposicao_id` | varchar | Identificador da proposição na fonte. |  |
+| `sigla` | varchar | Sigla do tipo da proposição, número e ano. |  |
+| `ementa` | varchar | Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista. |  |
+| `ementa_oficial` | varchar | Texto oficial, exatamente como veio. |  |
+| `apresentada_em` | date | Data de apresentação. |  |
+| `situacao` | varchar | Situação atual segundo a fonte. |  |
+| `orgao_ultimo_status` | varchar | Órgão do último andamento. |  |
+| `ultimo_status_em` | date | Data do último andamento. |  |
+| `fonte_url` | varchar | Endereço da proposição na fonte oficial. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.tramitacoes
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `proposicao_id` | varchar | Proposição (marts.proposicoes, junto com a fonte). |
-| `sequencia` | integer | Número do andamento dentro da proposição. |
-| `registrada_em` | timestamp | Data e hora do andamento. |
-| `orgao_sigla` | varchar | Órgão em que ocorreu. |
-| `regime` | varchar | Regime de tramitação informado. |
-| `descricao` | varchar | Descrição do tipo de andamento. |
-| `situacao` | varchar | Situação da proposição após o andamento. |
-| `despacho` | varchar | Texto do despacho, como a fonte informa. |
-| `capturado_em` | date | Data da captura do lote de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `proposicao_id` | varchar | Proposição (marts.proposicoes, junto com a fonte). |  |
+| `sequencia` | integer | Número do andamento dentro da proposição. |  |
+| `registrada_em` | timestamp | Data e hora do andamento. |  |
+| `orgao_sigla` | varchar | Órgão em que ocorreu. |  |
+| `regime` | varchar | Regime de tramitação informado. |  |
+| `descricao` | varchar | Descrição do tipo de andamento. |  |
+| `situacao` | varchar | Situação da proposição após o andamento. |  |
+| `despacho` | varchar | Texto do despacho, como a fonte informa. |  |
+| `capturado_em` | date | Data da captura do lote de origem. |  |
 
 ### marts.vetos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `veto_id` | bigint | Código do veto no Senado. |
-| `materia_veto_id` | bigint | Código da matéria do veto (a que tramita no Congresso). |
-| `numero` | integer | Número do veto no ano. |
-| `ano` | integer | Ano do veto. |
-| `materia_vetada_id` | bigint | Código da matéria vetada (o projeto aprovado). |
-| `materia_vetada_sigla` | varchar | Sigla da matéria vetada (PL, PLN, PLP...). |
-| `materia_vetada_numero` | varchar | Número da matéria vetada. |
-| `materia_vetada_ano` | integer | Ano da matéria vetada. |
-| `materia_vetada_ementa` | varchar | Ementa da matéria vetada, com caixa padronizada. |
-| `norma_id` | bigint | Norma gerada pela matéria (marts.normas); vazia quando não houve. |
-| `norma_nome` | varchar | Nome da norma gerada. |
-| `mensagem_numero` | integer | Número da mensagem presidencial do veto. |
-| `mensagem_ano` | integer | Ano da mensagem presidencial. |
-| `mensagem_url` | varchar | Mensagem presidencial no Planalto, como a fonte informa. |
-| `veto_total` | boolean | Veto total (verdadeiro) ou parcial (falso). |
-| `assunto` | varchar | Assunto do veto, como a fonte informa. |
-| `recebido_em` | date | Data em que o Congresso recebeu o veto. |
-| `publicado_em` | date | Data de publicação do veto. |
-| `sobrestado_em` | date | Data em que o veto passou a trancar a pauta. |
-| `sobrestando_pauta` | boolean | O veto tranca a pauta hoje. |
-| `quantidade_dispositivos` | integer | Quantos dispositivos foram vetados. |
-| `em_tramitacao` | boolean | O veto ainda tramita. |
-| `fonte_url` | varchar | Página oficial da matéria do veto no Senado. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `veto_id` | bigint | Código do veto no Senado. |  |
+| `materia_veto_id` | bigint | Código da matéria do veto (a que tramita no Congresso). |  |
+| `numero` | integer | Número do veto no ano. |  |
+| `ano` | integer | Ano do veto. |  |
+| `materia_vetada_id` | bigint | Código da matéria vetada (o projeto aprovado). |  |
+| `materia_vetada_sigla` | varchar | Sigla da matéria vetada (PL, PLN, PLP...). |  |
+| `materia_vetada_numero` | varchar | Número da matéria vetada. |  |
+| `materia_vetada_ano` | integer | Ano da matéria vetada. |  |
+| `materia_vetada_ementa` | varchar | Ementa da matéria vetada, com caixa padronizada. |  |
+| `norma_id` | bigint | Norma gerada pela matéria (marts.normas); vazia quando não houve. |  |
+| `norma_nome` | varchar | Nome da norma gerada. |  |
+| `mensagem_numero` | integer | Número da mensagem presidencial do veto. |  |
+| `mensagem_ano` | integer | Ano da mensagem presidencial. |  |
+| `mensagem_url` | varchar | Mensagem presidencial no Planalto, como a fonte informa. |  |
+| `veto_total` | boolean | Veto total (verdadeiro) ou parcial (falso). |  |
+| `assunto` | varchar | Assunto do veto, como a fonte informa. |  |
+| `recebido_em` | date | Data em que o Congresso recebeu o veto. |  |
+| `publicado_em` | date | Data de publicação do veto. |  |
+| `sobrestado_em` | date | Data em que o veto passou a trancar a pauta. |  |
+| `sobrestando_pauta` | boolean | O veto tranca a pauta hoje. |  |
+| `quantidade_dispositivos` | integer | Quantos dispositivos foram vetados. |  |
+| `em_tramitacao` | boolean | O veto ainda tramita. |  |
+| `fonte_url` | varchar | Página oficial da matéria do veto no Senado. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.votacoes
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `votacao_id` | varchar | Identificador da votação na fonte. |
-| `data` | date | Data da votação. |
-| `orgao_sigla` | varchar | Sigla do órgão em que ocorreu. |
-| `descricao` | varchar | Descrição oficial da votação, com caixa padronizada. |
-| `aprovada` | integer | 1 se a fonte registra aprovação; 0 se não; vazio se não informa. |
-| `votos_sim` | integer | Total de votos Sim informado pela fonte. |
-| `votos_nao` | integer | Total de votos Não informado pela fonte. |
-| `votos_outros` | integer | Total de outros votos informado pela fonte. |
-| `proposicoes` | varchar | Proposições ligadas à votação, separadas por ponto e vírgula. |
-| `votacao_secreta` | boolean | Verdadeiro se a votação foi secreta; vazio onde a fonte não informa (Câmara). |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `votacao_id` | varchar | Identificador da votação na fonte. |  |
+| `data` | date | Data da votação. |  |
+| `orgao_sigla` | varchar | Sigla do órgão em que ocorreu. |  |
+| `descricao` | varchar | Descrição oficial da votação, com caixa padronizada. |  |
+| `aprovada` | integer | 1 se a fonte registra aprovação; 0 se não; vazio se não informa. |  |
+| `votos_sim` | integer | Total de votos Sim informado pela fonte. |  |
+| `votos_nao` | integer | Total de votos Não informado pela fonte. |  |
+| `votos_outros` | integer | Total de outros votos informado pela fonte. |  |
+| `proposicoes` | varchar | Proposições ligadas à votação, separadas por ponto e vírgula. |  |
+| `votacao_secreta` | boolean | Verdadeiro se a votação foi secreta; vazio onde a fonte não informa (Câmara). |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.votos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `votacao_id` | varchar | Votação (marts.votacoes, junto com a fonte). |
-| `voto` | varchar | Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.). |
-| `votou_em` | timestamp | Data e hora do voto. |
-| `partido` | varchar | Partido na data do voto. |
-| `uf` | varchar | UF na data do voto. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |  |
+| `votacao_id` | varchar | Votação (marts.votacoes, junto com a fonte). |  |
+| `voto` | varchar | Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.). |  |
+| `votou_em` | timestamp | Data e hora do voto. |  |
+| `partido` | varchar | Partido na data do voto. |  |
+| `uf` | varchar | UF na data do voto. |  |
 
 ### marts.votos_de_candidatos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |
-| `candidatura_id` | varchar | Candidatura (marts.candidaturas). |
-| `ano_eleicao` | integer | Ano da eleição. |
-| `turno` | integer | Turno da eleição. |
-| `uf` | varchar | UF da candidatura. |
-| `cargo` | varchar | Cargo disputado. |
-| `votos_nominais` | bigint | Votos nominais recebidos, de qualquer destinação. |
-| `votos_validos` | bigint | Votos nominais válidos. |
-| `municipios` | bigint | Em quantos municípios o candidato teve votos. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas). |  |
+| `candidatura_id` | varchar | Candidatura (marts.candidaturas). |  |
+| `ano_eleicao` | integer | Ano da eleição. |  |
+| `turno` | integer | Turno da eleição. |  |
+| `uf` | varchar | UF da candidatura. |  |
+| `cargo` | varchar | Cargo disputado. |  |
+| `votos_nominais` | bigint | Votos nominais recebidos, de qualquer destinação. |  |
+| `votos_validos` | bigint | Votos nominais válidos. |  |
+| `municipios` | bigint | Em quantos municípios o candidato teve votos. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.votos_em_vetos
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro. |
-| `dispositivo_id` | bigint | Dispositivo votado (marts.dispositivos_vetados). |
-| `casa` | varchar | Câmara ou Senado. |
-| `nome_parlamentar` | varchar | Nome do parlamentar como a fonte informa, com caixa padronizada. |
-| `partido` | varchar | Partido na sessão, como a fonte informa. |
-| `uf` | varchar | UF do parlamentar. |
-| `voto` | varchar | Voto como a fonte informa (Sim, Não, Branco, Abstenção...). |
-| `sessao` | varchar | Sessão do Congresso, como a fonte informa. |
-| `capturado_em` | date | Data da captura do arquivo de origem. |
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `dispositivo_id` | bigint | Dispositivo votado (marts.dispositivos_vetados). |  |
+| `casa` | varchar | Câmara ou Senado. |  |
+| `nome_parlamentar` | varchar | Nome do parlamentar como a fonte informa, com caixa padronizada. |  |
+| `partido` | varchar | Partido na sessão, como a fonte informa. |  |
+| `uf` | varchar | UF do parlamentar. |  |
+| `voto` | varchar | Voto como a fonte informa (Sim, Não, Branco, Abstenção...). |  |
+| `sessao` | varchar | Sessão do Congresso, como a fonte informa. |  |
+| `capturado_em` | date | Data da captura do arquivo de origem. |  |

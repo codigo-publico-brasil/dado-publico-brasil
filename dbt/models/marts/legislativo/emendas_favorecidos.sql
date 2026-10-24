@@ -1,5 +1,5 @@
--- Quem recebeu o dinheiro de cada emenda, por mês: só pessoa jurídica e unidade gestora (a pessoa física, cidadão comum,
--- nunca entra). Uma linha por emenda, favorecido e mês.
+-- Quem recebeu o dinheiro de cada emenda, por mês, como o Portal da Transparência publica. Inclui pessoa física
+-- (cidadão comum, com CPF mascarado): `contem_dado_pessoal` marca essas linhas para quem consome decidir como mostrá-las.
 select
     'transparencia' as fonte,
     f.emenda_codigo,
@@ -16,6 +16,11 @@ select
     f.uf,
     f.municipio,
     f.valor,
+    (
+        f.favorecido_codigo like '%*%'
+        or lower(f.tipo_favorecido) like 'pessoa f%'
+        or f.tipo_favorecido like 'Inscri%'
+    ) as contem_dado_pessoal,
     cast(k.capturado_em as date) as capturado_em
 
 from {{ ref('stg_transparencia__emendas_favorecidos') }} as f

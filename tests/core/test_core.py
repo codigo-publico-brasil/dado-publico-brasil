@@ -39,7 +39,7 @@ def test_failed_run_is_recorded_and_the_error_is_raised(con: Connection) -> None
 
 def test_migrations_apply_once_and_in_order(tmp_path: Path) -> None:
     con = warehouse.connect(Settings(storage_root=tmp_path / "store"))
-    assert migrations.apply(con) == ["0001", "0002", "0003", "0004", "0005"]
+    assert migrations.apply(con) == ["0001", "0002", "0003", "0004", "0005", "0006"]
     assert migrations.apply(con) == []
 
 

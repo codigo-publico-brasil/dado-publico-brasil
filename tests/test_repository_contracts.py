@@ -30,6 +30,22 @@ def test_catalog_covers_every_table_the_pipeline_builds() -> None:
     assert all(t["description"] for t in catalog.tables(Settings()))
 
 
+SENSITIVITIES = {"publico", "publico-agente-publico", "publico-dados-pessoais-de-terceiros", "controle"}
+
+
+def test_sensitivity_is_declared_from_the_known_classes_and_a_table_with_personal_columns_is_not_public() -> (
+    None
+):
+    settings = Settings()
+    invalid = [t["name"] for t in catalog.tables(settings) if t["sensitivity"] not in SENSITIVITIES]
+    assert not invalid, f"tabelas sem sensibilidade conhecida: {invalid}"
+    sensitivity = {t["name"]: t["sensitivity"] for t in catalog.tables(settings) if t["schema"] == "marts"}
+    wrong = sorted(
+        {c["table"] for c in catalog.columns(settings) if c["pii"] and sensitivity[c["table"]] == "publico"}
+    )
+    assert not wrong, f"tabelas com coluna de dado pessoal marcadas como públicas: {wrong}"
+
+
 def test_every_mart_column_has_a_description() -> None:
     cols = catalog.columns(Settings())
     assert cols

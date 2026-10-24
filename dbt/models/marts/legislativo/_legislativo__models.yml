@@ -90,8 +90,10 @@ models:
       - {name: titulo, data_type: varchar, description: "Ocupação declarada."}
       - {name: entidade, data_type: varchar, description: "Entidade em que exerceu a ocupação."}
       - {name: entidade_uf, data_type: varchar, description: "UF da entidade."}
-      - {name: ano_inicio, data_type: integer, description: "Ano de início."}
-      - {name: ano_fim, data_type: integer, description: "Ano de fim."}
+      - {name: ano_inicio, data_type: integer, description: "Ano de início; vazio quando a fonte escreve outra coisa que um ano (por exemplo, 1999a2002)."}
+      - {name: ano_inicio_original, data_type: varchar, description: "Ano de início exatamente como a fonte escreve."}
+      - {name: ano_fim, data_type: integer, description: "Ano de fim; vazio quando a fonte escreve outra coisa que um ano."}
+      - {name: ano_fim_original, data_type: varchar, description: "Ano de fim exatamente como a fonte escreve."}
 
   - name: proposicoes
     description: Proposições com ementa padronizada, ementa oficial, situação atual e URL da fonte. Uma linha por proposição.
@@ -110,19 +112,20 @@ models:
       - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: autorias
-    description: Proposições de que cada pessoa é autora ou apoiadora, com a posição na assinatura e o total de autores. Uma linha por pessoa e proposição.
-    meta: {sensitivity: publico-agente-publico, grain: pessoa e proposição, owner: fundador do projeto, freshness: diário}
+    description: Autores de cada proposição (deputados e também comissão, Senado, Executivo e outros), com a posição na assinatura e o total de autores; id_pessoa só existe quando o autor é deputado. Uma linha por autor e proposição.
+    meta: {sensitivity: publico-agente-publico, grain: autor e proposição, owner: fundador do projeto, freshness: diário}
     columns:
       - name: id_pessoa
         data_type: bigint
-        description: "Chave da pessoa (marts.pessoas)."
+        description: "Chave da pessoa (marts.pessoas); vazia quando o autor não é deputado."
         tests:
-          - not_null
           - relationships: {to: ref('pessoas'), field: id_pessoa}
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: proposicao_id, data_type: varchar, tests: [not_null], description: "Identificador da proposição na fonte."}
       - {name: ordem_assinatura, data_type: integer, description: "Posição na assinatura."}
       - {name: qtd_autores, data_type: bigint, description: "Total de autores da proposição."}
+      - {name: nome_autor, data_type: varchar, description: "Nome do autor como a fonte informa (deputado, comissão, Senado, Executivo...)."}
+      - {name: tipo_autor, data_type: varchar, description: "Tipo do autor na fonte (deputado, órgão, outro)."}
       - {name: proponente, data_type: integer, description: "1 quando consta como proponente; 0 caso contrário."}
       - {name: proposicao_fonte_url, data_type: varchar, description: "Endereço da proposição na fonte oficial."}
 
@@ -567,8 +570,8 @@ models:
       - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: emendas_favorecidos
-    description: Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Só pessoa jurídica e unidade gestora, a pessoa física, cidadão comum, nunca entra. Uma linha por emenda, favorecido e mês.
-    meta: {sensitivity: publico, grain: emenda, favorecido e mês, owner: fundador do projeto, freshness: diário}
+    description: Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês.
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: emenda, favorecido e mês, owner: fundador do projeto, freshness: diário}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: emenda_codigo, data_type: varchar, description: "Código da emenda (marts.emendas)."}
@@ -578,11 +581,12 @@ models:
       - {name: tipo, data_type: varchar, description: "Tipo da emenda."}
       - {name: ano, data_type: integer, description: "Ano do pagamento."}
       - {name: mes, data_type: integer, description: "Mês do pagamento."}
-      - {name: favorecido_codigo, data_type: varchar, description: "CNPJ ou código da unidade gestora do favorecido."}
-      - {name: favorecido, data_type: varchar, description: "Nome do favorecido."}
+      - {name: favorecido_codigo, data_type: varchar, meta: {pii: true}, description: "CNPJ, código da unidade gestora ou CPF mascarado do favorecido, como a fonte informa."}
+      - {name: favorecido, data_type: varchar, meta: {pii: true}, description: "Nome do favorecido (pessoa física inclusive)."}
       - {name: natureza_juridica, data_type: varchar, description: "Natureza jurídica do favorecido."}
       - {name: tipo_favorecido, data_type: varchar, description: "Pessoa jurídica ou unidade gestora."}
       - {name: uf, data_type: varchar, description: "UF do favorecido."}
       - {name: municipio, data_type: varchar, description: "Município do favorecido."}
       - {name: valor, data_type: "decimal(18,2)", description: "Valor recebido em reais."}
+      - {name: contem_dado_pessoal, data_type: boolean, description: "Verdadeiro quando a linha identifica uma pessoa física (CPF mascarado, tipo pessoa física ou inscrição genérica)."}
       - {name: capturado_em, data_type: date, description: "Data da captura do arquivo de origem."}

@@ -82,7 +82,7 @@ def test_json_loads_into_the_raw_with_a_child_table_for_the_list(tmp_path: Path)
     con = migrations.open_warehouse(settings)
     stats = loader.load_file(settings, contract, contract.datasets["votacoes"], landed_json(tmp_path), 1, con)
     schema = contract.schema
-    assert stats == {"read": 2, "loaded": 2, "rejected": 0}
+    assert stats == {"read": 2, "filtered": 0, "loaded": 2, "rejected": 0, "conflicting": 0}
     parents = rows(con, f"SELECT id, ementa, orgao_sigla FROM {schema}.votacoes ORDER BY id")
     assert [(p["id"], p["ementa"], p["orgao_sigla"]) for p in parents] == [
         ("1", "A", "PLEN"),

@@ -1,8 +1,9 @@
 # Declaração da fonte: Tribunal Superior Eleitoral (Justiça Eleitoral), dados abertos. Os arquivos são pacotes
 # .zip com um CSV por UF e um `_BRASIL.csv` que reúne todos (por isso só ele é lido).
-# Minimização: CPF, título de eleitor, e-mail e nome social não estão em `columns` (nunca entram no raw), e
-# `only` deixa passar só as candidaturas ao Congresso (deputado federal e senador, com suplentes) no dataset
-# `candidaturas`; os datasets `bens` e `votacao` trazem todos os cargos.
+# Minimização: CPF, título de eleitor, e-mail e nome social não estão em `columns` (nunca entram no raw). Todos os
+# cargos entram no raw; os marts só expõem quem já é pessoa do projeto (ADR 0013). A candidatura se identifica por
+# ano, unidade eleitoral (SG_UE: UF, ou BR para presidente) e sequencial: o sequencial se repete entre estados
+# em 2002 e 2006 (ADR 0017).
 # O landing guarda o pacote original, com hash.
 
 source: tse
@@ -26,11 +27,9 @@ datasets:
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
-    primary_key: [ANO_ELEICAO, SQ_CANDIDATO, NR_TURNO]
-    only:
-      DS_CARGO: ["DEPUTADO FEDERAL", "SENADOR", "1º SUPLENTE", "2º SUPLENTE", "1º SUPLENTE SENADOR", "2º SUPLENTE SENADOR"]
+    primary_key: [ANO_ELEICAO, SG_UE, SQ_CANDIDATO, NR_TURNO]
     columns:
-      [ANO_ELEICAO, NR_TURNO, SG_UF, DS_CARGO, SQ_CANDIDATO, NR_CANDIDATO, NM_CANDIDATO, NM_URNA_CANDIDATO,
+      [ANO_ELEICAO, NR_TURNO, SG_UF, SG_UE, DS_CARGO, SQ_CANDIDATO, NR_CANDIDATO, NM_CANDIDATO, NM_URNA_CANDIDATO,
        DS_SITUACAO_CANDIDATURA, SG_PARTIDO, NM_PARTIDO, DT_NASCIMENTO, DS_GENERO, DS_SIT_TOT_TURNO]
 
   bens:
@@ -44,12 +43,12 @@ datasets:
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
-    primary_key: [ANO_ELEICAO, SQ_CANDIDATO, NR_ORDEM_BEM_CANDIDATO]
+    primary_key: [_row_hash]        # o número do bem não é único em 2006: a chave é o conteúdo da linha
     aliases:                        # os arquivos de 2006 e 2010 usam outros nomes
       NR_ORDEM_CANDIDATO: NR_ORDEM_BEM_CANDIDATO
       DT_ULTIMA_ATUALIZACAO: DT_ULT_ATUAL_BEM_CANDIDATO
     columns:
-      [ANO_ELEICAO, SG_UF, SQ_CANDIDATO, NR_ORDEM_BEM_CANDIDATO, CD_TIPO_BEM_CANDIDATO, DS_TIPO_BEM_CANDIDATO,
+      [ANO_ELEICAO, SG_UF, SG_UE, SQ_CANDIDATO, NR_ORDEM_BEM_CANDIDATO, CD_TIPO_BEM_CANDIDATO, DS_TIPO_BEM_CANDIDATO,
        DS_BEM_CANDIDATO, VR_BEM_CANDIDATO, DT_ULT_ATUAL_BEM_CANDIDATO]
 
   votacao:

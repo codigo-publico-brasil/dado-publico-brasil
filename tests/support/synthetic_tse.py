@@ -85,7 +85,7 @@ def _csv(linhas: Sequence[tuple[str, ...]]) -> bytes:
     for cargo, sq, nome, urna, nasc, situacao, resultado, uf, partido in linhas:
         valores = dict.fromkeys(COLUNAS, "#NULO#")
         valores.update(
-            ANO_ELEICAO="2022", NR_TURNO="1", DS_CARGO=cargo, SQ_CANDIDATO=sq, NR_CANDIDATO="1234", NM_CANDIDATO=nome,
+            ANO_ELEICAO="2022", NR_TURNO="1", DS_CARGO=cargo, SQ_CANDIDATO=sq, NR_CANDIDATO="1234", NM_CANDIDATO=nome, SG_UE=uf,
             NM_URNA_CANDIDATO=urna, DS_SITUACAO_CANDIDATURA=situacao, SG_PARTIDO=partido, NM_PARTIDO=f"PARTIDO {partido}",
             DT_NASCIMENTO=nasc, DS_GENERO="FEMININO", DS_SIT_TOT_TURNO=resultado, SG_UF=uf,
             NR_CPF_CANDIDATO="12345678900", DS_EMAIL="x@exemplo.com", NR_TITULO_ELEITORAL_CANDIDATO="000111222333",
@@ -124,6 +124,9 @@ VOTOS = [
 ]
 
 
+UF_DE = {linha[1]: linha[7] for linha in LINHAS}  # sq -> UF do candidato
+
+
 def _tabela(colunas: Sequence[str], linhas: Sequence[dict[str, str]]) -> bytes:
     saida = io.StringIO()
     escritor = csv.writer(saida, delimiter=";", quoting=csv.QUOTE_ALL)
@@ -141,7 +144,7 @@ def _bens() -> bytes:
         BENS_COLUNAS,
         [
             {"SQ_CANDIDATO": sq, "NR_ORDEM_BEM_CANDIDATO": ordem, "DS_TIPO_BEM_CANDIDATO": tipo,
-             "DS_BEM_CANDIDATO": descricao, "VR_BEM_CANDIDATO": valor, "SG_UF": "SP",
+             "DS_BEM_CANDIDATO": descricao, "VR_BEM_CANDIDATO": valor, "SG_UF": UF_DE[sq], "SG_UE": UF_DE[sq],
              "DT_ULT_ATUAL_BEM_CANDIDATO": "06/09/2022"}
             for sq, ordem, tipo, descricao, valor in BENS
         ],
@@ -153,7 +156,7 @@ def _votacao() -> bytes:
     return _tabela(
         VOTACAO_COLUNAS,
         [
-            {"NR_TURNO": "1", "SQ_CANDIDATO": sq, "DS_CARGO": cargo, "SG_UF": uf, "CD_MUNICIPIO": municipio,
+            {"NR_TURNO": "1", "SQ_CANDIDATO": sq, "DS_CARGO": cargo, "SG_UF": uf, "SG_UE": uf, "CD_MUNICIPIO": municipio,
              "NM_MUNICIPIO": f"MUNICIPIO {municipio}", "NR_ZONA": zona, "NM_CANDIDATO": nomes[sq][0],
              "NM_URNA_CANDIDATO": nomes[sq][1], "NM_SOCIAL_CANDIDATO": "NOME SOCIAL SIGILOSO",
              "QT_VOTOS_NOMINAIS": nominais, "QT_VOTOS_NOMINAIS_VALIDOS": validos, "NM_TIPO_DESTINACAO_VOTOS": destino,

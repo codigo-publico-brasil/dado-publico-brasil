@@ -11,6 +11,7 @@ A pasta de armazenamento e o warehouse vêm de PLATAFORMA_STORAGE_ROOT e PLATAFO
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
 Publicação: publish copia os marts para o PostgreSQL de serviço (PLATAFORMA_POSTGRES_DSN).
 Auditoria: verify (hashes do landing e cópia da identidade) e coverage (itens obtidos nos datasets por item).
+Observabilidade: observe resume o que mudou desde a execução anterior e falha se houver erro.
 Datasets por item (tramitação, processos): `--foreach 200` busca os 200 mais recentes que faltam;
 `--foreach all` busca todos; `--dataset NOME` limita a um dataset (também nos anuais,
 como `--years 2022 --dataset votacao`).
@@ -26,7 +27,7 @@ from plataforma_dados.core import settings as settings_module
 from plataforma_dados.core.settings import Settings
 from plataforma_dados.ingestion import contract, foreach, landing, loader
 from plataforma_dados.orchestration import pipeline
-from plataforma_dados.transformation import build, catalog, dbt, publish, snapshot
+from plataforma_dados.transformation import build, catalog, dbt, observability, publish, snapshot
 
 COMMANDS = (
     "run",
@@ -40,6 +41,7 @@ COMMANDS = (
     "query",
     "verify",
     "coverage",
+    "observe",
 )
 
 
@@ -100,7 +102,7 @@ def _ingest(settings: Settings, args: argparse.Namespace) -> None:
                         if dataset.foreach and args.foreach and args.dataset in (None, name):
                             foreach.capture(con, settings, source, name, _per_item(args))
                 else:
-                    captures, rows = loader.load_pending(con, settings, source, args.rebuild)
+                    captures, rows = loader.load_pending(con, settings, source, args.rebuild, args.dataset)
                     print(f"{source.source}: {captures} capturas carregadas, {rows} linhas")
     finally:
         con.close()
@@ -167,6 +169,12 @@ def main(argv: list[str] | None = None) -> int:
             con.close()
             print(chr(10).join(problems) or "landing íntegro: todos os hashes conferem")
             return 1 if problems else 0
+        case "observe":
+            con = warehouse.connect(settings, read_only=True)
+            lines, failed = observability.report(con)
+            con.close()
+            print(chr(10).join(lines))
+            return 1 if failed else 0
         case "coverage":
             _coverage(settings, args.source)
         case "identity":

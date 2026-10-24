@@ -1,6 +1,7 @@
 """Monitoramento das fontes: disponibilidade, mudança de colunas e queda de volume."""
 
 import urllib.error
+import zipfile
 from pathlib import Path
 
 from plataforma_dados.core import runs
@@ -44,10 +45,11 @@ def test_missing_contract_column_is_an_error_and_a_new_column_is_a_warning(
     monitoring.check_header(con, contract, dataset, None, header_file(tmp_path, columns))
     monitoring.check_header(con, contract, dataset, None, header_file(tmp_path, [*columns, "novo"]))
     monitoring.check_header(con, contract, dataset, None, header_file(tmp_path, columns[1:]))
-    schema = checks(con, "schema")
-    assert [s for s, _ in schema] == ["ok", "warn", "error", "warn"]
-    assert "novo" in schema[1][1]
-    assert columns[0] in schema[2][1]
+    assert [s for s, _ in checks(con, "schema")] == ["ok", "ok", "error"]
+    changed = checks(con, "schema_mudou")
+    assert [s for s, _ in changed] == ["ok", "warn", "warn"]
+    assert "novo" in changed[1][1]
+    assert columns[0] in checks(con, "schema")[2][1]
 
 
 def test_volume_drop_against_the_previous_load_is_a_warning(con: Connection) -> None:
@@ -66,3 +68,46 @@ def test_a_different_column_order_is_not_a_schema_change(
     monitoring.check_header(con, contract, dataset, None, header_file(tmp_path, columns))
     monitoring.check_header(con, contract, dataset, None, header_file(tmp_path, columns[::-1], "g.csv"))
     assert [s for s, _ in checks(con, "schema")] == ["ok", "ok"]
+    assert [s for s, _ in checks(con, "schema_mudou")] == ["ok", "ok"]
+
+
+def test_json_that_omits_an_empty_field_is_a_warning_and_csv_missing_a_column_stays_an_error(
+    con: Connection, tmp_path: Path
+) -> None:
+    from plataforma_dados.ingestion import contract as contracts
+
+    senado = contracts.find("senado")
+    file = tmp_path / "lista.json"
+    file.write_text(
+        '{"ListaDocumento": {"documentos": {"documento": [{"id": "1", "tipo": "LEI"}]}}}', encoding="utf-8"
+    )
+    monitoring.check_header(con, senado, senado.datasets["normas"], 1950, file)
+    [(status, detail)] = [(s, d) for s, d in checks(con, "schema")]
+    assert status == "warn" and "numero" in detail
+
+
+def test_the_column_change_is_measured_against_the_same_partition_not_against_another_year(
+    con: Connection, contract: SourceContract, tmp_path: Path
+) -> None:
+    dataset = contract.datasets["partidos"]
+    columns = list(dataset.columns)
+    monitoring.check_header(con, contract, dataset, 2020, header_file(tmp_path, columns))
+    monitoring.check_header(con, contract, dataset, 2021, header_file(tmp_path, [*columns, "extra"], "h.csv"))
+    assert [s for s, _ in checks(con, "schema_mudou")] == ["ok", "ok"]  # outro ano não é mudança
+    monitoring.check_header(con, contract, dataset, 2021, header_file(tmp_path, columns, "i.csv"))
+    assert [s for s, _ in checks(con, "schema_mudou")][-1] == "warn"  # o mesmo ano mudou
+
+
+def test_an_old_name_declared_as_alias_counts_as_the_current_column(con: Connection, tmp_path: Path) -> None:
+    from plataforma_dados.ingestion import contract as contracts
+
+    tse = contracts.find("tse")
+    bens = tse.datasets["bens"]
+    legacy = {v: k for k, v in bens.aliases.items()}
+    file = tmp_path / "bem_candidato_2006.zip"
+    with zipfile.ZipFile(file, "w") as z:
+        header = ";".join(legacy.get(c, c) for c in bens.columns)
+        row = ";".join("x" for _ in bens.columns)
+        z.writestr("bem_candidato_2006_BRASIL.csv", header + chr(10) + row + chr(10))
+    monitoring.check_header(con, tse, bens, 2006, file)
+    assert [s for s, _ in checks(con, "schema")] == ["ok"]

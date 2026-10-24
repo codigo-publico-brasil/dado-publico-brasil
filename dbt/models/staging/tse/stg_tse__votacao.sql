@@ -12,7 +12,7 @@ select
     try_cast(cd_cargo as integer) as cargo_codigo,
     sentence_case(upper(ds_cargo)) as cargo,  -- caixa mista aqui e maiúsculas nas candidaturas: padroniza igual
     try_cast(sq_candidato as bigint) as sq_candidato,
-    ano_eleicao || ':' || sq_candidato as candidatura_id,
+    ano_eleicao || ':' || sg_ue || ':' || sq_candidato as candidatura_id,
     nr_candidato as numero,
     proper_name(nm_candidato) as nome,
     proper_name(nm_urna_candidato) as nome_urna,

@@ -184,7 +184,7 @@ def test_new_source_enters_with_only_a_contract_and_rejects_rows_without_key(
     settings = Settings(storage_root=tmp_path / "store")
     contract = make_contract(tmp_path)
     stats = load(settings, contract, "pessoas", "codigo,nome,cpf\n1,Ana,111\n2,Bia,222\n,Sem Chave,333\n", 7)
-    assert stats == {"read": 3, "loaded": 2, "rejected": 1}
+    assert stats == {"read": 3, "filtered": 0, "loaded": 2, "rejected": 1, "conflicting": 0}
     assert read_all(
         settings, "SELECT codigo, nome, _source_file_id FROM raw_municipal_teste.pessoas ORDER BY 1"
     ) == [
@@ -229,3 +229,30 @@ def test_dlt_temporary_area_does_not_look_like_the_dbt_staging_layer(
     schemas = {r[0] for r in con.execute("SELECT schema_name FROM duckdb_schemas()").fetchall()}
     assert "raw_camara_staging" not in schemas
     assert not {s for s in schemas if s.endswith("_staging")}
+
+
+def test_a_natural_key_that_joins_different_rows_is_counted_as_a_collision_and_identical_repeats_are_not(
+    tmp_path: Path,
+) -> None:
+    settings = Settings(storage_root=tmp_path / "store")
+    contract = make_contract(tmp_path)
+    text = "codigo,nome,cpf\n1,Ana,111\n1,Outra Ana,222\n2,Bia,333\n2,Bia,333\n"
+    stats = load(settings, contract, "pessoas", text, 8)
+    assert stats["read"] == 4 and stats["conflicting"] == 1  # a linha 2 repetida e idêntica não é perda
+
+
+def test_the_load_registers_one_balance_that_is_an_error_for_collisions_and_rejections_and_ok_otherwise(
+    con: Connection,
+) -> None:
+    from plataforma_dados.ingestion import monitoring
+
+    monitoring.check_load(
+        con, "teste", "ds", 2006, {"read": 10, "filtered": 3, "loaded": 6, "rejected": 1, "conflicting": 2}
+    )
+    found = con.execute("SELECT check_name, status, detail FROM metadata.source_checks").fetchall()
+    assert [(c, s) for c, s, _ in found] == [("carga", "error")]
+    assert "filtradas pelo only 3" in found[0][2] and "colisões de chave 2" in found[0][2]
+    monitoring.check_load(
+        con, "teste", "limpo", None, {"read": 5, "filtered": 0, "loaded": 5, "rejected": 0, "conflicting": 0}
+    )
+    assert scalar(con, "SELECT status FROM metadata.source_checks WHERE dataset = 'limpo'") == "ok"

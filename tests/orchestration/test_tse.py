@@ -6,15 +6,15 @@ from plataforma_dados.core.warehouse import Connection, columns, rows, scalar
 Env = tuple[Connection, Settings]
 
 
-def test_raw_only_has_congress_candidacies_from_the_brasil_file_and_never_the_personal_documents(
+def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_personal_documents(
     full: Env,
 ) -> None:
     con, _ = full
     cols = set(columns(con, "raw_federal_tse", "candidaturas"))
     assert not {"nr_cpf_candidato", "ds_email", "nr_titulo_eleitoral_candidato", "nm_social_candidato"} & cols
     found = {r["sq_candidato"] for r in rows(con, "SELECT sq_candidato FROM raw_federal_tse.candidaturas")}
-    # 1006 é deputado estadual (fora do `only`) e 9999 só existe no arquivo do estado (só o _BRASIL.csv é lido)
-    assert found == {"1001", "1002", "1003", "1004", "1005"}
+    # 1006 é deputado estadual e entra no raw (todos os cargos); 9999 só existe no arquivo do estado (só o _BRASIL.csv é lido)
+    assert found == {"1001", "1002", "1003", "1004", "1005", "1006"}
     leaked = scalar(con, "SELECT COUNT(*) FROM raw_federal_tse.candidaturas WHERE nm_candidato LIKE '%@%'")
     assert leaked == 0
 
@@ -37,8 +37,8 @@ def test_homonyms_in_the_same_election_and_unmatched_candidates_are_not_linked_a
     con, _ = full
     linked = {r["candidatura_id"] for r in rows(con, "SELECT candidatura_id FROM marts.candidaturas")}
     assert linked == {
-        "2022:1001",
-        "2022:1002",
+        "2022:RJ:1001",
+        "2022:SP:1002",
     }  # 1003 e 1004 (mesmo nome e nascimento) e 1005 (sem pessoa) ficam de fora
     gap = scalar(
         con, "SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%eleitos_federais_sem_vinculo%'"
@@ -101,3 +101,20 @@ def test_linking_again_changes_nothing(full: Env) -> None:
     identity.resolve(con)
     assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador") == before
     assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa_fusao") == 1
+
+
+def test_a_derived_tse_link_that_is_no_longer_proposed_is_removed_and_the_valid_ones_stay(full: Env) -> None:
+    from plataforma_dados.transformation import identity
+
+    con, _ = full
+    valid = scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador WHERE source = 'tse'")
+    person = scalar(con, "SELECT min(id_pessoa) FROM identity.pessoa")
+    con.execute(
+        "INSERT INTO identity.pessoa_identificador VALUES ('tse', 'candidato', '2022:XX:777', ?, 'x', 'regra automática', 'x')",
+        (person,),
+    )  # a chave antiga, sem unidade eleitoral, que a carga corrigida não gera mais
+    identity.resolve(con)
+    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador WHERE source = 'tse'") == valid
+    assert (
+        scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador WHERE source_id = '2022:XX:777'") == 0
+    )

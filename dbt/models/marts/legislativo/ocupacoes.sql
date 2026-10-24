@@ -4,7 +4,9 @@ select
     o.entidade,
     o.entidade_uf,
     o.ano_inicio,
-    o.ano_fim
+    o.ano_inicio_original,
+    o.ano_fim,
+    o.ano_fim_original
 
 from {{ ref('stg_camara__deputados_ocupacoes') }} as o
 

@@ -2,7 +2,8 @@
 select
     try_cast(ano_eleicao as integer) as ano_eleicao,
     try_cast(sq_candidato as bigint) as sq_candidato,
-    ano_eleicao || ':' || sq_candidato as candidatura_id,
+    ano_eleicao || ':' || sg_ue || ':' || sq_candidato as candidatura_id,
+    sg_ue as ue,
     sg_uf as uf,
     try_cast(nr_ordem_bem_candidato as integer) as ordem,
     try_cast(cd_tipo_bem_candidato as integer) as tipo_codigo,

@@ -93,14 +93,15 @@ Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada 
 
 | Dado | Fonte | Cobertura carregada |
 | --- | --- | --- |
-| Candidaturas a deputado federal e senador (com suplentes), com partido, situação e resultado | `candidaturas` (um pacote por eleição) | eleições gerais de 1998, 2002, 2006, 2010, 2014, 2018, 2022 e 2026 |
+| Candidaturas de todos os cargos, com partido, situação e resultado | `candidaturas` (um pacote por eleição) | eleições gerais de 1998, 2002, 2006, 2010, 2014, 2018, 2022 e 2026 |
 
-- **Ligação** por nome civil e nascimento iguais e únicos ([ADR 0013](../adr/0013-tse-ligacao-por-nome-civil-e-nascimento.md)): 6.709 candidaturas ligadas. As demais (candidatos de fora do Congresso e quem não foi eleito) ficam no staging.
-- **Eleitos sem vínculo:** 363 candidaturas marcadas como eleitas não foram ligadas (teste `eleitos_federais_sem_vinculo`). Medido em 2026-10-23: 194 são da eleição de 2026, cujos eleitos ainda não tomaram posse (não há registro na Câmara nem no Senado, então não é falha de ligação); 130 têm alguém com a mesma data de nascimento mas nome civil diferente (candidatos à aprovação manual em `vinculos_aprovados`); 5 têm nome e data iguais a mais de um registro (homônimo); 34 não têm ninguém com a mesma data (por exemplo, eleitos de 1998 que não aparecem nas séries digitais).
+- **Ligação** por nome civil e nascimento iguais e únicos ([ADR 0013](../adr/0013-tse-ligacao-por-nome-civil-e-nascimento.md)): 10.790 candidaturas ligadas (10.997 linhas no mart, 3.201 pessoas). As demais (candidatos de fora do Congresso e quem não foi eleito) ficam no staging.
+- **Eleitos sem vínculo:** 398 candidaturas marcadas como eleitas não foram ligadas (teste `eleitos_federais_sem_vinculo`). Medido em 2026-10-24: 194 são da eleição de 2026 (outras 33 de 2002 e 22 de 2006 também sem registro digital), cujos eleitos ainda não tomaram posse (não há registro na Câmara nem no Senado, então não é falha de ligação); 130 têm alguém com a mesma data de nascimento mas nome civil diferente (candidatos à aprovação manual em `vinculos_aprovados`); 5 têm nome e data iguais a mais de um registro (homônimo); 34 não têm ninguém com a mesma data (por exemplo, eleitos de 1998 que não aparecem nas séries digitais).
 - **Nascimento ausente:** 971 pessoas sem data de nascimento, o que impede a ligação por esta regra. O detalhe de todos os 843 senadores foi obtido; o que falta não vem na fonte.
 - **Ambiguidade:** o teste `pessoas_ambiguas_entre_fontes` mede nome civil e nascimento repetidos dentro de uma fonte.
 - **Resultado da eleição de 2026:** vem como a fonte informa na data da carga; uma eleição recente pode ter resultado ainda não consolidado.
-- **Ainda não carregados:** bens declarados, redes sociais, fotos, certidões, coligações, vagas e votação por candidato.
+- **Candidaturas sem voto (aviso):** 26 candidaturas de 2022 de pessoas do projeto não têm linha em `votos_de_candidatos` (eram 56 antes de excluir vice-governador e vice-presidente, que não recebem voto próprio: o voto é do titular). As 26 são resultados em branco ou candidaturas sem voto na fonte.
+- **Ainda não carregados:** redes sociais, fotos, certidões, coligações e vagas.
 
 ## Normas, vetos e Constituição
 

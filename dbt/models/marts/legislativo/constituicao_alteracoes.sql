@@ -8,11 +8,9 @@ with notas as (
         parte,
         ordem,
         identificador,
-        unnest(regexp_extract_all(texto, '\(([^()]*Emenda[^()]*)(?:\)|$)', 1)) as nota
+        unnest(regexp_extract_all(texto, '(?i)\(([^()]*emenda[^()]*)(?:\)|$)', 1)) as nota
 
     from {{ ref('constituicao_dispositivos') }}
-
-    where texto like '%Emenda%'
 
 ),
 
@@ -30,11 +28,11 @@ classificadas as (
             when lower(nota) like 'vide%' then 'vide'
             else 'outra'
         end as tipo_alteracao,
-        if(nota like '%de Revisão%', 'Emenda Constitucional de Revisão', 'Emenda Constitucional') as emenda_tipo,
+        if(lower(nota) like '%de revisão%', 'Emenda Constitucional de Revisão', 'Emenda Constitucional') as emenda_tipo,
         regexp_extract_all(
             regexp_extract(
                 nota,
-                'Emendas? Constitucion(?:al|ais)(?: de Revisão)? n[º°os]+ ?(\d{1,3}(?:(?:, | e )\d{1,3}\b)*)',
+                '(?i)emendas? constitucion(?:al|ais)(?: de revisão)?(?: n[º°os]+)? ?(\d{1,3}(?:(?:, | e )\d{1,3}\b)*)',
                 1
             ),
             '\d+'

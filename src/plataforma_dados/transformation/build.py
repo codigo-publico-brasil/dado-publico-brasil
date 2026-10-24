@@ -12,7 +12,7 @@ dos schemas `raw_*` e de `metadata.captures`.
 from plataforma_dados.core import runs, warehouse
 from plataforma_dados.core.settings import Settings
 from plataforma_dados.core.warehouse import Connection
-from plataforma_dados.transformation import dbt, identity, snapshot
+from plataforma_dados.transformation import dbt, identity, observability, snapshot
 from plataforma_dados.transformation.quality import record
 
 # `cautious`: um teste só roda quando todos os modelos de que depende já existem.
@@ -35,6 +35,10 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
         with runs.track(con, stage, "dbt") as run:
             record(con, run.id, outcome.results)
             run.rows_in, run.rows_out = len(outcome.results), len(outcome.failures)
+            if (
+                stage == "transform_post"
+            ):  # os marts estão prontos: fotografa e compara com a execução anterior
+                observability.run(con, run.id)
             if outcome.returncode != 0:
                 names = "; ".join(
                     f"{r['unique_id']}: {r['status']} {(r['message'] or '')[:1500]}" for r in outcome.failures

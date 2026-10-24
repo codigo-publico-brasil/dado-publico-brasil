@@ -67,6 +67,13 @@ def _link(con: Connection, moment: str) -> None:
         f"UPDATE {BRIDGE} SET id_pessoa = f.survivor FROM fusions f WHERE {BRIDGE}.id_pessoa = f.absorbed"
     )
     con.execute("DELETE FROM identity.pessoa WHERE id_pessoa IN (SELECT absorbed FROM fusions)")
+    # As ligações do TSE são derivadas: a regra as recalcula a cada execução. Uma que deixou de ser proposta
+    # (a chave da candidatura mudou, ou surgiu um homônimo) sai; as aprovadas à mão entram pela mesma tabela.
+    con.execute(
+        f"DELETE FROM {BRIDGE} WHERE source = 'tse' AND NOT EXISTS ("
+        f"SELECT 1 FROM {LINKS} v WHERE v.origem_fonte = 'tse' AND v.origem_tipo = {BRIDGE}.id_type "
+        f"AND v.origem_id = {BRIDGE}.source_id)"
+    )
     con.execute(
         f"INSERT INTO {BRIDGE} "
         "SELECT v.origem_fonte, v.origem_tipo, v.origem_id, b.id_pessoa, v.metodo, ?, ? "

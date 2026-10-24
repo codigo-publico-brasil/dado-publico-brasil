@@ -1,9 +1,9 @@
 -- Convênios firmados com recursos de emendas: uma linha por convênio e emenda.
 select
     nullif(nullif(c_digo_da_emenda, 'Sem informação'), 'S/I') as emenda_codigo,
-    try_cast(c_digo_fun_o as integer) as funcao_codigo,
+    c_digo_fun_o as funcao_codigo,
     nome_fun_o as funcao,
-    try_cast(c_digo_subfun_o as integer) as subfuncao_codigo,
+    c_digo_subfun_o as subfuncao_codigo,
     nome_subfun_o as subfuncao,
     localidade_do_gasto as localidade,
     tipo_de_emenda as tipo,

@@ -54,6 +54,7 @@ def columns(settings: Settings) -> list[dict[str, str]]:
                         "name": column["name"],
                         "type": str(column.get("data_type") or ""),
                         "description": " ".join(str(column.get("description") or "").split()),
+                        "pii": "sim" if (column.get("meta") or {}).get("pii") else "",
                     }
                 )
     return found
@@ -95,7 +96,14 @@ def markdown(settings: Settings) -> str:
     for c in columns(settings):
         by_table.setdefault(c["table"], []).append(c)
     for table in sorted(by_table):
-        lines += [f"### marts.{table}", "", "| Coluna | Tipo | Descrição |", "| --- | --- | --- |"]
-        lines += [f"| `{c['name']}` | {c['type']} | {c['description']} |" for c in by_table[table]]
+        lines += [
+            f"### marts.{table}",
+            "",
+            "| Coluna | Tipo | Descrição | Dado pessoal |",
+            "| --- | --- | --- | --- |",
+        ]
+        lines += [
+            f"| `{c['name']}` | {c['type']} | {c['description']} | {c['pii']} |" for c in by_table[table]
+        ]
         lines.append("")
     return "\n".join(lines)
