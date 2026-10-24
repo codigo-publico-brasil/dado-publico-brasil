@@ -143,9 +143,9 @@ def _register(
     number: int,
     envelopes: list[tuple[batch.Envelope, str | None]],
 ) -> None:
-    folder = settings.landing_dir / contract.source
-    folder.mkdir(parents=True, exist_ok=True)
-    file = folder / f"{name}-lote-{run_id}-{number}.jsonl.gz"
+    target = landing.folder(settings, contract.source, name, None, runs.now())
+    target.mkdir(parents=True, exist_ok=True)
+    file = target / f"{name}-lote-{run_id}-{number}.jsonl.gz"
     batch.write(file, (e for e, _ in envelopes))
     digest = hashlib.sha256(file.read_bytes()).hexdigest()
     relative = file.relative_to(settings.storage_root).as_posix()

@@ -166,6 +166,8 @@ O [catálogo](catalogo.md) lista todas as tabelas, gerado do dbt (`uv run dado-p
 
 **Imutabilidade do landing.** O arquivo é salvo com o hash no nome e nunca é sobrescrito. Se a fonte mudar o conteúdo, nasce um segundo arquivo.
 
+**Organização do landing.** O caminho diz a origem, a referência e a data da extração: `landing/<fonte>/<dataset>/<referência>/<AAAAMMDD>/<nome>-<hash>.<ext>`. A referência é o ano, o mês (`AAAAMM`, no DOU) ou a legislatura do arquivo, ou `completo` quando o dataset não é particionado (lotes de datasets por item também ficam em `completo`). A data é a da captura. Capturar de novo o mesmo conteúdo em outro dia não cria arquivo: vale o primeiro e só a data da última verificação muda ([ADR 0021](../adr/0021-landing-por-fonte-dataset-e-data.md)).
+
 **Linhagem.** Toda linha do raw leva `_source_file_id`, que aponta para `metadata.captures` (URL, hash, tamanho, datas, caminho); nos datasets por item, `metadata.capture_items` aponta para cada resposta dentro do lote. Cada execução registra a versão do código (commit). O dlt grava `_dlt_load_id` por carga e o Dagster mostra o grafo entre ativos.
 
 > **Conceito: linhagem de dados.** O rastro de cada dado até a origem. Exigência do projeto: "todo dado exibido precisa de fonte oficial, URL e data de captura".

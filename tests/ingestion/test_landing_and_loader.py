@@ -3,8 +3,10 @@
 from pathlib import Path
 
 import duckdb
+import pytest
 from synthetic_camara import fake_downloader, no_headers, synthetic_files
 
+from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, columns, scalar, tables
 from dado_publico_brasil.ingestion import landing, loader
@@ -26,7 +28,7 @@ def test_extract_keeps_the_original_with_hash_and_registers_the_capture(
     path, sha, run_id = con.execute(
         "SELECT path, sha256, run_id FROM metadata.captures WHERE id = ?", (capture_id,)
     ).fetchone() or ("", "", 0)
-    assert path.startswith("landing/camara/deputados-")
+    assert path.startswith("landing/camara/deputados/completo/")
     assert sha[:12] in path
     assert (settings.storage_root / path).exists()
     assert con.execute("SELECT stage, status FROM metadata.runs WHERE id = ?", (run_id,)).fetchone() == (
@@ -43,6 +45,24 @@ def test_extracting_twice_does_not_duplicate_the_capture(
     b = landing.extract(con, settings, contract, "deputados", downloader=download, head_request=no_headers)
     assert a == b
     assert scalar(con, "SELECT COUNT(*) FROM metadata.captures") == 1
+
+
+def test_the_path_shows_source_dataset_reference_and_capture_date_and_the_same_content_on_another_day_is_not_kept_twice(
+    con: Connection,
+    settings: Settings,
+    contract: SourceContract,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    download = fake_downloader(synthetic_files(tmp_path / "origin"))
+    monkeypatch.setattr(runs, "now", lambda: "2026-10-01T10:00:00+00:00")
+    first = landing.extract(con, settings, contract, "votacoes", 2024, download, no_headers)
+    path = scalar(con, "SELECT path FROM metadata.captures WHERE id = ?", (first,))
+    assert path.startswith("landing/camara/votacoes/2024/20261001/")
+    monkeypatch.setattr(runs, "now", lambda: "2026-10-02T10:00:00+00:00")
+    assert landing.extract(con, settings, contract, "votacoes", 2024, download, no_headers) == first
+    assert not (settings.landing_dir / "camara" / "votacoes" / "2024" / "20261002").exists()
+    assert (settings.storage_root / path).exists()
 
 
 def test_unchanged_file_is_not_downloaded_again(
