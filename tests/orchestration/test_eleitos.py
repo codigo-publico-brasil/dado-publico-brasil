@@ -33,7 +33,11 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
     assert bia["tipo_mandato"] == "novato"  # o mandato dela começa depois dessa eleição: nenhum anterior
     assert (carlos["ligado"], carlos["qtd_votos"], carlos["percentual_votos_nominais"]) == (False, None, None)
     assert carlos["tipo_mandato"] == "novato" and carlos["vinculo_metodo"] is None
-    assert (fulano["cargo"], fulano["uf"], fulano["tipo_mandato"]) == ("Deputado estadual", "SP", None)  # sem base de mandatos
+    assert (fulano["cargo"], fulano["uf"], fulano["tipo_mandato"]) == (
+        "Deputado estadual",
+        "SP",
+        None,
+    )  # sem base de mandatos
 
 
 def test_each_office_shows_its_real_state_without_guessing(full: tuple[Connection, Settings]) -> None:
