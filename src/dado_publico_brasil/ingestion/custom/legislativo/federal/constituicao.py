@@ -33,14 +33,14 @@ def _resolve(url: str) -> tuple[str, str, int]:
     page = parts._replace(query="", fragment="").geturl()
     status, body = fetch.get(page)
     if status != 200:
-        raise RuntimeError(f"página da Constituição respondeu {status}: {page}")
+        raise OSError(f"página da Constituição respondeu {status}: {page}")
     found = [
         (int(m.group(1)), link)
         for link in LINKS[part].findall(body.decode("utf-8", "replace"))
         if "lixeira" not in link and (m := EMENDA.search(link))
     ]
     if not found:
-        raise RuntimeError(f"nenhum arquivo HTML de '{part}' na página {page}")
+        raise OSError(f"nenhum arquivo HTML de '{part}' na página {page}")
     amendment, link = max(found)
     return urljoin(page, link), part, amendment
 

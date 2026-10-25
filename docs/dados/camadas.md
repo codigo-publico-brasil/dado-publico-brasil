@@ -134,7 +134,7 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 A pasta de armazenamento (`data_store/`, fora do git) vem de `DADO_PUBLICO_STORAGE_ROOT` (padrão `data_store`). Tudo a partir da raiz do repositório:
 
 ```bash
-uv run dado-publico run --incremental                               # só o que pode ter mudado
+uv run dado-publico run --incremental                               # só a partição em curso (cada fonte declara `refresh`)
 uv run dado-publico run --historical --from-year 2000   # carga massiva
 uv run dado-publico run --years 2024 2025 2026 --extra-years 2019   # anos escolhidos
 uv run dado-publico run --incremental --source senado               # só uma fonte

@@ -18,6 +18,7 @@ FORMATS = {"csv", "json", "html"}  # html não tem leitor padrão: exige `record
 POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
+REFRESHES = {"daily", "on_request"}  # daily: entra na execução diária; on_request: só quando pedido
 ARCHIVES = {"zip"}
 PARTITIONS = {"year", "legislature", "month"}  # month: o valor da partição é AAAAMM
 WRITES = {"merge", "replace"}
@@ -54,7 +55,7 @@ class Dataset:
     write: str
     columns: tuple[str, ...]
     primary_key: tuple[str, ...] = ()
-    stable_after_years: int = 1
+    refresh: str = "daily"  # frequência de atualização da fonte (ver REFRESHES); padrão: o da fonte
     extra_years: bool = False
     first_year: int | None = None
     partition: str = "year"
@@ -120,9 +121,12 @@ class SourceContract:
         return f"raw_{self.level}_{self.source}"
 
 
-def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
+def _dataset(source: str, name: str, data: dict[str, Any], default_refresh: str = "daily") -> Dataset:
     where = f"{source}.{name}"
     raw = bool(data.get("raw", True))
+    refresh = data.get("refresh", default_refresh)
+    if refresh not in REFRESHES:
+        raise InvalidContract(f"{where}: refresh '{refresh}' inválido ({sorted(REFRESHES)})")
     for required in ("url", "load", "write", "columns") if raw else ("url", "load"):
         if required not in data:
             raise InvalidContract(f"{where}: falta '{required}'")
@@ -164,7 +168,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         write=data.get("write", "replace"),
         columns=columns,
         primary_key=key,
-        stable_after_years=int(data.get("stable_after_years", 1)),
+        refresh=refresh,
         extra_years=bool(data.get("extra_years", False)),
         partition=str(data.get("partition", "year")),
         records=data.get("records"),
@@ -224,7 +228,7 @@ def load_contract(path: Path) -> SourceContract:
     for field_name, allowed in (("power", POWERS), ("level", LEVELS)):
         if data.get(field_name) not in allowed:
             raise InvalidContract(f"{source}: {field_name} deve ser um de {sorted(allowed)}")
-    datasets = {n: _dataset(source, n, d) for n, d in data["datasets"].items()}
+    datasets = {n: _dataset(source, n, d, data.get("refresh", "daily")) for n, d in data["datasets"].items()}
     for name, dataset in datasets.items():
         if dataset.foreach and dataset.foreach.source not in datasets:
             raise InvalidContract(

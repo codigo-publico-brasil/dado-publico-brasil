@@ -11,6 +11,10 @@ power: judiciario
 level: federal
 description: Tribunal Superior Eleitoral, dados abertos (CKAN; pacotes .zip com CSV)
 
+# Regra de extração: o TSE muda em datas pontuais (eleição, apuração, prestação de contas), então nada entra na execução
+# diária: cada dataset roda quando pedido (`dado-publico extract --source tse --years 2026`), um por vez nos pesados.
+refresh: on_request
+
 access:
   base_url: https://cdn.tse.jus.br/estatistica/sead/odsele
   format: csv
@@ -23,7 +27,6 @@ datasets:
     load: yearly
     first_year: 1998                # primeira eleição geral cujos votos a plataforma tem
     step: 4                         # só as eleições gerais (1998, 2002, ... 2022, 2026)
-    stable_after_years: 4           # o incremental confere a eleição corrente e a anterior
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
@@ -39,7 +42,6 @@ datasets:
     load: yearly
     first_year: 2006
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
@@ -58,7 +60,6 @@ datasets:
     load: yearly
     first_year: 1998
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
@@ -76,7 +77,6 @@ datasets:
     load: yearly
     first_year: 2022
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
@@ -91,7 +91,6 @@ datasets:
     load: yearly
     first_year: 2022
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "receitas_candidatos_[0-9]*_BRASIL.csv"   # não pega receitas_candidatos_doador_originario_*
     write: merge
@@ -107,7 +106,6 @@ datasets:
     load: yearly
     first_year: 2022
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "despesas_contratadas_candidatos_*_BRASIL.csv"
     write: merge
