@@ -21,3 +21,9 @@ sources:
         description: Bens declarados pelos candidatos de todos os cargos nas eleições gerais de 2006 em diante, uma linha por bem.
       - name: votacao
         description: Votos de cada candidato (todos os cargos) por município e zona nas eleições gerais já carregadas, como o TSE publica.
+      - name: vagas
+        description: Quantidade de vagas de cada cargo em cada unidade eleitoral nas eleições gerais (por exemplo, 513 de deputado federal), uma linha por cargo e unidade, como o TSE publica.
+      - name: receitas_candidatos
+        description: Receitas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por receita, só com as colunas do total (sem nome nem documento de quem doou), como o TSE publica.
+      - name: despesas_candidatos
+        description: Despesas contratadas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por despesa, só com as colunas do total (sem nome nem documento do fornecedor), como o TSE publica.

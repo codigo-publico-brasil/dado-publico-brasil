@@ -153,6 +153,18 @@ Lacunas conhecidas, medidas ou registradas:
 - **Termos do portal:** as páginas de termos de uso e de dicionário de dados do Portal da Transparência pedem verificação anti-robô e não foram lidas; vale a licença de livre utilização do Decreto 8.777/2016.
 - **Despesas (empenhos) e TCU:** não carregados. O DOU está só no landing, de ago a out de 2026 ([ADR 0019](../adr/0019-dou-so-no-landing.md)); o TCU não tem licença aberta (ver o [catálogo de fontes](fontes-de-dados.md)).
 
+## Eleitos das eleições gerais
+
+| O que | Mart | Cobertura em 25/10/2026 |
+| --- | --- | --- |
+| Eleitos de presidente, governador, senador e deputado federal | `eleitos` | 1998 a 2026, das candidaturas carregadas (resultado como o TSE informa; provisório até a diplomação) |
+| Situação de cada cargo (vagas, eleitos e pendentes) | `eleitos_cargos` | 2022 e 2026 (as vagas só foram carregadas desses anos) |
+| Totais de bens, receitas e despesas de cada eleito | `eleitos_campanhas` | bens de 2006 em diante; receitas e despesas vazias até a carga da prestação de contas |
+
+- **2026, pelo arquivo de candidaturas de 21/10:** 513 de 513 deputados federais eleitos (335 já ligados a pessoa: 305 reeleitos, 26 retornos e 182 novatos), 52 de 54 senadores, 20 de 27 governadores (7 aguardam o 2º turno) e a presidência aguardando o 2º turno. O resultado muda a cada captura do TSE.
+- **Fila de revisão:** `eleitos_com_possivel_vinculo` lista os eleitos ao Congresso sem vínculo que têm alguém com a mesma data de nascimento na base; uma pessoa confere e aprova em `vinculos_aprovados`.
+- **Ainda não carregados:** a prestação de contas (receitas e despesas) e a votação por município e zona de 2026, por serem cargas pesadas; as propostas de governo e a diplomação, que não vêm nos arquivos abertos.
+
 ## 3. O que a Câmara **não** tem e precisa vir de outra instância
 
 | Necessidade | Fonte provável | Por que a Câmara não basta |

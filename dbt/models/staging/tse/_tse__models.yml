@@ -66,3 +66,53 @@ models:
       - {name: votos_validos, description: "Votos nominais válidos."}
       - {name: resultado, description: "Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+
+  - name: stg_tse__vagas
+    description: Vagas de cada cargo em cada unidade eleitoral, uma linha por eleição, cargo e unidade, como o TSE publica; traz também as eleições suplementares.
+    columns:
+      - {name: ano_eleicao, description: "Ano da eleição."}
+      - {name: cd_eleicao, description: "Código da eleição, como o TSE informa (distingue a eleição geral da suplementar no mesmo ano)."}
+      - {name: eleicao, description: "Descrição da eleição, como o TSE informa (por exemplo, Eleição Geral Federal 2022 ou Eleição Suplementar)."}
+      - {name: ue, description: "Sigla da unidade eleitoral (UF ou BR), como o TSE informa."}
+      - {name: uf, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: cd_cargo, description: "Código do cargo disputado, como o TSE informa."}
+      - {name: cargo, description: "Cargo em disputa, com caixa padronizada."}
+      - {name: qtd_vagas, description: "Quantidade de vagas do cargo na unidade eleitoral."}
+      - {name: dt_posse, description: "Data da posse prevista, como o TSE informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+
+  - name: stg_tse__receitas_candidatos
+    description: Receitas declaradas pelos candidatos de todos os cargos, uma linha por receita; o valor é o declarado, sem nome nem documento de quem doou.
+    columns:
+      - {name: ano_eleicao, description: "Ano da eleição."}
+      - {name: turno, description: "Turno da prestação de contas, como o TSE informa (campo ST_TURNO)."}
+      - {name: id_candidatura, description: "Identificador da candidatura (ano, unidade eleitoral e sequencial), igual ao de stg_tse__candidaturas."}
+      - {name: sq_candidato, description: "Número sequencial do candidato na eleição, como o TSE informa (único só dentro da unidade eleitoral)."}
+      - {name: sq_prestador_contas, description: "Número sequencial do prestador de contas (a campanha do candidato), como o TSE informa."}
+      - {name: sq_receita, description: "Número sequencial da receita, como o TSE informa."}
+      - {name: ue, description: "Sigla da unidade eleitoral (UF ou BR), como o TSE informa."}
+      - {name: uf, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: cargo, description: "Cargo disputado, com caixa padronizada."}
+      - {name: tipo_prestacao, description: "Tipo da prestação de contas (por exemplo, parcial ou final), como o TSE informa."}
+      - {name: dt_prestacao, description: "Data da prestação de contas."}
+      - {name: dt_receita, description: "Data da receita."}
+      - {name: valor, description: "Valor da receita em reais, como declarado."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+
+  - name: stg_tse__despesas_candidatos
+    description: Despesas contratadas declaradas pelos candidatos de todos os cargos, uma linha por despesa; o valor é o declarado, sem nome nem documento do fornecedor.
+    columns:
+      - {name: ano_eleicao, description: "Ano da eleição."}
+      - {name: turno, description: "Turno da prestação de contas, como o TSE informa (campo ST_TURNO)."}
+      - {name: id_candidatura, description: "Identificador da candidatura (ano, unidade eleitoral e sequencial), igual ao de stg_tse__candidaturas."}
+      - {name: sq_candidato, description: "Número sequencial do candidato na eleição, como o TSE informa (único só dentro da unidade eleitoral)."}
+      - {name: sq_prestador_contas, description: "Número sequencial do prestador de contas (a campanha do candidato), como o TSE informa."}
+      - {name: sq_despesa, description: "Número sequencial da despesa, como o TSE informa."}
+      - {name: ue, description: "Sigla da unidade eleitoral (UF ou BR), como o TSE informa."}
+      - {name: uf, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: cargo, description: "Cargo disputado, com caixa padronizada."}
+      - {name: tipo_prestacao, description: "Tipo da prestação de contas (por exemplo, parcial ou final), como o TSE informa."}
+      - {name: dt_prestacao, description: "Data da prestação de contas."}
+      - {name: dt_despesa, description: "Data da despesa."}
+      - {name: valor, description: "Valor da despesa contratada em reais, como declarado."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}

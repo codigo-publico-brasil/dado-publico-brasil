@@ -13,7 +13,14 @@ def args(**kw: object) -> argparse.Namespace:
 
 def test_without_dataset_the_plan_has_every_yearly_dataset_of_the_source() -> None:
     items = _plan(args())(contract.find("tse"))
-    assert {name for name, _ in items} == {"candidaturas", "bens", "votacao"}
+    assert {name for name, _ in items} == {
+        "candidaturas",
+        "bens",
+        "votacao",
+        "vagas",
+        "receitas_candidatos",
+        "despesas_candidatos",
+    }
 
 
 def test_with_dataset_only_that_one_is_planned() -> None:
