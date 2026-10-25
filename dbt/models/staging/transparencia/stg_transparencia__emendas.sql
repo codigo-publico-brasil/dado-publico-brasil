@@ -1,9 +1,9 @@
 -- Emendas parlamentares: uma linha por emenda, localidade, função, programa e ação. "Sem informação" vira vazio.
 select
-    nullif(nullif(c_digo_da_emenda, 'Sem informação'), 'S/I') as emenda_codigo,
+    nullif(nullif(c_digo_da_emenda, 'Sem informação'), 'S/I') as cd_emenda,
     try_cast(ano_da_emenda as integer) as ano,
     tipo_de_emenda as tipo,
-    nullif(nullif(c_digo_do_autor_da_emenda, 'Sem informação'), 'S/I') as autor_codigo,
+    nullif(nullif(c_digo_do_autor_da_emenda, 'Sem informação'), 'S/I') as cd_autor,
     proper_name(nullif(nome_do_autor_da_emenda, 'Sem informação')) as autor_nome,
     nullif(nullif(n_mero_da_emenda, 'Sem informação'), 'S/I') as numero,
     localidade_de_aplica_o_do_recurso as localidade,
@@ -11,13 +11,13 @@ select
     munic_pio as municipio,
     uf,
     regi_o as regiao,
-    c_digo_fun_o as funcao_codigo,
+    c_digo_fun_o as cd_funcao,
     nome_fun_o as funcao,
-    c_digo_subfun_o as subfuncao_codigo,
+    c_digo_subfun_o as cd_subfuncao,
     nome_subfun_o as subfuncao,
-    c_digo_programa as programa_codigo,
+    c_digo_programa as cd_programa,
     nome_programa as programa,
-    c_digo_a_o as acao_codigo,
+    c_digo_a_o as cd_acao,
     nome_a_o as acao,
     nome_plano_or_ament_rio as plano_orcamentario,
     try_cast(replace(valor_empenhado, ',', '.') as decimal(18, 2)) as valor_empenhado,
@@ -26,6 +26,6 @@ select
     try_cast(replace(valor_restos_a_pagar_inscritos, ',', '.') as decimal(18, 2)) as valor_restos_a_pagar_inscritos,
     try_cast(replace(valor_restos_a_pagar_cancelados, ',', '.') as decimal(18, 2)) as valor_restos_a_pagar_cancelados,
     try_cast(replace(valor_restos_a_pagar_pagos, ',', '.') as decimal(18, 2)) as valor_restos_a_pagar_pagos,
-    _source_file_id as source_file_id
+    _source_file_id as id_captura
 
 from {{ source('transparencia', 'emendas') }}

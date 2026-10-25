@@ -1,6 +1,6 @@
 -- Autor que não é deputado (comissão, Senado, Executivo...) fica sem pessoa (id_pessoa nulo).
 select
-    a.proposicao_id,
+    a.id_proposicao,
     a.ordem_assinatura,
     a.nome_autor,
     i.id_pessoa,
@@ -8,11 +8,11 @@ select
     a.partido_sigla,
     a.uf_sigla,
     a.proponente,
-    a.source_file_id
+    a.id_captura
 
 from {{ ref('stg_camara__proposicoes_autores') }} as a
 
 left join {{ ref('stg_identity__pessoa_identificadores') }} as i
     on i.fonte = '{{ var("source_camara") }}'
-    and i.tipo_id = '{{ var("id_type_camara") }}'
-    and i.id_na_fonte = cast(a.deputado_id as varchar)
+    and i.id_tipo = '{{ var("id_type_camara") }}'
+    and i.id_na_fonte = cast(a.id_deputado as varchar)

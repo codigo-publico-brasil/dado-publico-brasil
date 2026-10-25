@@ -6,8 +6,8 @@ select
     s.nome,
     s.nome_civil,
     s.sexo,
-    d.nascimento as data_nascimento,
-    cast(null as date) as data_falecimento,
+    d.dt_nascimento as dt_nascimento,
+    cast(null as date) as dt_falecimento,
     d.municipio_nascimento,
     d.uf_nascimento,
     d.foto_url,
@@ -18,7 +18,7 @@ from {{ ref('stg_identity__pessoa_identificadores') }} as i
 
 inner join {{ ref('int_senadores_unidos') }} as s
     on i.fonte = '{{ var("source_senado") }}'
-    and i.tipo_id = '{{ var("id_type_senado") }}'
-    and i.id_na_fonte = cast(s.senador_id as varchar)
+    and i.id_tipo = '{{ var("id_type_senado") }}'
+    and i.id_na_fonte = cast(s.id_senador as varchar)
 
-left join {{ ref('stg_senado__senadores_detalhe') }} as d on d.senador_id = s.senador_id
+left join {{ ref('stg_senado__senadores_detalhe') }} as d on d.id_senador = s.id_senador

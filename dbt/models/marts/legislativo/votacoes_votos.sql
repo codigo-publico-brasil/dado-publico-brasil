@@ -1,10 +1,10 @@
 select
     fonte,
     id_pessoa,
-    votacao_id,
+    id_votacao,
     voto,
-    votou_em,
+    dt_voto,
     partido_sigla as partido,
     uf_sigla as uf
 
-from {{ ref('int_votos_ligados_a_pessoas') }}
+from {{ ref('int_votacoes_votos_ligados') }}

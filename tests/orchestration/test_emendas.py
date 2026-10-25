@@ -16,8 +16,8 @@ def test_the_three_tables_come_from_the_same_package(full: Env) -> None:
 def test_values_become_numbers_and_no_information_becomes_empty(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT emenda_codigo, ano, autor_codigo, autor_nome, municipio_ibge, valor_empenhado, valor_liquidado, "
-        "valor_pago, valor_restos_a_pagar_pagos FROM marts.emendas ORDER BY ano, emenda_codigo NULLS FIRST"
+        "SELECT cd_emenda, ano, cd_autor, autor_nome, municipio_ibge, valor_empenhado, valor_liquidado, "
+        "valor_pago, valor_restos_a_pagar_pagos FROM marts.emendas ORDER BY ano, cd_emenda NULLS FIRST"
     ).fetchall()
     old, individual, relator = found
     assert old[:5] == (None, 2014, None, None, 9999999) and float(old[8]) == 1000.0
@@ -39,7 +39,7 @@ def test_every_favored_party_enters_as_published_and_the_rows_that_identify_a_pe
     found = {
         r[0]: r[1]
         for r in con.execute(
-            "SELECT tipo_favorecido, contem_dado_pessoal FROM marts.emendas_favorecidos"
+            "SELECT tipo_favorecido, fl_contem_dado_pessoal FROM marts.emendas_favorecidos"
         ).fetchall()
     }
     assert found == {
@@ -48,9 +48,7 @@ def test_every_favored_party_enters_as_published_and_the_rows_that_identify_a_pe
         "Pessoa Fisica": True,  # CPF mascarado: cidadão comum
         "Inscrição Genérica": True,
     }
-    assert (
-        scalar(con, "SELECT COUNT(*) FROM marts.emendas_favorecidos WHERE favorecido_codigo LIKE '%*%'") == 1
-    )
+    assert scalar(con, "SELECT COUNT(*) FROM marts.emendas_favorecidos WHERE cd_favorecido LIKE '%*%'") == 1
 
 
 def test_the_table_with_personal_data_of_third_parties_is_classified_and_its_columns_are_marked(
@@ -65,7 +63,7 @@ def test_the_table_with_personal_data_of_third_parties_is_classified_and_its_col
     marked = {
         c["name"] for c in catalog.columns(settings) if c["table"] == "emendas_favorecidos" and c["pii"]
     }
-    assert marked == {"favorecido", "favorecido_codigo"}
+    assert marked == {"favorecido", "cd_favorecido"}
 
 
 def test_the_missing_author_is_measured_as_a_gap(full: Env) -> None:
@@ -81,5 +79,5 @@ def test_the_missing_author_is_measured_as_a_gap(full: Env) -> None:
 
 def test_a_convenio_keeps_the_date_object_and_value(full: Env) -> None:
     con, _ = full
-    found = con.execute("SELECT publicado_em, convenente, valor FROM marts.emendas_convenios").fetchone()
+    found = con.execute("SELECT dt_publicacao, convenente, valor FROM marts.emendas_convenios").fetchone()
     assert found is not None and str(found[0]) == "2025-01-06" and float(found[2]) == 1450000.0

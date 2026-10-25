@@ -7,10 +7,11 @@ with source as (
 renamed as (
 
     select
-        try_cast(id as bigint) as partido_id,
-        sigla,
+        try_cast(id as bigint) as id_partido,
+        regexp_replace(sigla, '\*+$', '') as sigla,
+        sigla as sigla_original,
         proper_name(nome) as nome,
-        _source_file_id as source_file_id
+        _source_file_id as id_captura
 
     from source
 

@@ -3,10 +3,10 @@
 -- não é o código do parlamentar na Câmara ou no Senado: por isso a emenda não é ligada a `pessoas`.
 select
     'transparencia' as fonte,
-    e.emenda_codigo,
+    e.cd_emenda,
     e.ano,
     e.tipo,
-    e.autor_codigo,
+    e.cd_autor,
     e.autor_nome,
     e.numero,
     e.localidade,
@@ -16,9 +16,9 @@ select
     e.regiao,
     e.funcao,
     e.subfuncao,
-    e.programa_codigo,
+    e.cd_programa,
     e.programa,
-    e.acao_codigo,
+    e.cd_acao,
     e.acao,
     e.plano_orcamentario,
     e.valor_empenhado,
@@ -27,8 +27,8 @@ select
     e.valor_restos_a_pagar_inscritos,
     e.valor_restos_a_pagar_cancelados,
     e.valor_restos_a_pagar_pagos,
-    cast(k.capturado_em as date) as capturado_em
+    cast(k.dt_captura as date) as dt_captura
 
 from {{ ref('stg_transparencia__emendas') }} as e
 
-left join {{ ref('stg_metadata__captures') }} as k on k.source_file_id = e.source_file_id
+left join {{ ref('stg_metadata__captures') }} as k on k.id_captura = e.id_captura

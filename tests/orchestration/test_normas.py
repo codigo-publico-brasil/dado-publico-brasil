@@ -9,8 +9,8 @@ Env = tuple[Connection, Settings]
 def test_catalog_has_every_norm_with_the_official_page_and_the_popular_name(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT tipo_sigla, numero, ano, assinada_em, apelido, ementa, ementa_oficial, fonte_url "
-        "FROM marts.normas WHERE norma_id = 1001"
+        "SELECT tipo_sigla, numero, ano, dt_assinatura, apelido, ementa, ementa_oficial, fonte_url "
+        "FROM marts.normas WHERE id_norma = 1001"
     ).fetchone()
     assert found is not None
     assert found[:2] == ("LEI-n", "14999") and found[2] == 2024 and str(found[3]) == "2024-06-28"
@@ -24,16 +24,16 @@ def test_only_laws_amendments_and_provisional_measures_are_detailed_and_a_missin
     full: Env,
 ) -> None:
     con, _ = full
-    detailed = {r["norma_id"] for r in rows(con, "SELECT DISTINCT norma_id FROM marts.normas_publicacoes")}
+    detailed = {r["id_norma"] for r in rows(con, "SELECT DISTINCT id_norma FROM marts.normas_publicacoes")}
     assert detailed == {1001, 1002, 579494}  # o decreto 1003 não entra; a emenda 1002 não tem relações ("")
-    assert scalar(con, "SELECT COUNT(*) FROM marts.normas_relacoes WHERE norma_id = 1002") == 0
+    assert scalar(con, "SELECT COUNT(*) FROM marts.normas_relacoes WHERE id_norma = 1002") == 0
 
 
 def test_relations_say_what_changed_each_norm_and_publications_say_where_it_came_out(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT tipo_relacao, norma_posterior_id, norma_posterior_nome, norma_posterior_assinada_em "
-        "FROM marts.normas_relacoes WHERE norma_id = 1001"
+        "SELECT tipo_relacao, id_norma_posterior, norma_posterior_nome, dt_norma_posterior_assinatura "
+        "FROM marts.normas_relacoes WHERE id_norma = 1001"
     ).fetchall()
     assert [(f[0], f[1], f[2], str(f[3])) for f in found] == [
         (
@@ -44,7 +44,7 @@ def test_relations_say_what_changed_each_norm_and_publications_say_where_it_came
         )
     ]
     publication = con.execute(
-        "SELECT tipo_sigla, publicada_em, pagina, coluna, tem_texto FROM marts.normas_publicacoes WHERE norma_id = 1001"
+        "SELECT tipo_sigla, dt_publicacao, pagina, coluna, fl_tem_texto FROM marts.normas_publicacoes WHERE id_norma = 1001"
     ).fetchone()
     assert publication is not None and (publication[0], str(publication[1]), publication[4]) == (
         "PUB",
@@ -56,7 +56,7 @@ def test_relations_say_what_changed_each_norm_and_publications_say_where_it_came
 def test_a_veto_points_to_the_vetoed_matter_and_to_the_norm_that_came_out(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT numero, ano, materia_vetada_sigla, materia_vetada_numero, norma_id, veto_total, recebido_em, "
+        "SELECT numero, ano, materia_vetada_sigla, materia_vetada_numero, id_norma, fl_veto_total, dt_recebimento, "
         "quantidade_dispositivos, fonte_url FROM marts.vetos"
     ).fetchall()
     assert len(found) == 1
@@ -77,8 +77,8 @@ def test_a_veto_points_to_the_vetoed_matter_and_to_the_norm_that_came_out(full: 
 def test_vetoed_provisions_keep_the_text_the_reason_and_the_decision_as_the_source_says(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT dispositivo_id, veto_id, texto_vetado, razao_veto, situacao, possui_votos, tipo_votacao, sessao_em "
-        "FROM marts.dispositivos_vetados ORDER BY dispositivo_id"
+        "SELECT id_dispositivo, id_veto, texto_vetado, razao_veto, situacao, fl_possui_votos, tipo_votacao, dt_sessao "
+        "FROM marts.vetos_dispositivos ORDER BY id_dispositivo"
     ).fetchall()
     assert [(f[0], f[1], f[4], f[5], f[6], str(f[7])) for f in found] == [
         (9001, 7001, "Rejeitado", True, "Painel", "2024-09-10"),
@@ -93,7 +93,7 @@ def test_vetoed_provisions_keep_the_text_the_reason_and_the_decision_as_the_sour
 def test_veto_votes_come_with_name_party_and_state_and_are_not_linked_to_people(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT casa, nome_parlamentar, partido, uf, voto FROM marts.votos_em_vetos ORDER BY casa, nome_parlamentar"
+        "SELECT casa, nome_parlamentar, partido, uf, voto FROM marts.vetos_votos ORDER BY casa, nome_parlamentar"
     ).fetchall()
     assert found == [
         ("Câmara", "Bia", "BBB", "RJ", "Sim"),
@@ -107,7 +107,7 @@ def test_veto_votes_come_with_name_party_and_state_and_are_not_linked_to_people(
 
 def test_the_norm_a_matter_generated_points_to_the_catalog(full: Env) -> None:
     con, _ = full
-    assert scalar(con, "SELECT COUNT(*) FROM marts.normas_geradas WHERE norma_id IS NOT NULL") >= 1
+    assert scalar(con, "SELECT COUNT(*) FROM marts.normas_geradas WHERE id_norma IS NOT NULL") >= 1
 
 
 def test_the_constitution_is_classified_with_the_context_of_each_provision(full: Env) -> None:

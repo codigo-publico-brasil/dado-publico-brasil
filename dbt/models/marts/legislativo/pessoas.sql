@@ -1,16 +1,16 @@
 with cadastro as (
 
     select
-        id_pessoa, fonte, nome, nome_civil, sexo, data_nascimento, data_falecimento, municipio_nascimento,
+        id_pessoa, fonte, nome, nome_civil, sexo, dt_nascimento, dt_falecimento, municipio_nascimento,
         uf_nascimento, foto_url, rede_social_url, site_url
-    from {{ ref('int_pessoas_unidas_ao_cadastro') }}
+    from {{ ref('int_pessoas_unidas_cadastro') }}
 
     union all
 
     select
-        id_pessoa, fonte, nome, nome_civil, sexo, data_nascimento, data_falecimento, municipio_nascimento,
+        id_pessoa, fonte, nome, nome_civil, sexo, dt_nascimento, dt_falecimento, municipio_nascimento,
         uf_nascimento, foto_url, rede_social_url, site_url
-    from {{ ref('int_pessoas_do_senado_unidas_ao_cadastro') }}
+    from {{ ref('int_pessoas_senado_unidas') }}
 
 ),
 
@@ -29,7 +29,7 @@ uma_por_pessoa as (
 
 capturas as (
 
-    select fonte, cast(max(capturado_em) as date) as capturado_em
+    select fonte, cast(max(dt_captura) as date) as dt_captura
 
     from {{ ref('stg_metadata__captures') }}
 
@@ -48,8 +48,8 @@ select
     lower(strip_accents(p.nome)) as nome_ordem,
     lower(strip_accents(p.nome || ' ' || coalesce(p.nome_civil, ''))) as nome_busca,
     p.sexo,
-    p.data_nascimento,
-    p.data_falecimento,
+    p.dt_nascimento,
+    p.dt_falecimento,
     p.municipio_nascimento,
     p.uf_nascimento,
     p.foto_url,
@@ -60,11 +60,11 @@ select
     pr.profissoes,
     a.ultimo_partido,
     a.ultima_uf,
-    a.ultimo_voto_em,
+    a.dt_ultimo_voto,
     -- autoria só existe para a Câmara: nas demais fontes é desconhecida (vazio), não zero
     if(p.fonte = '{{ var("source_camara") }}', coalesce(a.qtd_propostas, 0), null) as qtd_propostas,
     coalesce(a.qtd_votos, 0) as qtd_votos,
-    c.capturado_em
+    c.dt_captura
 
 from uma_por_pessoa as p
 

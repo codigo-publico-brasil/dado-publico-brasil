@@ -17,8 +17,8 @@ def test_raw_keeps_assets_and_votes_of_every_office_and_never_the_social_name(fu
 def test_assets_are_exposed_only_for_candidates_who_are_people_with_the_declared_value(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT p.nome, b.candidatura_id, b.ordem, b.tipo, b.valor FROM marts.bens_de_candidatos b "
-        "JOIN marts.pessoas p USING (id_pessoa) ORDER BY b.candidatura_id, b.ordem"
+        "SELECT p.nome, b.id_candidatura, b.ordem, b.tipo, b.valor FROM marts.candidaturas_bens b "
+        "JOIN marts.pessoas p USING (id_pessoa) ORDER BY b.id_candidatura, b.ordem"
     ).fetchall()
     assert [(f[0], f[1], f[2], f[3], float(f[4])) for f in found] == [
         ("Bia", "2022:RJ:1001", 1, "Casa", 150000.0),
@@ -32,7 +32,7 @@ def test_votes_are_summed_per_candidacy_and_the_annulled_ones_stay_out_of_the_va
     con, _ = full
     found = con.execute(
         "SELECT p.nome, v.cargo, v.uf, v.votos_nominais, v.votos_validos, v.municipios "
-        "FROM marts.votos_de_candidatos v JOIN marts.pessoas p USING (id_pessoa) ORDER BY v.candidatura_id"
+        "FROM marts.candidaturas_votos v JOIN marts.pessoas p USING (id_pessoa) ORDER BY v.id_candidatura"
     ).fetchall()
     assert found == [
         ("Bia", "Deputado federal", "RJ", 1770, 1750, 2),

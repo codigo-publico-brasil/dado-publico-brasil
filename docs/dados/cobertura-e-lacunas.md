@@ -81,9 +81,9 @@ Lacunas conhecidas, medidas ou registradas:
 - **Votação secreta** (1.782 das 3.389 votações e 96.075 dos 273.094 votos): a fonte não informa a escolha; o voto fica como `Votou`. `marts.votacoes.votacao_secreta` marca essas votações.
 - **Totais de Sim, Não e Abstenção** vêm vazios em parte das votações antigas. O teste `votacoes_com_total_sim_divergente` compara o total oficial com a contagem dos votos individuais, deixando de fora a votação secreta (não há Sim a contar): 13 votações, todas da Câmara.
 - **Sem nascimento, foto e redes** dos senadores: o arquivo de legislatura não as traz.
-- **Sem autoria nem situação das matérias**: exigem uma chamada por matéria; `autorias` e `situacao` ficam vazios para o Senado, e `pessoas.qtd_propostas` é vazio (não zero) para senadores.
+- **Sem autoria nem situação das matérias**: exigem uma chamada por matéria; `proposicoes_autorias` e `situacao` ficam vazios para o Senado, e `pessoas.qtd_propostas` é vazio (não zero) para senadores.
 - **Siglas de partidos sem evento conferido** (teste `partidos_encerrados_sem_linhagem`, 5 em 2026-10-23): PRTB, PSDC (o TSE deferiu a troca para Democracia Cristã, mas a data da decisão não foi encontrada), PTC, SD e SDD. A tabela só tem o que foi conferido numa página do TSE.
-- **Mandatos oficiais:** `marts.exercicios` traz titular e suplentes do Senado, com início, fim e causa de afastamento de cada período, como o Senado informa. `marts.mandatos` continua vindo dos votos observados, nas duas casas; a Câmara não publica o exercício.
+- **Mandatos oficiais:** `marts.mandatos_exercicios` traz titular e suplentes do Senado, com início, fim e causa de afastamento de cada período, como o Senado informa. `marts.mandatos` continua vindo dos votos observados, nas duas casas; a Câmara não publica o exercício.
 - **Quem foi deputado e senador tem duas chaves de pessoa**: a regra conservadora liga só por identificador oficial da própria fonte, nunca por nome.
 
 ## Datasets por item (amostra)
@@ -105,7 +105,7 @@ Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada 
 - **Nascimento ausente:** 971 pessoas sem data de nascimento, o que impede a ligação por esta regra. O detalhe de todos os 843 senadores foi obtido; o que falta não vem na fonte.
 - **Ambiguidade:** o teste `pessoas_ambiguas_entre_fontes` mede nome civil e nascimento repetidos dentro de uma fonte.
 - **Resultado da eleição de 2026:** vem como a fonte informa na data da carga; uma eleição recente pode ter resultado ainda não consolidado.
-- **Candidaturas sem voto (aviso):** 26 candidaturas de 2022 de pessoas do projeto não têm linha em `votos_de_candidatos` (eram 56 antes de excluir vice-governador e vice-presidente, que não recebem voto próprio: o voto é do titular). As 26 são resultados em branco ou candidaturas sem voto na fonte.
+- **Candidaturas sem voto (aviso):** 26 candidaturas de 2022 de pessoas do projeto não têm linha em `candidaturas_votos` (eram 56 antes de excluir vice-governador e vice-presidente, que não recebem voto próprio: o voto é do titular). As 26 são resultados em branco ou candidaturas sem voto na fonte.
 - **Ainda não carregados:** redes sociais, fotos, certidões, coligações e vagas.
 
 ## Normas, vetos e Constituição
@@ -140,7 +140,7 @@ Lacunas conhecidas, medidas ou registradas:
 | Votos de cada candidato por município e zona (todos os cargos) | `votacao` (por eleição) | **só 2022**: 9.377.845 linhas e 26.237 candidaturas no raw; 1.221 linhas de 1.206 pessoas do projeto nos marts |
 | Emendas parlamentares | `emendas` | 94.736 linhas, de 2014 a 2026 |
 | Convênios de emendas | `emendas_convenios` | 85.403 linhas |
-| Quem recebeu o dinheiro, como o portal publica (com sinalização de dado pessoal) | `emendas_favorecidos` | 828.419 linhas, todas; `contem_dado_pessoal` marca as de pessoa física e de CPF mascarado |
+| Quem recebeu o dinheiro, como o portal publica (com sinalização de dado pessoal) | `emendas_favorecidos` | 828.419 linhas, todas; `fl_contem_dado_pessoal` marca as de pessoa física e de CPF mascarado |
 
 Lacunas conhecidas, medidas ou registradas:
 
@@ -149,7 +149,7 @@ Lacunas conhecidas, medidas ou registradas:
 - **Candidaturas sem voto** (`candidaturas_sem_votos_carregados`, 26 em 2022): resultados em branco ou candidaturas sem votação na fonte. Suplentes de senador e vices não têm voto próprio e ficam de fora do teste.
 - **Votos e bens de quem não é pessoa do projeto** (deputados estaduais, governadores e candidatos sem ligação): ficam no staging, não nos marts.
 - **Emenda sem ligação a pessoa:** o autor vem pelo nome e por um código orçamentário que não é o do parlamentar. 15.962 emendas (as antigas, sobretudo) vêm sem autor (`emendas_sem_autor_conhecido`).
-- **Favorecido pessoa física:** entra como o portal publica, com CPF mascarado ([ADR 0017](../adr/0017-revisao-de-filtros-e-dados-pessoais.md)); a tabela, as colunas `favorecido` e `favorecido_codigo` e cada linha (`contem_dado_pessoal`) são sinalizadas como dado pessoal. Quem consome precisa tratar assim (LGPD).
+- **Favorecido pessoa física:** entra como o portal publica, com CPF mascarado ([ADR 0017](../adr/0017-revisao-de-filtros-e-dados-pessoais.md)); a tabela, as colunas `favorecido` e `cd_favorecido` e cada linha (`fl_contem_dado_pessoal`) são sinalizadas como dado pessoal. Quem consome precisa tratar assim (LGPD).
 - **Termos do portal:** as páginas de termos de uso e de dicionário de dados do Portal da Transparência pedem verificação anti-robô e não foram lidas; vale a licença de livre utilização do Decreto 8.777/2016.
 - **Despesas (empenhos) e TCU:** não carregados. O DOU está só no landing, de ago a out de 2026 ([ADR 0019](../adr/0019-dou-so-no-landing.md)); o TCU não tem licença aberta (ver o [catálogo de fontes](fontes-de-dados.md)).
 
@@ -160,9 +160,9 @@ Lacunas conhecidas, medidas ou registradas:
 | Senadores, votos e matérias do Senado | Senado Federal, dados abertos | outra casa legislativa |
 | Presidente, vice e ministros | TSE (candidaturas e eleitos), Planalto, DOU | pertencem ao Executivo |
 | Candidaturas, eleições e resultados | TSE | a Câmara só conhece quem tomou posse |
-| Filiação partidária por período | TSE | a Câmara só informa o partido **na data do voto**; mudanças de nome, fusões e incorporações dos partidos estão em `marts.linhagem_de_partidos` (curada, só o que foi conferido no TSE; faltam as siglas medidas por `partidos_encerrados_sem_linhagem`) |
+| Filiação partidária por período | TSE | a Câmara só informa o partido **na data do voto**; mudanças de nome, fusões e incorporações dos partidos estão em `marts.partidos_linhagem` (curada, só o que foi conferido no TSE; faltam as siglas medidas por `partidos_encerrados_sem_linhagem`) |
 | Lei, decreto ou medida provisória que resultou da proposição | Diário Oficial da União, API de legislação do Senado | a Câmara termina no trâmite; a norma publicada é outro documento (o catálogo de normas já está em `marts.normas`; falta ligar as proposições da Câmara) |
-| Sanção, veto e derrubada de veto | Senado/Congresso, DOU | acontecem depois da votação na Câmara (vetos desde 1994 em `marts.vetos` e `marts.dispositivos_vetados`) |
+| Sanção, veto e derrubada de veto | Senado/Congresso, DOU | acontecem depois da votação na Câmara (vetos desde 1994 em `marts.vetos` e `marts.vetos_dispositivos`) |
 | Emendas parlamentares e dinheiro público | Portal da Transparência, TCU | outro assunto (emendas já em `marts.emendas`; despesas e TCU não) |
 | Município de São Paulo | Câmara Municipal, Querido Diário | outro ente |
 | Decisões anteriores às séries digitais | curadoria manual, rotulada | não há dado estruturado |
@@ -170,7 +170,7 @@ Lacunas conhecidas, medidas ou registradas:
 ## 4. Limitações do carregamento atual
 
 - **Foto só para quem votou ou esteve em frente parlamentar.** O cadastro não traz foto; ela vem dos arquivos de votos e de frentes. Quem não aparece neles fica "sem foto"; o teste `pessoas_sem_foto` mede a lacuna.
-- **Mandato por votos observados.** Início e fim do mandato de cada pessoa ficam vazios, porque a fonte não os publica em lote (suplentes entram e saem no meio da legislatura). O mart traz, ao lado, as datas oficiais da legislatura (`legislatura_inicio`, `legislatura_fim`), que **não** são as do mandato (ver [identidade de pessoas](identidade-de-pessoas.md)).
+- **Mandato por votos observados.** Início e fim do mandato de cada pessoa ficam vazios, porque a fonte não os publica em lote (suplentes entram e saem no meio da legislatura). O mart traz, ao lado, as datas oficiais da legislatura (`dt_legislatura_inicio`, `dt_legislatura_fim`), que **não** são as do mandato (ver [identidade de pessoas](identidade-de-pessoas.md)).
 - **Órgãos citados e ausentes da lista de órgãos.** A composição cita 129 órgãos (como o Congresso Nacional e comissões especiais) que `orgaos.csv` não lista. As participações ficam, com a sigla informada na própria linha, e o teste de relação do dbt mede a lacuna.
 - **Participações em frentes sem deputado.** 256 linhas de coordenação antiga não identificam o deputado; ficam no staging e saem dos marts.
 - **Linhas repetidas com `dataFim` diferente.** Na composição de órgãos, a fonte traz às vezes a mesma participação duas vezes, uma aberta e outra encerrada. As duas são mantidas (o raw identifica a linha pelo conteúdo, `_row_hash`); quem consome deve considerar a encerrada.
@@ -178,7 +178,7 @@ Lacunas conhecidas, medidas ou registradas:
 - **Muitas proposições sem situação.** Nos arquivos da Câmara, uma parte grande das proposições vem sem a última situação. A página mostra o campo vazio.
 - **Divergência entre fontes oficiais.** A data de falecimento de um deputado consta no arquivo em lote e não na API de detalhe. As duas fontes são oficiais; o projeto usa o arquivo em lote e registra a divergência.
 - **O `merge` do dlt não apaga.** Se a Câmara remover uma linha de um arquivo, o raw mantém a linha antiga. O landing guarda os dois arquivos e o aviso `linhas_removidas` (`dado-publico observe`) conta as linhas de capturas anteriores que a atual não traz.
-- **Siglas em ementas.** A lista de siglas para preservar a caixa é aprendida de todas as ementas de caixa mista carregadas (modelo `int_siglas_em_ementas_extraidas`, mínimo de 3 ocorrências). Uma sigla que só apareça em ementas de caixa alta pode ser minusculizada.
+- **Siglas em ementas.** A lista de siglas para preservar a caixa é aprendida de todas as ementas de caixa mista carregadas (modelo `int_ementas_siglas_extraidas`, mínimo de 3 ocorrências). Uma sigla que só apareça em ementas de caixa alta pode ser minusculizada.
 
 ## 5. Onde estão os números atuais
 

@@ -5,12 +5,12 @@ with source as (
 )
 
 select
-    try_cast(_item as bigint) as senador_id,
+    try_cast(_item as bigint) as id_senador,
     proper_name(identificacao_parlamentar_nome_completo_parlamentar) as nome_civil,
-    try_cast(dados_basicos_parlamentar_data_nascimento as date) as nascimento,
+    try_cast(dados_basicos_parlamentar_data_nascimento as date) as dt_nascimento,
     dados_basicos_parlamentar_naturalidade as municipio_nascimento,
     dados_basicos_parlamentar_uf_naturalidade as uf_nascimento,
     identificacao_parlamentar_url_foto_parlamentar as foto_url,
-    _source_file_id as source_file_id
+    _source_file_id as id_captura
 
 from source

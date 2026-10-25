@@ -3,15 +3,15 @@
 -- provisórias e a Constituição). Uma linha por norma, ato posterior e tipo de relação.
 select
     '{{ var("source_senado") }}' as fonte,
-    r.norma_id,
+    r.id_norma,
     r.tipo_relacao,
-    r.norma_posterior_id,
+    r.id_norma_posterior,
     r.norma_posterior_nome,
-    r.norma_posterior_assinada_em,
-    r.publicada_em,
+    r.dt_norma_posterior_assinatura,
+    r.dt_publicacao,
     r.publicacao,
-    cast(c.capturado_em as date) as capturado_em
+    cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_senado__normas_relacoes') }} as r
 
-left join {{ ref('stg_metadata__captures') }} as c on c.source_file_id = r.source_file_id
+left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = r.id_captura

@@ -10,9 +10,9 @@ with pessoas as (
 
     select *
 
-    from {{ ref('int_pessoas_para_vinculo') }}
+    from {{ ref('int_pessoas_vinculo') }}
 
-    where nome_chave is not null and nascimento is not null
+    where nome_chave is not null and dt_nascimento is not null
 
 ),
 
@@ -20,13 +20,13 @@ chaves as (
 
     select
         nome_chave,
-        nascimento,
+        dt_nascimento,
         max(id_na_fonte) filter (where fonte = '{{ var("source_camara") }}') as id_camara,
         max(id_na_fonte) filter (where fonte = '{{ var("source_senado") }}') as id_senado
 
     from pessoas
 
-    group by nome_chave, nascimento
+    group by nome_chave, dt_nascimento
 
     having count(*) filter (where fonte = '{{ var("source_camara") }}') <= 1
        and count(*) filter (where fonte = '{{ var("source_senado") }}') <= 1
@@ -37,25 +37,25 @@ candidaturas as (
 
     select
         ano_eleicao,
-        candidatura_id,
+        id_candidatura,
         name_key(nome) as nome_chave,
-        nascimento
+        dt_nascimento
 
     from {{ ref('stg_tse__candidaturas') }}
 
-    where nome is not null and nascimento is not null
+    where nome is not null and dt_nascimento is not null
 
-    qualify count(distinct candidatura_id) over (partition by ano_eleicao, name_key(nome), nascimento) = 1
+    qualify count(distinct id_candidatura) over (partition by ano_eleicao, name_key(nome), dt_nascimento) = 1
 
 )
 
 select
     '{{ var("source_camara") }}' as origem_fonte,
     '{{ var("id_type_camara") }}' as origem_tipo,
-    id_camara as origem_id,
+    id_camara as id_origem,
     '{{ var("source_senado") }}' as destino_fonte,
     '{{ var("id_type_senado") }}' as destino_tipo,
-    id_senado as destino_id,
+    id_senado as id_destino,
     'nome civil e data de nascimento iguais e únicos' as metodo
 
 from chaves
@@ -67,7 +67,7 @@ union all
 select distinct
     '{{ var("source_tse") }}',
     '{{ var("id_type_tse") }}',
-    c.candidatura_id,
+    c.id_candidatura,
     if(k.id_camara is not null, '{{ var("source_camara") }}', '{{ var("source_senado") }}'),
     if(k.id_camara is not null, '{{ var("id_type_camara") }}', '{{ var("id_type_senado") }}'),
     coalesce(k.id_camara, k.id_senado),
@@ -75,17 +75,17 @@ select distinct
 
 from candidaturas as c
 
-inner join chaves as k on k.nome_chave = c.nome_chave and k.nascimento = c.nascimento
+inner join chaves as k on k.nome_chave = c.nome_chave and k.dt_nascimento = c.dt_nascimento
 
 union all
 
 select
     origem_fonte,
     origem_tipo,
-    origem_id,
+    id_origem,
     destino_fonte,
     destino_tipo,
-    destino_id,
-    'vínculo aprovado por ' || aprovado_por || ' em ' || aprovado_em
+    id_destino,
+    'vínculo aprovado por ' || aprovado_por || ' em ' || dt_aprovacao
 
 from {{ ref('vinculos_aprovados') }}

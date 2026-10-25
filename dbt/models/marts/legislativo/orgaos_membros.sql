@@ -1,12 +1,12 @@
 select
     '{{ var("source_camara") }}' as fonte,
-    orgao_id,
+    id_orgao,
     orgao_sigla,
     id_pessoa,
     cargo,
     partido_sigla as partido,
     uf_sigla as uf,
-    inicio,
-    fim
+    dt_inicio,
+    dt_fim
 
-from {{ ref('int_orgaos_membros_ligados_a_pessoas') }}
+from {{ ref('int_orgaos_membros_ligados') }}

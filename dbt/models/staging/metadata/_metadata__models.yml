@@ -4,5 +4,11 @@ models:
   - name: stg_metadata__captures
     description: Capturas dos arquivos da fonte (um arquivo, uma linha). `source_file_id` liga as linhas do raw ao arquivo.
     columns:
-      - name: source_file_id
-        tests: [unique, not_null]
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data.", tests: ["unique", "not_null"]}
+      - {name: fonte, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
+      - {name: dataset, description: "Nome do dataset de origem do registro."}
+      - {name: ano, description: "Ano do evento."}
+      - {name: url, description: "Endereço (URL) do registro ou do arquivo na fonte."}
+      - {name: sha256, description: "Impressão digital (SHA-256) do arquivo capturado: prova que o arquivo guardado é o mesmo que a fonte entregou."}
+      - {name: dt_captura, description: "Data da captura do cadastro de deputados."}
+      - {name: dt_verificacao, description: "Data em que o registro foi verificado."}

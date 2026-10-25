@@ -65,6 +65,26 @@ def test_the_reader_role_can_select_and_nothing_stays_in_the_staging_schema(
 
 
 @needs_postgres
+def test_every_published_table_and_column_carries_its_description(
+    full: tuple[Connection, Settings], service: duckdb.DuckDBPyConnection
+) -> None:
+    run(full)
+    tables_without = query(
+        service,
+        "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+        "WHERE n.nspname = 'marts' AND c.relkind = 'r' AND obj_description(c.oid) IS NULL",
+    )
+    columns_without = query(
+        service,
+        "SELECT c.relname || '.' || a.attname FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid "
+        "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'marts' AND c.relkind = 'r' "
+        "AND a.attnum > 0 AND NOT a.attisdropped AND col_description(a.attrelid, a.attnum) IS NULL",
+    )
+    assert (tables_without, columns_without) == ([], [])
+    assert query(service, "SELECT obj_description('marts.pessoas'::regclass)")[0][0]
+
+
+@needs_postgres
 def test_publishing_again_replaces_the_marts_without_duplicating_rows(
     full: tuple[Connection, Settings], service: duckdb.DuckDBPyConnection
 ) -> None:

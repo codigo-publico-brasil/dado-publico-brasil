@@ -10,7 +10,7 @@ with classificadas as (
         ordem,
         linha,
         emenda_do_arquivo,
-        source_file_id,
+        id_captura,
         case
             when ordem = 1 then 'cabeçalho do arquivo'
             when linha = 'PREÂMBULO' then 'preâmbulo'
@@ -143,8 +143,8 @@ select
     f.linha as texto,
     f.emenda_do_arquivo as atualizada_ate_emenda,
     'https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988' as fonte_url,
-    cast(c.capturado_em as date) as capturado_em
+    cast(c.dt_captura as date) as dt_captura
 
 from final as f
 
-left join {{ ref('stg_metadata__captures') }} as c on c.source_file_id = f.source_file_id
+left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = f.id_captura

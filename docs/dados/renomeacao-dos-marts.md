@@ -2,7 +2,7 @@
 
 Para quem consome os dados (aplicações e pessoas que auditam): o nome antigo e o novo de cada tabela e coluna dos marts. Regra em [convenção de nomes](../engenharia/convencao-de-nomes.md); decisão no [ADR 0022](../adr/0022-convencao-de-nomes-e-descricoes.md).
 
-**Estado: proposta para aprovação.** Ainda não aplicada: os marts continuam com os nomes antigos.
+**Estado: aplicada em 25/10/2026.** Os marts já têm os nomes novos; esta lista serve para quem ainda lê os nomes antigos.
 
 ## Tabelas
 
@@ -68,27 +68,35 @@ Só as colunas que mudam; as demais ficam como estão.
 
 | Antes | Depois |
 | --- | --- |
+| `emenda_codigo` | `cd_emenda` |
+| `autor_codigo` | `cd_autor` |
+| `programa_codigo` | `cd_programa` |
+| `acao_codigo` | `cd_acao` |
 | `capturado_em` | `dt_captura` |
 
-25 colunas sem mudança.
+21 colunas sem mudança.
 
 ### `emendas_convenios`
 
 | Antes | Depois |
 | --- | --- |
+| `emenda_codigo` | `cd_emenda` |
 | `publicado_em` | `dt_publicacao` |
 | `capturado_em` | `dt_captura` |
 
-10 colunas sem mudança.
+9 colunas sem mudança.
 
 ### `emendas_favorecidos`
 
 | Antes | Depois |
 | --- | --- |
+| `emenda_codigo` | `cd_emenda` |
+| `autor_codigo` | `cd_autor` |
+| `favorecido_codigo` | `cd_favorecido` |
 | `contem_dado_pessoal` | `fl_contem_dado_pessoal` |
 | `capturado_em` | `dt_captura` |
 
-15 colunas sem mudança.
+12 colunas sem mudança.
 
 ### `frentes`
 
@@ -339,10 +347,28 @@ Só as colunas que mudam; as demais ficam como estão.
 
 5 colunas sem mudança.
 
-## Decisões em aberto
+## Intermediate e seeds
 
-- **Códigos da fonte** (`emendas.emenda_codigo`, `emendas.autor_codigo`, `emendas.programa_codigo`, `emendas.acao_codigo`, `emendas_convenios.emenda_codigo`, `emendas_favorecidos.emenda_codigo`, `emendas_favorecidos.autor_codigo`, `emendas_favorecidos.favorecido_codigo`): ficam como estão até haver decisão. Proposta: prefixo `cd_` (`cd_emenda`, `cd_autor`...), por serem códigos da fonte, e não chaves nossas.
-- **`emendas`:** continua com o nome, porque o tema é a emenda parlamentar orçamentária; `constituicao_alteracoes` cobre as emendas constitucionais.
-- **`orgaos`:** continua com o nome; a descrição diz que são órgãos legislativos (Câmara e Senado).
-- **`normas_geradas`:** já tem o tema na frente (normas) e continua; a descrição diz que são normas geradas por matérias do Senado.
-- **Colunas `fonte`, `fonte_url` e `fontes`:** não têm prefixo de tipo e continuam como estão, por serem o contrato de proveniência do projeto.
+O staging e o intermediate seguem a mesma regra de colunas (por exemplo, `partido_id` virou `id_partido`, `votou_em` virou `dt_voto`, `source_file_id` virou `id_captura`). As tabelas do intermediate e dos seeds que mudaram de nome:
+
+| Antes | Depois |
+| --- | --- |
+| `eventos_de_partidos` | `partidos_eventos` |
+| `int_autorias_ligadas_a_pessoas` | `int_proposicoes_autorias_ligadas` |
+| `int_deputados_fotos_das_frentes` | `int_deputados_frentes_fotos` |
+| `int_deputados_nos_votos_agregados` | `int_deputados_votos_agregados` |
+| `int_frentes_membros_ligados_a_pessoas` | `int_frentes_membros_ligados` |
+| `int_materias_do_senado_unicas` | `int_senado_materias_unicas` |
+| `int_orgaos_membros_ligados_a_pessoas` | `int_orgaos_membros_ligados` |
+| `int_pessoas_do_senado_unidas_ao_cadastro` | `int_pessoas_senado_unidas` |
+| `int_pessoas_para_vinculo` | `int_pessoas_vinculo` |
+| `int_pessoas_unidas_ao_cadastro` | `int_pessoas_unidas_cadastro` |
+| `int_siglas_em_ementas_extraidas` | `int_ementas_siglas_extraidas` |
+| `int_votos_ligados_a_pessoas` | `int_votacoes_votos_ligados` |
+
+## Decisões tomadas
+
+- **Códigos da fonte** (`emenda_codigo`, `autor_codigo`, `programa_codigo`, `acao_codigo`, `favorecido_codigo`) levam o prefixo `cd_` (`cd_emenda`, `cd_autor`...): são códigos que a fonte usa, e não chaves nossas.
+- **`emendas`, `orgaos` e `normas_geradas`** mantêm o nome: o tema já está na frente, e a descrição diz o que são (emendas parlamentares orçamentárias; órgãos legislativos; normas geradas por matérias do Senado).
+- **`fonte`, `fonte_url` e `fontes`** não levam prefixo de tipo e continuam como estão, por serem o contrato de proveniência do projeto.
+- **`identity` e `metadata`** (tabelas de controle criadas em `ddl/`) ainda têm nomes em inglês (`created_at`, `source`...) e foram só descritas; renomeá-las fica para outra etapa.

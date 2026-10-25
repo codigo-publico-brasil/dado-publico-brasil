@@ -6,20 +6,20 @@ select
     v.id_pessoa,
     if(v.fonte = '{{ var("source_senado") }}', 'Senador', 'Deputado federal') as cargo,
     if(v.fonte = '{{ var("source_senado") }}', 'Senado Federal', 'Câmara dos Deputados') as casa,
-    v.legislatura_id,
-    arg_max(v.uf_sigla, v.votou_em) as uf,
-    cast(null as date) as inicio,
-    cast(null as date) as fim,
-    min(v.votou_em) as primeiro_voto_observado_em,
-    max(v.votou_em) as ultimo_voto_observado_em,
+    v.id_legislatura,
+    arg_max(v.uf_sigla, v.dt_voto) as uf,
+    cast(null as date) as dt_inicio,
+    cast(null as date) as dt_fim,
+    min(v.dt_voto) as dt_primeiro_voto_observado,
+    max(v.dt_voto) as dt_ultimo_voto_observado,
     'votos observados' as base,
-    any_value(l.inicio) as legislatura_inicio,
-    any_value(l.fim) as legislatura_fim
+    any_value(l.dt_inicio) as dt_legislatura_inicio,
+    any_value(l.dt_fim) as dt_legislatura_fim
 
-from {{ ref('int_votos_ligados_a_pessoas') }} as v
+from {{ ref('int_votacoes_votos_ligados') }} as v
 
-left join {{ ref('stg_camara__legislaturas') }} as l on l.legislatura_id = v.legislatura_id
+left join {{ ref('stg_camara__legislaturas') }} as l on l.id_legislatura = v.id_legislatura
 
-where v.legislatura_id is not null
+where v.id_legislatura is not null
 
-group by v.fonte, v.id_pessoa, v.legislatura_id
+group by v.fonte, v.id_pessoa, v.id_legislatura

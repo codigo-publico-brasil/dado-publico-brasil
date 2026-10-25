@@ -4,6 +4,6 @@ select
     id_pessoa_absorvida,
     id_pessoa_sobrevivente,
     metodo,
-    fundida_em
+    dt_fusao
 
 from {{ ref('stg_identity__pessoa_fusoes') }}

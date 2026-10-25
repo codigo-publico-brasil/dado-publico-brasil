@@ -26,16 +26,16 @@ def resolve(con: Connection) -> tuple[int, int]:
     with runs.track(con, "identity") as run:
         con.execute(
             "CREATE OR REPLACE TEMP TABLE new_people AS "
-            "SELECT nextval('identity.seq_pessoa') AS id_pessoa, s.fonte, s.tipo_id, s.id_na_fonte "
+            "SELECT nextval('identity.seq_pessoa') AS id_pessoa, s.fonte, s.id_tipo, s.id_na_fonte "
             f"FROM {SEEN} s WHERE NOT EXISTS ("
             "SELECT 1 FROM identity.pessoa_identificador i "
-            "WHERE i.source = s.fonte AND i.id_type = s.tipo_id AND i.source_id = s.id_na_fonte)"
+            "WHERE i.source = s.fonte AND i.id_type = s.id_tipo AND i.source_id = s.id_na_fonte)"
         )
         moment = runs.now()
         con.execute("INSERT INTO identity.pessoa SELECT id_pessoa, ? FROM new_people", (moment,))
         con.execute(
             "INSERT INTO identity.pessoa_identificador "
-            "SELECT fonte, tipo_id, id_na_fonte, id_pessoa, ?, ?, ? FROM new_people",
+            "SELECT fonte, id_tipo, id_na_fonte, id_pessoa, ?, ?, ? FROM new_people",
             (METHOD, CONFIRMED_BY, moment),
         )
         _link(con, moment)
@@ -51,8 +51,8 @@ def _same(alias: str, *columns: str) -> str:
 
 def _link(con: Connection, moment: str) -> None:
     """Aplica os vínculos propostos: funde as chaves que são a mesma pessoa e liga as candidaturas."""
-    origin = _same("a", "origem_fonte", "origem_tipo", "origem_id")
-    target = _same("b", "destino_fonte", "destino_tipo", "destino_id")
+    origin = _same("a", "origem_fonte", "origem_tipo", "id_origem")
+    target = _same("b", "destino_fonte", "destino_tipo", "id_destino")
     con.execute(
         "CREATE OR REPLACE TEMP TABLE fusions AS "
         "SELECT least(a.id_pessoa, b.id_pessoa) AS survivor, greatest(a.id_pessoa, b.id_pessoa) AS absorbed, "
@@ -72,11 +72,11 @@ def _link(con: Connection, moment: str) -> None:
     con.execute(
         f"DELETE FROM {BRIDGE} WHERE source = 'tse' AND NOT EXISTS ("
         f"SELECT 1 FROM {LINKS} v WHERE v.origem_fonte = 'tse' AND v.origem_tipo = {BRIDGE}.id_type "
-        f"AND v.origem_id = {BRIDGE}.source_id)"
+        f"AND v.id_origem = {BRIDGE}.source_id)"
     )
     con.execute(
         f"INSERT INTO {BRIDGE} "
-        "SELECT v.origem_fonte, v.origem_tipo, v.origem_id, b.id_pessoa, v.metodo, ?, ? "
+        "SELECT v.origem_fonte, v.origem_tipo, v.id_origem, b.id_pessoa, v.metodo, ?, ? "
         f"FROM {LINKS} v JOIN {BRIDGE} b ON {target} WHERE v.origem_fonte = 'tse' AND NOT EXISTS "
         f"(SELECT 1 FROM {BRIDGE} a WHERE {origin})",
         (CONFIRMED_BY, moment),

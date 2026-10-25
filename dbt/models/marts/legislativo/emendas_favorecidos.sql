@@ -2,14 +2,14 @@
 -- (cidadão comum, com CPF mascarado): `contem_dado_pessoal` marca essas linhas para quem consome decidir como mostrá-las.
 select
     'transparencia' as fonte,
-    f.emenda_codigo,
-    f.autor_codigo,
+    f.cd_emenda,
+    f.cd_autor,
     f.autor_nome,
     f.numero,
     f.tipo,
     f.ano,
     f.mes,
-    f.favorecido_codigo,
+    f.cd_favorecido,
     f.favorecido,
     f.natureza_juridica,
     f.tipo_favorecido,
@@ -17,12 +17,12 @@ select
     f.municipio,
     f.valor,
     (
-        f.favorecido_codigo like '%*%'
+        f.cd_favorecido like '%*%'
         or lower(f.tipo_favorecido) like 'pessoa f%'
         or f.tipo_favorecido like 'Inscri%'
-    ) as contem_dado_pessoal,
-    cast(k.capturado_em as date) as capturado_em
+    ) as fl_contem_dado_pessoal,
+    cast(k.dt_captura as date) as dt_captura
 
 from {{ ref('stg_transparencia__emendas_favorecidos') }} as f
 
-left join {{ ref('stg_metadata__captures') }} as k on k.source_file_id = f.source_file_id
+left join {{ ref('stg_metadata__captures') }} as k on k.id_captura = f.id_captura

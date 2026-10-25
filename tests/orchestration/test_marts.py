@@ -14,8 +14,8 @@ def test_person_has_counts_last_party_search_keys_and_standardized_names(
     con, _ = full
     row = con.execute(
         "SELECT nome, nome_civil, nome_ordem, nome_busca, qtd_propostas, qtd_votos, ultimo_partido, "
-        "ultima_uf, profissoes, primeira_legislatura_com_voto, foto_url, data_nascimento, "
-        "capturado_em IS NOT NULL FROM marts.pessoas WHERE nome = 'Ana Árvore'"
+        "ultima_uf, profissoes, primeira_legislatura_com_voto, foto_url, dt_nascimento, "
+        "dt_captura IS NOT NULL FROM marts.pessoas WHERE nome = 'Ana Árvore'"
     ).fetchone()
     assert row is not None
     assert tuple(row[:12]) == (
@@ -41,7 +41,7 @@ def test_proposition_keeps_official_and_standardized_summary_and_the_source_url(
     con, _ = full
     assert con.execute(
         "SELECT sigla, ementa, ementa_oficial, situacao, fonte_url FROM marts.proposicoes "
-        "WHERE proposicao_id = '102'"
+        "WHERE id_proposicao = '102'"
     ).fetchone() == (
         "PL 9/2019",
         "Requer o desarquivamento de proposições.",
@@ -50,7 +50,7 @@ def test_proposition_keeps_official_and_standardized_summary_and_the_source_url(
         "https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=102",
     )
     assert con.execute(
-        "SELECT situacao, orgao_ultimo_status FROM marts.proposicoes WHERE proposicao_id = '100'"
+        "SELECT situacao, orgao_ultimo_status FROM marts.proposicoes WHERE id_proposicao = '100'"
     ).fetchone() == ("Aguardando Parecer", "CCJC")
 
 
@@ -60,18 +60,18 @@ def test_authorship_counts_the_authors_and_leaves_out_authors_that_are_not_peopl
     con, _ = full
     ana = person_id(con, "Ana Árvore")
     rows = con.execute(
-        "SELECT proposicao_id, ordem_assinatura, qtd_autores, proponente FROM marts.autorias "
-        "WHERE id_pessoa = ? ORDER BY proposicao_id",
+        "SELECT id_proposicao, ordem_assinatura, qtd_autores, proponente FROM marts.proposicoes_autorias "
+        "WHERE id_pessoa = ? ORDER BY id_proposicao",
         (ana,),
     ).fetchall()
     assert rows == [("100", 1, 3, 1), ("101", 1, 2, 1), ("102", 1, 1, 1), ("999", 1, 1, 1)]
     senate = con.execute(
-        "SELECT COUNT(*) FROM intermediate.int_autorias_ligadas_a_pessoas "
-        "WHERE proposicao_id = 100 AND id_pessoa IS NULL AND nome_autor = 'Senado Federal'"
+        "SELECT COUNT(*) FROM intermediate.int_proposicoes_autorias_ligadas "
+        "WHERE id_proposicao = 100 AND id_pessoa IS NULL AND nome_autor = 'Senado Federal'"
     ).fetchone()
     assert senate == (1,)
     kept = con.execute(
-        "SELECT COUNT(*) FROM marts.autorias WHERE proposicao_id = '100' AND id_pessoa IS NULL AND nome_autor = 'Senado Federal'"
+        "SELECT COUNT(*) FROM marts.proposicoes_autorias WHERE id_proposicao = '100' AND id_pessoa IS NULL AND nome_autor = 'Senado Federal'"
     ).fetchone()
     assert kept == (1,)  # o autor que não é pessoa fica no mart, sem id_pessoa
 
@@ -82,7 +82,7 @@ def test_voting_lists_the_propositions_and_the_official_result(
     con, _ = full
     assert con.execute(
         "SELECT descricao, aprovada, votos_sim, votos_nao, proposicoes FROM marts.votacoes "
-        "WHERE votacao_id = '100-1'"
+        "WHERE id_votacao = '100-1'"
     ).fetchone() == ("Aprovada a PEC.", 1, 2, 1, "PEC 5/2024")
 
 
@@ -90,7 +90,7 @@ def test_votes_carry_the_party_and_state_of_the_day(full: tuple[Connection, Sett
     con, _ = full
     ana = person_id(con, "Ana Árvore")
     assert con.execute(
-        "SELECT voto, partido, uf FROM marts.votos WHERE id_pessoa = ? ORDER BY votou_em DESC",
+        "SELECT voto, partido, uf FROM marts.votacoes_votos WHERE id_pessoa = ? ORDER BY dt_voto DESC",
         (ana,),
     ).fetchall() == [("Não", "BBB", "SP"), ("Sim", "AAA", "SP")]
 
@@ -101,7 +101,7 @@ def test_mandate_comes_from_observed_votes_and_official_dates_stay_empty(
     con, _ = full
     ana = person_id(con, "Ana Árvore")
     row = con.execute(
-        "SELECT cargo, casa, legislatura_id, uf, inicio, fim, base FROM marts.mandatos WHERE id_pessoa = ?",
+        "SELECT cargo, casa, id_legislatura, uf, dt_inicio, dt_fim, base FROM marts.mandatos WHERE id_pessoa = ?",
         (ana,),
     ).fetchone()
     assert row == (
@@ -129,45 +129,45 @@ def test_every_warehouse_table_of_the_marts_has_a_declared_contract(
 ) -> None:
     con, _ = full
     assert tables(con, "marts") == [
-        "autorias",
-        "bens_de_candidatos",
         "candidaturas",
+        "candidaturas_bens",
+        "candidaturas_votos",
         "constituicao_alteracoes",
         "constituicao_dispositivos",
-        "dispositivos_vetados",
         "emendas",
         "emendas_convenios",
         "emendas_favorecidos",
-        "exercicios",
         "frentes",
-        "fusoes_de_pessoas",
+        "frentes_membros",
         "legislaturas",
-        "linhagem_de_partidos",
         "mandatos",
-        "membros_de_frentes",
-        "membros_de_orgaos",
+        "mandatos_exercicios",
         "normas",
         "normas_geradas",
         "normas_publicacoes",
         "normas_relacoes",
-        "ocupacoes",
         "orgaos",
+        "orgaos_membros",
         "partidos",
+        "partidos_linhagem",
         "pessoas",
+        "pessoas_fusoes",
+        "pessoas_ocupacoes",
         "proposicoes",
-        "tramitacoes",
+        "proposicoes_autorias",
+        "proposicoes_tramitacoes",
         "vetos",
+        "vetos_dispositivos",
+        "vetos_votos",
         "votacoes",
-        "votos",
-        "votos_de_candidatos",
-        "votos_em_vetos",
+        "votacoes_votos",
     ]
-    assert columns(con, "marts", "votos") == [
+    assert columns(con, "marts", "votacoes_votos") == [
         "fonte",
         "id_pessoa",
-        "votacao_id",
+        "id_votacao",
         "voto",
-        "votou_em",
+        "dt_voto",
         "partido",
         "uf",
     ]
@@ -178,12 +178,12 @@ def test_descriptions_are_persisted_in_the_warehouse_for_tables_and_columns(
 ) -> None:
     con, _ = full
     table = scalar(
-        con, "SELECT comment FROM duckdb_tables() WHERE schema_name='marts' AND table_name='votos'"
+        con, "SELECT comment FROM duckdb_tables() WHERE schema_name='marts' AND table_name='votacoes_votos'"
     )
     column = scalar(
         con,
         "SELECT comment FROM duckdb_columns() "
-        "WHERE schema_name='marts' AND table_name='votos' AND column_name='votacao_id'",
+        "WHERE schema_name='marts' AND table_name='votacoes_votos' AND column_name='id_votacao'",
     )
     assert table and "Voto de cada pessoa" in table
     assert column
@@ -195,8 +195,8 @@ def test_organs_and_fronts_link_members_to_people_and_report_unknown_deputies(
     con, _ = full
     assert scalar(con, "SELECT count(*) FROM marts.orgaos") == 2
     members = con.execute(
-        "SELECT p.nome, m.cargo, m.fim FROM marts.membros_de_orgaos m JOIN marts.pessoas p USING (id_pessoa) "
-        "ORDER BY p.nome, m.fim NULLS FIRST"
+        "SELECT p.nome, m.cargo, m.dt_fim FROM marts.orgaos_membros m JOIN marts.pessoas p USING (id_pessoa) "
+        "ORDER BY p.nome, m.dt_fim NULLS FIRST"
     ).fetchall()
     # as duas linhas distintas da fonte para a mesma pessoa e cargo são mantidas; o deputado 99 fica de fora
     assert [(r[0], r[1]) for r in members] == [("Ana Árvore", "Presidente")] * 2 + [("Bia", "Titular")]
@@ -204,7 +204,7 @@ def test_organs_and_fronts_link_members_to_people_and_report_unknown_deputies(
         "SELECT titulo, situacao, id_pessoa_coordenador IS NOT NULL FROM marts.frentes"
     ).fetchall()
     assert front == [("Frente X", "Em andamento", True)]
-    assert scalar(con, "SELECT count(*) FROM marts.membros_de_frentes") == 2
+    assert scalar(con, "SELECT count(*) FROM marts.frentes_membros") == 2
 
 
 def test_official_legislature_dates_do_not_become_the_mandate_dates(
@@ -212,7 +212,7 @@ def test_official_legislature_dates_do_not_become_the_mandate_dates(
 ) -> None:
     con, _ = full
     row = con.execute(
-        "SELECT inicio, fim, legislatura_inicio, legislatura_fim FROM marts.mandatos WHERE legislatura_id = 57 LIMIT 1"
+        "SELECT dt_inicio, dt_fim, dt_legislatura_inicio, dt_legislatura_fim FROM marts.mandatos WHERE id_legislatura = 57 LIMIT 1"
     ).fetchone()
     assert row is not None
     assert row[0] is None and row[1] is None
@@ -231,14 +231,14 @@ def test_party_lineage_comes_from_the_curated_table_and_every_event_cites_the_of
 ) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT sigla_anterior, sigla_posterior, tipo, ano FROM marts.linhagem_de_partidos "
+        "SELECT sigla_anterior, sigla_posterior, tipo, ano FROM marts.partidos_linhagem "
         "WHERE sigla_anterior = 'PMDB'"
     ).fetchall()
     assert found == [("PMDB", "MDB", "mudança de nome", 2018)]
     assert (
         scalar(
             con,
-            "SELECT COUNT(*) FROM marts.linhagem_de_partidos WHERE fonte_url NOT LIKE 'https://%tse.jus.br/%'",
+            "SELECT COUNT(*) FROM marts.partidos_linhagem WHERE fonte_url NOT LIKE 'https://%tse.jus.br/%'",
         )
         == 0
     )

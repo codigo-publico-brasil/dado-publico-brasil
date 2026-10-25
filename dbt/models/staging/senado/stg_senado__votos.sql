@@ -11,13 +11,13 @@ votacoes as (
 )
 
 select
-    try_cast(votacoes.codigo_sessao_votacao as bigint) as votacao_id,
-    try_cast(votos.codigo_parlamentar as bigint) as senador_id,
+    try_cast(votacoes.codigo_sessao_votacao as bigint) as id_votacao,
+    try_cast(votos.codigo_parlamentar as bigint) as id_senador,
     proper_name(votos.nome_parlamentar) as nome,
     votos.sigla_voto_parlamentar as voto,
     votos.sigla_partido_parlamentar as partido_sigla,
     votos.sigla_uf_parlamentar as uf_sigla,
-    votacoes._source_file_id as source_file_id
+    votacoes._source_file_id as id_captura
 
 from votos
 

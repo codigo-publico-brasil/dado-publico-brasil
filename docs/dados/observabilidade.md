@@ -9,7 +9,7 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 | Monitor da fonte | Fonte fora do ar, coluna que sumiu ou apareceu (`schema`, `schema_mudou`), queda de volume | `metadata.source_checks` |
 | Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`); linhas de capturas anteriores que a atual não traz (`linhas_removidas`) | `metadata.source_checks` |
 | Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.dbt_results` |
-| Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam; nas marts com data de evento (`votacoes`, `votos`, `proposicoes`, `normas`, `emendas_convenios`), volume por dia com sazonalidade de dia da semana e frescor (a fonte parou de atualizar) | `metadata.dbt_results` e esquema `elementary` |
+| Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam; nas marts com data de evento (`votacoes`, `votacoes_votos`, `proposicoes`, `normas`, `emendas_convenios`), volume por dia com sazonalidade de dia da semana e frescor (a fonte parou de atualizar) | `metadata.dbt_results` e esquema `elementary` |
 | Relatório e alerta | Junta tudo, falha se houver problema e envia por e-mail | `dado-publico observe` |
 | Dagster | A saúde de cada fonte e da carga aparece como a verificação `saude_da_fonte` de cada tabela do raw (erro vira falha, aviso vira aviso); o sensor `falha_de_execucao` manda e-mail quando qualquer execução falha | interface do Dagster |
 

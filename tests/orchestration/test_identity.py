@@ -55,7 +55,7 @@ def test_a_deputy_seen_only_in_the_votes_also_becomes_a_person(
 ) -> None:
     con, _ = full
     assert con.execute(
-        "SELECT p.nome, p.data_nascimento, p.foto_url FROM marts.pessoas p "
+        "SELECT p.nome, p.dt_nascimento, p.foto_url FROM marts.pessoas p "
         "JOIN identity.pessoa_identificador i USING (id_pessoa) WHERE i.source_id = '12'"
     ).fetchone() == ("Caio", None, None)
 

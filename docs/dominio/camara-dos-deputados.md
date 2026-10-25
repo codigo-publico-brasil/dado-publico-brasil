@@ -74,7 +74,7 @@ O campo `situacao` é a **última situação registrada**, por exemplo "Aguardan
 
 ### Andamentos (tramitação)
 
-A tramitação completa (cada andamento, com data, órgão, regime, situação e o texto do despacho) não existe em arquivo em lote: a plataforma a busca na API, **uma chamada por proposição**, e só das que podem virar norma: PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC (requerimentos, pareceres e emendas ficam de fora). A busca roda sob pedido (`--foreach`), dos mais recentes aos mais antigos, e o resultado é o mart `tramitacoes`. Enquanto a carga é por amostra, `dado-publico coverage` e o teste `proposicoes_alvo_sem_tramitacao` mostram quantas faltam. Esse endpoint não traz a norma resultante (número da lei): ela virá do Planalto e do LexML.
+A tramitação completa (cada andamento, com data, órgão, regime, situação e o texto do despacho) não existe em arquivo em lote: a plataforma a busca na API, **uma chamada por proposição**, e só das que podem virar norma: PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC (requerimentos, pareceres e emendas ficam de fora). A busca roda sob pedido (`--foreach`), dos mais recentes aos mais antigos, e o resultado é o mart `proposicoes_tramitacoes`. Enquanto a carga é por amostra, `dado-publico coverage` e o teste `proposicoes_alvo_sem_tramitacao` mostram quantas faltam. Esse endpoint não traz a norma resultante (número da lei): ela virá do Planalto e do LexML.
 
 ## Votação
 

@@ -10,10 +10,10 @@ O autor vem pelo **nome e por um código orçamentário**, que não é o código
 
 ## Bens declarados
 
-Todo candidato declara seus bens ao registrar a candidatura. `marts.bens_de_candidatos` traz cada bem (tipo, descrição e **valor declarado**) das pessoas do projeto. O valor é o que o candidato declarou, sem correção, e muda de uma eleição a outra por compra, venda ou valorização.
+Todo candidato declara seus bens ao registrar a candidatura. `marts.candidaturas_bens` traz cada bem (tipo, descrição e **valor declarado**) das pessoas do projeto. O valor é o que o candidato declarou, sem correção, e muda de uma eleição a outra por compra, venda ou valorização.
 
 ## Votos por candidato
 
-A fonte traz os votos de cada candidato por **município e zona eleitoral**. `marts.votos_de_candidatos` soma por candidatura: `votos_nominais` inclui qualquer destinação (por exemplo, votos anulados por decisão judicial) e `votos_validos` só os que contaram. O detalhe por município e zona de todos os candidatos fica no staging (`staging.stg_tse__votacao`).
+A fonte traz os votos de cada candidato por **município e zona eleitoral**. `marts.votacoes_votos_de_candidatos` soma por candidatura: `votos_nominais` inclui qualquer destinação (por exemplo, votos anulados por decisão judicial) e `votos_validos` só os que contaram. O detalhe por município e zona de todos os candidatos fica no staging (`staging.stg_tse__votacao`).
 
 > **Conceito: o que está na tabela é o que o órgão publicou.** A plataforma não calcula riqueza, eficiência ou desempenho de ninguém: entrega os fatos com fonte, data de captura e as lacunas medidas.

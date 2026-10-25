@@ -62,10 +62,13 @@ seeds:
   dado_publico_brasil:
     +schema: intermediate
     +tags: [pre_identity]
+    +persist_docs:
+      relation: true
+      columns: true
     vinculos_aprovados:
-      +column_types: {origem_id: varchar, destino_id: varchar, aprovado_em: date}
-    eventos_de_partidos:
-      +column_types: {aprovado_em: date, ano: integer}
+      +column_types: {id_origem: varchar, id_destino: varchar, dt_aprovacao: date}
+    partidos_eventos:
+      +column_types: {dt_aprovacao: date, ano: integer}
 
 data_tests:
   dado_publico_brasil:

@@ -9,8 +9,8 @@ def test_senators_become_people_with_standardized_names_and_empty_fields_the_sou
 ) -> None:
     con, _ = full
     row = con.execute(
-        "SELECT nome, nome_civil, sexo, data_nascimento, foto_url, qtd_propostas, qtd_votos, ultimo_partido, "
-        "ultima_uf, capturado_em IS NOT NULL FROM marts.pessoas WHERE fonte = 'senado' AND nome = 'Beto Barreiras'"
+        "SELECT nome, nome_civil, sexo, dt_nascimento, foto_url, qtd_propostas, qtd_votos, ultimo_partido, "
+        "ultima_uf, dt_captura IS NOT NULL FROM marts.pessoas WHERE fonte = 'senado' AND nome = 'Beto Barreiras'"
     ).fetchone()
     assert row is not None
     assert row[:3] == ("Beto Barreiras", "Roberto Barreiras", "M")
@@ -35,8 +35,8 @@ def test_senate_votings_carry_the_result_the_secrecy_and_the_matter(
 ) -> None:
     con, _ = full
     rows = con.execute(
-        "SELECT votacao_id, data, orgao_sigla, aprovada, votos_sim, votacao_secreta, proposicoes "
-        "FROM marts.votacoes WHERE fonte = 'senado' ORDER BY votacao_id"
+        "SELECT id_votacao, dt_votacao, orgao_sigla, aprovada, votos_sim, fl_votacao_secreta, proposicoes "
+        "FROM marts.votacoes WHERE fonte = 'senado' ORDER BY id_votacao"
     ).fetchall()
     assert [(r[0], str(r[1]), r[2], r[3], r[4], r[5], r[6]) for r in rows] == [
         ("9001", "2024-05-10", "PLEN", 1, 1, False, "PLP 700/2023"),
@@ -44,7 +44,8 @@ def test_senate_votings_carry_the_result_the_secrecy_and_the_matter(
     ]
     assert (
         scalar(
-            con, "SELECT COUNT(*) FROM marts.votacoes WHERE fonte = 'camara' AND votacao_secreta IS NOT NULL"
+            con,
+            "SELECT COUNT(*) FROM marts.votacoes WHERE fonte = 'camara' AND fl_votacao_secreta IS NOT NULL",
         )
         == 0
     )
@@ -55,8 +56,8 @@ def test_senate_votes_keep_the_source_text_and_secret_ballots_stay_as_voted(
 ) -> None:
     con, _ = full
     votes = con.execute(
-        "SELECT v.votacao_id, p.nome, v.voto, v.partido, v.uf FROM marts.votos v JOIN marts.pessoas p USING (id_pessoa) "
-        "WHERE v.fonte = 'senado' ORDER BY v.votacao_id, p.nome"
+        "SELECT v.id_votacao, p.nome, v.voto, v.partido, v.uf FROM marts.votacoes_votos v JOIN marts.pessoas p USING (id_pessoa) "
+        "WHERE v.fonte = 'senado' ORDER BY v.id_votacao, p.nome"
     ).fetchall()
     assert votes == [
         ("9001", "Ana Árvore", "Não", "BBB", "RJ"),
@@ -69,8 +70,8 @@ def test_senate_votes_keep_the_source_text_and_secret_ballots_stay_as_voted(
 def test_each_voted_matter_appears_once_with_its_official_page(full: tuple[Connection, Settings]) -> None:
     con, _ = full
     row = con.execute(
-        "SELECT sigla, ementa, ementa_oficial, apresentada_em, situacao, fonte_url "
-        "FROM marts.proposicoes WHERE fonte = 'senado' AND proposicao_id = '700'"
+        "SELECT sigla, ementa, ementa_oficial, dt_apresentacao, situacao, fonte_url "
+        "FROM marts.proposicoes WHERE fonte = 'senado' AND id_proposicao = '700'"
     ).fetchall()
     assert len(row) == 1
     sigla, ementa, oficial, apresentada, situacao, url = row[0]
@@ -89,7 +90,7 @@ def test_senate_mandates_come_from_observed_votes_with_the_official_legislature_
 ) -> None:
     con, _ = full
     row = con.execute(
-        "SELECT m.cargo, m.casa, m.legislatura_id, m.uf, m.inicio, m.legislatura_inicio, m.base "
+        "SELECT m.cargo, m.casa, m.id_legislatura, m.uf, m.dt_inicio, m.dt_legislatura_inicio, m.base "
         "FROM marts.mandatos m JOIN marts.pessoas p USING (id_pessoa) "
         "WHERE m.fonte = 'senado' AND p.nome = 'Beto Barreiras'"
     ).fetchone()
@@ -104,13 +105,13 @@ def test_official_exercises_come_from_the_senate_with_the_reason_each_period_end
 ) -> None:
     con, _ = full
     rows = con.execute(
-        "SELECT p.nome, e.participacao, e.uf, e.mandato_inicio, e.mandato_fim, e.inicio, e.fim, e.causa_afastamento "
-        "FROM marts.exercicios e JOIN marts.pessoas p USING (id_pessoa) ORDER BY e.exercicio_id"
+        "SELECT p.nome, e.participacao, e.uf, e.dt_mandato_inicio, e.dt_mandato_fim, e.dt_inicio, e.dt_fim, e.causa_afastamento "
+        "FROM marts.mandatos_exercicios e JOIN marts.pessoas p USING (id_pessoa) ORDER BY e.id_exercicio"
     ).fetchall()
     assert len(rows) == 3  # um por senador do cadastro; quem só aparece nos votos não tem exercício
-    nome, participacao, uf, mandato_inicio, mandato_fim, inicio, fim, causa = rows[0]
+    nome, participacao, uf, dt_mandato_inicio, dt_mandato_fim, inicio, fim, causa = rows[0]
     assert (participacao, uf, causa) == ("Titular", "SP", "Licença")
-    assert (str(mandato_inicio), str(mandato_fim), str(inicio), str(fim)) == (
+    assert (str(dt_mandato_inicio), str(dt_mandato_fim), str(inicio), str(fim)) == (
         "2019-02-01",
         "2027-01-31",
         "2019-02-01",

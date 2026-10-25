@@ -23,7 +23,7 @@ def test_candidacy_is_linked_to_the_person_by_civil_name_and_birth_date(full: En
     con, _ = full
     found = con.execute(
         "SELECT p.nome, c.ano_eleicao, c.cargo, c.partido, c.situacao_candidatura, c.resultado, c.uf "
-        "FROM marts.candidaturas c JOIN marts.pessoas p USING (id_pessoa) ORDER BY c.candidatura_id"
+        "FROM marts.candidaturas c JOIN marts.pessoas p USING (id_pessoa) ORDER BY c.id_candidatura"
     ).fetchall()
     assert found == [
         ("Bia", 2022, "Deputado federal", "BBB", "Deferido", "Eleito por qp", "RJ"),
@@ -35,7 +35,7 @@ def test_homonyms_in_the_same_election_and_unmatched_candidates_are_not_linked_a
     full: Env,
 ) -> None:
     con, _ = full
-    linked = {r["candidatura_id"] for r in rows(con, "SELECT candidatura_id FROM marts.candidaturas")}
+    linked = {r["id_candidatura"] for r in rows(con, "SELECT id_candidatura FROM marts.candidaturas")}
     assert linked == {
         "2022:RJ:1001",
         "2022:SP:1002",
@@ -57,7 +57,7 @@ def test_deputy_and_senator_with_the_same_civil_name_and_birth_date_become_one_p
         )
     }
     assert len(set(ids.values())) == 1  # a chave mais antiga ficou
-    fusao = rows(con, "SELECT * FROM marts.fusoes_de_pessoas")
+    fusao = rows(con, "SELECT * FROM marts.pessoas_fusoes")
     assert len(fusao) == 1 and fusao[0]["id_pessoa_sobrevivente"] == ids["11"]
     assert fusao[0]["id_pessoa_absorvida"] > fusao[0]["id_pessoa_sobrevivente"]
     assert "iguais e únicos" in fusao[0]["metodo"]
@@ -81,7 +81,7 @@ def test_the_merged_person_has_one_row_with_both_sources_and_the_chamber_data(fu
 def test_senator_detail_gives_birth_naturality_and_photo_but_not_email_or_address(full: Env) -> None:
     con, _ = full
     row = con.execute(
-        "SELECT data_nascimento, municipio_nascimento, uf_nascimento, foto_url FROM marts.pessoas "
+        "SELECT dt_nascimento, municipio_nascimento, uf_nascimento, foto_url FROM marts.pessoas "
         "WHERE fonte = 'senado' AND nome = 'Beto Barreiras'"
     ).fetchone()
     assert (

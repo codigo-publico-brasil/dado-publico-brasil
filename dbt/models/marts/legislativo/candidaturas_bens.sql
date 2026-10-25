@@ -3,20 +3,20 @@
 select distinct
     '{{ var("source_tse") }}' as fonte,
     i.id_pessoa,
-    b.candidatura_id,
+    b.id_candidatura,
     b.ano_eleicao,
     b.ordem,
     b.tipo,
     b.descricao,
     b.valor,
-    b.atualizado_em,
-    cast(k.capturado_em as date) as capturado_em
+    b.dt_atualizacao,
+    cast(k.dt_captura as date) as dt_captura
 
 from {{ ref('stg_tse__bens') }} as b
 
 inner join {{ ref('stg_identity__pessoa_identificadores') }} as i
     on i.fonte = '{{ var("source_tse") }}'
-    and i.tipo_id = '{{ var("id_type_tse") }}'
-    and i.id_na_fonte = b.candidatura_id
+    and i.id_tipo = '{{ var("id_type_tse") }}'
+    and i.id_na_fonte = b.id_candidatura
 
-left join {{ ref('stg_metadata__captures') }} as k on k.source_file_id = b.source_file_id
+left join {{ ref('stg_metadata__captures') }} as k on k.id_captura = b.id_captura

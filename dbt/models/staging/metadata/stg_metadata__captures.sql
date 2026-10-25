@@ -7,14 +7,14 @@ with source as (
 renamed as (
 
     select
-        id as source_file_id,
+        id as id_captura,
         source as fonte,
         dataset,
         year as ano,
         url,
         sha256,
-        try_cast(captured_at as timestamp) as capturado_em,
-        try_cast(last_checked_at as timestamp) as verificado_em
+        try_cast(captured_at as timestamp) as dt_captura,
+        try_cast(last_checked_at as timestamp) as dt_verificacao
 
     from source
 

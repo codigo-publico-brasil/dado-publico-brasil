@@ -2,7 +2,7 @@
 -- emendas e medidas provisórias detalhadas e da Constituição.
 with detalhadas as (
 
-    select _dlt_id, try_cast(id as bigint) as norma_id, _source_file_id as source_file_id
+    select _dlt_id, try_cast(id as bigint) as id_norma, _source_file_id as id_captura
     from {{ source('senado', 'normas_detalhe') }}
 
     union all
@@ -23,15 +23,15 @@ publicacoes as (
 )
 
 select
-    d.norma_id,
-    try_cast(p.id as bigint) as publicacao_id,
+    d.id_norma,
+    try_cast(p.id as bigint) as id_publicacao,
     p.tipo as tipo_sigla,
     p.fonte as veiculo,
-    try_strptime(p.data, '%d/%m/%Y')::date as publicada_em,
+    try_strptime(p.data, '%d/%m/%Y')::date as dt_publicacao,
     p.pagina,
     p.coluna,
-    p.tem_texto = 'S' as tem_texto,
-    d.source_file_id
+    p.tem_texto = 'S' as fl_tem_texto,
+    d.id_captura
 
 from publicacoes as p
 

@@ -1,1 +1,1 @@
-origem_fonte,origem_tipo,origem_id,destino_fonte,destino_tipo,destino_id,aprovado_por,aprovado_em,evidencia
+origem_fonte,origem_tipo,id_origem,destino_fonte,destino_tipo,id_destino,aprovado_por,dt_aprovacao,evidencia

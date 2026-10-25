@@ -24,6 +24,31 @@ def _count(con: duckdb.DuckDBPyConnection, sql: str) -> int:
     return int(row[0]) if row else 0
 
 
+def _comments(con: duckdb.DuckDBPyConnection) -> str:
+    """`COMMENT ON` de cada tabela e coluna dos marts, lidos do DuckDB, para o Postgres de serviço."""
+
+    def text(value: str) -> str:
+        return "'" + value.replace("'", "''") + "'"
+
+    statements = [
+        f'COMMENT ON TABLE {STAGING}."{table}" IS {text(comment)}'
+        for table, comment in con.execute(
+            "SELECT table_name, comment FROM duckdb_tables() "
+            "WHERE database_name = 'wh' AND schema_name = ? AND comment IS NOT NULL",
+            (LIVE,),
+        ).fetchall()
+    ]
+    statements += [
+        f'COMMENT ON COLUMN {STAGING}."{table}"."{column}" IS {text(comment)}'
+        for table, column, comment in con.execute(
+            "SELECT table_name, column_name, comment FROM duckdb_columns() "
+            "WHERE database_name = 'wh' AND schema_name = ? AND comment IS NOT NULL",
+            (LIVE,),
+        ).fetchall()
+    ]
+    return "; ".join(statements)
+
+
 def publish(settings: Settings) -> dict[str, int]:
     """Copia cada tabela de `marts` e devolve as linhas publicadas por tabela."""
     if not settings.service_dsn:
@@ -46,6 +71,9 @@ def publish(settings: Settings) -> dict[str, int]:
         con.execute(f"CREATE SCHEMA service.{STAGING}")
         for name in names:
             con.execute(f"CREATE TABLE service.{STAGING}.{name} AS SELECT * FROM wh.{LIVE}.{name}")
+        con.execute(
+            f"CALL postgres_execute('service', '{_quote(_comments(con))}')"
+        )  # descrições, como no DuckDB
         swap = (
             f"DROP SCHEMA IF EXISTS {LIVE} CASCADE; ALTER SCHEMA {STAGING} RENAME TO {LIVE}; "
             f"GRANT USAGE ON SCHEMA {LIVE} TO {READER}; "

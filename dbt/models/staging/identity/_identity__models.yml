@@ -4,17 +4,22 @@ models:
   - name: stg_identity__pessoas
     description: Pessoas do projeto (chave própria).
     columns:
-      - name: id_pessoa
-        tests: [unique, not_null]
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
+      - {name: dt_criacao, description: "Data de criação."}
   - name: stg_identity__pessoa_identificadores
     description: Identificadores de cada pessoa em cada fonte.
     columns:
-      - name: id_pessoa
-        tests: [not_null]
-      - name: id_na_fonte
-        tests: [not_null]
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["not_null"]}
+      - {name: fonte, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
+      - {name: id_tipo, description: "Identificador do tipo, como a fonte informa."}
+      - {name: id_na_fonte, description: "Identificador do registro na fonte de origem.", tests: ["not_null"]}
+      - {name: metodo, description: "Regra que ligou as duas chaves."}
+      - {name: confirmado_por, description: "Quem confirmou o registro."}
+      - {name: dt_ligacao, description: "Data em que o vínculo foi feito."}
   - name: stg_identity__pessoa_fusoes
     description: Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa, uma linha por chave absorvida.
     columns:
-      - name: id_pessoa_absorvida
-        tests: [unique, not_null]
+      - {name: id_pessoa_absorvida, description: "Chave que deixou de existir.", tests: ["unique", "not_null"]}
+      - {name: id_pessoa_sobrevivente, description: "Chave que a substituiu (marts.pessoas)."}
+      - {name: metodo, description: "Regra que ligou as duas chaves."}
+      - {name: dt_fusao, description: "Momento da fusão."}

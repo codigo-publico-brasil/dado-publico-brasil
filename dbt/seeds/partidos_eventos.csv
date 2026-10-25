@@ -1,4 +1,4 @@
-sigla_anterior,sigla_posterior,tipo,aprovado_em,ano,fonte_url,observacao
+sigla_anterior,sigla_posterior,tipo,dt_aprovacao,ano,fonte_url,observacao
 PST,PL,incorporação,2003-04-01,2003,https://www.tse.jus.br/servicos-eleitorais/glossario/termos/partido-politico,Res.-TSE 21.374: incorporado ao PL junto com o PGT.
 PPB,PP,mudança de nome,2003-05-29,2003,https://www.tse.jus.br/partidos/partidos-registrados-no-tse/partido-progressista,Res.-TSE 21.401. Em 2017 o nome passou a Progressistas; a sigla PP não mudou.
 PL,PR,fusão,2006-12-19,2006,https://agenciaje.tse.jus.br/noticias/2006/dezembro/plenario-do-tse-aprova-criacao-do-partido-da,Res.-TSE 22.504: fusão do PL com o PRONA. A sigla PL voltou em 2019 (outro evento abaixo): a sigla sozinha não identifica o partido.

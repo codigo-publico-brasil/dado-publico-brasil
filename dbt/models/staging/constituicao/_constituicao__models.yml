@@ -4,5 +4,8 @@ models:
   - name: stg_constituicao__linhas
     description: Uma linha por parágrafo de texto do arquivo da Constituição e do ADCT, como publicado.
     columns:
-      - name: ordem
-        tests: [not_null]
+      - {name: parte, description: "Constituição (parte permanente) ou ADCT."}
+      - {name: ordem, description: "Posição do parágrafo no arquivo, a partir de 1.", tests: ["not_null"]}
+      - {name: linha, description: "Texto de uma linha do arquivo da Constituição, como a Câmara publica."}
+      - {name: emenda_do_arquivo, description: "Número da última emenda constitucional até a qual o arquivo do texto está atualizado."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}

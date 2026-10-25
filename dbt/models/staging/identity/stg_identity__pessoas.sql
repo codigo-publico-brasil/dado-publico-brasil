@@ -8,7 +8,7 @@ renamed as (
 
     select
         id_pessoa,
-        try_cast(created_at as timestamp) as criada_em
+        try_cast(created_at as timestamp) as dt_criacao
 
     from source
 

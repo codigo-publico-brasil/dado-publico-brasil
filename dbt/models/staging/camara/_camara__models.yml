@@ -4,105 +4,200 @@ models:
   - name: stg_camara__deputados
     description: Deputados, uma linha por deputado, com nomes padronizados e tipos corretos.
     columns:
-      - name: deputado_id
-        tests: [unique, not_null]
-      - name: nome
-        tests: [not_null]
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["unique", "not_null"]}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada.", tests: ["not_null"]}
+      - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
+      - {name: sexo, description: "Sexo registrado no cadastro da fonte."}
+      - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
+      - {name: dt_falecimento, description: "Data de falecimento informada pela fonte."}
+      - {name: uf_nascimento, description: "UF de nascimento informada pela fonte."}
+      - {name: municipio_nascimento, description: "Município de nascimento informado pela fonte."}
+      - {name: rede_social_url, description: "Primeira rede social informada no cadastro."}
+      - {name: site_url, description: "Site informado no cadastro."}
+      - {name: id_primeira_legislatura, description: "Identificador da primeira legislatura do mandato."}
+      - {name: id_ultima_legislatura, description: "Identificador da última legislatura do mandato."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__deputados_profissoes
     description: Profissões declaradas por deputado (linhas sem título descartadas pela padronização).
     columns:
-      - name: deputado_id
-        tests: [not_null]
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["not_null"]}
+      - {name: cd_tipo, description: "Código do tipo, como a fonte informa."}
+      - {name: titulo, description: "Ocupação declarada."}
+      - {name: dt_registro, description: "Data e hora do andamento."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__deputados_ocupacoes
     description: Ocupações anteriores declaradas por deputado.
     columns:
-      - name: deputado_id
-        tests: [not_null]
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["not_null"]}
+      - {name: titulo, description: "Ocupação declarada."}
+      - {name: entidade, description: "Entidade em que exerceu a ocupação."}
+      - {name: entidade_uf, description: "UF da entidade."}
+      - {name: entidade_pais, description: "País da entidade, como a fonte informa."}
+      - {name: ano_inicio, description: "Ano de início; vazio quando a fonte escreve outra coisa que um ano (por exemplo, 1999a2002)."}
+      - {name: ano_inicio_original, description: "Ano de início exatamente como a fonte escreve."}
+      - {name: ano_fim, description: "Ano de fim; vazio quando a fonte escreve outra coisa que um ano."}
+      - {name: ano_fim_original, description: "Ano de fim exatamente como a fonte escreve."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__proposicoes
     description: Proposições com a última situação. A ementa fica como veio da fonte.
     columns:
-      - name: proposicao_id
-        tests: [unique, not_null]
-      - name: sigla_tipo
-        tests: [not_null]
+      - {name: id_proposicao, description: "Identificador da proposição na fonte.", tests: ["unique", "not_null"]}
+      - {name: sigla_tipo, description: "Sigla do tipo, como a fonte informa.", tests: ["not_null"]}
+      - {name: numero, description: "Número da norma."}
+      - {name: ano, description: "Ano do evento."}
+      - {name: descricao_tipo, description: "Descrição do tipo da proposição, como a Câmara informa."}
+      - {name: ementa, description: "Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista."}
+      - {name: dt_apresentacao, description: "Data de apresentação."}
+      - {name: url_inteiro_teor, description: "Endereço do inteiro teor do documento na fonte."}
+      - {name: situacao, description: "Situação atual segundo a fonte."}
+      - {name: dt_ultimo_status, description: "Data do último andamento."}
+      - {name: ultimo_status_orgao_sigla, description: "Sigla do órgão onde a proposição teve o último status."}
+      - {name: tramitacao, description: "Descrição da tramitação do último status da proposição, como a Câmara informa."}
+      - {name: regime, description: "Regime de tramitação informado."}
+      - {name: apreciacao, description: "Forma de apreciação, como a Câmara informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__proposicoes_autores
     description: Autores de proposições (deputados, comissões, Senado, Executivo...), por ordem de assinatura.
     columns:
-      - name: proposicao_id
-        tests: [not_null]
-      - name: nome_autor
-        tests: [not_null]
+      - {name: id_proposicao, description: "Identificador da proposição na fonte.", tests: ["not_null"]}
+      - {name: ordem_assinatura, description: "Posição na assinatura."}
+      - {name: nome_autor, description: "Nome do autor como a fonte informa (deputado, comissão, Senado, Executivo...).", tests: ["not_null"]}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara."}
+      - {name: cd_tipo_autor, description: "Código do tipo de autor da emenda, como o Portal da Transparência informa."}
+      - {name: tipo_autor, description: "Tipo do autor na fonte (deputado, órgão, outro)."}
+      - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
+      - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: proponente, description: "1 quando consta como proponente; 0 caso contrário."}
+      - {name: autor_uri, description: "Endereço (URI) do autor na API da fonte."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__votacoes
     description: Votações com resultado e totais oficiais.
     columns:
-      - name: votacao_id
-        tests: [unique, not_null]
-      - name: data
-        tests: [not_null]
+      - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["unique", "not_null"]}
+      - {name: dt_votacao, description: "Data da votação.", tests: ["not_null"]}
+      - {name: dt_registro, description: "Data e hora do andamento."}
+      - {name: id_orgao, description: "Identificador do órgão na fonte."}
+      - {name: orgao_sigla, description: "Sigla do órgão em que ocorreu."}
+      - {name: id_evento, description: "Identificador do evento na Câmara."}
+      - {name: aprovada, description: "1 se a fonte registra aprovação; 0 se não; vazio se não informa."}
+      - {name: votos_sim, description: "Total de votos Sim informado pela fonte."}
+      - {name: votos_nao, description: "Total de votos Não informado pela fonte."}
+      - {name: votos_outros, description: "Total de outros votos informado pela fonte."}
+      - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__votos
     description: Voto de cada deputado em cada votação nominal. Voto vazio fica como texto vazio.
     columns:
-      - name: votacao_id
-        tests: [not_null]
-      - name: deputado_id
-        tests: [not_null]
+      - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["not_null"]}
+      - {name: voto, description: "Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.)."}
+      - {name: dt_voto, description: "Data e hora do voto."}
+      - {name: id_partido, description: "Identificador do partido na fonte."}
+      - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
+      - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: id_legislatura, description: "Número da legislatura."}
+      - {name: deputado_nome, description: "Nome do deputado, como a fonte informa."}
+      - {name: deputado_foto_url, description: "Endereço da foto do deputado na fonte."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__votacoes_orientacoes
     description: Orientação de cada bancada em cada votação.
     columns:
-      - name: votacao_id
-        tests: [not_null]
+      - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
+      - {name: bancada_sigla, description: "Sigla da bancada, bloco ou partido a que a orientação de voto se refere."}
+      - {name: orientacao, description: "Orientação de voto da bancada na votação (por exemplo, Sim, Não, Liberado, Obstrução)."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__votacoes_proposicoes
     description: Proposições afetadas por votação.
     columns:
-      - name: votacao_id
-        tests: [not_null]
+      - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
+      - {name: id_proposicao, description: "Identificador da proposição na fonte."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__votacoes_objetos
     description: Proposições que são objeto de votação.
     columns:
-      - name: votacao_id
-        tests: [not_null]
+      - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
+      - {name: id_proposicao, description: "Identificador da proposição na fonte."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__legislaturas
     description: Legislaturas, uma linha por legislatura, com datas oficiais.
     columns:
-      - name: legislatura_id
-        tests: [unique, not_null]
+      - {name: id_legislatura, description: "Número da legislatura.", tests: ["unique", "not_null"]}
+      - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
+      - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: ano_eleicao, description: "Ano da eleição que a formou."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__partidos
     description: Partidos, uma linha por partido.
     columns:
-      - name: partido_id
-        tests: [unique, not_null]
+      - {name: id_partido, description: "Identificador do partido na fonte.", tests: ["unique", "not_null"]}
+      - {name: sigla, description: "Sigla do tipo da proposição, número e ano."}
+      - {name: sigla_original, description: "Sigla exatamente como a Câmara publica, com os asteriscos (por exemplo, PP, PP** e PP***, registros diferentes com a mesma sigla). O significado dos asteriscos não consta nas fontes que consultamos."}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__orgaos
     description: Órgãos da Câmara, um por órgão, com a URL da fonte.
     columns:
-      - name: orgao_id
-        tests: [unique, not_null]
+      - {name: id_orgao, description: "Identificador do órgão na fonte.", tests: ["unique", "not_null"]}
+      - {name: sigla, description: "Sigla do tipo da proposição, número e ano."}
+      - {name: apelido, description: "Nome curto do órgão."}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
+      - {name: id_tipo_orgao, description: "Identificador do tipo de órgão, como a fonte informa."}
+      - {name: tipo_orgao, description: "Tipo do órgão, como a fonte informa."}
+      - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
+      - {name: dt_instalacao, description: "Data de instalação, quando a fonte informa."}
+      - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: situacao, description: "Situação atual segundo a fonte."}
+      - {name: casa, description: "Casa legislativa."}
+      - {name: fonte_url, description: "Endereço da proposição na fonte oficial."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__orgaos_membros
     description: Participação de deputados em órgãos, uma linha por cargo e período.
     columns:
-      - name: orgao_id
-        tests: [not_null]
-      - name: deputado_id
-        tests: [not_null]
+      - {name: id_orgao, description: "Identificador do órgão na fonte.", tests: ["not_null"]}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["not_null"]}
+      - {name: orgao_sigla, description: "Sigla do órgão em que ocorreu."}
+      - {name: cargo, description: "Cargo exercido."}
+      - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
+      - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
+      - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__frentes
     description: Frentes parlamentares, uma por frente.
     columns:
-      - name: frente_id
-        tests: [unique, not_null]
+      - {name: id_frente, description: "Identificador da frente na fonte.", tests: ["unique", "not_null"]}
+      - {name: titulo, description: "Ocupação declarada."}
+      - {name: dt_criacao, description: "Data de criação."}
+      - {name: id_legislatura, description: "Número da legislatura."}
+      - {name: situacao, description: "Situação atual segundo a fonte."}
+      - {name: id_coordenador_deputado, description: "Identificador do deputado que coordena a frente, na Câmara."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__frentes_membros
     description: >
       Participação de deputados em frentes parlamentares, uma linha por legislatura e título. Em parte das
       linhas (coordenações antigas) a fonte não identifica o deputado; elas ficam aqui e saem dos marts.
     columns:
-      - name: frente_id
-        tests: [not_null]
-      - name: deputado_id
-        tests:
-          - not_null:
-              config: {severity: warn}
+      - {name: id_frente, description: "Identificador da frente na fonte.", tests: ["not_null"]}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: [{"not_null": {"config": {"severity": "warn"}}}]}
+      - {name: id_legislatura, description: "Número da legislatura."}
+      - {name: titulo, description: "Ocupação declarada."}
+      - {name: deputado_foto_url, description: "Endereço da foto do deputado na fonte."}
+      - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
+      - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_camara__tramitacoes
     description: Tramitação das proposições que podem virar norma (só as já buscadas), uma linha por andamento.
     columns:
-      - name: proposicao_id
-        tests: [not_null]
-      - name: sequencia
-        tests: [not_null]
+      - {name: id_proposicao, description: "Identificador da proposição na fonte.", tests: ["not_null"]}
+      - {name: sequencia, description: "Número do andamento dentro da proposição.", tests: ["not_null"]}
+      - {name: dt_registro, description: "Data e hora do andamento."}
+      - {name: orgao_sigla, description: "Sigla do órgão em que ocorreu."}
+      - {name: regime, description: "Regime de tramitação informado."}
+      - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada."}
+      - {name: id_tipo, description: "Identificador do tipo, como a fonte informa."}
+      - {name: situacao, description: "Situação atual segundo a fonte."}
+      - {name: id_situacao, description: "Identificador da situação, como a fonte informa."}
+      - {name: despacho, description: "Texto do despacho, como a fonte informa."}
+      - {name: ambito, description: "Âmbito da tramitação, como a Câmara informa."}
+      - {name: apreciacao, description: "Forma de apreciação, como a Câmara informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}

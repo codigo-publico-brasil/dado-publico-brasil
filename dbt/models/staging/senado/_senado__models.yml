@@ -4,68 +4,170 @@ models:
   - name: stg_senado__senadores
     description: Senadores, uma linha por senador (o mais recente dos arquivos de legislatura), com nomes padronizados.
     columns:
-      - name: senador_id
-        tests: [unique, not_null]
-      - name: nome
-        tests: [not_null]
+      - {name: id_senador, description: "Identificador do senador no Senado.", tests: ["unique", "not_null"]}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada.", tests: ["not_null"]}
+      - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
+      - {name: sexo, description: "Sexo registrado no cadastro da fonte."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__votacoes
     description: Votações em plenário com resultado, totais e a matéria votada. Votação secreta tem `secreta` verdadeiro.
     columns:
-      - name: votacao_id
-        tests: [unique, not_null]
-      - name: data
-        tests: [not_null]
+      - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["unique", "not_null"]}
+      - {name: dt_votacao, description: "Data da votação.", tests: ["not_null"]}
+      - {name: fl_secreta, description: "Verdadeiro se a votação foi secreta (a fonte não informa a escolha de cada voto)."}
+      - {name: resultado, description: "Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado."}
+      - {name: votos_sim, description: "Total de votos Sim informado pela fonte."}
+      - {name: votos_nao, description: "Total de votos Não informado pela fonte."}
+      - {name: votos_abstencao, description: "Quantidade de votos de abstenção, como a fonte informa."}
+      - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada."}
+      - {name: orgao_sigla, description: "Sigla do órgão em que ocorreu."}
+      - {name: id_materia, description: "Identificador da matéria no Senado."}
+      - {name: materia_sigla, description: "Identificação da matéria (sigla, número e ano), como o Senado informa."}
+      - {name: dt_materia_apresentacao, description: "Data em que a matéria foi apresentada, como o Senado informa."}
+      - {name: materia_ementa, description: "Ementa da matéria, como o Senado informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__votos
     description: Voto de cada senador em cada votação nominal. Em votação secreta a sigla é "Votou".
     columns:
-      - name: votacao_id
-        tests: [not_null]
-      - name: senador_id
-        tests: [not_null]
+      - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
+      - {name: id_senador, description: "Identificador do senador no Senado.", tests: ["not_null"]}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
+      - {name: voto, description: "Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.)."}
+      - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
+      - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__processos
     description: Processo de cada matéria votada (só as já buscadas), com a situação atual e a norma gerada.
     columns:
-      - name: processo_id
-        tests: [unique, not_null]
-      - name: materia_id
-        tests: [not_null]
+      - {name: id_processo, description: "Identificador do processo (matéria) no Senado.", tests: ["unique", "not_null"]}
+      - {name: id_materia, description: "Identificador da matéria no Senado.", tests: ["not_null"]}
+      - {name: materia_sigla, description: "Identificação da matéria (sigla, número e ano), como o Senado informa."}
+      - {name: fl_tramitando, description: "Verdadeiro se a matéria está tramitando, como o Senado informa."}
+      - {name: situacao, description: "Situação atual segundo a fonte."}
+      - {name: dt_situacao, description: "Data da situação atual."}
+      - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
+      - {name: casa_iniciadora, description: "Casa em que a matéria começou a tramitar (Câmara ou Senado), como a fonte informa."}
+      - {name: id_norma, description: "Código da norma no Senado (marts.normas)."}
+      - {name: norma_sigla_tipo, description: "Sigla do tipo da norma gerada pela matéria."}
+      - {name: norma_tipo, description: "Tipo da norma gerada pela matéria."}
+      - {name: norma_numero, description: "Número da norma gerada pela matéria."}
+      - {name: norma_ano, description: "Ano da norma gerada pela matéria."}
+      - {name: dt_norma_assinatura, description: "Data de assinatura da norma gerada pela matéria."}
+      - {name: dt_norma_publicacao, description: "Data de publicação da norma gerada pela matéria."}
+      - {name: norma_descricao, description: "Descrição da norma gerada pela matéria."}
+      - {name: norma_veiculo, description: "Veículo em que a norma gerada pela matéria foi publicada."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__exercicios
     description: Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento.
     columns:
-      - name: exercicio_id
-        tests: [not_null]
+      - {name: id_senador, description: "Identificador do senador no Senado."}
+      - {name: id_mandato, description: "Código do mandato no Senado (titular e suplentes compartilham o mesmo)."}
+      - {name: id_exercicio, description: "Código do período de exercício no Senado.", tests: ["not_null"]}
+      - {name: participacao, description: "Titular, 1º suplente ou 2º suplente."}
+      - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
+      - {name: dt_mandato_inicio, description: "Início do mandato (da primeira legislatura que ele cobre)."}
+      - {name: dt_mandato_fim, description: "Fim do mandato (da última legislatura que ele cobre)."}
+      - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
+      - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: causa_afastamento_sigla, description: "Sigla da causa do fim do período (licença, renúncia, fim do mandato); vazia se não informada."}
+      - {name: causa_afastamento, description: "Descrição da causa do fim do período."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__normas
     description: Catálogo das normas federais, uma linha por norma, só metadados, com a ementa padronizada e a original.
     columns:
-      - name: norma_id
-        tests: [unique, not_null]
+      - {name: id_norma, description: "Código da norma no Senado (marts.normas).", tests: ["unique", "not_null"]}
+      - {name: tipo_sigla, description: "Sigla do tipo da norma na fonte (LEI-n, DEC-n, MPV-cs...)."}
+      - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
+      - {name: numero, description: "Número da norma."}
+      - {name: identificador, description: "Identificador curto da norma na fonte (LEI-14116-2020-12-31)."}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
+      - {name: ementa, description: "Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista."}
+      - {name: ementa_oficial, description: "Texto oficial, exatamente como veio."}
+      - {name: dt_assinatura, description: "Data de assinatura."}
+      - {name: ano, description: "Ano do evento."}
+      - {name: apelido, description: "Nome curto do órgão."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__normas_publicacoes
     description: Publicações de cada norma detalhada (e da Constituição) no Diário Oficial, uma linha por norma e publicação.
     columns:
-      - name: norma_id
-        tests: [not_null]
+      - {name: id_norma, description: "Código da norma no Senado (marts.normas).", tests: ["not_null"]}
+      - {name: id_publicacao, description: "Código da publicação no Senado."}
+      - {name: tipo_sigla, description: "Sigla do tipo da norma na fonte (LEI-n, DEC-n, MPV-cs...)."}
+      - {name: veiculo, description: "Veículo e edição, como a fonte informa."}
+      - {name: dt_publicacao, description: "Data de publicação."}
+      - {name: pagina, description: "Página da publicação."}
+      - {name: coluna, description: "Coluna da página."}
+      - {name: fl_tem_texto, description: "A fonte informa que há o texto da publicação."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__normas_relacoes
     description: Relações de cada norma detalhada (e da Constituição) com atos posteriores, uma linha por norma, ato e tipo de relação.
     columns:
-      - name: norma_id
-        tests: [not_null]
+      - {name: id_norma, description: "Código da norma no Senado (marts.normas).", tests: ["not_null"]}
+      - {name: tipo_relacao, description: "Tipo da relação como a fonte declara (por exemplo, Declaração de Alteração Permanente)."}
+      - {name: id_norma_posterior, description: "Ato posterior que se relaciona com a norma."}
+      - {name: norma_posterior_nome, description: "Nome do ato posterior."}
+      - {name: dt_norma_posterior_assinatura, description: "Data de assinatura do ato posterior."}
+      - {name: dt_publicacao, description: "Data de publicação."}
+      - {name: publicacao, description: "Publicação do ato posterior no Diário Oficial."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__vetos
     description: Vetos presidenciais apreciados pelo Congresso, uma linha por veto, com a matéria vetada e a norma gerada.
     columns:
-      - name: veto_id
-        tests: [unique, not_null]
+      - {name: id_veto, description: "Código do veto no Senado.", tests: ["unique", "not_null"]}
+      - {name: id_materia_veto, description: "Código da matéria do veto (a que tramita no Congresso)."}
+      - {name: numero, description: "Número da norma."}
+      - {name: ano, description: "Ano do evento."}
+      - {name: id_materia_vetada, description: "Código da matéria vetada (o projeto aprovado)."}
+      - {name: materia_vetada_sigla, description: "Sigla da matéria vetada (PL, PLN, PLP...)."}
+      - {name: materia_vetada_numero, description: "Número da matéria vetada."}
+      - {name: materia_vetada_ano, description: "Ano da matéria vetada."}
+      - {name: materia_vetada_ementa, description: "Ementa da matéria vetada, com caixa padronizada."}
+      - {name: id_norma, description: "Código da norma no Senado (marts.normas)."}
+      - {name: norma_nome, description: "Nome da norma gerada."}
+      - {name: mensagem_numero, description: "Número da mensagem presidencial do veto."}
+      - {name: mensagem_ano, description: "Ano da mensagem presidencial."}
+      - {name: mensagem_url, description: "Mensagem presidencial no Planalto, como a fonte informa."}
+      - {name: fl_veto_total, description: "Veto total (verdadeiro) ou parcial (falso)."}
+      - {name: assunto, description: "Assunto do veto, como a fonte informa."}
+      - {name: dt_recebimento, description: "Data em que o Congresso recebeu o veto."}
+      - {name: dt_publicacao, description: "Data de publicação."}
+      - {name: dt_sobrestamento, description: "Data em que o veto passou a trancar a pauta."}
+      - {name: fl_sobrestando_pauta, description: "O veto tranca a pauta hoje."}
+      - {name: quantidade_dispositivos, description: "Quantos dispositivos foram vetados."}
+      - {name: fl_em_tramitacao, description: "O veto ainda tramita."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__vetos_dispositivos
     description: Dispositivos vetados de cada veto buscado, com o texto vetado, a razão do veto e a situação.
     columns:
-      - name: dispositivo_id
-        tests: [unique, not_null]
+      - {name: id_dispositivo, description: "Código do dispositivo vetado no Senado.", tests: ["unique", "not_null"]}
+      - {name: id_materia_veto, description: "Código da matéria do veto (a que tramita no Congresso)."}
+      - {name: identificador, description: "Identificador curto da norma na fonte (LEI-14116-2020-12-31)."}
+      - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada."}
+      - {name: texto_vetado, description: "Texto que foi vetado, como a fonte publica."}
+      - {name: razao_veto, description: "Razão do veto escrita pela Presidência, como a fonte publica."}
+      - {name: situacao, description: "Situação atual segundo a fonte."}
+      - {name: fl_possui_votos, description: "Há voto nominal registrado para o dispositivo."}
+      - {name: tipo_votacao, description: "Forma da votação (painel ou cédula); vazia quando não foi apreciado."}
+      - {name: dt_sessao, description: "Data da sessão do Congresso que apreciou o dispositivo."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__vetos_votos
     description: Voto nominal de cada deputado e senador num dispositivo vetado, sem o código do parlamentar.
     columns:
-      - name: dispositivo_id
-        tests: [not_null]
+      - {name: id_dispositivo, description: "Código do dispositivo vetado no Senado.", tests: ["not_null"]}
+      - {name: casa, description: "Casa legislativa."}
+      - {name: nome_parlamentar, description: "Nome do parlamentar como a fonte informa, com caixa padronizada."}
+      - {name: partido, description: "Partido na data do voto."}
+      - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
+      - {name: voto, description: "Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.)."}
+      - {name: sessao, description: "Sessão do Congresso, como a fonte informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_senado__senadores_detalhe
     description: Detalhe de cada senador (só os já buscados), com nome civil, nascimento, naturalidade e foto.
     columns:
-      - name: senador_id
-        tests: [unique, not_null]
+      - {name: id_senador, description: "Identificador do senador no Senado.", tests: ["unique", "not_null"]}
+      - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
+      - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
+      - {name: municipio_nascimento, description: "Município de nascimento informado pela fonte."}
+      - {name: uf_nascimento, description: "UF de nascimento informada pela fonte."}
+      - {name: foto_url, description: "Endereço da foto oficial."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}

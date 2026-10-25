@@ -12,7 +12,7 @@ dos schemas `raw_*` e de `metadata.captures`.
 from dado_publico_brasil.core import runs, warehouse
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection
-from dado_publico_brasil.transformation import dbt, identity, observability, snapshot
+from dado_publico_brasil.transformation import dbt, describe, identity, observability, snapshot
 from dado_publico_brasil.transformation.quality import record
 
 # `cautious`: um teste só roda quando todos os modelos de que depende já existem.
@@ -35,7 +35,10 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
         with runs.track(con, stage, "dbt") as run:
             record(con, run.id, outcome.results)
             run.rows_in, run.rows_out = len(outcome.results), len(outcome.failures)
-            if stage == "transform_post":  # os marts estão prontos: avisa por e-mail se algo está errado
+            if (
+                stage == "transform_post"
+            ):  # os marts estão prontos: descreve o raw e avisa se algo está errado
+                describe.raw(con, dbt.target_dir(settings))
                 observability.notify(con)
             if outcome.returncode != 0:
                 names = "; ".join(

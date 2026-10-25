@@ -2,16 +2,16 @@
 -- coluna. Só das normas detalhadas. Uma linha por norma e publicação.
 select
     '{{ var("source_senado") }}' as fonte,
-    p.norma_id,
-    p.publicacao_id,
+    p.id_norma,
+    p.id_publicacao,
     p.tipo_sigla,
     p.veiculo,
-    p.publicada_em,
+    p.dt_publicacao,
     p.pagina,
     p.coluna,
-    p.tem_texto,
-    cast(c.capturado_em as date) as capturado_em
+    p.fl_tem_texto,
+    cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_senado__normas_publicacoes') }} as p
 
-left join {{ ref('stg_metadata__captures') }} as c on c.source_file_id = p.source_file_id
+left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = p.id_captura

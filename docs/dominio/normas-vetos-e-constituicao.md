@@ -10,7 +10,7 @@ Para quem quer entender os campos que a plataforma traz sobre a lei. As fontes e
 
 ## Veto
 
-Depois de aprovado pelo Congresso, o projeto vai à sanção. O Presidente pode **vetar** o projeto inteiro (veto total) ou partes dele (veto parcial), e deve escrever a **razão do veto**. O Congresso, em sessão conjunta de deputados e senadores, aprecia o veto, **dispositivo por dispositivo**: o veto pode ser **mantido** (o trecho vetado não vale) ou **rejeitado** (o Congresso derrubou o veto e o trecho vale). Há ainda "prejudicado" e "não apreciado" (ainda não votado). `marts.vetos` traz o veto, a matéria vetada e a norma que ela gerou; `marts.dispositivos_vetados`, o texto vetado, a razão e a situação como a fonte informa; `marts.votos_em_vetos`, o voto nominal (nome, partido, UF e voto), **sem ligação a `pessoas`**, porque a fonte não traz o código do parlamentar.
+Depois de aprovado pelo Congresso, o projeto vai à sanção. O Presidente pode **vetar** o projeto inteiro (veto total) ou partes dele (veto parcial), e deve escrever a **razão do veto**. O Congresso, em sessão conjunta de deputados e senadores, aprecia o veto, **dispositivo por dispositivo**: o veto pode ser **mantido** (o trecho vetado não vale) ou **rejeitado** (o Congresso derrubou o veto e o trecho vale). Há ainda "prejudicado" e "não apreciado" (ainda não votado). `marts.vetos` traz o veto, a matéria vetada e a norma que ela gerou; `marts.vetos_dispositivos`, o texto vetado, a razão e a situação como a fonte informa; `marts.votacoes_votos_em_vetos`, o voto nominal (nome, partido, UF e voto), **sem ligação a `pessoas`**, porque a fonte não traz o código do parlamentar.
 
 ## Constituição
 

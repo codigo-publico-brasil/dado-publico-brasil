@@ -3,7 +3,7 @@
 -- detalhadas e da Constituição.
 with detalhadas as (
 
-    select _dlt_id, try_cast(id as bigint) as norma_id, _source_file_id as source_file_id
+    select _dlt_id, try_cast(id as bigint) as id_norma, _source_file_id as id_captura
     from {{ source('senado', 'normas_detalhe') }}
 
     union all
@@ -24,14 +24,14 @@ relacoes as (
 )
 
 select
-    d.norma_id,
+    d.id_norma,
     r.comentario as tipo_relacao,
-    try_cast(r.codnormaposterior as bigint) as norma_posterior_id,
+    try_cast(r.codnormaposterior as bigint) as id_norma_posterior,
     r.nome_norma_posterior as norma_posterior_nome,
-    try_strptime(r.dat_assinatura, '%d/%m/%Y')::date as norma_posterior_assinada_em,
-    try_strptime(r.datapub, '%d/%m/%Y')::date as publicada_em,
+    try_strptime(r.dat_assinatura, '%d/%m/%Y')::date as dt_norma_posterior_assinatura,
+    try_strptime(r.datapub, '%d/%m/%Y')::date as dt_publicacao,
     r.nome_pub as publicacao,
-    d.source_file_id
+    d.id_captura
 
 from relacoes as r
 
