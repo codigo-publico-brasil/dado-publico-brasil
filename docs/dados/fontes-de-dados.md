@@ -49,6 +49,13 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 - **Complementar (verificado em 23/10/2026):** `bem_candidato_{ano}.zip` (bens declarados, de 2006 a 2026, 31 MB no total; 1998 e 2002 não existem; 2006 e 2010 usam outros nomes de coluna) e `votacao_candidato_munzona_{ano}.zip` (votos de cada candidato por município e zona, de 1998 a 2026, **2,4 GB compactados**; 2022 sozinho tem 580 MB, 4,3 GB descompactados e 9,38 milhões de linhas, de todos os cargos). Os dois trazem `SQ_CANDIDATO`, a chave que liga à candidatura.
 - **Cuidado:** são dados pessoais de candidatos. O nome social e as certidões criminais não entram; CPF, título de eleitor e e-mail nunca entram. Fora da carga por enquanto: redes sociais, fotos, propostas, notas fiscais e prestação de contas.
 
+### TSE: eleições gerais de 2026 (verificado em 25/10/2026)
+
+- **Portal de dados abertos** (`dadosabertos.tse.jus.br`, CC BY, acessível por robô): `candidatos-2026` (candidaturas, bens, coligações, vagas, redes sociais, fotos), `resultados-2026` (votação nominal por município e zona, detalhe da apuração, votação por seção) e `prestacao-de-contas-eleitorais-2026` (receitas e despesas de candidatos e partidos). Os pacotes `.zip` ficam em `cdn.tse.jus.br/estatistica/sead/odsele/...` e o servidor informa `ETag` e `Last-Modified`.
+- **Vagas** (`consulta_vagas_{ano}.zip`): quantas vagas cada cargo tem por unidade eleitoral (2026: 54 de senador, 513 de deputado federal, 27 de governador). O arquivo de 2022 traz também a eleição suplementar de governador de Roraima (código 6278).
+- **Prestação de contas de candidatos** (`prestacao_de_contas_eleitorais_candidatos_{ano}.zip`): uma linha por receita e por despesa; o pacote de 2026 tem 201 MB compactados e o de 2022, mais de 1,7 GB descompactados nos arquivos usados. Traz documento e nome de doadores e fornecedores, que a plataforma não lê.
+- **Não acessíveis por robô:** a página de informações técnicas da divulgação de resultados (`www.tse.jus.br`) e o DivulgaCandContas (propostas de governo) respondem 403 do Akamai, mesmo com cabeçalhos honestos; não foram contornados. O JSON de divulgação em tempo real (`resultados.tse.jus.br`) não teve o formato verificado.
+
 ### Portal da Transparência (CGU) (verificado em 23/10/2026)
 
 - **Acesso:** API com token gratuito (conta gov.br nível prata ou ouro; cabeçalho `chave-api-dados`). Limite informado: 400 requisições por minuto entre 6h e 23h59 e 700 por minuto entre 0h e 5h59. Download em lote em `/download-de-dados/...`, **sem token**.

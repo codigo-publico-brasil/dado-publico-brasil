@@ -646,3 +646,68 @@ models:
       - {name: valor, data_type: "decimal(18,2)", description: "Valor recebido em reais."}
       - {name: fl_contem_dado_pessoal, data_type: boolean, description: "Verdadeiro quando a linha identifica uma pessoa física (CPF mascarado, tipo pessoa física ou inscrição genérica)."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: eleitos
+    description: Eleitos para presidente, governador, senador e deputado federal nas eleições gerais, de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito.
+    meta: {sensitivity: publico-agente-publico, grain: eleito, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: id_candidatura, data_type: varchar, tests: [unique, not_null], description: "Identificador da candidatura (ano, unidade eleitoral e sequencial do candidato, como o TSE informa)."}
+      - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
+      - {name: turno, data_type: integer, description: "Turno em que o resultado de eleito foi registrado."}
+      - {name: uf, data_type: varchar, description: "UF da eleição (BR para presidente)."}
+      - {name: cargo, data_type: varchar, description: "Cargo para o qual foi eleito."}
+      - {name: nome_urna, data_type: varchar, description: "Nome de urna, com caixa padronizada."}
+      - {name: nome, data_type: varchar, description: "Nome completo, com caixa padronizada."}
+      - {name: partido, data_type: varchar, description: "Sigla do partido pelo qual concorreu."}
+      - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no TSE (por exemplo, deferido), como o TSE informa."}
+      - {name: resultado, data_type: varchar, description: "Resultado como o TSE informa (por exemplo, eleito, eleito por QP ou eleito por média)."}
+      - {name: qtd_votos, data_type: bigint, description: "Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada."}
+      - {name: percentual_votos_nominais, data_type: "decimal(5,2)", description: "Percentual dos votos nominais válidos do cargo na unidade eleitoral e no turno, sem os votos de legenda; vazio se a votação ainda não foi carregada."}
+      - {name: id_pessoa, data_type: bigint, description: "Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos novatos e nos casos sem ligação."}
+      - {name: tipo_mandato, data_type: varchar, description: "Só para deputado federal e senador: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum)."}
+      - {name: vinculo_metodo, data_type: varchar, description: "Como o eleito foi ligado à pessoa: identificador oficial da própria fonte ou nome civil e data de nascimento iguais e únicos; vazio sem ligação."}
+      - {name: vinculo_aprovado_por, data_type: varchar, description: "Quem aprovou o vínculo, quando foi aprovado à mão; vazio nos demais."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de candidaturas de onde vem o resultado."}
+      - {name: fonte_url, data_type: varchar, description: "Página oficial do TSE com os arquivos de candidatos da eleição."}
+
+  - name: eleitos_cargos
+    description: Situação de cada cargo em cada unidade eleitoral nas eleições gerais, com vagas, eleitos e pendentes. Mostra o estado real, sem palpite. Uma linha por eleição, cargo e unidade eleitoral.
+    meta: {sensitivity: publico, grain: cargo por unidade eleitoral e eleição, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
+      - {name: uf, data_type: varchar, description: "UF da eleição (BR para presidente)."}
+      - {name: cargo, data_type: varchar, description: "Cargo em disputa."}
+      - {name: qtd_vagas, data_type: integer, description: "Quantidade de vagas do cargo na unidade eleitoral, como o TSE informa."}
+      - {name: qtd_eleitos, data_type: bigint, description: "Quantos eleitos o resultado do TSE já registra para o cargo."}
+      - {name: qtd_pendentes, data_type: bigint, description: "Vagas ainda sem eleito (vagas menos eleitos)."}
+      - {name: status, data_type: varchar, description: "eleito_provisorio quando todas as vagas têm eleito pelo resultado do TSE (ainda sem diplomação); aguardando_resultado quando falta eleito."}
+      - {name: dt_posse, data_type: date, description: "Data da posse prevista, como o TSE informa."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de candidaturas de onde vêm os resultados."}
+      - {name: fonte_url, data_type: varchar, description: "Página oficial do TSE com os arquivos de candidatos da eleição."}
+
+  - name: eleitos_campanhas
+    description: O que cada eleito declarou na campanha, com totais dos bens, das receitas e das despesas contratadas, só fatos e totais. O total fica vazio, e não zero, quando o arquivo ainda não foi carregado. Uma linha por eleito.
+    meta: {sensitivity: publico-agente-publico, grain: eleito, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: id_candidatura, data_type: varchar, tests: [unique, not_null], description: "Identificador da candidatura (marts.eleitos)."}
+      - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
+      - {name: uf, data_type: varchar, description: "UF da eleição (BR para presidente)."}
+      - {name: cargo, data_type: varchar, description: "Cargo para o qual foi eleito."}
+      - {name: qtd_bens, data_type: bigint, description: "Quantidade de bens declarados; vazio se o candidato não declarou ou o arquivo não foi carregado."}
+      - {name: valor_bens, data_type: "decimal(18,2)", description: "Soma dos valores dos bens declarados, em reais, sem correção."}
+      - {name: dt_atualizacao_bens, data_type: date, description: "Data da última atualização dos bens declarados, como o TSE informa."}
+      - {name: dt_captura_bens, data_type: date, description: "Data da captura do arquivo de bens."}
+      - {name: qtd_receitas, data_type: bigint, description: "Quantidade de receitas declaradas na prestação de contas; vazio se o arquivo não foi carregado."}
+      - {name: valor_receitas, data_type: "decimal(18,2)", description: "Soma das receitas declaradas, em reais."}
+      - {name: qtd_despesas, data_type: bigint, description: "Quantidade de despesas contratadas declaradas na prestação de contas; vazio se o arquivo não foi carregado."}
+      - {name: valor_despesas, data_type: "decimal(18,2)", description: "Soma das despesas contratadas declaradas, em reais."}
+      - {name: dt_prestacao, data_type: date, description: "Data mais recente da prestação de contas entre receitas e despesas."}
+      - {name: dt_captura_contas, data_type: date, description: "Data da captura do arquivo da prestação de contas."}
+      - {name: fonte_url_bens, data_type: varchar, description: "Página oficial do TSE com os arquivos de bens da eleição."}
+      - {name: fonte_url_contas, data_type: varchar, description: "Página oficial do TSE com os arquivos da prestação de contas da eleição."}

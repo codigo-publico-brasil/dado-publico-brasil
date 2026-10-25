@@ -68,3 +68,50 @@ datasets:
        DS_CARGO, SQ_CANDIDATO, NR_CANDIDATO, NM_CANDIDATO, NM_URNA_CANDIDATO, DS_SITUACAO_CANDIDATURA,
        DS_DETALHE_SITUACAO_CAND, NR_PARTIDO, SG_PARTIDO, SG_FEDERACAO, ST_VOTO_EM_TRANSITO, QT_VOTOS_NOMINAIS,
        NM_TIPO_DESTINACAO_VOTOS, QT_VOTOS_NOMINAIS_VALIDOS, DS_SIT_TOT_TURNO]
+
+  vagas:
+    # Quantas vagas cada cargo tem em cada unidade eleitoral (por exemplo, 54 de senador e 513 de deputado federal em
+    # 2026). É o que permite saber se alguma vaga ficou sem eleito. Layout igual em 2022 e 2026.
+    url: "{base_url}/consulta_vagas/consulta_vagas_{year}.zip"
+    load: yearly
+    first_year: 2022
+    step: 4
+    stable_after_years: 4
+    archive: zip
+    member: "*_BRASIL.csv"
+    write: merge
+    primary_key: [ANO_ELEICAO, CD_ELEICAO, SG_UE, CD_CARGO]   # o arquivo de 2022 traz também a eleição suplementar de RR
+    columns: [ANO_ELEICAO, CD_ELEICAO, DS_ELEICAO, DT_POSSE, SG_UF, SG_UE, NM_UE, CD_CARGO, DS_CARGO, QT_VAGA]
+
+  receitas_candidatos:
+    # Prestação de contas dos candidatos: uma linha por receita. Só as colunas do total arrecadado; o nome e o
+    # documento de quem doou não entram (minimização). Os dois datasets de prestação leem o mesmo pacote (distintos
+    # pelo fragmento da URL, que não vai ao servidor); o pacote de 2022 tem centenas de MB: peça por ano.
+    url: "{base_url}/prestacao_contas/prestacao_de_contas_eleitorais_candidatos_{year}.zip#receitas"
+    load: yearly
+    first_year: 2022
+    step: 4
+    stable_after_years: 4
+    archive: zip
+    member: "receitas_candidatos_[0-9]*_BRASIL.csv"   # não pega receitas_candidatos_doador_originario_*
+    write: merge
+    primary_key: [AA_ELEICAO, SQ_PRESTADOR_CONTAS, SQ_RECEITA]
+    columns:
+      [AA_ELEICAO, ST_TURNO, TP_PRESTACAO_CONTAS, DT_PRESTACAO_CONTAS, SQ_PRESTADOR_CONTAS, SG_UF, SG_UE, DS_CARGO,
+       SQ_CANDIDATO, SQ_RECEITA, DT_RECEITA, VR_RECEITA]
+
+  despesas_candidatos:
+    # Despesas contratadas pelos candidatos (o 2022 descompactado tem 1,3 GB). Mesmo pacote e mesma minimização:
+    # sem o nome nem o documento do fornecedor.
+    url: "{base_url}/prestacao_contas/prestacao_de_contas_eleitorais_candidatos_{year}.zip#despesas"
+    load: yearly
+    first_year: 2022
+    step: 4
+    stable_after_years: 4
+    archive: zip
+    member: "despesas_contratadas_candidatos_*_BRASIL.csv"
+    write: merge
+    primary_key: [AA_ELEICAO, SQ_PRESTADOR_CONTAS, SQ_DESPESA]
+    columns:
+      [AA_ELEICAO, ST_TURNO, TP_PRESTACAO_CONTAS, DT_PRESTACAO_CONTAS, SQ_PRESTADOR_CONTAS, SG_UF, SG_UE, DS_CARGO,
+       SQ_CANDIDATO, SQ_DESPESA, DT_DESPESA, VR_DESPESA_CONTRATADA]

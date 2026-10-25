@@ -198,4 +198,95 @@ def tse_files(pasta: Path) -> dict[str, Path]:
             pacote.writestr(f"{nome}_SP.csv", conteudo)  # o `_BRASIL.csv` é o único lido; este é só ruído
             pacote.writestr(f"{nome}_BRASIL.csv", conteudo)
         arquivos[contrato.url(dataset, 2022)] = pacote_destino
+    arquivos[contrato.url("vagas", 2022)] = _pacote(
+        pasta / "consulta_vagas_2022.zip", {"consulta_vagas_2022_BRASIL.csv": _vagas()}
+    )
+    contas = _pacote(
+        pasta / "prestacao_de_contas_eleitorais_candidatos_2022.zip",
+        {
+            "receitas_candidatos_2022_BRASIL.csv": _receitas(),
+            "receitas_candidatos_doador_originario_2022_BRASIL.csv": _receitas(),  # não pode ser lido
+            "despesas_contratadas_candidatos_2022_BRASIL.csv": _despesas(),
+        },
+    )
+    arquivos[contrato.url("receitas_candidatos", 2022)] = contas
+    arquivos[contrato.url("despesas_candidatos", 2022)] = contas
     return arquivos
+
+
+VAGAS_COLUNAS = "DT_GERACAO HH_GERACAO ANO_ELEICAO CD_TIPO_ELEICAO NM_TIPO_ELEICAO CD_ELEICAO DS_ELEICAO DT_ELEICAO DT_POSSE SG_UF SG_UE NM_UE CD_CARGO DS_CARGO QT_VAGA".split()  # noqa: E501
+#       uf, cargo, vagas: RJ completa (1 de 1), MG com vaga pendente (1 de 2) e SP sem nenhum eleito
+VAGAS = [
+    ("RJ", "Deputado Federal", "1"),
+    ("MG", "Deputado Federal", "2"),
+    ("SP", "Senador", "2"),
+    ("SP", "Deputado Estadual", "70"),
+]
+RECEITAS_COLUNAS = "DT_GERACAO HH_GERACAO AA_ELEICAO ST_TURNO TP_PRESTACAO_CONTAS DT_PRESTACAO_CONTAS SQ_PRESTADOR_CONTAS SG_UF SG_UE DS_CARGO SQ_CANDIDATO NR_CPF_CANDIDATO NR_CPF_CNPJ_DOADOR NM_DOADOR SQ_RECEITA DT_RECEITA VR_RECEITA".split()  # noqa: E501
+DESPESAS_COLUNAS = "DT_GERACAO HH_GERACAO AA_ELEICAO ST_TURNO TP_PRESTACAO_CONTAS DT_PRESTACAO_CONTAS SQ_PRESTADOR_CONTAS SG_UF SG_UE DS_CARGO SQ_CANDIDATO NR_CPF_CANDIDATO NR_CPF_CNPJ_FORNECEDOR NM_FORNECEDOR SQ_DESPESA DT_DESPESA VR_DESPESA_CONTRATADA".split()  # noqa: E501
+#         sq, valor da receita
+RECEITAS = [("1001", "1000,00"), ("1001", "250,50"), ("1002", "300,00")]
+#         sq, valor da despesa contratada
+DESPESAS = [("1001", "400,00")]
+
+
+def _pacote(destino: Path, membros: dict[str, bytes]) -> Path:
+    with zipfile.ZipFile(destino, "w") as pacote:
+        for nome, conteudo in membros.items():
+            pacote.writestr(nome, conteudo)
+    return destino
+
+
+CODIGO_DO_CARGO = {"Deputado Federal": "6", "Senador": "5", "Deputado Estadual": "7", "Governador": "3"}
+
+
+def _vagas() -> bytes:
+    gerais = [
+        {
+            "SG_UF": uf,
+            "SG_UE": uf,
+            "DS_CARGO": cargo,
+            "QT_VAGA": vagas,
+            "CD_CARGO": CODIGO_DO_CARGO[cargo],
+            "CD_ELEICAO": "544",
+            "DS_ELEICAO": "Eleição Geral Federal 2022",
+            "DT_POSSE": "01/02/2023",
+        }
+        for uf, cargo, vagas in VAGAS
+    ]
+    # o arquivo real de 2022 traz também a eleição suplementar de governador de Roraima: não é eleição geral
+    suplementar = {
+        "SG_UF": "RR",
+        "SG_UE": "RR",
+        "DS_CARGO": "Governador",
+        "QT_VAGA": "1",
+        "CD_CARGO": "3",
+        "CD_ELEICAO": "6278",
+        "DS_ELEICAO": "Eleição Suplementar Governador 2026",
+        "DT_POSSE": "01/01/2027",
+    }
+    return _tabela(VAGAS_COLUNAS, [*gerais, suplementar])
+
+
+def _contas(
+    colunas: Sequence[str], linhas: Sequence[tuple[str, str]], chave: str, valor: str, sufixo: str
+) -> bytes:
+    return _tabela(
+        colunas,
+        [
+            {"AA_ELEICAO": "2022", "ST_TURNO": "1", "TP_PRESTACAO_CONTAS": "FINAL", "DT_PRESTACAO_CONTAS": "12/12/2022",
+             "SQ_PRESTADOR_CONTAS": f"90{sq}", "SG_UF": UF_DE[sq], "SG_UE": UF_DE[sq], "DS_CARGO": "Deputado Federal",
+             "SQ_CANDIDATO": sq, "NR_CPF_CANDIDATO": "12345678900", "NR_CPF_CNPJ_DOADOR": "11122233344",
+             "NM_DOADOR": "DOADOR SIGILOSO", "NR_CPF_CNPJ_FORNECEDOR": "55566677788", "NM_FORNECEDOR": "FORNECEDOR SIGILOSO",
+             chave: f"{i}{sq}", sufixo: "10/09/2022", valor: v}
+            for i, (sq, v) in enumerate(linhas, start=1)
+        ],
+    )  # fmt: skip
+
+
+def _receitas() -> bytes:
+    return _contas(RECEITAS_COLUNAS, RECEITAS, "SQ_RECEITA", "VR_RECEITA", "DT_RECEITA")
+
+
+def _despesas() -> bytes:
+    return _contas(DESPESAS_COLUNAS, DESPESAS, "SQ_DESPESA", "VR_DESPESA_CONTRATADA", "DT_DESPESA")

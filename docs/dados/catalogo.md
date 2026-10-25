@@ -72,6 +72,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `bens` | Bens declarados pelos candidatos de todos os cargos nas eleições gerais de 2006 em diante, uma linha por bem. | publico-agente-publico |  |
 | `candidaturas` | Candidaturas a deputado federal e senador (e suplentes) nas eleições gerais, uma linha por candidatura. | publico-agente-publico |  |
+| `despesas_candidatos` | Despesas contratadas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por despesa, só com as colunas do total (sem nome nem documento do fornecedor), como o TSE publica. | publico-agente-publico |  |
+| `receitas_candidatos` | Receitas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por receita, só com as colunas do total (sem nome nem documento de quem doou), como o TSE publica. | publico-agente-publico |  |
+| `vagas` | Quantidade de vagas de cada cargo em cada unidade eleitoral nas eleições gerais (por exemplo, 513 de deputado federal), uma linha por cargo e unidade, como o TSE publica. | publico-agente-publico |  |
 | `votacao` | Votos de cada candidato (todos os cargos) por município e zona nas eleições gerais já carregadas, como o TSE publica. | publico-agente-publico |  |
 
 ## staging
@@ -117,6 +120,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_transparencia__emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica (inclui pessoa física, com CPF mascarado). | publico-agente-publico |  |
 | `stg_tse__bens` | Bens declarados pelos candidatos de todos os cargos, uma linha por bem. | publico-agente-publico |  |
 | `stg_tse__candidaturas` | Candidaturas ao Congresso (deputado federal e senador, com suplentes) nas eleições gerais, uma linha por candidatura e turno. | publico-agente-publico |  |
+| `stg_tse__despesas_candidatos` | Despesas contratadas declaradas pelos candidatos de todos os cargos, uma linha por despesa; o valor é o declarado, sem nome nem documento do fornecedor. | publico-agente-publico |  |
+| `stg_tse__receitas_candidatos` | Receitas declaradas pelos candidatos de todos os cargos, uma linha por receita; o valor é o declarado, sem nome nem documento de quem doou. | publico-agente-publico |  |
+| `stg_tse__vagas` | Vagas de cada cargo em cada unidade eleitoral, uma linha por eleição, cargo e unidade, como o TSE publica; traz também as eleições suplementares. | publico-agente-publico |  |
 | `stg_tse__votacao` | Votos de cada candidato (todos os cargos) por município e zona, como o TSE publica. | publico-agente-publico |  |
 
 ## intermediate
@@ -151,6 +157,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `candidaturas_votos` | Votos de cada candidatura de quem já é pessoa do projeto, somados dos municípios e zonas, nas eleições gerais já carregadas. Uma linha por candidatura e turno. | publico-agente-publico | candidatura e turno |
 | `constituicao_alteracoes` | Cada indicação de emenda que o texto da Constituição traz entre parênteses, por dispositivo (por exemplo, Redação dada pela Emenda Constitucional nº 45, de 2004). Uma linha por dispositivo e emenda citada. | publico | dispositivo e emenda citada |
 | `constituicao_dispositivos` | A Constituição de 1988 e o ADCT dispositivo a dispositivo, como a Câmara publica (texto atualizado até a emenda indicada). O tipo e o contexto saem da posição e do começo de cada linha; o texto não é reescrito. Uma linha por parágrafo do arquivo. | publico | parágrafo do arquivo |
+| `eleitos` | Eleitos para presidente, governador, senador e deputado federal nas eleições gerais, de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito. | publico-agente-publico | eleito |
+| `eleitos_campanhas` | O que cada eleito declarou na campanha, com totais dos bens, das receitas e das despesas contratadas, só fatos e totais. O total fica vazio, e não zero, quando o arquivo ainda não foi carregado. Uma linha por eleito. | publico-agente-publico | eleito |
+| `eleitos_cargos` | Situação de cada cargo em cada unidade eleitoral nas eleições gerais, com vagas, eleitos e pendentes. Mostra o estado real, sem palpite. Uma linha por eleição, cargo e unidade eleitoral. | publico | cargo por unidade eleitoral e eleição |
 | `emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
 | `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
 | `emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês. | publico-dados-pessoais-de-terceiros | emenda |
@@ -279,6 +288,68 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `atualizada_ate_emenda` | integer | Número da emenda constitucional até a qual o arquivo está atualizado. |  |
 | `fonte_url` | varchar | Página oficial da Câmara com o texto atualizado. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.eleitos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_candidatura` | varchar | Identificador da candidatura (ano, unidade eleitoral e sequencial do candidato, como o TSE informa). |  |
+| `ano_eleicao` | integer | Ano da eleição. |  |
+| `turno` | integer | Turno em que o resultado de eleito foi registrado. |  |
+| `uf` | varchar | UF da eleição (BR para presidente). |  |
+| `cargo` | varchar | Cargo para o qual foi eleito. |  |
+| `nome_urna` | varchar | Nome de urna, com caixa padronizada. |  |
+| `nome` | varchar | Nome completo, com caixa padronizada. |  |
+| `partido` | varchar | Sigla do partido pelo qual concorreu. |  |
+| `situacao_candidatura` | varchar | Situação da candidatura no TSE (por exemplo, deferido), como o TSE informa. |  |
+| `resultado` | varchar | Resultado como o TSE informa (por exemplo, eleito, eleito por QP ou eleito por média). |  |
+| `qtd_votos` | bigint | Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada. |  |
+| `percentual_votos_nominais` | decimal(5,2) | Percentual dos votos nominais válidos do cargo na unidade eleitoral e no turno, sem os votos de legenda; vazio se a votação ainda não foi carregada. |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos novatos e nos casos sem ligação. |  |
+| `tipo_mandato` | varchar | Só para deputado federal e senador: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum). |  |
+| `vinculo_metodo` | varchar | Como o eleito foi ligado à pessoa: identificador oficial da própria fonte ou nome civil e data de nascimento iguais e únicos; vazio sem ligação. |  |
+| `vinculo_aprovado_por` | varchar | Quem aprovou o vínculo, quando foi aprovado à mão; vazio nos demais. |  |
+| `dt_captura` | date | Data da captura do arquivo de candidaturas de onde vem o resultado. |  |
+| `fonte_url` | varchar | Página oficial do TSE com os arquivos de candidatos da eleição. |  |
+
+### marts.eleitos_campanhas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_candidatura` | varchar | Identificador da candidatura (marts.eleitos). |  |
+| `ano_eleicao` | integer | Ano da eleição. |  |
+| `uf` | varchar | UF da eleição (BR para presidente). |  |
+| `cargo` | varchar | Cargo para o qual foi eleito. |  |
+| `qtd_bens` | bigint | Quantidade de bens declarados; vazio se o candidato não declarou ou o arquivo não foi carregado. |  |
+| `valor_bens` | decimal(18,2) | Soma dos valores dos bens declarados, em reais, sem correção. |  |
+| `dt_atualizacao_bens` | date | Data da última atualização dos bens declarados, como o TSE informa. |  |
+| `dt_captura_bens` | date | Data da captura do arquivo de bens. |  |
+| `qtd_receitas` | bigint | Quantidade de receitas declaradas na prestação de contas; vazio se o arquivo não foi carregado. |  |
+| `valor_receitas` | decimal(18,2) | Soma das receitas declaradas, em reais. |  |
+| `qtd_despesas` | bigint | Quantidade de despesas contratadas declaradas na prestação de contas; vazio se o arquivo não foi carregado. |  |
+| `valor_despesas` | decimal(18,2) | Soma das despesas contratadas declaradas, em reais. |  |
+| `dt_prestacao` | date | Data mais recente da prestação de contas entre receitas e despesas. |  |
+| `dt_captura_contas` | date | Data da captura do arquivo da prestação de contas. |  |
+| `fonte_url_bens` | varchar | Página oficial do TSE com os arquivos de bens da eleição. |  |
+| `fonte_url_contas` | varchar | Página oficial do TSE com os arquivos da prestação de contas da eleição. |  |
+
+### marts.eleitos_cargos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `ano_eleicao` | integer | Ano da eleição. |  |
+| `uf` | varchar | UF da eleição (BR para presidente). |  |
+| `cargo` | varchar | Cargo em disputa. |  |
+| `qtd_vagas` | integer | Quantidade de vagas do cargo na unidade eleitoral, como o TSE informa. |  |
+| `qtd_eleitos` | bigint | Quantos eleitos o resultado do TSE já registra para o cargo. |  |
+| `qtd_pendentes` | bigint | Vagas ainda sem eleito (vagas menos eleitos). |  |
+| `status` | varchar | eleito_provisorio quando todas as vagas têm eleito pelo resultado do TSE (ainda sem diplomação); aguardando_resultado quando falta eleito. |  |
+| `dt_posse` | date | Data da posse prevista, como o TSE informa. |  |
+| `dt_captura` | date | Data da captura do arquivo de candidaturas de onde vêm os resultados. |  |
+| `fonte_url` | varchar | Página oficial do TSE com os arquivos de candidatos da eleição. |  |
 
 ### marts.emendas
 
