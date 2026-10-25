@@ -648,7 +648,7 @@ models:
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: eleitos
-    description: Eleitos para presidente, governador, senador e deputado federal nas eleições gerais, de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito.
+    description: Eleitos para presidente, governador, senador, deputado federal, deputado estadual e deputado distrital nas eleições gerais, de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito.
     meta: {sensitivity: publico-agente-publico, grain: eleito, owner: fundador do projeto, freshness: a cada eleição}
     data_tests: *monitoramento
     columns:
