@@ -7,6 +7,19 @@ from email.message import EmailMessage
 from pathlib import Path
 
 
+def notify_failure(job: str, run_id: str, steps: list[str], message: str, url: str | None = None) -> bool:
+    """Avisa por e-mail que uma execução falhou. Nunca falha: se o SMTP falhar, só avisa na saída."""
+    lines = [f"A execução {run_id} do job {job} falhou.", ""]
+    lines += [f"Passos com falha: {', '.join(steps) or 'não informado'}", "", message[:2000]]
+    if url:
+        lines += ["", f"Execução: {url}"]
+    try:
+        return send(f"Plataforma de dados: a execução de {job} falhou", chr(10).join(lines))
+    except (OSError, smtplib.SMTPException) as error:
+        print(f"Alerta por e-mail não enviado: {error}")
+        return False
+
+
 def send(subject: str, body: str, attachment: Path | None = None) -> bool:
     """Envia o e-mail (com um anexo HTML, se pedido). Devolve False sem SMTP ou destinatário configurados."""
     host, to = os.environ.get("DADO_PUBLICO_SMTP_HOST"), os.environ.get("DADO_PUBLICO_ALERT_TO")

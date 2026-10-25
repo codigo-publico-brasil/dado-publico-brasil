@@ -94,11 +94,14 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
         "from dado_publico_brasil.orchestration.definitions import defs;"
         "keys = {k.to_user_string() for k in defs.resolve_asset_graph().get_all_asset_keys()};"
         "print(len(keys), 'marts/pessoas' in keys or 'pessoas' in keys, 'identity/pessoa' in keys, {'landing/camara', 'landing/senado'} <= keys,"
-        " [s.name for s in defs.schedules or []])"
+        " [s.name for s in defs.schedules or []],"
+        " [s.name for s in defs.sensors or []],"
+        " len([c for c in defs.resolve_asset_graph().asset_check_keys if c.name == 'saude_da_fonte']))"
     )
     env = {**os.environ, "DADO_PUBLICO_STORAGE_ROOT": str(settings.storage_root)}
     result = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, env=env, cwd=ROOT, check=False
     )
     assert result.returncode == 0, result.stderr[-1500:]
-    assert "True True True ['daily_incremental']" in result.stdout, result.stdout
+    assert "True True True ['daily_incremental'] ['falha_de_execucao']" in result.stdout, result.stdout
+    assert int(result.stdout.split()[-1]) > 0, result.stdout  # uma verificação de saúde por tabela do raw
