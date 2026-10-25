@@ -2,23 +2,23 @@
 with nos_votos as (
 
     select
-        v.senador_id,
-        arg_max(v.nome, d.data) as nome
+        v.id_senador,
+        arg_max(v.nome, d.dt_votacao) as nome
 
     from {{ ref('stg_senado__votos') }} as v
 
-    inner join {{ ref('stg_senado__votacoes') }} as d on d.votacao_id = v.votacao_id
+    inner join {{ ref('stg_senado__votacoes') }} as d on d.id_votacao = v.id_votacao
 
-    group by v.senador_id
+    group by v.id_senador
 
 )
 
 select
-    coalesce(c.senador_id, n.senador_id) as senador_id,
+    coalesce(c.id_senador, n.id_senador) as id_senador,
     coalesce(c.nome, n.nome) as nome,
     c.nome_civil,
     c.sexo
 
 from {{ ref('stg_senado__senadores') }} as c
 
-full outer join nos_votos as n on n.senador_id = c.senador_id
+full outer join nos_votos as n on n.id_senador = c.id_senador

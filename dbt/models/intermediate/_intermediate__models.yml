@@ -1,94 +1,168 @@
 version: 2
 
 models:
-  - name: int_deputados_nos_votos_agregados
+  - name: int_deputados_votos_agregados
     description: Um registro por deputado visto nos votos, com nome e foto mais recentes.
     config:
       tags: [pre_identity]
     columns:
-      - name: deputado_id
-        tests: [unique, not_null]
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["unique", "not_null"]}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
+      - {name: foto_url, description: "Endereço da foto oficial."}
   - name: int_deputados_ids_unidos
     description: Todo deputado informado pela Câmara (cadastro mais votos).
     config:
       tags: [pre_identity]
     columns:
-      - name: deputado_id
-        tests: [unique, not_null]
-  - name: int_siglas_em_ementas_extraidas
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["unique", "not_null"]}
+  - name: int_ementas_siglas_extraidas
     description: Siglas escritas em maiúsculas dentro de ementas de caixa mista.
     config:
       tags: [pre_identity]
     columns:
-      - name: sigla
-        tests: [unique, not_null]
-  - name: int_pessoas_unidas_ao_cadastro
+      - {name: sigla, description: "Sigla do tipo da proposição, número e ano.", tests: ["unique", "not_null"]}
+  - name: int_pessoas_unidas_cadastro
     description: Pessoa do projeto unida ao cadastro e aos dados vistos nos votos.
     columns:
-      - name: id_pessoa
-        tests: [unique, not_null]
-  - name: int_votos_ligados_a_pessoas
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
+      - {name: fonte, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara."}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
+      - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
+      - {name: sexo, description: "Sexo registrado no cadastro da fonte."}
+      - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
+      - {name: dt_falecimento, description: "Data de falecimento informada pela fonte."}
+      - {name: municipio_nascimento, description: "Município de nascimento informado pela fonte."}
+      - {name: uf_nascimento, description: "UF de nascimento informada pela fonte."}
+      - {name: foto_url, description: "Endereço da foto oficial."}
+      - {name: rede_social_url, description: "Primeira rede social informada no cadastro."}
+      - {name: site_url, description: "Site informado no cadastro."}
+  - name: int_votacoes_votos_ligados
     description: Votos com a pessoa do projeto (chave própria).
     columns:
-      - name: id_pessoa
-        tests: [not_null]
-  - name: int_autorias_ligadas_a_pessoas
+      - {name: fonte, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
+      - {name: id_votacao, description: "Identificador da votação na fonte."}
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["not_null"]}
+      - {name: voto, description: "Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.)."}
+      - {name: dt_voto, description: "Data e hora do voto."}
+      - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
+      - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: id_legislatura, description: "Número da legislatura."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+  - name: int_proposicoes_autorias_ligadas
     description: Autorias com a pessoa do projeto; autor que não é deputado fica sem pessoa.
+    columns:
+      - {name: id_proposicao, description: "Identificador da proposição na fonte."}
+      - {name: ordem_assinatura, description: "Posição na assinatura."}
+      - {name: nome_autor, description: "Nome do autor como a fonte informa (deputado, comissão, Senado, Executivo...)."}
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity)."}
+      - {name: tipo_autor, description: "Tipo do autor na fonte (deputado, órgão, outro)."}
+      - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
+      - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: proponente, description: "1 quando consta como proponente; 0 caso contrário."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: int_pessoas_atividade_agregada
     description: Uma linha por pessoa, com votos, propostas e legislaturas.
     columns:
-      - name: id_pessoa
-        tests: [unique, not_null]
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
+      - {name: qtd_votos, description: "Quantidade de votos nominais registrados."}
+      - {name: qtd_propostas, description: "Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado)."}
+      - {name: ultimo_partido, description: "Partido no voto mais recente."}
+      - {name: ultima_uf, description: "UF no voto mais recente."}
+      - {name: dt_ultimo_voto, description: "Data e hora do voto mais recente."}
+      - {name: primeira_legislatura_com_voto, description: "Primeira legislatura em que há voto registrado."}
+      - {name: ultima_legislatura_com_voto, description: "Última legislatura em que há voto registrado."}
   - name: int_pessoas_profissoes_agregadas
     description: Uma linha por pessoa, com as profissões declaradas.
     columns:
-      - name: id_pessoa
-        tests: [unique, not_null]
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
+      - {name: profissoes, description: "Profissões declaradas, separadas por ponto e vírgula."}
   - name: int_votacoes_proposicoes_unidas
     description: Proposições de cada votação, com o papel (afetada ou objeto).
     columns:
-      - name: votacao_id
-        tests: [not_null]
-  - name: int_orgaos_membros_ligados_a_pessoas
+      - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
+      - {name: id_proposicao, description: "Identificador da proposição na fonte."}
+      - {name: papel, description: "Papel da proposição na votação: afetada (proposição afetada pela votação) ou objeto (objeto da votação)."}
+  - name: int_orgaos_membros_ligados
     description: Participação em órgãos ligada à pessoa do projeto.
     columns:
-      - name: id_pessoa
-        tests: [not_null]
-  - name: int_frentes_membros_ligados_a_pessoas
+      - {name: id_orgao, description: "Identificador do órgão na fonte."}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara."}
+      - {name: orgao_sigla, description: "Sigla do órgão em que ocorreu."}
+      - {name: cargo, description: "Cargo exercido."}
+      - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
+      - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
+      - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["not_null"]}
+  - name: int_frentes_membros_ligados
     description: Participação em frentes ligada à pessoa do projeto.
     columns:
-      - name: id_pessoa
-        tests: [not_null]
-  - name: int_deputados_fotos_das_frentes
+      - {name: id_frente, description: "Identificador da frente na fonte."}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara."}
+      - {name: id_legislatura, description: "Número da legislatura."}
+      - {name: titulo, description: "Ocupação declarada."}
+      - {name: deputado_foto_url, description: "Endereço da foto do deputado na fonte."}
+      - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
+      - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["not_null"]}
+  - name: int_deputados_frentes_fotos
     description: Uma foto por deputado, a da legislatura mais recente nos arquivos de frentes.
     columns:
-      - name: deputado_id
-        tests: [unique, not_null]
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["unique", "not_null"]}
+      - {name: foto_url, description: "Endereço da foto oficial."}
   - name: int_senadores_unidos
     description: Todo senador informado pelo Senado (cadastro mais votos).
     config:
       tags: [pre_identity]
     columns:
-      - name: senador_id
-        tests: [unique, not_null]
+      - {name: id_senador, description: "Identificador do senador no Senado.", tests: ["unique", "not_null"]}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
+      - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
+      - {name: sexo, description: "Sexo registrado no cadastro da fonte."}
   - name: int_pessoas_ids_vistos
     description: Todo identificador de pessoa informado pelas fontes. Entrada do código de identidade.
     config:
       tags: [pre_identity]
-  - name: int_pessoas_do_senado_unidas_ao_cadastro
+    columns:
+      - {name: fonte, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
+      - {name: id_tipo, description: "Identificador do tipo, como a fonte informa."}
+      - {name: id_na_fonte, description: "Identificador do registro na fonte de origem."}
+  - name: int_pessoas_senado_unidas
     description: Pessoa do projeto unida ao cadastro do Senado.
     columns:
-      - name: id_pessoa
-        tests: [unique, not_null]
-  - name: int_materias_do_senado_unicas
+      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
+      - {name: fonte, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
+      - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
+      - {name: sexo, description: "Sexo registrado no cadastro da fonte."}
+      - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
+      - {name: dt_falecimento, description: "Data de falecimento informada pela fonte."}
+      - {name: municipio_nascimento, description: "Município de nascimento informado pela fonte."}
+      - {name: uf_nascimento, description: "UF de nascimento informada pela fonte."}
+      - {name: foto_url, description: "Endereço da foto oficial."}
+      - {name: rede_social_url, description: "Primeira rede social informada no cadastro."}
+      - {name: site_url, description: "Site informado no cadastro."}
+  - name: int_senado_materias_unicas
     description: Uma linha por matéria votada no Senado, com os dados da votação mais recente.
     columns:
-      - name: materia_id
-        tests: [unique, not_null]
-  - name: int_pessoas_para_vinculo
+      - {name: id_materia, description: "Identificador da matéria no Senado.", tests: ["unique", "not_null"]}
+      - {name: sigla, description: "Sigla do tipo da proposição, número e ano."}
+      - {name: ementa, description: "Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista."}
+      - {name: dt_apresentacao, description: "Data de apresentação."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+  - name: int_pessoas_vinculo
     description: Pessoas das duas casas com nome civil (como chave) e nascimento, para ligar entre fontes.
     config:
       tags: [pre_identity]
+    columns:
+      - {name: fonte, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
+      - {name: id_tipo, description: "Identificador do tipo, como a fonte informa."}
+      - {name: id_na_fonte, description: "Identificador do registro na fonte de origem."}
+      - {name: nome_chave, description: "Nome padronizado (sem acento e em minúsculas), usado só para comparar nomes entre fontes."}
+      - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
   - name: int_vinculos_propostos
     description: >
       Vínculos propostos entre fontes pela regra de nome civil e nascimento iguais e únicos: Câmara com Senado
@@ -96,7 +170,10 @@ models:
     config:
       tags: [pre_identity]
     columns:
-      - name: origem_id
-        tests: [not_null]
-      - name: destino_id
-        tests: [not_null]
+      - {name: origem_fonte, description: "Fonte do registro de origem do vínculo (por exemplo, camara)."}
+      - {name: origem_tipo, description: "Tipo de identificador do registro de origem do vínculo."}
+      - {name: id_origem, description: "Identificador do registro de origem do vínculo, na fonte de origem.", tests: ["not_null"]}
+      - {name: destino_fonte, description: "Fonte do registro de destino do vínculo (por exemplo, senado)."}
+      - {name: destino_tipo, description: "Tipo de identificador do registro de destino do vínculo."}
+      - {name: id_destino, description: "Identificador do registro de destino do vínculo, na fonte de destino.", tests: ["not_null"]}
+      - {name: metodo, description: "Regra que ligou as duas chaves."}

@@ -46,9 +46,9 @@ Decidida na spec 008: um erro de ligação (juntar duas pessoas diferentes, ou s
 
 ### Fusão de chaves
 
-Quando a regra mostra que um deputado e um senador são a mesma pessoa, a chave mais **nova** é absorvida pela mais **antiga**: os identificadores passam a apontar para a sobrevivente, a chave absorvida sai de `identity.pessoa` e **nunca é reaproveitada**, e a fusão fica em `identity.pessoa_fusao` (mart `fusoes_de_pessoas`) para quem guardou a chave antiga resolver a atual. `marts.pessoas` tem uma linha por pessoa (dados da Câmara quando está nas duas casas; coluna `fontes` com todas).
+Quando a regra mostra que um deputado e um senador são a mesma pessoa, a chave mais **nova** é absorvida pela mais **antiga**: os identificadores passam a apontar para a sobrevivente, a chave absorvida sai de `identity.pessoa` e **nunca é reaproveitada**, e a fusão fica em `identity.pessoa_fusao` (mart `pessoas_fusoes`) para quem guardou a chave antiga resolver a atual. `marts.pessoas` tem uma linha por pessoa (dados da Câmara quando está nas duas casas; coluna `fontes` com todas).
 
-Hoje só existe a fonte Câmara, então toda ligação é a automática "identificador oficial da própria fonte". O código está em [`identity.py`](../../src/dado_publico_brasil/transformation/identity.py) e as tabelas são criadas por [migração](../../ddl/0002_identity.sql). Os dados da pessoa (nome, foto, nascimento) e o mandato são modelos SQL do dbt ([`int_pessoas_unidas_ao_cadastro`](../../dbt/models/intermediate/int_pessoas_unidas_ao_cadastro.sql) e [`mandatos`](../../dbt/models/marts/legislativo/mandatos.sql)).
+Hoje só existe a fonte Câmara, então toda ligação é a automática "identificador oficial da própria fonte". O código está em [`identity.py`](../../src/dado_publico_brasil/transformation/identity.py) e as tabelas são criadas por [migração](../../ddl/0002_identity.sql). Os dados da pessoa (nome, foto, nascimento) e o mandato são modelos SQL do dbt ([`int_pessoas_unidas_cadastro`](../../dbt/models/intermediate/int_pessoas_unidas_cadastro.sql) e [`mandatos`](../../dbt/models/marts/legislativo/mandatos.sql)).
 
 ## Mandato: o que é oficial e o que é observado
 

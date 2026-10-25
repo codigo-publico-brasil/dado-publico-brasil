@@ -7,10 +7,10 @@ with source as (
 renamed as (
 
     select
-        id_votacao as votacao_id,
+        id_votacao as id_votacao,
         sigla_bancada as bancada_sigla,
         orientacao,
-        _source_file_id as source_file_id
+        _source_file_id as id_captura
 
     from source
 

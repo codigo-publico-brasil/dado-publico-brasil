@@ -7,11 +7,11 @@ with source as (
 renamed as (
 
     select
-        try_cast(id as bigint) as deputado_id,
-        try_cast(cod_tipo_profissao as integer) as tipo_codigo,
+        try_cast(id as bigint) as id_deputado,
+        try_cast(cod_tipo_profissao as integer) as cd_tipo,
         sentence_case(titulo) as titulo,
-        try_cast(data_hora as timestamp) as registrada_em,
-        _source_file_id as source_file_id
+        try_cast(data_hora as timestamp) as dt_registro,
+        _source_file_id as id_captura
 
     from source
 

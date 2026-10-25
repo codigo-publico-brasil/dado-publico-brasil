@@ -2,21 +2,21 @@
 -- decidiu (situação como a fonte informa). Só dos vetos já buscados. Uma linha por dispositivo.
 select
     '{{ var("source_senado") }}' as fonte,
-    d.dispositivo_id,
-    d.materia_veto_id,
-    v.veto_id,
+    d.id_dispositivo,
+    d.id_materia_veto,
+    v.id_veto,
     d.identificador,
     d.descricao,
     d.texto_vetado,
     d.razao_veto,
     d.situacao,
-    d.possui_votos,
+    d.fl_possui_votos,
     d.tipo_votacao,
-    d.sessao_em,
-    cast(c.capturado_em as date) as capturado_em
+    d.dt_sessao,
+    cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_senado__vetos_dispositivos') }} as d
 
-left join {{ ref('stg_senado__vetos') }} as v on v.materia_veto_id = d.materia_veto_id
+left join {{ ref('stg_senado__vetos') }} as v on v.id_materia_veto = d.id_materia_veto
 
-left join {{ ref('stg_metadata__captures') }} as c on c.source_file_id = d.source_file_id
+left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = d.id_captura

@@ -4,9 +4,64 @@ models:
   - name: stg_transparencia__emendas
     description: Emendas parlamentares, uma linha por emenda, localidade, função, programa e ação.
     columns:
-      - name: ano
-        tests: [not_null]
+      - {name: cd_emenda, description: "Código da emenda; vazio em registros antigos sem código."}
+      - {name: ano, description: "Ano do evento.", tests: ["not_null"]}
+      - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
+      - {name: cd_autor, description: "Código orçamentário do autor; vazio quando a fonte não informa."}
+      - {name: autor_nome, description: "Nome do autor (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada."}
+      - {name: numero, description: "Número da norma."}
+      - {name: localidade, description: "Localidade de aplicação do recurso, como a fonte informa."}
+      - {name: municipio_ibge, description: "Código IBGE do município."}
+      - {name: municipio, description: "Município de aplicação."}
+      - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
+      - {name: regiao, description: "Região."}
+      - {name: cd_funcao, description: "Código da função orçamentária, como o Portal da Transparência informa."}
+      - {name: funcao, description: "Função orçamentária."}
+      - {name: cd_subfuncao, description: "Código da subfunção orçamentária, como o Portal da Transparência informa."}
+      - {name: subfuncao, description: "Subfunção orçamentária."}
+      - {name: cd_programa, description: "Código do programa."}
+      - {name: programa, description: "Programa."}
+      - {name: cd_acao, description: "Código da ação."}
+      - {name: acao, description: "Ação orçamentária."}
+      - {name: plano_orcamentario, description: "Plano orçamentário."}
+      - {name: valor_empenhado, description: "Valor empenhado em reais."}
+      - {name: valor_liquidado, description: "Valor liquidado em reais."}
+      - {name: valor_pago, description: "Valor pago em reais."}
+      - {name: valor_restos_a_pagar_inscritos, description: "Restos a pagar inscritos em reais."}
+      - {name: valor_restos_a_pagar_cancelados, description: "Restos a pagar cancelados em reais."}
+      - {name: valor_restos_a_pagar_pagos, description: "Restos a pagar pagos em reais."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_transparencia__emendas_convenios
     description: Convênios firmados com recursos de emendas parlamentares.
+    columns:
+      - {name: cd_emenda, description: "Código da emenda; vazio em registros antigos sem código."}
+      - {name: cd_funcao, description: "Código da função orçamentária, como o Portal da Transparência informa."}
+      - {name: funcao, description: "Função orçamentária."}
+      - {name: cd_subfuncao, description: "Código da subfunção orçamentária, como o Portal da Transparência informa."}
+      - {name: subfuncao, description: "Subfunção orçamentária."}
+      - {name: localidade, description: "Localidade de aplicação do recurso, como a fonte informa."}
+      - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
+      - {name: dt_publicacao, description: "Data de publicação."}
+      - {name: convenente, description: "Quem firmou o convênio."}
+      - {name: objeto, description: "Objeto do convênio."}
+      - {name: convenio_numero, description: "Número do convênio."}
+      - {name: valor, description: "Valor declarado em reais, sem correção."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_transparencia__emendas_favorecidos
     description: Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica (inclui pessoa física, com CPF mascarado).
+    columns:
+      - {name: cd_emenda, description: "Código da emenda; vazio em registros antigos sem código."}
+      - {name: cd_autor, description: "Código orçamentário do autor; vazio quando a fonte não informa."}
+      - {name: autor_nome, description: "Nome do autor (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada."}
+      - {name: numero, description: "Número da norma."}
+      - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
+      - {name: ano, description: "Ano do evento."}
+      - {name: mes, description: "Mês do pagamento."}
+      - {name: cd_favorecido, description: "CNPJ, código da unidade gestora ou CPF mascarado do favorecido, como a fonte informa."}
+      - {name: favorecido, description: "Nome do favorecido (pessoa física inclusive)."}
+      - {name: natureza_juridica, description: "Natureza jurídica do favorecido."}
+      - {name: tipo_favorecido, description: "Pessoa jurídica ou unidade gestora."}
+      - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
+      - {name: municipio, description: "Município de aplicação."}
+      - {name: valor, description: "Valor declarado em reais, sem correção."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}

@@ -120,7 +120,7 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 
 - **staging**: um modelo por tabela do raw, `stg_<fonte>__<entidades>`, **views**, só renomear, converter tipos e padronizar texto. Sem joins nem agregações. É o único lugar que usa `source()`.
 - **intermediate**: uma finalidade por modelo (`int_..._agregados`, `..._ligados_a_...`, `..._unidos`), **tabelas** fora dos marts. Aqui estão a re-granularidade e os joins.
-- **marts**: **entidades** com nome simples e plural (`pessoas`, `proposicoes`, `votos`), um grain por tabela, largos, com **contrato de colunas e tipos** (`contract.enforced`). Declarados como *exposure* para a aplicação.
+- **marts**: **entidades** com nome simples e plural (`pessoas`, `proposicoes`, `votacoes_votos`), um grain por tabela, largos, com **contrato de colunas e tipos** (`contract.enforced`). Declarados como *exposure* para a aplicação.
 - **YAML** ao lado dos modelos (`_<pasta>__models.yml`, `_<fonte>__sources.yml`), com descrição, `meta` (sensibilidade, grain, dono) e testes de chave (`unique`, `not_null`, `relationships`).
 - **Testes**: genéricos no YAML, singulares em `tests/`. As lacunas conhecidas da fonte são testes `severity: warn` (a contagem de linhas que falharam mede a lacuna); reconciliações e integridade são `error` e interrompem o pipeline. O resultado de cada execução vai para `metadata.dbt_results`.
 - **Frescor** declarado nas fontes (`freshness` e `loaded_at_field`), medido com `dbt source freshness`.
@@ -155,7 +155,7 @@ O warehouse é `data_store/warehouse.duckdb`. Um arquivo DuckDB aceita um escrit
 
 ```bash
 uv run dado-publico query --sql "SELECT * FROM marts.pessoas WHERE nome_busca LIKE '%reginaldo%'"
-uv run python -c "import duckdb; print(duckdb.connect('data_store/warehouse.duckdb', read_only=True).sql('SELECT COUNT(*) FROM marts.votos'))"
+uv run python -c "import duckdb; print(duckdb.connect('data_store/warehouse.duckdb', read_only=True).sql('SELECT COUNT(*) FROM marts.votacoes_votos'))"
 ```
 
 O [catálogo](catalogo.md) lista todas as tabelas, gerado do dbt (`uv run dado-publico catalog`).
@@ -191,7 +191,7 @@ A fonte traz nomes e ementas ora em maiúsculas, ora em minúsculas. A regra ún
 - Só se altera texto **100% maiúsculo ou 100% minúsculo**; com as duas caixas, fica como está.
 - **Nomes:** `REGINALDO LÁZARO DE OLIVEIRA LOPES` vira `Reginaldo Lázaro de Oliveira Lopes`. Partículas (`da`, `de`, `dos`) em minúsculas; algarismos romanos e siglas sem vogal (`JHC`) em maiúsculas.
 - **Rótulos** (tipo de autor, situação): caixa de frase.
-- **Ementas:** o texto oficial vai em `ementa_oficial` e a versão padronizada em `ementa`. As siglas que a fonte escreve em maiúsculas dentro de outras ementas (`BNDES`) são mantidas (modelo `int_siglas_em_ementas_extraidas`).
+- **Ementas:** o texto oficial vai em `ementa_oficial` e a versão padronizada em `ementa`. As siglas que a fonte escreve em maiúsculas dentro de outras ementas (`BNDES`) são mantidas (modelo `int_ementas_siglas_extraidas`).
 - O que a regra não resolve fica visível no teste `pessoas_com_nome_em_maiusculas`.
 
 Reescrever ementa em linguagem simples com IA **não** é padronização; se vier a existir, será campo derivado à parte, rotulado como gerado por IA (ver [governança](governanca.md)).

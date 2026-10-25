@@ -7,9 +7,9 @@ with source as (
 renamed as (
 
     select
-        id_votacao as votacao_id,
-        try_cast(proposicao_id as bigint) as proposicao_id,
-        _source_file_id as source_file_id
+        id_votacao as id_votacao,
+        try_cast(proposicao_id as bigint) as id_proposicao,
+        _source_file_id as id_captura
 
     from source
 

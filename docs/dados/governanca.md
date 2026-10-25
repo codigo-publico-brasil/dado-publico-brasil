@@ -17,7 +17,7 @@ Cada tabela de cada camada é descrita **onde nasce**: o raw nas fontes do dbt (
 | `publico-dados-pessoais-de-terceiros` | dado que a fonte publica e que inclui pessoas que não são agentes públicos (cidadão comum) | favorecidos de emendas (nome e CPF mascarado de pessoa física) |
 | `controle` | metadado operacional | registro de execuções |
 
-**Sinalização em três níveis.** A classe vale para a tabela (`meta.sensitivity`); a coluna que identifica uma pessoa leva `meta: {pii: true}` e aparece marcada no dicionário do [catálogo](catalogo.md); e, nas tabelas que misturam pessoas jurídicas e físicas, uma coluna por linha (`contem_dado_pessoal`) deixa a aplicação decidir como mostrar. A plataforma guarda o que a fonte publica; quem consome decide a exibição. Um teste confere que a classe é uma das acima e que tabela com coluna `pii` não é `publico`.
+**Sinalização em três níveis.** A classe vale para a tabela (`meta.sensitivity`); a coluna que identifica uma pessoa leva `meta: {pii: true}` e aparece marcada no dicionário do [catálogo](catalogo.md); e, nas tabelas que misturam pessoas jurídicas e físicas, uma coluna por linha (`fl_contem_dado_pessoal`) deixa a aplicação decidir como mostrar. A plataforma guarda o que a fonte publica; quem consome decide a exibição. Um teste confere que a classe é uma das acima e que tabela com coluna `pii` não é `publico`.
 
 Regras (princípio IX da constituição do projeto):
 

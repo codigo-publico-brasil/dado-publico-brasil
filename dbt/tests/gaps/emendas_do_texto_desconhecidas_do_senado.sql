@@ -10,7 +10,7 @@ where a.parte = 'Constituição'
     and not exists (
         select 1
         from {{ ref('normas_relacoes') }} as r
-        where r.norma_id = 579494
+        where r.id_norma = 579494
             and r.tipo_relacao like '%Alteração Permanente%'
             and r.norma_posterior_nome like 'Emenda Constitucional n%'
             and try_cast(regexp_extract(r.norma_posterior_nome, 'Emenda Constitucional nº ?(\d+)', 1) as integer)

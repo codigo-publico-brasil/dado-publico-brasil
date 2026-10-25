@@ -40,7 +40,7 @@ from dado_publico_brasil.core import alert, migrations, runs, warehouse
 from dado_publico_brasil.core.settings import DBT_DIR, load_settings
 from dado_publico_brasil.ingestion import contract, landing, loader, monitoring
 from dado_publico_brasil.orchestration import pipeline
-from dado_publico_brasil.transformation import build, observability, quality
+from dado_publico_brasil.transformation import build, describe, observability, quality
 from dado_publico_brasil.transformation import dbt as dbt_runner
 
 SETTINGS = load_settings()
@@ -137,6 +137,7 @@ def _record_dbt(stage: str, target: Path) -> None:
             quality.record(con, run.id, results)
             run.rows_in = len(results)
             if stage == "transform_post":
+                describe.raw(con, target)
                 observability.notify(con)
     finally:
         con.close()

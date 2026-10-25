@@ -7,19 +7,19 @@ with source as (
 renamed as (
 
     select
-        try_cast(_item as bigint) as proposicao_id,
+        try_cast(_item as bigint) as id_proposicao,
         try_cast(sequencia as integer) as sequencia,
-        try_cast(data_hora as timestamp) as registrada_em,
+        try_cast(data_hora as timestamp) as dt_registro,
         sigla_orgao as orgao_sigla,
         regime,
         descricao_tramitacao as descricao,
-        try_cast(cod_tipo_tramitacao as integer) as tipo_id,
+        try_cast(cod_tipo_tramitacao as integer) as id_tipo,
         sentence_case(descricao_situacao) as situacao,
-        try_cast(cod_situacao as integer) as situacao_id,
+        try_cast(cod_situacao as integer) as id_situacao,
         despacho,
         ambito,
         apreciacao,
-        _source_file_id as source_file_id
+        _source_file_id as id_captura
 
     from source
 

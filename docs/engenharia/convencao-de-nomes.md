@@ -19,18 +19,19 @@ O **prefixo mostra o tipo** da coluna. Outros tipos não têm prefixo.
 | Identificador (chave nossa ou da fonte) | `id_` | `id_pessoa`, `id_proposicao`, `id_norma_posterior` |
 | Data ou instante | `dt_` | `dt_nascimento`, `dt_inicio`, `dt_captura` |
 | Booleano (flag) | `fl_` | `fl_votacao_secreta`, `fl_contem_dado_pessoal` |
+| Código que a fonte usa (não é chave nossa) | `cd_` | `cd_emenda`, `cd_autor`, `cd_funcao` |
 
 Regras:
 
 - **Nunca duplique o tipo no nome:** `dt_nascimento`, jamais `dt_data_nascimento`; `id_pessoa`, jamais `id_pessoa_id`.
 - **Não encurte o nome** para colocar o prefixo: `votacao_secreta` vira `fl_votacao_secreta`.
 - Minúsculas, sem acento, `_` entre palavras, em português.
-- Prefixo novo (por exemplo, para os códigos que a fonte usa) só com decisão registrada em ADR.
+- Prefixo novo só com decisão registrada em ADR.
 - Texto e número não levam prefixo (`nome`, `sigla`, `qtd_votos`).
 
 ## Raw
 
-O raw **espelha a fonte**: guarda os nomes de tabela e de coluna como a fonte publica, sem tratamento. Mesmo assim, tem descrição de tabela e de coluna.
+O raw **espelha a fonte**: guarda os nomes de tabela e de coluna como a fonte publica, sem tratamento. Mesmo assim, tem descrição de tabela e de coluna: a da fonte declarada no dbt, ou um texto que diz só que o campo vem da fonte, como publicado (`dado-publico transform` grava os comentários).
 
 ## Descrições
 
@@ -53,4 +54,4 @@ O projeto e os dados gerados precisam ser fáceis de auditar pelo público: cada
 ## Como é garantido
 
 - Este documento é citado no `CLAUDE.md` e no `AGENTS.md`, que os agentes de IA leem antes de trabalhar, e no modelo de pull request.
-- Um teste no CI lê o manifesto do dbt e reprova nome fora do padrão e tabela ou coluna sem descrição (ligado quando os marts forem renomeados).
+- Testes no CI (`tests/test_names_and_descriptions.py`) conferem, no warehouse que a pipeline constrói, os prefixos de tipo, os nomes de tabela sem conectivo e a descrição de toda tabela e coluna. A regra vale para staging, intermediate e marts; o raw espelha a fonte; `identity` e `metadata` são só descritos por enquanto (os nomes em inglês ficam para outra etapa); o esquema `elementary` é do pacote do Elementary e fica de fora.

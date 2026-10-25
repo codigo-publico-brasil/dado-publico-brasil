@@ -5,7 +5,7 @@ select
     try_cast(ordem as integer) as ordem,
     linha,
     try_cast(emenda_do_arquivo as integer) as emenda_do_arquivo,
-    _source_file_id as source_file_id
+    _source_file_id as id_captura
 
 from {{ source('constituicao', 'constituicao') }}
 

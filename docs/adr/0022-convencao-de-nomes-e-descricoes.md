@@ -10,7 +10,7 @@ Os nomes de tabelas e colunas dos marts não têm padrão: `autorias` não diz a
 ## Decisão
 
 1. **Tabelas:** tema na frente, detalhe depois, sem conectivos (`proposicoes_autorias`).
-2. **Colunas:** o prefixo mostra o tipo: `id_` (identificador), `dt_` (data) e `fl_` (flag), sem duplicar o tipo no nome e sem encurtar o nome (`dt_nascimento`, `fl_votacao_secreta`).
+2. **Colunas:** o prefixo mostra o tipo: `id_` (identificador), `dt_` (data), `fl_` (flag) e `cd_` (código que a fonte usa), sem duplicar o tipo no nome e sem encurtar o nome (`dt_nascimento`, `fl_votacao_secreta`).
 3. **Raw espelha a fonte** nos nomes, mas também é descrito.
 4. **Toda tabela e coluna, em todas as camadas, tem descrição**, e o `publish` a leva ao Postgres.
 5. **Auditabilidade:** nenhuma regra de nome ou transformação pode esconder a origem da informação.
@@ -25,5 +25,6 @@ Os nomes de tabelas e colunas dos marts não têm padrão: `autorias` não diz a
 
 ## Consequências
 
-- Os marts mudam de contrato: 13 tabelas e 101 colunas são renomeadas, e a aplicação quem-decidiu precisa mudar junto (PR coordenado).
-- Códigos que a fonte usa (`emenda_codigo`, `autor_codigo`...) ainda não têm prefixo definido; a decisão fica registrada no anexo de renomeação.
+- Os marts mudam de contrato: 13 tabelas e 109 colunas são renomeadas. A aplicação quem-decidiu ainda não existe de fato e não foi atualizada.
+- Os códigos que a fonte usa (`emenda_codigo`, `autor_codigo`...) viram `cd_emenda`, `cd_autor`...
+- `identity` e `metadata` (tabelas de `ddl/`) foram descritas, mas os nomes em inglês ficam para outra etapa; o esquema `elementary` é do pacote do Elementary e não segue a convenção.

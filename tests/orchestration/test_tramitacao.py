@@ -10,8 +10,8 @@ Env = tuple[Connection, Settings]
 def test_camara_andamentos_come_in_order_with_standardized_situation(full: Env) -> None:
     con, _ = full
     rows = con.execute(
-        "SELECT sequencia, orgao_sigla, situacao, despacho FROM marts.tramitacoes "
-        "WHERE fonte = 'camara' AND proposicao_id = '100' ORDER BY sequencia"
+        "SELECT sequencia, orgao_sigla, situacao, despacho FROM marts.proposicoes_tramitacoes "
+        "WHERE fonte = 'camara' AND id_proposicao = '100' ORDER BY sequencia"
     ).fetchall()
     assert [(r[0], r[1], r[2]) for r in rows] == [
         (1, "MESA", "Aguardando designação"),
@@ -23,7 +23,9 @@ def test_camara_andamentos_come_in_order_with_standardized_situation(full: Env) 
 
 def test_only_the_fetched_target_items_have_andamentos_and_the_rest_is_measured(full: Env) -> None:
     con, _ = full
-    assert scalar(con, "SELECT COUNT(DISTINCT proposicao_id) FROM marts.tramitacoes") == 2  # 100 e 101
+    assert (
+        scalar(con, "SELECT COUNT(DISTINCT id_proposicao) FROM marts.proposicoes_tramitacoes") == 2
+    )  # 100 e 101
     gap = scalar(
         con,
         "SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%proposicoes_alvo_sem_tramitacao%'",
@@ -34,11 +36,11 @@ def test_only_the_fetched_target_items_have_andamentos_and_the_rest_is_measured(
 def test_senate_process_gives_the_current_situation_and_the_norm_that_resulted(full: Env) -> None:
     con, _ = full
     row = con.execute(
-        "SELECT situacao, ultimo_status_em FROM marts.proposicoes WHERE fonte = 'senado' AND proposicao_id = '700'"
+        "SELECT situacao, dt_ultimo_status FROM marts.proposicoes WHERE fonte = 'senado' AND id_proposicao = '700'"
     ).fetchone()
     assert row is not None and row[0] == "Transformada em norma jurídica" and str(row[1]) == "2024-07-01"
     norm = con.execute(
-        "SELECT proposicao_id, tipo, numero, ano, assinada_em, publicada_em, descricao, veiculo_publicacao "
+        "SELECT id_proposicao, tipo, numero, ano, dt_assinatura, dt_publicacao, descricao, veiculo_publicacao "
         "FROM marts.normas_geradas"
     ).fetchall()
     assert [(n[0], n[1], n[2], n[3], str(n[4]), str(n[5]), n[6], n[7]) for n in norm] == [

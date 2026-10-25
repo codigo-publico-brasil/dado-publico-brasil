@@ -2,15 +2,15 @@
 select
     try_cast(ano_eleicao as integer) as ano_eleicao,
     try_cast(sq_candidato as bigint) as sq_candidato,
-    ano_eleicao || ':' || sg_ue || ':' || sq_candidato as candidatura_id,
+    ano_eleicao || ':' || sg_ue || ':' || sq_candidato as id_candidatura,
     sg_ue as ue,
     sg_uf as uf,
     try_cast(nr_ordem_bem_candidato as integer) as ordem,
-    try_cast(cd_tipo_bem_candidato as integer) as tipo_codigo,
+    try_cast(cd_tipo_bem_candidato as integer) as cd_tipo,
     sentence_case(ds_tipo_bem_candidato) as tipo,
     ds_bem_candidato as descricao,
     try_cast(replace(vr_bem_candidato, ',', '.') as decimal(18, 2)) as valor,
-    try_strptime(dt_ult_atual_bem_candidato, '%d/%m/%Y')::date as atualizado_em,
-    _source_file_id as source_file_id
+    try_strptime(dt_ult_atual_bem_candidato, '%d/%m/%Y')::date as dt_atualizacao,
+    _source_file_id as id_captura
 
 from {{ source('tse', 'bens') }}

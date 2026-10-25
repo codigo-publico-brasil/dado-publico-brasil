@@ -5,9 +5,9 @@ select
     sigla_anterior,
     sigla_posterior,
     tipo,
-    aprovado_em,
+    dt_aprovacao,
     ano,
     fonte_url,
     observacao
 
-from {{ ref('eventos_de_partidos') }}
+from {{ ref('partidos_eventos') }}

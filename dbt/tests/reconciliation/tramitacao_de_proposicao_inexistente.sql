@@ -1,6 +1,6 @@
 -- Todo andamento pertence a uma proposição do mesmo fonte.
-select t.fonte, t.proposicao_id
-from {{ ref('tramitacoes') }} as t
+select t.fonte, t.id_proposicao
+from {{ ref('proposicoes_tramitacoes') }} as t
 where not exists (
-    select 1 from {{ ref('proposicoes') }} as p where p.fonte = t.fonte and p.proposicao_id = t.proposicao_id
+    select 1 from {{ ref('proposicoes') }} as p where p.fonte = t.fonte and p.id_proposicao = t.id_proposicao
 )

@@ -4,14 +4,14 @@
 select
     '{{ var("source_senado") }}' as fonte,
     i.id_pessoa,
-    e.mandato_id,
-    e.exercicio_id,
+    e.id_mandato,
+    e.id_exercicio,
     e.participacao,
     e.uf,
-    e.mandato_inicio,
-    e.mandato_fim,
-    e.inicio,
-    e.fim,
+    e.dt_mandato_inicio,
+    e.dt_mandato_fim,
+    e.dt_inicio,
+    e.dt_fim,
     e.causa_afastamento_sigla,
     e.causa_afastamento
 
@@ -19,5 +19,5 @@ from {{ ref('stg_senado__exercicios') }} as e
 
 inner join {{ ref('stg_identity__pessoa_identificadores') }} as i
     on i.fonte = '{{ var("source_senado") }}'
-    and i.tipo_id = '{{ var("id_type_senado") }}'
-    and i.id_na_fonte = cast(e.senador_id as varchar)
+    and i.id_tipo = '{{ var("id_type_senado") }}'
+    and i.id_na_fonte = cast(e.id_senador as varchar)

@@ -17,14 +17,14 @@ votos as (
 )
 
 select
-    try_cast(v._item as bigint) as dispositivo_id,
+    try_cast(v._item as bigint) as id_dispositivo,
     o.casa,
     proper_name(o.nome_parlamentar) as nome_parlamentar,
     o.partido_parlamentar as partido,
     o.uf_parlamentar as uf,
     o.tipo_voto as voto,
     v.sessao,
-    v._source_file_id as source_file_id
+    v._source_file_id as id_captura
 
 from votos as o
 
