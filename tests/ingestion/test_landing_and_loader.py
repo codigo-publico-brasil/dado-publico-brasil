@@ -167,6 +167,12 @@ datasets:
     write: merge
     primary_key: [codigo]
     columns: [codigo, nome{extra}]
+  lancamentos:
+    url: "{{base_url}}/lancamentos.csv"
+    load: full
+    write: merge
+    primary_key: [_row_hash]
+    columns: [codigo, valor]
   fixos:
     url: "{{base_url}}/fixos.csv"
     load: full
@@ -259,6 +265,21 @@ def test_a_natural_key_that_joins_different_rows_is_counted_as_a_collision_and_i
     text = "codigo,nome,cpf\n1,Ana,111\n1,Outra Ana,222\n2,Bia,333\n2,Bia,333\n"
     stats = load(settings, contract, "pessoas", text, 8)
     assert stats["read"] == 4 and stats["conflicting"] == 1  # a linha 2 repetida e idêntica não é perda
+
+
+def test_identical_rows_of_the_source_are_all_kept_and_loading_again_does_not_duplicate_them(
+    tmp_path: Path,
+) -> None:
+    settings = Settings(storage_root=tmp_path / "store")
+    contract = make_contract(tmp_path)
+    text = "codigo,valor\n1,10\n1,10\n1,10\n2,5\n"
+    stats = load(settings, contract, "lancamentos", text, 9)
+    assert stats["loaded"] == 4 and stats["conflicting"] == 0
+    load(settings, contract, "lancamentos", text, 10)
+    assert read_all(
+        settings,
+        "SELECT codigo, count(*), count(DISTINCT _row_hash) FROM raw_municipal_teste.lancamentos GROUP BY 1 ORDER BY 1",
+    ) == [("1", 3, 3), ("2", 1, 1)]
 
 
 def test_the_load_registers_one_balance_that_is_an_error_for_collisions_and_rejections_and_ok_otherwise(

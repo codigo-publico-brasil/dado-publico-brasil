@@ -36,10 +36,10 @@ def test_the_link_is_the_html_with_the_highest_amendment_and_never_the_trash_or_
 
 def test_a_page_without_the_file_or_with_an_error_fails_loudly(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(fetch, "get", lambda url, headers=None: (200, b"<p>sem links</p>"))
-    with pytest.raises(RuntimeError, match="nenhum arquivo HTML"):
+    with pytest.raises(OSError, match="nenhum arquivo HTML"):
         constituicao._resolve(URL + "constituicao")
     monkeypatch.setattr(fetch, "get", lambda url, headers=None: (503, b""))
-    with pytest.raises(RuntimeError, match="respondeu 503"):
+    with pytest.raises(OSError, match="respondeu 503"):
         constituicao._resolve(URL + "constituicao")
 
 

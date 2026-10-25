@@ -11,7 +11,7 @@ from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, rows, scalar
 
 
-def test_the_elected_of_the_four_offices_include_the_ones_without_a_link_and_leave_out_state_deputies(
+def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_deputies_have_no_mandate_type(
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
@@ -20,8 +20,8 @@ def test_the_elected_of_the_four_offices_include_the_ones_without_a_link_and_lea
         "SELECT nome, cargo, uf, resultado, qtd_votos, percentual_votos_nominais, id_pessoa IS NOT NULL AS ligado, "
         "tipo_mandato, vinculo_metodo FROM marts.eleitos ORDER BY nome",
     )
-    assert [r["nome"] for r in found] == ["Bia Souza", "Carlos Eleito"]
-    bia, carlos = found
+    assert [r["nome"] for r in found] == ["Bia Souza", "Carlos Eleito", "Fulano Estadual"]
+    bia, carlos, fulano = found
     assert (bia["cargo"], bia["uf"], bia["resultado"], bia["ligado"]) == (
         "Deputado federal",
         "RJ",
@@ -33,6 +33,11 @@ def test_the_elected_of_the_four_offices_include_the_ones_without_a_link_and_lea
     assert bia["tipo_mandato"] == "novato"  # o mandato dela começa depois dessa eleição: nenhum anterior
     assert (carlos["ligado"], carlos["qtd_votos"], carlos["percentual_votos_nominais"]) == (False, None, None)
     assert carlos["tipo_mandato"] == "novato" and carlos["vinculo_metodo"] is None
+    assert (fulano["cargo"], fulano["uf"], fulano["tipo_mandato"]) == (
+        "Deputado estadual",
+        "SP",
+        None,
+    )  # sem base de mandatos
 
 
 def test_each_office_shows_its_real_state_without_guessing(full: tuple[Connection, Settings]) -> None:
@@ -47,6 +52,7 @@ def test_each_office_shows_its_real_state_without_guessing(full: tuple[Connectio
         ("RJ", "Deputado federal"): (1, 1, 0, "eleito_provisorio"),
         ("MG", "Deputado federal"): (2, 1, 1, "aguardando_resultado"),
         ("SP", "Senador"): (2, 0, 2, "aguardando_resultado"),
+        ("SP", "Deputado estadual"): (70, 1, 69, "aguardando_resultado"),
     }
 
 
@@ -96,5 +102,5 @@ def test_every_elected_of_the_staging_reaches_the_mart(full: tuple[Connection, S
     assert scalar(
         con,
         "SELECT count(*) FROM staging.stg_tse__candidaturas WHERE resultado LIKE 'Eleito%' "
-        "AND cargo IN ('Presidente', 'Governador', 'Senador', 'Deputado federal')",
+        "AND cargo IN ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital')",
     ) == scalar(con, "SELECT count(*) FROM marts.eleitos")

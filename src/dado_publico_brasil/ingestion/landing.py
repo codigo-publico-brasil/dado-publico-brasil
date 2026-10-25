@@ -7,13 +7,13 @@ Antes de baixar, pergunta-se à fonte se o arquivo mudou (`ETag`, `Last-Modified
 Três maneiras de montar o que baixar (o plano):
 - explícito: os anos pedidos;
 - histórico (massivo): todos os anos de um intervalo;
-- incremental: os datasets completos e só os anos que ainda podem mudar (por padrão o corrente e
-  o anterior).
+- incremental (a execução diária): os datasets completos e só a partição em curso (ano, mês ou legislatura)
+  dos que a fonte declara `refresh: daily`; `on_request` só roda quando pedido.
 """
 
 from collections.abc import Mapping
 from contextlib import suppress
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from http.client import HTTPException
 from pathlib import Path
 from typing import Any
@@ -126,9 +126,15 @@ def partitions(dataset: Dataset, years: list[int] | set[int]) -> list[int]:
     return sorted(valid)
 
 
-def mutable_years(dataset: Dataset, current: int) -> list[int]:
-    """Anos que ainda podem mudar: do corrente até `stable_after_years` anos atrás."""
-    return list(range(current - dataset.stable_after_years, current + 1))
+def current_partition(dataset: Dataset, today: date) -> int:
+    """A partição em curso: o ano, o mês (AAAAMM) ou a legislatura de hoje."""
+    match dataset.partition:
+        case "month":
+            return today.year * 100 + today.month
+        case "legislature":
+            return legislature_of(today.year)
+        case _:
+            return today.year
 
 
 def plan(contract: SourceContract, years: list[int], extra_years: list[int] | None = None) -> list[Item]:
@@ -158,17 +164,22 @@ def plan_historical(
     return plan(contract, list(range(start, (end or current_year()) + 1)), extra_years)
 
 
-def plan_incremental(contract: SourceContract, current: int | None = None) -> list[Item]:
-    """Plano incremental: datasets completos e só os anos que ainda podem mudar."""
-    current = current or current_year()
+def plan_incremental(contract: SourceContract, today: date | None = None) -> list[Item]:
+    """Plano incremental (o da execução diária): só a partição em curso de cada dataset da fonte.
+
+    Cada fonte diz, no seu YAML, com que frequência cada dataset se atualiza (`refresh`): `daily` entra aqui;
+    `on_request` (por exemplo, o TSE, que muda em datas pontuais) só roda quando pedido. Tudo que é retroativo
+    (anos ou meses anteriores) exige pedir (`--years` ou `--historical`).
+    """
+    today = today or datetime.now(UTC).date()
     items: list[Item] = []
     for d in contract.datasets.values():
-        if d.foreach or d.partition == "month":  # por mês: só quando pedido (o do mês corrente muda todo dia)
+        if d.foreach or d.refresh != "daily":
             continue
         if not d.yearly:
             items.append((d.name, None))
-        else:
-            items += [(d.name, v) for v in partitions(d, mutable_years(d, current))]
+        elif (current := current_partition(d, today)) in partitions(d, {today.year}):
+            items.append((d.name, current))
     return items
 
 

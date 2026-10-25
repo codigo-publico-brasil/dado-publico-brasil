@@ -11,6 +11,10 @@ power: judiciario
 level: federal
 description: Tribunal Superior Eleitoral, dados abertos (CKAN; pacotes .zip com CSV)
 
+# Regra de extração: o TSE muda em datas pontuais (eleição, apuração, prestação de contas), então nada entra na execução
+# diária: cada dataset roda quando pedido (`dado-publico extract --source tse --years 2026`), um por vez nos pesados.
+refresh: on_request
+
 access:
   base_url: https://cdn.tse.jus.br/estatistica/sead/odsele
   format: csv
@@ -23,7 +27,6 @@ datasets:
     load: yearly
     first_year: 1998                # primeira eleição geral cujos votos a plataforma tem
     step: 4                         # só as eleições gerais (1998, 2002, ... 2022, 2026)
-    stable_after_years: 4           # o incremental confere a eleição corrente e a anterior
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
@@ -39,7 +42,6 @@ datasets:
     load: yearly
     first_year: 2006
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
@@ -58,7 +60,6 @@ datasets:
     load: yearly
     first_year: 1998
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
@@ -76,7 +77,6 @@ datasets:
     load: yearly
     first_year: 2022
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "*_BRASIL.csv"
     write: merge
@@ -91,14 +91,13 @@ datasets:
     load: yearly
     first_year: 2022
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "receitas_candidatos_[0-9]*_BRASIL.csv"   # não pega receitas_candidatos_doador_originario_*
     write: merge
-    primary_key: [AA_ELEICAO, SQ_PRESTADOR_CONTAS, SQ_RECEITA]
+    primary_key: [_row_hash]   # SQ_RECEITA se repete entre itens do mesmo lançamento; o hash guarda todas as linhas
     columns:
       [AA_ELEICAO, ST_TURNO, TP_PRESTACAO_CONTAS, DT_PRESTACAO_CONTAS, SQ_PRESTADOR_CONTAS, SG_UF, SG_UE, DS_CARGO,
-       SQ_CANDIDATO, SQ_RECEITA, DT_RECEITA, VR_RECEITA]
+       SQ_CANDIDATO, SQ_RECEITA, DT_RECEITA, DS_RECEITA, VR_RECEITA]
 
   despesas_candidatos:
     # Despesas contratadas pelos candidatos (o 2022 descompactado tem 1,3 GB). Mesmo pacote e mesma minimização:
@@ -107,11 +106,10 @@ datasets:
     load: yearly
     first_year: 2022
     step: 4
-    stable_after_years: 4
     archive: zip
     member: "despesas_contratadas_candidatos_*_BRASIL.csv"
     write: merge
-    primary_key: [AA_ELEICAO, SQ_PRESTADOR_CONTAS, SQ_DESPESA]
+    primary_key: [_row_hash]   # SQ_DESPESA se repete entre itens do mesmo lançamento; o hash guarda todas as linhas
     columns:
       [AA_ELEICAO, ST_TURNO, TP_PRESTACAO_CONTAS, DT_PRESTACAO_CONTAS, SQ_PRESTADOR_CONTAS, SG_UF, SG_UE, DS_CARGO,
-       SQ_CANDIDATO, SQ_DESPESA, DT_DESPESA, VR_DESPESA_CONTRATADA]
+       SQ_CANDIDATO, SQ_DESPESA, DT_DESPESA, DS_DESPESA, VR_DESPESA_CONTRATADA]

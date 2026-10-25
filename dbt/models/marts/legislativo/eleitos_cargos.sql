@@ -43,5 +43,5 @@ left join eleitos_por_cargo as e
 
 left join capturas as k on k.ano_eleicao = v.ano_eleicao
 
-where v.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal')
+where v.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital')
     and v.eleicao not ilike '%suplementar%'  -- só as eleições gerais; as suplementares não entram aqui

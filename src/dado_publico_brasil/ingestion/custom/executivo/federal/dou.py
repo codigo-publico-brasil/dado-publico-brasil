@@ -39,13 +39,13 @@ def _resolve(url: str) -> tuple[str, str]:
     page = parts._replace(query=f"ano={year}&mes={MONTHS[month - 1]}", fragment="").geturl()
     status, body = fetch.get(page, HEADERS)
     if status != 200:
-        raise RuntimeError(f"página do DOU respondeu {status}: {page}")
+        raise OSError(f"página do DOU respondeu {status}: {page}")
     link = re.search(
         rf"https://www\.in\.gov\.br/documents/[\w/-]+/(S{section:02d}{month:02d}{year}(?:_[\w-]+)?\.zip)/[^\s\"'<>]*",
         html.unescape(body.decode("utf-8", "replace")),
     )
     if link is None:
-        raise RuntimeError(f"nenhum zip da seção {section} em {MONTHS[month - 1]} de {year}: {page}")
+        raise OSError(f"nenhum zip da seção {section} em {MONTHS[month - 1]} de {year}: {page}")
     return link.group(0), link.group(1)
 
 

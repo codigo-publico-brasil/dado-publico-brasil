@@ -7,6 +7,10 @@ power: legislativo
 level: federal
 description: Senado Federal, dados abertos (API REST, JSON)
 
+# Regra de extração: o Senado muda todo dia; a execução diária confere só o ano em curso (e os datasets completos). O que
+# é retroativo (anos anteriores) só roda quando pedido: `--years` ou `--historical --from-year`.
+refresh: daily
+
 access:
   base_url: https://legis.senado.leg.br/dadosabertos
   format: json
@@ -20,7 +24,6 @@ datasets:
     load: yearly
     partition: legislature
     first_year: 1999
-    stable_after_years: 1
     write: merge
     records: ListaParlamentarLegislatura.Parlamentares.Parlamentar
     primary_key: [_row_hash]
@@ -36,7 +39,6 @@ datasets:
     url: "{base_url}/votacao?dataInicio={year}-01-01&dataFim={year}-12-31"
     load: yearly
     first_year: 1999
-    stable_after_years: 1
     write: merge
     primary_key: [codigoSessaoVotacao]
     columns:
@@ -91,7 +93,6 @@ datasets:
     url: "{base_url}/legislacao/lista?ano={year}"
     load: yearly
     first_year: 1808
-    stable_after_years: 1
     write: merge
     records: ListaDocumento.documentos.documento
     primary_key: [id]
@@ -137,7 +138,6 @@ datasets:
     url: "{base_url}/materia/vetos/{year}"
     load: yearly
     first_year: 1994
-    stable_after_years: 1
     write: merge
     records: ListaVetosAnoCN.Vetos.Veto
     primary_key: [Codigo]

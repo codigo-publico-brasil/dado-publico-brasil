@@ -1,6 +1,7 @@
 """Fonte do DOU: um zip por seção e mês, só no landing (sem tabela no raw)."""
 
 import hashlib
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -18,7 +19,9 @@ PAGE = f"""<a href="{LINK}">S01</a>
 URL = "https://www.in.gov.br/acesso-a-informacao/dados-abertos/base-de-dados?ano={}&secao={}"
 
 
-def test_the_plan_is_one_zip_per_section_and_month_from_the_first_month_and_never_in_the_daily_plan() -> None:
+def test_the_plan_is_one_zip_per_section_and_month_from_the_first_month_and_the_daily_plan_has_only_the_current_month() -> (
+    None
+):
     source = contracts.find("dou")
     plan = landing.plan(source, [2026])
     assert {name for name, _ in plan} == {"secao1", "secao2", "secao3"}
@@ -26,7 +29,10 @@ def test_the_plan_is_one_zip_per_section_and_month_from_the_first_month_and_neve
     assert months[0] == 202608 and months == list(
         range(202608, months[-1] + 1)
     )  # mês corrente incluso, sem pular
-    assert landing.plan_incremental(source) == []  # o zip do mês corrente muda todo dia: só quando pedido
+    daily = landing.plan_incremental(source, today=date(2026, 10, 24))
+    assert {part for _, part in daily} == {
+        202610
+    }  # o diário confere só o mês em curso; os anteriores, sob pedido
 
 
 def test_the_link_is_the_zip_of_the_requested_section_and_month(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -49,10 +55,10 @@ def test_the_link_is_the_zip_of_the_requested_section_and_month(monkeypatch: pyt
 
 def test_a_missing_section_or_a_page_error_fails_loudly(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(fetch, "get", lambda url, headers=None: (200, PAGE.encode()))
-    with pytest.raises(RuntimeError, match="nenhum zip da seção 3"):
+    with pytest.raises(OSError, match="nenhum zip da seção 3"):
         dou._resolve(URL.format(202610, 3))
     monkeypatch.setattr(fetch, "get", lambda url, headers=None: (403, b""))
-    with pytest.raises(RuntimeError, match="403"):
+    with pytest.raises(OSError, match="403"):
         dou._resolve(URL.format(202610, 1))
 
 

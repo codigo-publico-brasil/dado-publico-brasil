@@ -17,7 +17,7 @@ Datasets por item (tramitação, processos): `--foreach 200` busca os 200 mais r
 `--foreach all` busca todos; `--dataset NOME` limita a um dataset (também nos anuais,
 como `--years 2022 --dataset votacao`).
 Modos de extração: --years (anos pedidos), --historical --from-year N (carga massiva) e
---incremental (só o que pode ter mudado).
+--incremental (a execução diária: só a partição em curso dos datasets que a fonte atualiza todo dia).
 """
 
 import argparse
@@ -122,7 +122,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--historical", action="store_true", help="carga massiva de um intervalo de anos")
     p.add_argument("--from-year", type=int, help="primeiro ano do histórico")
     p.add_argument("--to-year", type=int, help="último ano do histórico (padrão: o ano corrente)")
-    p.add_argument("--incremental", action="store_true", help="só o que pode ter mudado")
+    p.add_argument(
+        "--incremental", action="store_true", help="só a partição em curso dos datasets de `refresh: daily`"
+    )
     p.add_argument("--force", action="store_true", help="baixa mesmo que a fonte diga que não mudou")
     p.add_argument("--rebuild", action="store_true", help="carrega tudo de novo no raw")
     p.add_argument("--email", action="store_true", help="envia o relatório do comando observe por e-mail")

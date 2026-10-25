@@ -144,10 +144,10 @@ Lacunas conhecidas, medidas ou registradas:
 
 Lacunas conhecidas, medidas ou registradas:
 
-- **Votos de 1998 a 2018 e de 2026:** não carregados (2,4 GB compactados no total; 2022 sozinho levou 49 minutos para entrar no raw). Pedir por ano: `--years ANO --dataset votacao`.
+- **Votos de 1998 a 2018:** não carregados (2,4 GB compactados no total; 2022 sozinho levou 49 minutos para entrar no raw). Pedir por ano: `--years ANO --dataset votacao`.
 - **Bens de 1998 e 2002:** a fonte não publica. Os de 2006 e 2010 usam outros nomes de coluna e entram por `aliases`.
 - **Candidaturas sem voto** (`candidaturas_sem_votos_carregados`, 26 em 2022): resultados em branco ou candidaturas sem votação na fonte. Suplentes de senador e vices não têm voto próprio e ficam de fora do teste.
-- **Votos e bens de quem não é pessoa do projeto** (deputados estaduais, governadores e candidatos sem ligação): ficam no staging, não nos marts.
+- **Votos e bens de quem não é pessoa do projeto** (candidatos sem ligação): ficam no staging. Os eleitos entram em `eleitos` e `eleitos_campanhas` mesmo sem ligação, inclusive os deputados estaduais e distritais.
 - **Emenda sem ligação a pessoa:** o autor vem pelo nome e por um código orçamentário que não é o do parlamentar. 15.962 emendas (as antigas, sobretudo) vêm sem autor (`emendas_sem_autor_conhecido`).
 - **Favorecido pessoa física:** entra como o portal publica, com CPF mascarado ([ADR 0017](../adr/0017-revisao-de-filtros-e-dados-pessoais.md)); a tabela, as colunas `favorecido` e `cd_favorecido` e cada linha (`fl_contem_dado_pessoal`) são sinalizadas como dado pessoal. Quem consome precisa tratar assim (LGPD).
 - **Termos do portal:** as páginas de termos de uso e de dicionário de dados do Portal da Transparência pedem verificação anti-robô e não foram lidas; vale a licença de livre utilização do Decreto 8.777/2016.
@@ -157,13 +157,13 @@ Lacunas conhecidas, medidas ou registradas:
 
 | O que | Mart | Cobertura em 25/10/2026 |
 | --- | --- | --- |
-| Eleitos de presidente, governador, senador e deputado federal | `eleitos` | 1998 a 2026, das candidaturas carregadas (resultado como o TSE informa; provisório até a diplomação) |
+| Eleitos de presidente, governador, senador e deputados (federal, estadual e distrital) | `eleitos` | 1998 a 2026, das candidaturas carregadas (resultado como o TSE informa; provisório até a diplomação) |
 | Situação de cada cargo (vagas, eleitos e pendentes) | `eleitos_cargos` | 2022 e 2026 (as vagas só foram carregadas desses anos) |
-| Totais de bens, receitas e despesas de cada eleito | `eleitos_campanhas` | bens de 2006 em diante; receitas e despesas vazias até a carga da prestação de contas |
+| Totais de bens, receitas e despesas de cada eleito | `eleitos_campanhas` | bens de 2006 em diante; receitas e despesas de 2026 (190.178 receitas e 1.111.628 despesas, todas as linhas do TSE). Vazio, e não zero, quando o arquivo não traz o candidato |
 
 - **2026, pelo arquivo de candidaturas de 21/10:** 513 de 513 deputados federais eleitos (335 já ligados a pessoa: 305 reeleitos, 26 retornos e 182 novatos), 52 de 54 senadores, 20 de 27 governadores (7 aguardam o 2º turno) e a presidência aguardando o 2º turno. O resultado muda a cada captura do TSE.
 - **Fila de revisão:** `eleitos_com_possivel_vinculo` lista os eleitos ao Congresso sem vínculo que têm alguém com a mesma data de nascimento na base; uma pessoa confere e aprova em `vinculos_aprovados`.
-- **Ainda não carregados:** a prestação de contas (receitas e despesas) e a votação por município e zona de 2026, por serem cargas pesadas; as propostas de governo e a diplomação, que não vêm nos arquivos abertos.
+- **Ainda não carregados:** a prestação de contas de 2022 e de anos anteriores (carga pesada, só quando pedida); as propostas de governo e a diplomação, que não vêm nos arquivos abertos; as eleições municipais, vices e suplentes (issues 62, 63 e 64).
 
 ## 3. O que a Câmara **não** tem e precisa vir de outra instância
 

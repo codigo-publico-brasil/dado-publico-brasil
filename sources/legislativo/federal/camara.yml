@@ -7,8 +7,8 @@
 # Por dataset:
 #   url               endereço oficial; `{year}` nos anuais
 #   load              full (um arquivo) | yearly (um arquivo por partição)
-#   partition         (yearly) year (padrão, `{year}`) | legislature (`{legislature}`, derivada do ano)
-#   stable_after_years  (yearly) anos mais antigos que isso não mudam: a carga incremental os pula
+#   partition         (yearly) year (padrão, `{year}`) | legislature (`{legislature}`, derivada do ano) | month (AAAAMM)
+#   refresh           daily (execução diária confere a partição em curso) | on_request (só quando pedido); padrão: o da fonte
 #   first_year        (yearly) primeiro ano que a fonte publica; anos anteriores não são pedidos
 #   extra_years       (yearly) aceita anos só deste dataset (opção --extra-years)
 #   write             merge (upsert pela chave) | replace (troca o conteúdo anterior)
@@ -20,6 +20,10 @@ source: camara
 power: legislativo     # legislativo | executivo | judiciario (e a pasta onde este arquivo mora)
 level: federal          # federal | estadual | municipal; o raw vira raw_federal_camara
 description: Câmara dos Deputados, dados abertos (arquivos em lote)
+
+# Regra de extração: a Câmara muda todo dia; a execução diária confere só o ano em curso (e os datasets completos). O que
+# é retroativo (anos anteriores) só roda quando pedido: `--years` ou `--historical --from-year`.
+refresh: daily
 
 access:
   base_url: https://dadosabertos.camara.leg.br/arquivos
@@ -53,7 +57,6 @@ datasets:
   proposicoes:
     url: "{base_url}/proposicoes/csv/proposicoes-{year}.csv"
     load: yearly
-    stable_after_years: 1
     extra_years: true
     write: merge
     primary_key: [id]
@@ -65,7 +68,6 @@ datasets:
   proposicoesAutores:
     url: "{base_url}/proposicoesAutores/csv/proposicoesAutores-{year}.csv"
     load: yearly
-    stable_after_years: 1
     extra_years: true
     write: merge
     primary_key: [idProposicao, ordemAssinatura, nomeAutor]
@@ -76,7 +78,6 @@ datasets:
   votacoes:
     url: "{base_url}/votacoes/csv/votacoes-{year}.csv"
     load: yearly
-    stable_after_years: 1
     write: merge
     primary_key: [id]
     columns:
@@ -87,7 +88,6 @@ datasets:
     url: "{base_url}/votacoesVotos/csv/votacoesVotos-{year}.csv"
     load: yearly
     first_year: 2001
-    stable_after_years: 1
     write: merge
     primary_key: [idVotacao, deputado_id]
     columns:
@@ -98,7 +98,6 @@ datasets:
     url: "{base_url}/votacoesOrientacoes/csv/votacoesOrientacoes-{year}.csv"
     load: yearly
     first_year: 2003
-    stable_after_years: 1
     write: merge
     primary_key: [idVotacao, siglaBancada]
     columns: [idVotacao, siglaBancada, orientacao]
@@ -106,7 +105,6 @@ datasets:
   votacoesProposicoes:
     url: "{base_url}/votacoesProposicoes/csv/votacoesProposicoes-{year}.csv"
     load: yearly
-    stable_after_years: 1
     write: merge
     primary_key: [idVotacao, proposicao_id]
     columns: [idVotacao, proposicao_id]
@@ -114,7 +112,6 @@ datasets:
   votacoesObjetos:
     url: "{base_url}/votacoesObjetos/csv/votacoesObjetos-{year}.csv"
     load: yearly
-    stable_after_years: 1
     write: merge
     primary_key: [idVotacao, proposicao_id]
     columns: [idVotacao, proposicao_id]
@@ -146,7 +143,6 @@ datasets:
     url: "{base_url}/orgaosDeputados/csv/orgaosDeputados-L{legislature}.csv"
     load: yearly
     partition: legislature
-    stable_after_years: 1
     write: merge
     primary_key: [_row_hash]
     columns:

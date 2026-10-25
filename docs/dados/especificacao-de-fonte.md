@@ -22,7 +22,7 @@ datasets:
     url: "{base_url}/proposicoes/csv/proposicoes-{year}.csv"
     load: yearly                    # full | yearly
     first_year: 2001                # (yearly) primeiro ano publicado pela fonte: anos anteriores não são pedidos
-    stable_after_years: 1           # (yearly) anos mais antigos que isso não mudam: a carga incremental os pula
+    refresh: daily                  # daily (a execução diária confere a partição em curso) | on_request (só quando pedido)
     extra_years: true               # (yearly) aceita anos só deste dataset (--extra-years)
     write: merge                    # merge (upsert pela chave) | replace (troca o conteúdo anterior)
     primary_key: [id]

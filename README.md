@@ -57,7 +57,7 @@ uv sync --all-extras
 uv run dado-publico run --years 2025 2026
 ```
 
-Outros modos: `--incremental` (só o que pode ter mudado) e `--historical --from-year 2000` (carga massiva). Os dados ficam em `data_store/` (fora do git).
+Outros modos: `--incremental` (a execução diária: só a partição em curso dos datasets que cada fonte declara como `refresh: daily`) e `--historical --from-year 2000` (carga massiva). Os dados ficam em `data_store/` (fora do git).
 
 **Conexões e segredos** vão em variáveis de ambiente: copie `.env.example` para `.env` (fora do git) e use `uv run --env-file .env dado-publico ...` (o `dagster dev` já carrega o `.env` da pasta). Em produção, a infraestrutura injeta as variáveis, de preferência a partir de um gerenciador de segredos.
 

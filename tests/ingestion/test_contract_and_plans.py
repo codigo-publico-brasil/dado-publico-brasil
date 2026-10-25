@@ -1,9 +1,11 @@
 """Contrato da fonte (validação) e planos de extração (explícito, histórico e incremental)."""
 
+from datetime import date
 from pathlib import Path
 
 import pytest
 
+from dado_publico_brasil.ingestion import contract as contracts
 from dado_publico_brasil.ingestion import landing
 from dado_publico_brasil.ingestion.contract import InvalidContract, SourceContract, load_contract
 
@@ -67,11 +69,43 @@ def test_historical_plan_covers_every_year_of_the_range(contract: SourceContract
     assert ("votacoesVotos", 2026) in items
 
 
-def test_incremental_plan_has_only_what_can_still_change(contract: SourceContract) -> None:
-    items = landing.plan_incremental(contract, current=2026)
-    assert {y for d, y in items if d == "proposicoes"} == {2025, 2026}
+def test_incremental_plan_has_only_the_current_partition_of_each_dataset_that_refreshes_daily(
+    contract: SourceContract,
+) -> None:
+    items = landing.plan_incremental(contract, today=date(2026, 10, 24))
+    assert [y for d, y in items if d == "proposicoes"] == [2026]  # nada retroativo: só o ano em curso
     assert ("deputados", None) in items
-    assert ("votacoes", 2024) not in items
+    assert ("votacoes", 2025) not in items
+
+
+def test_each_source_declares_how_it_refreshes_and_what_is_on_request_stays_out_of_the_daily_plan() -> None:
+    today = date(2026, 10, 24)
+    assert landing.plan_incremental(contracts.find("tse"), today) == []  # TSE: pontual, só quando pedido
+    assert {name for name, _ in landing.plan_incremental(contracts.find("dou"), today)} == {
+        "secao1",
+        "secao2",
+        "secao3",
+    }
+    assert {part for _, part in landing.plan_incremental(contracts.find("dou"), today)} == {
+        202610
+    }  # só o mês em curso
+    senate = dict(landing.plan_incremental(contracts.find("senado"), today))
+    assert senate["senadores"] == landing.legislature_of(2026) and senate["votacoes"] == 2026
+
+
+def test_an_invalid_refresh_is_refused(tmp_path: Path) -> None:
+    file = tmp_path / "fonte.yml"
+    lines = [
+        "source: x",
+        "power: legislativo",
+        "level: federal",
+        "access: {base_url: 'http://x'}",
+        "datasets:",
+        "  d: {url: 'http://x/d.csv', load: full, write: replace, columns: [a], refresh: semanal}",
+    ]
+    file.write_text(chr(10).join(lines), encoding="utf-8")
+    with pytest.raises(InvalidContract, match="refresh"):
+        load_contract(file)
 
 
 def test_unchanged_uses_etag_or_last_modified_with_size() -> None:
