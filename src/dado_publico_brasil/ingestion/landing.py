@@ -12,8 +12,10 @@ Três maneiras de montar o que baixar (o plano):
 """
 
 from collections.abc import Mapping
+from contextlib import suppress
 from datetime import UTC, datetime
 from http.client import HTTPException
+from pathlib import Path
 from typing import Any
 
 from dado_publico_brasil.core import runs
@@ -38,6 +40,14 @@ def unchanged(previous: Mapping[str, Any] | None, headers: Mapping[str, str | No
         and headers.get("size")
         and str(previous["size_bytes"]) == headers["size"]
     )
+
+
+def folder(settings: Settings, source: str, dataset: str, partition: int | None, moment: str) -> Path:
+    """Pasta de um arquivo no landing: `<fonte>/<dataset>/<partição ou "completo">/<AAAAMMDD da captura>`.
+
+    A origem, a referência (ano, mês `AAAAMM` ou legislatura) e a data da extração aparecem no caminho."""
+    reference = "completo" if partition is None else str(partition)
+    return settings.landing_dir / source / dataset / reference / moment[:10].replace("-", "")
 
 
 def last_capture(con: Connection, url: str) -> dict[str, Any] | None:
@@ -194,10 +204,18 @@ def extract(
             run.rows_in = 1
             return int(previous["id"])
         try:
-            file, digest, size = downloader(url, settings.landing_dir / contract.source)
+            file, digest, size = downloader(url, folder(settings, contract.source, dataset, year, runs.now()))
         except (OSError, HTTPException) as error:
             monitoring.record(con, contract.source, dataset, year, "availability", "error", str(error))
             return -1
+        if previous is not None and previous["sha256"] == digest:  # mesmo conteúdo: fica o arquivo antigo
+            if file != settings.storage_root / previous["path"]:
+                file.unlink()
+                with suppress(OSError):  # a pasta só some se ficou vazia
+                    file.parent.rmdir()
+            mark_checked(con, int(previous["id"]))
+            run.rows_in = 1
+            return int(previous["id"])
         monitoring.record(con, contract.source, dataset, year, "availability", "ok", f"{size} bytes")
         if contract.datasets[dataset].raw:
             monitoring.check_header(con, contract, contract.datasets[dataset], year, file)

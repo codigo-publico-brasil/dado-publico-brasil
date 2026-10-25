@@ -132,6 +132,8 @@ def load_capture(
         monitoring.check_load(con, contract.source, dataset.name, capture["year"], stats)
         if not dataset.foreach:  # lotes têm tamanhos diferentes por natureza
             monitoring.check_volume(con, contract.source, dataset.name, capture["year"], stats["read"])
+            table = f"{contract.schema}.{normalize(dataset.name)}"
+            monitoring.check_removed(con, contract.source, dataset.name, capture["year"], table, capture)
         run.rows_in, run.rows_out = stats["read"], stats["loaded"]
         con.execute("UPDATE metadata.captures SET loaded_at = ? WHERE id = ?", (runs.now(), capture["id"]))
         return stats["loaded"]

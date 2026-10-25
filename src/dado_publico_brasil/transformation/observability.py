@@ -6,10 +6,17 @@ colunas que mudam, nulos). Nada aqui interrompe o pipeline: `dado-publico observ
 saída 1) se houver problema, e `notify` manda o resumo por e-mail quando há.
 """
 
+import os
+import shutil
 import smtplib
+import subprocess
+from pathlib import Path
 
 from dado_publico_brasil.core import alert
+from dado_publico_brasil.core.settings import DBT_DIR, Settings
 from dado_publico_brasil.core.warehouse import Connection
+
+ELEMENTARY = "0.26.1"  # a mesma versão do pacote dbt em dbt/packages.yml
 
 ANOMALIES = (
     "SELECT status, unique_id, failures, message FROM metadata.dbt_results WHERE run_id = "
@@ -58,6 +65,26 @@ def report(con: Connection) -> tuple[list[str], bool]:
     lines += ["", f"Anomalias nos marts (Elementary): {len(anomalies)}"]
     lines += [f"  [{s}] {uid}: {(message or '')[:200]}" for s, uid, _, message in anomalies]
     return lines, bool(source_errors or failing or anomalies)
+
+
+def html_report(settings: Settings) -> Path:
+    """Gera o relatório HTML do Elementary (`edr report`, rodado por `uvx`, sem entrar nas dependências).
+
+    O `edr` escreve no warehouse: o pipeline precisa estar parado e nenhuma conexão pode estar aberta.
+    """
+    uvx = shutil.which("uvx")
+    if uvx is None:
+        raise RuntimeError("uvx não encontrado: instale o uv (https://docs.astral.sh/uv/)")
+    folder = settings.state_dir / "observabilidade"
+    folder.mkdir(parents=True, exist_ok=True)
+    file = folder / "report.html"
+    command = [uvx, "--from", f"elementary-data[duckdb]=={ELEMENTARY}", "edr", "report"]
+    command += ["--profiles-dir", str(DBT_DIR), "--file-path", str(file)]
+    env = {**os.environ, "DADO_PUBLICO_WAREHOUSE_FILE": str(settings.warehouse.resolve())}
+    subprocess.run(
+        command, cwd=folder, env=env, check=True, capture_output=True
+    )  # cwd: o edr cria `edr_target`
+    return file
 
 
 def notify(con: Connection) -> bool:
