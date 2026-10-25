@@ -46,3 +46,7 @@ Leia `README.md` e `docs/dados/camadas.md`. Não contrarie um ADR de `docs/adr/`
 `src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português (`pessoas`, `proposicoes`, `votos`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `publish`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
 
 O fundador usa o projeto para aprender arquitetura de dados e de sistemas: explique decisões e alternativas em poucas linhas e aponte o que merece ADR.
+
+## Nomes e descrições
+
+Leia [`docs/engenharia/convencao-de-nomes.md`](docs/engenharia/convencao-de-nomes.md) antes de criar ou alterar tabela ou coluna: tabelas com o tema na frente e sem conectivos (`proposicoes_autorias`); colunas com prefixo de tipo, `id_`, `dt_` e `fl_`, sem duplicar o tipo (`dt_nascimento`); toda tabela e coluna descrita, em todas as camadas. Padronizar nunca apaga a origem: o dado precisa ser auditável pelo público.
