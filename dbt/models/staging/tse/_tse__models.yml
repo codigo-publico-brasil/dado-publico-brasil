@@ -2,13 +2,16 @@ version: 2
 
 models:
   - name: stg_tse__candidaturas
-    description: Candidaturas ao Congresso (deputado federal e senador, com suplentes) nas eleições gerais, uma linha por candidatura e turno.
+    description: Candidaturas de todos os cargos nas eleições gerais e municipais, uma linha por candidatura e turno.
     columns:
       - {name: ano_eleicao, description: "Ano da eleição que a formou."}
       - {name: turno, description: "Turno da votação."}
       - {name: sq_candidato, description: "Número sequencial do candidato na eleição, como o TSE informa (único só dentro da unidade eleitoral)."}
       - {name: id_candidatura, description: "Identificador da candidatura na fonte: ano da eleição e sequencial do candidato.", tests: ["not_null"]}
-      - {name: ue, description: "Sigla da unidade eleitoral (UF ou BR), como o TSE informa."}
+      - {name: cd_eleicao, description: "Código da eleição, como o TSE informa; vazio nos arquivos antigos que não trazem."}
+      - {name: eleicao, description: "Descrição da eleição, como o TSE informa (por exemplo, Eleições Municipais 2024 ou uma eleição suplementar); vazia nos arquivos antigos que não trazem."}
+      - {name: ue, description: "Código da unidade eleitoral, como o TSE informa: sigla da UF, BR para presidente ou o código do município."}
+      - {name: ue_nome, description: "Nome da unidade eleitoral (município, estado ou Brasil), como o TSE informa."}
       - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
       - {name: cargo, description: "Cargo exercido."}
       - {name: numero, description: "Número da norma."}
@@ -73,7 +76,8 @@ models:
       - {name: ano_eleicao, description: "Ano da eleição."}
       - {name: cd_eleicao, description: "Código da eleição, como o TSE informa (distingue a eleição geral da suplementar no mesmo ano)."}
       - {name: eleicao, description: "Descrição da eleição, como o TSE informa (por exemplo, Eleição Geral Federal 2022 ou Eleição Suplementar)."}
-      - {name: ue, description: "Sigla da unidade eleitoral (UF ou BR), como o TSE informa."}
+      - {name: ue, description: "Código da unidade eleitoral, como o TSE informa: sigla da UF, BR para presidente ou o código do município."}
+      - {name: ue_nome, description: "Nome da unidade eleitoral (município, estado ou Brasil), como o TSE informa."}
       - {name: uf, description: "Sigla da unidade da federação, como a fonte informa."}
       - {name: cd_cargo, description: "Código do cargo disputado, como o TSE informa."}
       - {name: cargo, description: "Cargo em disputa, com caixa padronizada."}

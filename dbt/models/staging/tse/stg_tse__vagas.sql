@@ -6,6 +6,7 @@ select
     try_cast(cd_eleicao as integer) as cd_eleicao,
     ds_eleicao as eleicao,
     sg_ue as ue,
+    proper_name(nm_ue) as ue_nome,
     sg_uf as uf,
     try_cast(cd_cargo as integer) as cd_cargo,
     sentence_case(lower(ds_cargo)) as cargo,

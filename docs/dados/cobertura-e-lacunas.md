@@ -157,7 +157,7 @@ Lacunas conhecidas, medidas ou registradas:
 
 | O que | Mart | Cobertura em 25/10/2026 |
 | --- | --- | --- |
-| Eleitos de presidente, governador, senador e deputados (federal, estadual e distrital) | `eleitos` | 1998 a 2026, das candidaturas carregadas (resultado como o TSE informa; provisório até a diplomação) |
+| Eleitos de todos os cargos (presidente, governador, senador, deputados, prefeito e vereador) | `eleitos` | 1998 a 2026, das candidaturas carregadas (resultado como o TSE informa; provisório até a diplomação) |
 | Situação de cada cargo (vagas, eleitos e pendentes) | `eleitos_cargos` | 2022 e 2026 (as vagas só foram carregadas desses anos) |
 | Totais de bens, receitas e despesas de cada eleito | `eleitos_campanhas` | bens de 2006 em diante; receitas e despesas de 2026 (190.178 receitas e 1.111.628 despesas, todas as linhas do TSE). Vazio, e não zero, quando o arquivo não traz o candidato |
 

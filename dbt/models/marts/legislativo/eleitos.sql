@@ -1,4 +1,5 @@
--- Eleitos para presidente, governador, senador, deputado federal, deputado estadual e deputado distrital nas eleições gerais: uma linha por eleito, de todos
+-- Eleitos para presidente, governador, senador, deputado federal, estadual e distrital (eleições gerais) e para prefeito e vereador
+-- (eleições municipais): uma linha por eleito, de todos
 -- os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos). O resultado é o que o TSE informa na data da
 -- captura: provisório até a diplomação. Votos e percentual vêm da votação por município e zona, quando carregada.
 -- O percentual é sobre os votos nominais válidos do cargo na unidade eleitoral (sem os votos de legenda).
@@ -16,7 +17,8 @@ with eleitos as (
     from {{ ref('stg_tse__candidaturas') }} as c
 
     where c.resultado like 'Eleito%'
-        and c.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital')
+        and c.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital', 'Prefeito', 'Vereador')
+        and coalesce(c.eleicao, '') not ilike '%suplementar%'  -- só as eleições ordinárias; as suplementares não entram
 
     -- o TSE pode marcar "eleito" nos dois turnos (por exemplo, o governador de Goiás em 2014): vale o turno final
     qualify row_number() over (partition by c.id_candidatura order by c.turno desc) = 1
@@ -49,6 +51,8 @@ select
     e.ano_eleicao,
     e.turno,
     e.uf,
+    e.ue,
+    e.ue_nome,
     e.cargo,
     e.nome_urna,
     e.nome,

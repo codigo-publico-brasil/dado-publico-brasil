@@ -648,7 +648,7 @@ models:
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: eleitos
-    description: Eleitos para presidente, governador, senador, deputado federal, deputado estadual e deputado distrital nas eleições gerais, de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito.
+    description: Eleitos para presidente, governador, senador, deputado federal, estadual e distrital (eleições gerais) e para prefeito e vereador (eleições municipais), de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito.
     meta: {sensitivity: publico-agente-publico, grain: eleito, owner: fundador do projeto, freshness: a cada eleição}
     data_tests: *monitoramento
     columns:
@@ -657,6 +657,8 @@ models:
       - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
       - {name: turno, data_type: integer, description: "Turno em que o resultado de eleito foi registrado."}
       - {name: uf, data_type: varchar, description: "UF da eleição (BR para presidente)."}
+      - {name: ue, data_type: varchar, description: "Código da unidade eleitoral, como o TSE informa: sigla da UF, BR para presidente ou o código do município."}
+      - {name: ue_nome, data_type: varchar, description: "Nome da unidade eleitoral (município, estado ou Brasil), como o TSE informa."}
       - {name: cargo, data_type: varchar, description: "Cargo para o qual foi eleito."}
       - {name: nome_urna, data_type: varchar, description: "Nome de urna, com caixa padronizada."}
       - {name: nome, data_type: varchar, description: "Nome completo, com caixa padronizada."}
@@ -673,13 +675,15 @@ models:
       - {name: fonte_url, data_type: varchar, description: "Página oficial do TSE com os arquivos de candidatos da eleição."}
 
   - name: eleitos_cargos
-    description: Situação de cada cargo em cada unidade eleitoral nas eleições gerais, com vagas, eleitos e pendentes. Mostra o estado real, sem palpite. Uma linha por eleição, cargo e unidade eleitoral.
+    description: Situação de cada cargo em cada unidade eleitoral nas eleições gerais e municipais, com vagas, eleitos e pendentes. Mostra o estado real, sem palpite. Uma linha por eleição, cargo e unidade eleitoral.
     meta: {sensitivity: publico, grain: cargo por unidade eleitoral e eleição, owner: fundador do projeto, freshness: a cada eleição}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
       - {name: uf, data_type: varchar, description: "UF da eleição (BR para presidente)."}
+      - {name: ue, data_type: varchar, description: "Código da unidade eleitoral, como o TSE informa: sigla da UF, BR para presidente ou o código do município."}
+      - {name: ue_nome, data_type: varchar, description: "Nome da unidade eleitoral (município, estado ou Brasil), como o TSE informa."}
       - {name: cargo, data_type: varchar, description: "Cargo em disputa."}
       - {name: qtd_vagas, data_type: integer, description: "Quantidade de vagas do cargo na unidade eleitoral, como o TSE informa."}
       - {name: qtd_eleitos, data_type: bigint, description: "Quantos eleitos o resultado do TSE já registra para o cargo."}

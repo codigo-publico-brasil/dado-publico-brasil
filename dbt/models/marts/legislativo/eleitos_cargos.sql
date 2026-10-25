@@ -3,7 +3,7 @@
 -- um palpite. `eleito_provisorio` quer dizer que todas as vagas têm eleito pelo resultado do TSE, ainda sem diplomação.
 with eleitos_por_cargo as (
 
-    select ano_eleicao, uf, cargo, count(distinct id_candidatura) as qtd_eleitos
+    select ano_eleicao, ue, cargo, count(distinct id_candidatura) as qtd_eleitos
 
     from {{ ref('eleitos') }}
 
@@ -27,6 +27,8 @@ select
     '{{ var("source_tse") }}' as fonte,
     v.ano_eleicao,
     v.uf,
+    v.ue,
+    v.ue_nome,
     v.cargo,
     v.qtd_vagas,
     coalesce(e.qtd_eleitos, 0) as qtd_eleitos,
@@ -39,9 +41,9 @@ select
 from {{ ref('stg_tse__vagas') }} as v
 
 left join eleitos_por_cargo as e
-    on e.ano_eleicao = v.ano_eleicao and e.uf = v.uf and e.cargo = v.cargo
+    on e.ano_eleicao = v.ano_eleicao and e.ue = v.ue and e.cargo = v.cargo
 
 left join capturas as k on k.ano_eleicao = v.ano_eleicao
 
-where v.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital')
+where v.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital', 'Prefeito', 'Vereador')
     and v.eleicao not ilike '%suplementar%'  -- só as eleições gerais; as suplementares não entram aqui
