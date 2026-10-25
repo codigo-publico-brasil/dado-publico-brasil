@@ -94,10 +94,10 @@ datasets:
     archive: zip
     member: "receitas_candidatos_[0-9]*_BRASIL.csv"   # não pega receitas_candidatos_doador_originario_*
     write: merge
-    primary_key: [AA_ELEICAO, SQ_PRESTADOR_CONTAS, SQ_RECEITA]
+    primary_key: [_row_hash]   # SQ_RECEITA se repete entre itens do mesmo lançamento; o hash guarda todas as linhas
     columns:
       [AA_ELEICAO, ST_TURNO, TP_PRESTACAO_CONTAS, DT_PRESTACAO_CONTAS, SQ_PRESTADOR_CONTAS, SG_UF, SG_UE, DS_CARGO,
-       SQ_CANDIDATO, SQ_RECEITA, DT_RECEITA, VR_RECEITA]
+       SQ_CANDIDATO, SQ_RECEITA, DT_RECEITA, DS_RECEITA, VR_RECEITA]
 
   despesas_candidatos:
     # Despesas contratadas pelos candidatos (o 2022 descompactado tem 1,3 GB). Mesmo pacote e mesma minimização:
@@ -109,7 +109,7 @@ datasets:
     archive: zip
     member: "despesas_contratadas_candidatos_*_BRASIL.csv"
     write: merge
-    primary_key: [AA_ELEICAO, SQ_PRESTADOR_CONTAS, SQ_DESPESA]
+    primary_key: [_row_hash]   # SQ_DESPESA se repete entre itens do mesmo lançamento; o hash guarda todas as linhas
     columns:
       [AA_ELEICAO, ST_TURNO, TP_PRESTACAO_CONTAS, DT_PRESTACAO_CONTAS, SQ_PRESTADOR_CONTAS, SG_UF, SG_UE, DS_CARGO,
-       SQ_CANDIDATO, SQ_DESPESA, DT_DESPESA, VR_DESPESA_CONTRATADA]
+       SQ_CANDIDATO, SQ_DESPESA, DT_DESPESA, DS_DESPESA, VR_DESPESA_CONTRATADA]

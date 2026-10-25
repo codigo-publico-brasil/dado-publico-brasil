@@ -14,3 +14,6 @@ select
     _source_file_id as id_captura
 
 from {{ source('tse', 'bens') }}
+
+-- de cada candidato vale a declaração da captura mais recente: bem alterado ou retirado não soma duas vezes
+qualify _source_file_id = max(_source_file_id) over (partition by ano_eleicao, sq_candidato)

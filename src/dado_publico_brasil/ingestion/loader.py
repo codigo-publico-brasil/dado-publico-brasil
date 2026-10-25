@@ -9,6 +9,7 @@ registra cada carga (`_dlt_load_id`).
 """
 
 import hashlib
+from collections import Counter
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,7 @@ def read_rows(
     key = [names.get(c, c) for c in dataset.primary_key]
     natural_key = bool(key) and ROW_HASH not in dataset.primary_key
     seen: dict[tuple[Any, ...], str] = {}  # chave natural -> conteúdo da linha, para achar colisões
+    repeats: Counter[str] = Counter()
     for record in read.records(file, contract, dataset):
         stats["read"] += 1
         if any(record.get(field) not in allowed for field, allowed in dataset.only.items()):
@@ -54,7 +56,9 @@ def read_rows(
             "".join(str(row[names[c]] or "") for c in dataset.columns).encode()
         ).hexdigest()
         if ROW_HASH in dataset.primary_key:
-            row[ROW_HASH] = digest
+            # linhas idênticas no arquivo são todas da fonte: da segunda em diante o contador entra na chave
+            repeats[digest] += 1
+            row[ROW_HASH] = digest if repeats[digest] == 1 else f"{digest}:{repeats[digest]}"
         if any(row[k] is None for k in key):
             stats["rejected"] += 1
             continue
