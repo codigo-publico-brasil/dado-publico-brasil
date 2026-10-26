@@ -46,7 +46,7 @@ models:
       - {name: turno, description: "Turno da votação."}
       - {name: abrangencia, description: "Abrangência da eleição, como o TSE informa (campo TP_ABRANGENCIA)."}
       - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
-      - {name: cd_ue, description: "Código da unidade eleitoral (UF, município ou BR para presidente), como o TSE informa."}
+      - {name: cd_ue, description: "Código da unidade eleitoral do cargo: BR para presidente, a sigla da UF para os cargos estaduais e federais e o código do município para prefeito e vereador, igual ao das candidaturas."}
       - {name: ue_nome, description: "Nome da unidade eleitoral, como o TSE informa."}
       - {name: cd_municipio, description: "Código do município, como a fonte informa."}
       - {name: municipio, description: "Município de aplicação."}
@@ -66,7 +66,7 @@ models:
       - {name: fl_voto_em_transito, description: "Verdadeiro se o voto foi em trânsito, como o TSE informa (campo ST_VOTO_EM_TRANSITO)."}
       - {name: votos_nominais, description: "Votos nominais recebidos, de qualquer destinação."}
       - {name: destinacao, description: "Destinação dos votos, como o TSE informa (campo NM_TIPO_DESTINACAO_VOTOS)."}
-      - {name: votos_validos, description: "Votos nominais válidos."}
+      - {name: votos_validos, description: "Votos nominais válidos; nos arquivos de 2002 a 2014, que não separam os válidos, os votos nominais."}
       - {name: resultado, description: "Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
 

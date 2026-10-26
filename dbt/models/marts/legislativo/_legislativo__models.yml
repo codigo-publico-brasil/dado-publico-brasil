@@ -665,7 +665,7 @@ models:
       - {name: partido, data_type: varchar, description: "Sigla do partido pelo qual concorreu."}
       - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no TSE (por exemplo, deferido), como o TSE informa."}
       - {name: resultado, data_type: varchar, description: "Resultado como o TSE informa (por exemplo, eleito, eleito por QP ou eleito por média)."}
-      - {name: qtd_votos, data_type: bigint, description: "Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada."}
+      - {name: qtd_votos, data_type: bigint, description: "Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada. Em 2002 a 2014 o TSE não separa os válidos: valem os nominais."}
       - {name: percentual_votos_nominais, data_type: "decimal(5,2)", description: "Percentual dos votos nominais válidos do cargo na unidade eleitoral e no turno, sem os votos de legenda; vazio se a votação ainda não foi carregada."}
       - {name: id_pessoa, data_type: bigint, description: "Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos casos sem ligação."}
       - {name: tipo_mandato, data_type: varchar, description: "Só para deputado federal e senador ligados a uma pessoa: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum). Vazio para quem não foi ligado: sem prova do histórico, nada é afirmado."}
