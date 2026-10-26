@@ -69,7 +69,7 @@ def test_historical_plan_covers_every_year_of_the_range(contract: SourceContract
     assert ("votacoesVotos", 2026) in items
 
 
-def test_incremental_plan_has_only_the_current_partition_of_each_dataset_that_refreshes_daily(
+def test_incremental_plan_has_only_the_current_partition_of_each_dataset_of_a_scheduled_source(
     contract: SourceContract,
 ) -> None:
     items = landing.plan_incremental(contract, today=date(2026, 10, 24))
@@ -78,9 +78,19 @@ def test_incremental_plan_has_only_the_current_partition_of_each_dataset_that_re
     assert ("votacoes", 2025) not in items
 
 
-def test_each_source_declares_how_it_refreshes_and_what_is_on_request_stays_out_of_the_daily_plan() -> None:
+def test_a_source_without_schedule_has_an_empty_incremental_plan(tmp_path: Path) -> None:
+    assert contract_from(tmp_path).schedule is None
+    assert landing.plan_incremental(contract_from(tmp_path), date(2026, 10, 24)) == []  # só quando pedido
+
+
+def test_each_source_declares_its_schedule_and_the_plan_has_only_the_current_partition() -> None:
     today = date(2026, 10, 24)
-    assert landing.plan_incremental(contracts.find("tse"), today) == []  # TSE: pontual, só quando pedido
+    assert all(c.schedule for c in contracts.find_all())  # nenhuma fonte fica sem cadência por esquecimento
+    tse = {part for _, part in landing.plan_incremental(contracts.find("tse"), today)}
+    assert tse == {2026}  # ano de eleição: só ele é conferido
+    assert (
+        landing.plan_incremental(contracts.find("tse"), date(2025, 6, 1)) == []
+    )  # sem eleição, nada a conferir
     assert {name for name, _ in landing.plan_incremental(contracts.find("dou"), today)} == {
         "secao1",
         "secao2",
@@ -93,19 +103,12 @@ def test_each_source_declares_how_it_refreshes_and_what_is_on_request_stays_out_
     assert senate["senadores"] == landing.legislature_of(2026) and senate["votacoes"] == 2026
 
 
-def test_an_invalid_refresh_is_refused(tmp_path: Path) -> None:
-    file = tmp_path / "fonte.yml"
-    lines = [
-        "source: x",
-        "power: legislativo",
-        "level: federal",
-        "access: {base_url: 'http://x'}",
-        "datasets:",
-        "  d: {url: 'http://x/d.csv', load: full, write: replace, columns: [a], refresh: semanal}",
-    ]
-    file.write_text(chr(10).join(lines), encoding="utf-8")
-    with pytest.raises(InvalidContract, match="refresh"):
-        load_contract(file)
+def test_an_invalid_schedule_is_refused(tmp_path: Path) -> None:
+    with pytest.raises(InvalidContract, match="schedule"):
+        contract_from(tmp_path, text="schedule: toda segunda" + chr(10) + TEMPLATE.format(extra=""))
+    assert contract_from(
+        tmp_path, text="schedule: '0 6 * * *'" + chr(10) + TEMPLATE.format(extra="")
+    ).schedule
 
 
 def test_unchanged_uses_etag_or_last_modified_with_size() -> None:

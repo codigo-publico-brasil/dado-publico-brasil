@@ -9,6 +9,7 @@ source: camara                      # nome curto: prefixo dos modelos stg_camara
 power: legislativo                  # legislativo | executivo | judiciario
 level: federal                      # federal | estadual | municipal: o raw vira raw_federal_camara
 description: Câmara dos Deputados, dados abertos (arquivos em lote)
+schedule: "0 6 * * *"             # quando capturar (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
 
 access:
   base_url: https://dadosabertos.camara.leg.br/arquivos
@@ -22,7 +23,6 @@ datasets:
     url: "{base_url}/proposicoes/csv/proposicoes-{year}.csv"
     load: yearly                    # full | yearly
     first_year: 2001                # (yearly) primeiro ano publicado pela fonte: anos anteriores não são pedidos
-    refresh: daily                  # daily (a execução diária confere a partição em curso) | on_request (só quando pedido)
     extra_years: true               # (yearly) aceita anos só deste dataset (--extra-years)
     write: merge                    # merge (upsert pela chave) | replace (troca o conteúdo anterior)
     primary_key: [id]

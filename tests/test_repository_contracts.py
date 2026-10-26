@@ -91,17 +91,27 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
     settings = Settings(storage_root=tmp_path / "store")
     dbt.invoke(settings, "parse")  # gera o manifesto que o Dagster lê
     code = (
+        "from dagster import AssetKey;"
+        "from dado_publico_brasil.ingestion import contract;"
         "from dado_publico_brasil.orchestration.definitions import defs;"
-        "keys = {k.to_user_string() for k in defs.resolve_asset_graph().get_all_asset_keys()};"
-        "print(len(keys), 'marts/pessoas' in keys or 'pessoas' in keys, 'identity/pessoa' in keys, {'landing/camara', 'landing/senado'} <= keys,"
-        " [s.name for s in defs.schedules or []],"
-        " [s.name for s in defs.sensors or []],"
-        " len([c for c in defs.resolve_asset_graph().asset_check_keys if c.name == 'saude_da_fonte']))"
+        "graph = defs.resolve_asset_graph();"
+        "keys = {k.to_user_string() for k in graph.get_all_asset_keys()};"
+        "scheduled = sorted(s.source for s in contract.find_all() if s.schedule);"
+        "print(len(keys), 'marts/pessoas' in keys, 'identity/pessoa' in keys, {'landing/camara', 'landing/senado'} <= keys,"
+        " sorted(s.name for s in defs.schedules or []) == [f'captura_{n}' for n in scheduled],"
+        " sorted(j.name for j in defs.jobs or []) ==  sorted(['atualizar_tudo'] + [f'{p}_{c.source}' for c in contract.find_all() for p in ('atualizar', 'captura')]),"
+        " sorted(s.name for s in defs.sensors or []),"
+        " graph.get(AssetKey(['marts', 'pessoas'])).automation_condition is not None,"
+        " graph.get(AssetKey(['identity', 'pessoa'])).automation_condition is not None,"
+        " graph.get(AssetKey(['tse', 'candidaturas'])).automation_condition is None,"
+        " len([c for c in graph.asset_check_keys if c.name == 'saude_da_fonte']) > 0,"
+        " len([c for c in graph.asset_check_keys if c.asset_key.path[0] == 'landing' and c.name != 'saude_da_fonte']) == len(scheduled))"
     )
     env = {**os.environ, "DADO_PUBLICO_STORAGE_ROOT": str(settings.storage_root)}
     result = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, env=env, cwd=ROOT, check=False
     )
     assert result.returncode == 0, result.stderr[-1500:]
-    assert "True True True ['daily_incremental'] ['falha_de_execucao']" in result.stdout, result.stdout
-    assert int(result.stdout.split()[-1]) > 0, result.stdout  # uma verificação de saúde por tabela do raw
+    sensors = "['falha_de_execucao', 'propagar_atualizacoes', 'verificar_atrasos']"
+    # ativos; agendamento e job por fonte; sensores; dbt e identidade sobem sozinhos, o raw não; atraso por fonte agendada
+    assert f"True True True True True {sensors} True True True True True" in result.stdout, result.stdout

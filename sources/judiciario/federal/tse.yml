@@ -11,9 +11,10 @@ power: judiciario
 level: federal
 description: Tribunal Superior Eleitoral, dados abertos (CKAN; pacotes .zip com CSV)
 
-# Regra de extração: o TSE muda em datas pontuais (eleição, apuração, prestação de contas), então nada entra na execução
-# diária: cada dataset roda quando pedido (`dado-publico extract --source tse --years 2026`), um por vez nos pesados.
-refresh: on_request
+# Regra de extração: o TSE muda em datas pontuais (eleição, apuração, prestação de contas), então a conferência é semanal
+# (segunda, 8h) e só do ano de eleição em curso; a pergunta barata à fonte (ETag/Last-Modified) evita baixar o que não mudou.
+# Anos anteriores ou um dataset pesado: `dado-publico extract --source tse --years 2022 --dataset votacao`.
+schedule: "0 8 * * 1"            # captura automática (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
 
 access:
   base_url: https://cdn.tse.jus.br/estatistica/sead/odsele

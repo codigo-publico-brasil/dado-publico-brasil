@@ -1,0 +1,11 @@
+.git
+.venv
+.env
+data_store
+.tmp_dagster_home_*
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+dbt/target
+dbt/dbt_packages

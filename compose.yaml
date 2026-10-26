@@ -1,5 +1,6 @@
-# PostgreSQL de serviço para desenvolvimento local (ADR 0014): o que as aplicações leem.
-# Subir: `docker compose up -d` (lê o `.env` desta pasta). Senhas vêm do `.env`; nenhuma fica neste arquivo.
+# PostgreSQL de serviço (ADR 0014) e pipeline com Dagster (ADR 0027).
+# Só o banco: `docker compose up -d` (lê o `.env` desta pasta). Banco e pipeline: `docker compose --profile pipeline up -d --build`.
+# Senhas vêm do `.env`; nenhuma fica neste arquivo.
 name: dado-publico-brasil
 
 services:
@@ -20,5 +21,28 @@ services:
       interval: 5s
       retries: 10
 
+  # Dagster: interface em http://127.0.0.1:3000, agendamentos por fonte, propagação automática e publicação.
+  # Só escuta em 127.0.0.1: sem login, não deve ser exposto à rede (ver docs/02-fazer/04-operar-e-publicar.md).
+  dagster:
+    profiles: [pipeline]
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: [.env]
+    environment:
+      DADO_PUBLICO_STORAGE_ROOT: /data
+      DADO_PUBLICO_WAREHOUSE: "{root}/warehouse.duckdb"
+      DADO_PUBLICO_POSTGRES_DSN: postgresql://dado_publico:${DADO_PUBLICO_PG_PASSWORD}@postgres:5432/dado_publico
+      DAGSTER_HOME: /dagster_home
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./data_store:/data
+      - dagster_home:/dagster_home
+      - ./dagster.yaml:/dagster_home/dagster.yaml:ro
+
 volumes:
   pgdata:
+  dagster_home:

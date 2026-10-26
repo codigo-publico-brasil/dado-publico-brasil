@@ -3,7 +3,7 @@ power: legislativo
 level: federal
 description: Constituição de 1988, texto atualizado até a última emenda, como a Câmara dos Deputados publica
 # Regra de extração: o texto muda só com cada emenda; a execução diária só confere a página (e baixa se mudou).
-refresh: daily
+schedule: "15 7 * * *"            # captura automática (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
 
 access:
   base_url: https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988

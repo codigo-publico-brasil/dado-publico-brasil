@@ -8,7 +8,7 @@ Três maneiras de montar o que baixar (o plano):
 - explícito: os anos pedidos;
 - histórico (massivo): todos os anos de um intervalo;
 - incremental (a execução diária): os datasets completos e só a partição em curso (ano, mês ou legislatura)
-  dos que a fonte declara `refresh: daily`; `on_request` só roda quando pedido.
+  da fonte que declara `schedule`; sem `schedule`, só roda quando pedido.
 """
 
 from collections.abc import Mapping
@@ -167,14 +167,16 @@ def plan_historical(
 def plan_incremental(contract: SourceContract, today: date | None = None) -> list[Item]:
     """Plano incremental (o da execução diária): só a partição em curso de cada dataset da fonte.
 
-    Cada fonte diz, no seu YAML, com que frequência cada dataset se atualiza (`refresh`): `daily` entra aqui;
-    `on_request` (por exemplo, o TSE, que muda em datas pontuais) só roda quando pedido. Tudo que é retroativo
-    (anos ou meses anteriores) exige pedir (`--years` ou `--historical`).
+    Cada fonte diz, no seu YAML, quando se captura (`schedule`, um cron); sem `schedule` o plano é vazio e
+    a fonte só roda quando pedida. Tudo que é retroativo (anos ou meses anteriores) exige pedir (`--years`
+    ou `--historical`).
     """
     today = today or datetime.now(UTC).date()
     items: list[Item] = []
+    if contract.schedule is None:
+        return items
     for d in contract.datasets.values():
-        if d.foreach or d.refresh != "daily":
+        if d.foreach:
             continue
         if not d.yearly:
             items.append((d.name, None))
