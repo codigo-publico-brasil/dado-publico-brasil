@@ -9,7 +9,9 @@ dependência vem da declaração do dbt. Carga histórica ou incremental é só 
 
 Automação (ADR 0027): cada fonte com `schedule` no YAML ganha um agendamento que roda o job `captura_<fonte>`
 (landing e raw); o que depende do raw (dbt, identidade, publicação) roda sozinho quando o raw recebe dado novo
-(`AutomationCondition.eager`). `atualizar_<fonte>` refaz tudo o que vem da fonte; `atualizar_tudo` refaz tudo.
+(`AutomationCondition.eager`). `atualizar_<fonte>` refaz tudo o que vem da fonte; `atualizar_tudo` refaz tudo;
+`capturar_tudo` só captura (todas as fontes);
+`processar_tudo` só processa, sem capturar nada.
 """
 
 import json
@@ -265,8 +267,13 @@ SCHEDULED = [s for s in SOURCES if s.schedule]
 EXTRA = (
     [publish_asset] if SETTINGS.service_dsn else []
 )  # sem o banco de serviço configurado, não há o que publicar
+INGESTED = [key for s in SOURCES for key in _keys(s)]  # landing e raw de todas as fontes
 jobs = [
     define_asset_job("atualizar_tudo", selection="*", tags=REFRESH),
+    # captura tudo (landing e raw de todas as fontes), sem processar
+    define_asset_job("capturar_tudo", selection=AssetSelection.assets(*INGESTED)),
+    # processa tudo (dbt, identidade, publicação) a partir do que já está no raw, sem capturar nada
+    define_asset_job("processar_tudo", selection=AssetSelection.all() - AssetSelection.assets(*INGESTED)),
     *(
         define_asset_job(
             f"atualizar_{s.source}", selection=AssetSelection.assets(*_keys(s)).downstream(), tags=REFRESH
