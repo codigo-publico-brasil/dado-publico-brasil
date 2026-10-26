@@ -58,7 +58,7 @@ uv run dado-publico run --years 2025 2026     # captura, carrega e transforma (o
 uv run dado-publico query --sql "SELECT * FROM marts.pessoas LIMIT 10"
 ```
 
-Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). PostgreSQL, Dagster, auditoria e os outros modos de execução: [rodar localmente](docs/02-fazer/01-rodar-localmente.md).
+Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). PostgreSQL, [Dagster](docs/02-fazer/01-rodar-localmente.md#dagster-interface-agendamento-e-linhagem), auditoria e os outros modos de execução: [rodar localmente](docs/02-fazer/01-rodar-localmente.md).
 
 ## Estrutura das pastas
 
