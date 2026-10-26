@@ -8,7 +8,7 @@ Para quem chega ao projeto: onde cada coisa mora em `docs/` e em que ordem ler. 
 | [`02-fazer/`](02-fazer/) | **Como fazer:** passo a passo para rodar, operar, auditar e acrescentar fonte | quando for pôr a mão na massa |
 | [`03-consultar/`](03-consultar/) | **Referência:** catálogo de tabelas, convenção de nomes, fontes, lacunas | quando precisar de um fato exato |
 | [`04-dominio/`](04-dominio/) | Material didático sobre as instituições (Câmara, Senado, TSE...) e as regras por trás dos campos | para entender os dados |
-| [`05-decisoes/`](05-decisoes/) | ADRs: decisões de arquitetura aceitas, uma por arquivo (`0001`...) | para saber por que algo é assim |
+| [`05-decisoes/`](05-decisoes/) | ADRs: decisões de arquitetura, uma por arquivo (`0001`...); o [`README`](05-decisoes/README.md) diz quais valem hoje | para saber por que algo é assim |
 | [`99-historico/`](99-historico/) | Planos e propostas antigos, guardados só como registro | normalmente, nunca |
 
 ## Ordem de leitura
