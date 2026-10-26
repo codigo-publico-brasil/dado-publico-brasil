@@ -94,6 +94,14 @@ MUNICIPAIS = [
     ),
     ("VEREADOR", "1013", "VEREADOR TRES", "TRES", "NÃO ELEITO", ("700", "Eleições Ordinárias 2022")),
     (
+        "VEREADOR",
+        "1015",
+        "VEREADOR MEDIA",
+        "MEDIA",
+        "MÉDIA",
+        ("700", "Eleições Ordinárias 2022"),
+    ),  # nome antigo de eleito por média
+    (
         "PREFEITO",
         "1014",
         "PREFEITO SUPLEMENTAR",
@@ -307,7 +315,7 @@ def _vagas() -> bytes:
     municipais = [
         {"SG_UF": "RJ", "SG_UE": ue, "DS_CARGO": cargo, "QT_VAGA": vagas, "CD_CARGO": codigo, "CD_ELEICAO": "700",
          "DS_ELEICAO": "Eleições Ordinárias 2022", "DT_POSSE": "01/01/2023", "NM_UE": f"MUNICIPIO {ue}"}
-        for ue, cargo, vagas, codigo in (("60011", "Prefeito", "1", "11"), ("60011", "Vereador", "2", "13"),
+        for ue, cargo, vagas, codigo in (("60011", "Prefeito", "1", "11"), ("60011", "Vereador", "3", "13"),
                                          ("60012", "Vereador", "3", "13"))
     ]  # fmt: skip
     return _tabela(VAGAS_COLUNAS, [*gerais, suplementar, *municipais])

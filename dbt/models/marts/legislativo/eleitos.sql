@@ -1,10 +1,11 @@
 -- Eleitos para presidente, governador, senador, deputado federal, estadual e distrital (eleições gerais) e para prefeito e vereador
 -- (eleições municipais): uma linha por eleito, de todos
--- os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos). O resultado é o que o TSE informa na data da
+-- os partidos e inclusive de quem ainda não é pessoa do projeto. O resultado é o que o TSE informa na data da
 -- captura: provisório até a diplomação. Votos e percentual vêm da votação por município e zona, quando carregada.
 -- O percentual é sobre os votos nominais válidos do cargo na unidade eleitoral (sem os votos de legenda).
 -- `tipo_mandato` só existe para quem foi eleito à Câmara ou ao Senado: reeleito (tinha mandato na mesma casa na
--- legislatura em curso na eleição), retorno (já teve mandato na mesma casa, antes) ou novato (nenhum).
+-- legislatura em curso na eleição), retorno (já teve mandato na mesma casa, antes) ou novato (pessoa ligada, sem mandato
+-- na casa). Quem não foi ligado a uma pessoa fica sem tipo: sem prova do histórico, nada é afirmado (nem novato).
 with eleitos as (
 
     select
@@ -18,7 +19,6 @@ with eleitos as (
 
     where c.resultado like 'Eleito%'
         and c.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital', 'Prefeito', 'Vereador')
-        and coalesce(c.eleicao, '') not ilike '%suplementar%'  -- só as eleições ordinárias; as suplementares não entram
 
     -- o TSE pode marcar "eleito" nos dois turnos (por exemplo, o governador de Goiás em 2014): vale o turno final
     qualify row_number() over (partition by c.id_candidatura order by c.turno desc) = 1
@@ -63,7 +63,7 @@ select
     cast(round(100.0 * v.qtd_votos / nullif(t.total_votos, 0), 2) as decimal(5, 2)) as percentual_votos_nominais,
     i.id_pessoa,
     case
-        when e.casa is null then null
+        when e.casa is null or i.id_pessoa is null then null
         when exists (
             select 1 from {{ ref('mandatos') }} as m
             where m.id_pessoa = i.id_pessoa and m.casa = e.casa

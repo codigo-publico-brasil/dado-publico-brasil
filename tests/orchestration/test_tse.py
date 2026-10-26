@@ -15,7 +15,20 @@ def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_
     found = {r["sq_candidato"] for r in rows(con, "SELECT sq_candidato FROM raw_federal_tse.candidaturas")}
     # 1006 é deputado estadual e 1010 a 1014 são municipais: entram no raw (todos os cargos); 9999 só existe no
     # arquivo do estado (só o _BRASIL.csv é lido)
-    assert found == {"1001", "1002", "1003", "1004", "1005", "1006", "1010", "1011", "1012", "1013", "1014"}
+    assert found == {
+        "1001",
+        "1002",
+        "1003",
+        "1004",
+        "1005",
+        "1006",
+        "1010",
+        "1011",
+        "1012",
+        "1013",
+        "1014",
+        "1015",
+    }
     leaked = scalar(con, "SELECT COUNT(*) FROM raw_federal_tse.candidaturas WHERE nm_candidato LIKE '%@%'")
     assert leaked == 0
 

@@ -26,6 +26,7 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
         "Fulano Estadual",
         "Prefeito Eleito",
         "Vereador Dois",
+        "Vereador Media",
         "Vereadora Um",
     ]  # sem o prefeito da eleição suplementar nem o vereador não eleito
     bia, carlos, fulano, prefeito, *vereadores = found
@@ -39,7 +40,7 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
     assert (bia["qtd_votos"], bia["percentual_votos_nominais"]) == (1750, Decimal("100.00"))
     assert bia["tipo_mandato"] == "novato"  # o mandato dela começa depois dessa eleição: nenhum anterior
     assert (carlos["ligado"], carlos["qtd_votos"], carlos["percentual_votos_nominais"]) == (False, None, None)
-    assert carlos["tipo_mandato"] == "novato" and carlos["vinculo_metodo"] is None
+    assert carlos["tipo_mandato"] is None and carlos["vinculo_metodo"] is None  # sem ligação: nem novato
     assert (prefeito["cargo"], prefeito["ue"], prefeito["ue_nome"], prefeito["tipo_mandato"]) == (
         "Prefeito",
         "60011",
@@ -68,7 +69,7 @@ def test_each_office_shows_its_real_state_without_guessing(full: tuple[Connectio
         ("SP", "Senador"): (2, 0, 2, "aguardando_resultado"),
         ("SP", "Deputado estadual"): (70, 1, 69, "aguardando_resultado"),
         ("60011", "Prefeito"): (1, 1, 0, "eleito_provisorio"),
-        ("60011", "Vereador"): (2, 2, 0, "eleito_provisorio"),
+        ("60011", "Vereador"): (3, 3, 0, "eleito_provisorio"),
         ("60012", "Vereador"): (3, 0, 3, "aguardando_resultado"),
     }
 
@@ -119,6 +120,5 @@ def test_every_elected_of_the_staging_reaches_the_mart(full: tuple[Connection, S
     assert scalar(
         con,
         "SELECT count(*) FROM staging.stg_tse__candidaturas WHERE resultado LIKE 'Eleito%' "
-        "AND cargo IN ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital', 'Prefeito', 'Vereador') "
-        "AND coalesce(eleicao, '') NOT ILIKE '%suplementar%'",
+        "AND cargo IN ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital', 'Prefeito', 'Vereador') ",
     ) == scalar(con, "SELECT count(*) FROM marts.eleitos")

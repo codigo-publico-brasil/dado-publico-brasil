@@ -308,8 +308,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `resultado` | varchar | Resultado como o TSE informa (por exemplo, eleito, eleito por QP ou eleito por média). |  |
 | `qtd_votos` | bigint | Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada. |  |
 | `percentual_votos_nominais` | decimal(5,2) | Percentual dos votos nominais válidos do cargo na unidade eleitoral e no turno, sem os votos de legenda; vazio se a votação ainda não foi carregada. |  |
-| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos novatos e nos casos sem ligação. |  |
-| `tipo_mandato` | varchar | Só para deputado federal e senador: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum). |  |
+| `id_pessoa` | bigint | Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos casos sem ligação. |  |
+| `tipo_mandato` | varchar | Só para deputado federal e senador ligados a uma pessoa: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum). Vazio para quem não foi ligado: sem prova do histórico, nada é afirmado. |  |
 | `vinculo_metodo` | varchar | Como o eleito foi ligado à pessoa: identificador oficial da própria fonte ou nome civil e data de nascimento iguais e únicos; vazio sem ligação. |  |
 | `vinculo_aprovado_por` | varchar | Quem aprovou o vínculo, quando foi aprovado à mão; vazio nos demais. |  |
 | `dt_captura` | date | Data da captura do arquivo de candidaturas de onde vem o resultado. |  |

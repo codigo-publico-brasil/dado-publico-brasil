@@ -25,7 +25,10 @@ select
     try_cast(qt_votos_nominais as bigint) as votos_nominais,
     nm_tipo_destinacao_votos as destinacao,
     try_cast(qt_votos_nominais_validos as bigint) as votos_validos,
-    sentence_case(nullif(nullif(ds_sit_tot_turno, '#NULO#'), '#NULO')) as resultado,
+    -- os arquivos de 1998 a 2010 chamam de `Média` o eleito por média, que depois vira `Eleito por média`
+    case when lower(trim(ds_sit_tot_turno)) = 'média' then 'Eleito por média' else sentence_case(nullif(nullif(ds_sit_tot_turno, '#NULO#'), '#NULO')) end as resultado,
     _source_file_id as id_captura
 
 from {{ source('tse', 'votacao') }}
+
+where coalesce(ds_eleicao, '') not ilike '%suplementar%'  -- as suplementares repetem o sequencial das ordinárias e ficam só no raw
