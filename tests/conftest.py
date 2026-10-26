@@ -56,7 +56,9 @@ def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract
     con.close()
     pipeline.run_all(
         Settings(storage_root=base / "full"),
-        lambda c: landing.plan(c, [2022] if c.source == "tse" else [2024], []),  # TSE: só eleição geral
+        lambda c: landing.plan(
+            c, [2018, 2022] if c.source == "tse" else [2024], []
+        ),  # TSE: duas eleições gerais
         downloader=fake_downloader(
             {
                 **files,

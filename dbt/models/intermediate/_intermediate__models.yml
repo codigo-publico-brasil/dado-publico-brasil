@@ -177,3 +177,8 @@ models:
       - {name: destino_tipo, description: "Tipo de identificador do registro de destino do vínculo."}
       - {name: id_destino, description: "Identificador do registro de destino do vínculo, na fonte de destino.", tests: ["not_null"]}
       - {name: metodo, description: "Regra que ligou as duas chaves."}
+  - name: int_tse_pessoas
+    description: Identificador da mesma pessoa entre as eleições do TSE (nome civil e data de nascimento iguais, a combinação única em cada eleição, sem datas de 1º de janeiro). Uma linha por candidatura ligável.
+    columns:
+      - {name: id_candidatura, description: "Identificador da candidatura (ano, unidade eleitoral e sequencial do candidato).", tests: ["unique", "not_null"]}
+      - {name: id_pessoa_tse, description: "Identificador da pessoa entre as eleições do TSE, derivado do nome civil e da data de nascimento; não é uma pessoa do projeto.", tests: ["not_null"]}

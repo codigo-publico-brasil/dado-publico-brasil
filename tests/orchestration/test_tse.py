@@ -13,7 +13,7 @@ def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_
     cols = set(columns(con, "raw_federal_tse", "candidaturas"))
     assert not {"nr_cpf_candidato", "ds_email", "nr_titulo_eleitoral_candidato", "nm_social_candidato"} & cols
     found = {r["sq_candidato"] for r in rows(con, "SELECT sq_candidato FROM raw_federal_tse.candidaturas")}
-    # 1006 é deputado estadual e 1010 a 1014 são municipais: entram no raw (todos os cargos); 9999 só existe no
+    # 1006 é deputado estadual, 1010 a 1015 são municipais e 2005 e 2006 são de 2018: entram no raw (todos os cargos); 9999 só existe no
     # arquivo do estado (só o _BRASIL.csv é lido)
     assert found == {
         "1001",
@@ -28,6 +28,8 @@ def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_
         "1013",
         "1014",
         "1015",
+        "2005",
+        "2006",
     }
     leaked = scalar(con, "SELECT COUNT(*) FROM raw_federal_tse.candidaturas WHERE nm_candidato LIKE '%@%'")
     assert leaked == 0
@@ -57,7 +59,7 @@ def test_homonyms_in_the_same_election_and_unmatched_candidates_are_not_linked_a
     gap = scalar(
         con, "SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%eleitos_federais_sem_vinculo%'"
     )
-    assert gap == 1  # Carlos, eleito sem correspondente
+    assert gap == 2  # Carlos, eleito sem correspondente em 2018 e em 2022
 
 
 def test_deputy_and_senator_with_the_same_civil_name_and_birth_date_become_one_person(full: Env) -> None:

@@ -137,6 +137,7 @@ def test_every_warehouse_table_of_the_marts_has_a_declared_contract(
         "eleitos",
         "eleitos_campanhas",
         "eleitos_cargos",
+        "eleitos_historico",
         "emendas",
         "emendas_convenios",
         "emendas_favorecidos",
