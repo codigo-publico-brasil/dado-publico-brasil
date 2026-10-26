@@ -19,6 +19,8 @@ Cada tabela de cada camada é descrita **onde nasce**: o raw nas fontes do dbt (
 
 **Sinalização em três níveis.** A classe vale para a tabela (`meta.sensitivity`); a coluna que identifica uma pessoa leva `meta: {pii: true}` e aparece marcada no dicionário do [catálogo](../03-consultar/01-catalogo.md); e, nas tabelas que misturam pessoas jurídicas e físicas, uma coluna por linha (`fl_contem_dado_pessoal`) deixa a aplicação decidir como mostrar. A plataforma guarda o que a fonte publica; quem consome decide a exibição. Um teste confere que a classe é uma das acima e que tabela com coluna `pii` não é `publico`.
 
+Base legal, finalidade, retenção e direitos dos titulares: [LGPD e dados pessoais](07-lgpd-dados-pessoais.md).
+
 Regras (princípio IX da constituição do projeto):
 
 - Dado público de agente público é permitido, **com fonte e data de captura**.
