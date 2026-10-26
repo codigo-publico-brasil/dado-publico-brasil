@@ -75,6 +75,8 @@ class LayerTranslator(DagsterDbtTranslator):
     """Grupo = camada do dbt (staging, intermediate, marts) e execução automática quando o upstream muda."""
 
     def get_group_name(self, dbt_resource_props: Mapping[str, Any]) -> str | None:
+        if dbt_resource_props["resource_type"] == "seed":  # o `fqn` de um seed é só o nome dele
+            return "seeds"
         return str(dbt_resource_props["fqn"][1])
 
     def get_automation_condition(
