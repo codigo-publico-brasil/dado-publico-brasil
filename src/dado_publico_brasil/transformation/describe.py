@@ -15,6 +15,7 @@ INTERNAL = {
         "Identificador da captura (metadata.captures.id): liga a linha ao arquivo original do landing, "
         "com hash e data."
     ),
+    "_ingested_at": "Instante (UTC) em que a linha chegou ao raw, o da carga do arquivo de origem.",
     "_row_hash": "Impressão digital do conteúdo da linha, chave dos arquivos sem identificador natural.",
     "_item": "Item (identificador) que originou a linha, nos datasets buscados item a item.",
     "_dlt_id": "Identificador interno da linha, criado pelo dlt.",

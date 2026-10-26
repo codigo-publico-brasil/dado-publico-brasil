@@ -65,6 +65,7 @@ datasets:
     member: "*_BRASIL.csv"
     write: merge
     primary_key: [_row_hash]
+    optional: [SG_FEDERACAO, NM_TIPO_DESTINACAO_VOTOS, QT_VOTOS_NOMINAIS_VALIDOS]   # só existem nos anos recentes (federação: 2022; votos válidos: ver #76)
     columns:
       [ANO_ELEICAO, NR_TURNO, CD_ELEICAO, DS_ELEICAO, TP_ABRANGENCIA, SG_UF, SG_UE, NM_UE, CD_MUNICIPIO, NM_MUNICIPIO, NR_ZONA, CD_CARGO,
        DS_CARGO, SQ_CANDIDATO, NR_CANDIDATO, NM_CANDIDATO, NM_URNA_CANDIDATO, DS_SITUACAO_CANDIDATURA,

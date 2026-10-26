@@ -100,7 +100,7 @@ O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósi
 - **Documentos pessoais são recusados.** Um contrato que liste `cpf`, `rg`, `titulo_eleitor`, `cnh` ou `passaporte` não carrega. Um teste confere.
 - **`write: merge` exige `primary_key`**; linhas sem valor na chave são rejeitadas e contadas. `write: replace` serve a arquivos completos que substituem o anterior.
 - **Valores como texto, vazio como nulo.** Tipos e limpeza ficam no staging.
-- Toda linha do raw leva `_source_file_id`, o id da captura (arquivo do landing) de onde veio.
+- Toda linha do raw leva `_source_file_id`, o id da captura (arquivo do landing) de onde veio, e `_ingested_at`, o instante em que chegou ao raw.
 - Erros do contrato (tipo, chave ou `load` inválidos) dizem onde está o problema.
 
 ## Receitas

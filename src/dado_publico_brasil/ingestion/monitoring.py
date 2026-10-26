@@ -40,9 +40,10 @@ def check_header(
     """Compara os campos do arquivo com o contrato e com a captura anterior do mesmo dataset e partição.
 
     Coluna do contrato ausente é erro em CSV (o layout mudou) e aviso em JSON (a API omite campo vazio, então
-    ausente quer dizer vazio no arquivo todo). Nome antigo declarado em `aliases` vale como a coluna atual. A
-    mudança de colunas só se mede contra o mesmo arquivo capturado antes: um ano antigo ter menos campos que o
-    seguinte é a natureza do dado, não alerta.
+    ausente quer dizer vazio no arquivo todo). Nome antigo declarado em `aliases` vale como a coluna atual, e
+    coluna em `optional` (só existe em anos recentes) pode faltar. A mudança de colunas só se mede contra o
+    mesmo arquivo capturado antes: um ano antigo ter menos campos que o seguinte é a natureza do dado, não
+    alerta.
     """
     header = read.fields(file, contract, dataset)
     source, name = contract.source, dataset.name
@@ -50,7 +51,7 @@ def check_header(
         record(con, source, name, partition, "schema", "ok", "arquivo sem registros")
         return
     present = set(header) | {new for old, new in dataset.aliases.items() if old in header}
-    missing = [c for c in dataset.columns if c not in present]
+    missing = [c for c in dataset.columns if c not in present and c not in dataset.optional]
     previous = con.execute(
         "SELECT detail FROM metadata.source_checks WHERE source = ? AND dataset = ? "
         "AND partition IS NOT DISTINCT FROM ? AND check_name = 'header' ORDER BY id DESC LIMIT 1",

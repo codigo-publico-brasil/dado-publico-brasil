@@ -3,7 +3,8 @@
 O raw é fiel à fonte: só as colunas permitidas pelo contrato, com o nome normalizado para
 snake_case pelo dlt, valores como texto e vazio virando nulo. Nada é renomeado, convertido ou
 limpo aqui; isso é trabalho do dbt (staging). Cada linha leva `_source_file_id`, o id da captura
-(arquivo do landing) de onde veio. O dlt cria a tabela, evolui o esquema (coluna nova no contrato
+(arquivo do landing) de onde veio, e `_ingested_at`, o instante em que chegou ao raw. O dlt cria a tabela,
+evolui o esquema (coluna nova no contrato
 aparece sozinha), faz `merge` pela chave natural (ou pelo conteúdo da linha, com `_row_hash`) e
 registra cada carga (`_dlt_load_id`).
 """
@@ -11,6 +12,7 @@ registra cada carga (`_dlt_load_id`).
 import hashlib
 from collections import Counter
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +42,7 @@ def read_rows(
     legacy = {new: old for old, new in dataset.aliases.items()}  # nome atual -> nome no layout antigo
     key = [names.get(c, c) for c in dataset.primary_key]
     natural_key = bool(key) and ROW_HASH not in dataset.primary_key
+    ingested_at = datetime.now(UTC)  # o mesmo instante para o arquivo todo
     seen: dict[tuple[Any, ...], str] = {}  # chave natural -> conteúdo da linha, para achar colisões
     repeats: Counter[str] = Counter()
     for record in read.records(file, contract, dataset):
@@ -52,6 +55,7 @@ def read_rows(
             for c in dataset.columns
         }
         row["_source_file_id"] = file_id
+        row["_ingested_at"] = ingested_at
         digest = hashlib.sha256(
             "".join(str(row[names[c]] or "") for c in dataset.columns).encode()
         ).hexdigest()
@@ -85,6 +89,10 @@ def resource(
     if ROW_HASH in dataset.primary_key:
         columns[ROW_HASH] = {"data_type": "text", "nullable": False}
     columns["_source_file_id"] = {"data_type": "bigint", "nullable": False}
+    columns["_ingested_at"] = {
+        "data_type": "timestamp",
+        "nullable": True,
+    }  # nulo só se o preenchimento retroativo faltar
     return dlt.resource(  # type: ignore[call-overload,no-any-return]
         lambda: read_rows(file, contract, dataset, file_id, stats),
         name=normalize(dataset.name),

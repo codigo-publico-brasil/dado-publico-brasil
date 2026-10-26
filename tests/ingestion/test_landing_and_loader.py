@@ -101,7 +101,7 @@ def test_raw_has_only_allowed_columns_and_never_the_personal_document(
     con, _ = raw
     cols = set(columns(con, "raw_federal_camara", "deputados"))
     assert "cpf" not in cols
-    assert {"uri", "nome", "nome_civil", "_source_file_id"} <= cols
+    assert {"uri", "nome", "nome_civil", "_source_file_id", "_ingested_at"} <= cols
     content = " ".join(
         str(c) for row in con.execute("SELECT * FROM raw_federal_camara.deputados").fetchall() for c in row
     )
@@ -132,6 +132,13 @@ def test_every_raw_row_points_to_an_existing_capture(raw: tuple[Connection, Sett
             "WHERE NOT EXISTS (SELECT 1 FROM metadata.captures c WHERE c.id = t._source_file_id)",
         )
         assert orphans == 0, table
+
+
+def test_every_raw_row_has_the_time_it_arrived(raw: tuple[Connection, Settings]) -> None:
+    con, _ = raw
+    for table in tables(con, "raw_federal_camara"):
+        sem_data = scalar(con, f"SELECT COUNT(*) FROM raw_federal_camara.{table} WHERE _ingested_at IS NULL")
+        assert sem_data == 0, table
 
 
 def test_loading_again_is_idempotent(raw: tuple[Connection, Settings], contract: SourceContract) -> None:

@@ -113,6 +113,28 @@ def test_an_old_name_declared_as_alias_counts_as_the_current_column(con: Connect
     assert [s for s, _ in checks(con, "schema")] == ["ok"]
 
 
+def test_an_optional_column_may_be_missing_in_old_years(con: Connection, tmp_path: Path) -> None:
+    from dado_publico_brasil.ingestion import contract as contracts
+
+    tse = contracts.find("tse")
+    votacao = tse.datasets["votacao"]
+
+    def pacote(columns: list[str], name: str) -> Path:
+        file = tmp_path / name
+        with zipfile.ZipFile(file, "w") as z:
+            z.writestr(
+                "votacao_candidato_munzona_2002_BRASIL.csv",
+                ";".join(columns) + chr(10) + ";".join("x" for _ in columns) + chr(10),
+            )
+        return file
+
+    old = [c for c in votacao.columns if c not in votacao.optional]
+    monitoring.check_header(con, tse, votacao, 2002, pacote(old, "a.zip"))
+    assert [s for s, _ in checks(con, "schema")] == ["ok"]
+    monitoring.check_header(con, tse, votacao, 2002, pacote(old[1:], "b.zip"))
+    assert [s for s, _ in checks(con, "schema")][-1] == "error"  # faltar outra coluna segue sendo erro
+
+
 def test_the_source_health_is_the_worst_of_the_latest_record_of_each_check(con: Connection) -> None:
     assert monitoring.latest_status(con, "camara", "votos") == ("ok", [])
     monitoring.record(con, "camara", "votos", 2024, "availability", "error", "404")
