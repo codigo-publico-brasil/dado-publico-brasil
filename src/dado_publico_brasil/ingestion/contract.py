@@ -68,6 +68,7 @@ class Dataset:
     first_month: int | None = None  # (partition: month) primeiro mês pedido, como AAAAMM
     step: int = 1  # (yearly) só os anos a cada N a partir de first_year (eleições gerais: 4)
     only: dict[str, tuple[str, ...]] = field(default_factory=dict)  # minimização: só linhas com estes valores
+    optional: tuple[str, ...] = ()  # colunas que só existem em anos recentes: ausentes não são erro
     aliases: dict[str, str] = field(
         default_factory=dict
     )  # layout antigo: nome antigo da coluna -> nome em `columns`
@@ -148,6 +149,9 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
     unknown = [new for new in data.get("aliases", {}).values() if new not in columns]
     if unknown:
         raise InvalidContract(f"{where}: aliases aponta para {unknown}, que não está em columns")
+    absent = [c for c in data.get("optional", ()) if c not in columns]
+    if absent:
+        raise InvalidContract(f"{where}: optional {absent} não está em columns")
     stray = [c for c in data.get("nested", ()) if c not in columns]
     if stray:
         raise InvalidContract(f"{where}: nested {stray} não está em columns")
@@ -178,6 +182,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         step=int(data.get("step", 1)),
         only={k: tuple(v) for k, v in data.get("only", {}).items()},
         aliases=dict(data.get("aliases", {})),
+        optional=tuple(data.get("optional", ())),
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
     )
 
