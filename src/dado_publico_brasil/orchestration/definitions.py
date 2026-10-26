@@ -242,7 +242,11 @@ def failure_email(context: RunFailureSensorContext) -> None:
 def _marts() -> list[AssetKey]:
     """Os modelos da camada marts, que o `publish` copia para o PostgreSQL."""
     nodes = json.loads(PROJECT.manifest_path.read_text(encoding="utf-8"))["nodes"].values()
-    return [AssetKey([n["schema"], n["name"]]) for n in nodes if n["resource_type"] == "model" and n["fqn"][1] == "marts"]
+    return [
+        AssetKey([n["schema"], n["name"]])
+        for n in nodes
+        if n["resource_type"] == "model" and n["fqn"][1] == "marts"
+    ]
 
 
 @asset(key=AssetKey(["servico", "marts"]), deps=_marts(), group_name="servico", automation_condition=EAGER)

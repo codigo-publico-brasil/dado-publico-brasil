@@ -59,6 +59,23 @@ A máquina não prova que o dado está certo. A cada fonte nova: comparar a cont
 
 O site do dbt ainda não é publicado na internet. O caminho usual é `dbt docs generate --static` (gera um único HTML) numa etapa do CI e hospedagem em página estática (por exemplo GitHub Pages); a decisão está em aberto numa issue.
 
+## Dagster: o pipeline sozinho
+
+O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md)) liga tudo, sem você apertar nada:
+
+| O que | Como |
+| --- | --- |
+| **Captura agendada** | cada fonte com `schedule` no YAML tem um agendamento `captura_<fonte>` (landing e raw). Mudar a cadência é mudar o cron no YAML |
+| **Propagação** | quando o raw de uma fonte recebe dado novo, o dbt, a identidade e a publicação no PostgreSQL rodam sozinhos (`AutomationCondition.eager`). Sem dado novo, nada a jusante roda |
+| **Atraso** | cada fonte agendada tem uma verificação de frescor: sem captura por mais de 1,5 intervalo do cron, o ativo `landing/<fonte>` aparece como atrasado |
+| **Uma execução por vez** | `dagster.yaml` limita a fila a uma execução (o DuckDB aceita um escritor) |
+
+**Jobs** (na interface, aba *Jobs*, *Launch run*): `atualizar_<fonte>` refaz tudo o que vem da fonte (por exemplo, `atualizar_tse`: captura, raw, dbt, identidade, publicação); `captura_<fonte>` só captura; `atualizar_tudo` refaz tudo. Para um ano ou modo diferente, abra o *launchpad* do job e ajuste `mode` (`incremental`, `historical`, `years`).
+
+**Ver o que está atrasado e executar:** na interface, *Assets* mostra a última atualização de cada ativo e os atrasos (verificação *freshness*); selecione os ativos parados e use *Materialize* (com *downstream*, se quiser propagar). Os sensores `propagar_atualizacoes` e `verificar_atrasos` e os agendamentos sobem ligados.
+
+**Limites:** o Dagster só propaga a partir do que ele mesmo materializou, então na primeira vez rode `atualizar_tudo`. A interface **não tem login** no Dagster de código aberto: o serviço do `compose.yaml` escuta só em `127.0.0.1`; não o exponha à rede sem uma camada de autenticação na frente (ainda em aberto).
+
 ## Como saber o que está desatualizado
 
 Dois tempos diferentes, os dois em `metadata.captures`: `captured_at` (quando **chegou conteúdo novo** da fonte) e `last_checked_at` (quando o pipeline **perguntou** à fonte pela última vez). Dataset com `last_checked_at` antigo está sem rodar; com `captured_at` antigo mas verificação recente, a fonte é que não publicou nada.
@@ -67,10 +84,10 @@ Dois tempos diferentes, os dois em `metadata.captures`: `captured_at` (quando **
 uv run dado-publico query --sql "SELECT source, dataset, max(captured_at) AS ultimo_dado_novo, max(last_checked_at) AS ultima_verificacao FROM metadata.captures GROUP BY 1, 2 ORDER BY 4"
 ```
 
-Outras visões que já existem:
+Outras visões:
 
+- **Dagster:** *Assets* mostra a última atualização de cada ativo e o atraso da captura (veja acima); a verificação `saude_da_fonte` mostra o último monitor da fonte (fora do ar, coluna que mudou, queda de volume).
 - `dado-publico observe`: resumo da saúde das fontes, da carga e dos testes (falha se houver problema).
 - **Frescor do dbt:** cada fonte declara `freshness` (`warn_after`, `error_after`) e o `dbt source freshness` roda no `transform`, gravando em `metadata.dbt_results`. Ele mede a idade da **última carga nossa**, não se a origem publicou algo novo.
-- **Dagster:** a verificação `saude_da_fonte` de cada ativo mostra o último monitor da fonte (fora do ar, coluna que mudou, queda de volume). O Dagster não mostra ainda a idade de cada ativo nem alerta por atraso.
 
-**O que ainda não existe:** um comando que pergunte às origens "há dado novo?" sem baixar, e um alerta de dataset parado. Hoje a pergunta é feita dentro da captura (o pedido leve de `ETag`/`Last-Modified` antes de baixar) e só para o que está no plano do dia; as fontes `on_request` não são consultadas sozinhas. Está em aberto numa issue.
+**O que ainda não existe:** um comando que pergunte às origens "há dado novo?" sem baixar. Hoje a pergunta é feita dentro da captura agendada (o pedido leve de `ETag`/`Last-Modified` antes de baixar), que roda no `schedule` de cada fonte. O alerta de atraso aparece na interface; o aviso por e-mail só cobre execuções que falham.
