@@ -6,7 +6,7 @@
 
 ## Contexto
 
-A pesquisa de fonte de 23/10/2026 achou, no TSE, os bens declarados e os votos por candidato (CC BY) e, no Portal da Transparência, as emendas parlamentares em arquivo único sem token. O DOU tem licença sem derivações e o TCU não tem licença aberta (ver o [catálogo de fontes](../dados/fontes-de-dados.md)).
+A pesquisa de fonte de 23/10/2026 achou, no TSE, os bens declarados e os votos por candidato (CC BY) e, no Portal da Transparência, as emendas parlamentares em arquivo único sem token. O DOU tem licença sem derivações e o TCU não tem licença aberta (ver o [catálogo de fontes](../03-consultar/03-fontes-de-dados.md)).
 
 ## Decisão
 

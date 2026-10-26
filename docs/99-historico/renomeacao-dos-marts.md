@@ -1,6 +1,6 @@
 # Renomeação dos marts
 
-Para quem consome os dados (aplicações e pessoas que auditam): o nome antigo e o novo de cada tabela e coluna dos marts. Regra em [convenção de nomes](../engenharia/convencao-de-nomes.md); decisão no [ADR 0022](../adr/0022-convencao-de-nomes-e-descricoes.md).
+Para quem consome os dados (aplicações e pessoas que auditam): o nome antigo e o novo de cada tabela e coluna dos marts. Regra em [convenção de nomes](../03-consultar/02-convencao-de-nomes.md); decisão no [ADR 0022](../05-decisoes/0022-convencao-de-nomes-e-descricoes.md).
 
 **Estado: aplicada em 25/10/2026.** Os marts já têm os nomes novos; esta lista serve para quem ainda lê os nomes antigos.
 

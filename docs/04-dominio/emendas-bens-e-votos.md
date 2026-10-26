@@ -1,6 +1,6 @@
 # Emendas, bens e votos: o que os dados dizem
 
-Para quem quer entender os campos que a plataforma traz sobre dinheiro de emendas e sobre candidatos. As fontes estão no [catálogo de fontes](../dados/fontes-de-dados.md) e as decisões, no [ADR 0016](../adr/0016-bens-votos-e-emendas.md).
+Para quem quer entender os campos que a plataforma traz sobre dinheiro de emendas e sobre candidatos. As fontes estão no [catálogo de fontes](../03-consultar/03-fontes-de-dados.md) e as decisões, no [ADR 0016](../05-decisoes/0016-bens-votos-e-emendas.md).
 
 ## Emenda parlamentar
 

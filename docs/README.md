@@ -1,20 +1,29 @@
-# Documentação da plataforma de dados
+# Documentação
 
-Índice e regra de organização de `docs/`. Todo documento novo entra em uma das pastas abaixo.
+Para quem chega ao projeto: onde cada coisa mora em `docs/` e em que ordem ler. As pastas têm um propósito cada (explicar, fazer, consultar) e os arquivos levam `NN-` pela ordem de leitura sugerida.
 
-| Pasta | O que guarda | Arquivos |
+| Pasta | Propósito | Quando ler |
 | --- | --- | --- |
-| `dados/` | Como os dados são tratados e o que sabemos sobre eles | [`camadas.md`](dados/camadas.md), [`especificacao-de-fonte.md`](dados/especificacao-de-fonte.md), [`catalogo.md`](dados/catalogo.md) (gerado), [`identidade-de-pessoas.md`](dados/identidade-de-pessoas.md), [`governanca.md`](dados/governanca.md), [`cobertura-e-lacunas.md`](dados/cobertura-e-lacunas.md) (inclui o relatório de pendências de dados), [`auditoria.md`](dados/auditoria.md), [`fontes-de-dados.md`](dados/fontes-de-dados.md), [`observabilidade.md`](dados/observabilidade.md), [`renomeacao-dos-marts.md`](dados/renomeacao-dos-marts.md) |
-| `dominio/` | O que as instituições são e as regras por trás dos campos (material didático) | [`camara-dos-deputados.md`](dominio/camara-dos-deputados.md), [`senado-federal.md`](dominio/senado-federal.md), [`tse.md`](dominio/tse.md), [`normas-vetos-e-constituicao.md`](dominio/normas-vetos-e-constituicao.md), [`emendas-bens-e-votos.md`](dominio/emendas-bens-e-votos.md) |
-| `engenharia/` | Como o sistema é construído | [`convencao-de-nomes.md`](engenharia/convencao-de-nomes.md), [`arquitetura.md`](engenharia/arquitetura.md), [`arquitetura-producao.html`](engenharia/arquitetura-producao.html) (desenho de produção: dados e infraestrutura, sem fixar provedor) |
-| `adr/` | Decisões de arquitetura aceitas, uma por arquivo | [`0001`](adr/0001-fases-e-portoes.md) a [`0024`](adr/0024-regras-de-extracao-por-fonte.md) |
-| `planejamento/` | Raciocínio e plano de longo prazo, de quando o projeto era um só (consulta) | [`plano-de-implementacao.md`](planejamento/plano-de-implementacao.md) |
+| [`01-entender/`](01-entender/) | **Explicação:** o que o projeto é, como é construído e por quê | primeiro, na ordem dos números |
+| [`02-fazer/`](02-fazer/) | **Como fazer:** passo a passo para rodar, operar, auditar e acrescentar fonte | quando for pôr a mão na massa |
+| [`03-consultar/`](03-consultar/) | **Referência:** catálogo de tabelas, convenção de nomes, fontes, lacunas | quando precisar de um fato exato |
+| [`04-dominio/`](04-dominio/) | Material didático sobre as instituições (Câmara, Senado, TSE...) e as regras por trás dos campos | para entender os dados |
+| [`05-decisoes/`](05-decisoes/) | ADRs: decisões de arquitetura, uma por arquivo (`0001`...); o [`README`](05-decisoes/README.md) diz quais valem hoje | para saber por que algo é assim |
+| [`99-historico/`](99-historico/) | Planos e propostas antigos, guardados só como registro | normalmente, nunca |
+
+## Ordem de leitura
+
+1. [`01-entender/`](01-entender/), na ordem: visão geral, arquitetura, camadas, ferramentas.
+2. [`01-entender/05-identidade-de-pessoas.md`](01-entender/05-identidade-de-pessoas.md) e [`06-governanca.md`](01-entender/06-governanca.md).
+3. [`02-fazer/`](02-fazer/), na ordem: rodar localmente, tutorial de nova fonte, especificação da fonte, operar e publicar, auditar.
+5. [`03-consultar/`](03-consultar/): conforme a necessidade.
 
 ## Regras
 
-1. **Um assunto, um lugar.** Antes de criar um arquivo, procure se o assunto já tem um.
-2. **Itens e pendências ficam no quadro do GitHub**, não em arquivos `.md`.
-3. **Uma decisão aceita não é editada**: vira um ADR novo que a substitui.
-4. **Todo documento começa dizendo para quem é e o que responde.**
-5. **O catálogo (`catalogo.md`) é gerado** (`uv run dado-publico catalog`); um teste falha se estiver desatualizado.
-6. Documentos de produto da aplicação ficam no repositório [quem-decidiu](https://github.com/codigo-publico-brasil/quem-decidiu). Os specs antigos estão fora dos repositórios (a refazer).
+1. **Um assunto, um lugar.** Antes de criar um arquivo, procure se o assunto já tem um; os outros apenas linkam.
+2. **Todo documento começa dizendo para quem é e o que responde.**
+3. **Uma decisão aceita não é editada:** vira um ADR novo que a substitui.
+4. **Itens e pendências ficam em issues** do repositório, não em arquivos `.md`.
+5. **O catálogo ([`03-consultar/01-catalogo.md`](03-consultar/01-catalogo.md)) é gerado** (`uv run dado-publico catalog`); um teste falha se estiver desatualizado.
+6. **Quem muda comportamento atualiza o documento no mesmo PR.**
+7. Documentos de produto da aplicação ficam no repositório [quem-decidiu](https://github.com/codigo-publico-brasil/quem-decidiu).

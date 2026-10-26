@@ -8,7 +8,7 @@ Regras para agentes de IA neste repositório. `CLAUDE.md` aponta para cá. Quem 
 
 ## Antes de começar
 
-Leia `README.md` e `docs/dados/camadas.md`. Não contrarie um ADR de `docs/adr/` sem propor outro. **Proponha antes de executar** qualquer mudança de arquitetura, estrutura ou ferramenta e espere aprovação. Se faltar contexto, pergunte.
+Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/03-camadas.md`. Não contrarie um ADR de `docs/05-decisoes/` sem propor outro. **Proponha antes de executar** qualquer mudança de arquitetura, estrutura ou ferramenta e espere aprovação. Se faltar contexto, pergunte.
 
 ## Dados (nunca violar)
 
@@ -30,7 +30,8 @@ Leia `README.md` e `docs/dados/camadas.md`. Não contrarie um ADR de `docs/adr/`
    ```
 3. Dependência nova só com ADR. Merge e implantação são da pessoa e da esteira.
 4. No PR, preencha "autoria da IA": o que a IA escreveu, o que uma pessoa revisou, o que ficou incerto. Commits levam o trailer `Co-Authored-By` do agente.
-5. Erro recorrente de agente vira regra aqui ou teste.
+5. **Documentação no mesmo PR:** quem muda comportamento, camada, comando, tabela ou estrutura de pastas atualiza o documento correspondente (e o `README.md` se a estrutura mudar). Doc desatualizada é bug.
+6. Erro recorrente de agente vira regra aqui ou teste.
 
 ## Onde mexer
 
@@ -49,4 +50,22 @@ O fundador usa o projeto para aprender arquitetura de dados e de sistemas: expli
 
 ## Nomes e descrições
 
-Leia [`docs/engenharia/convencao-de-nomes.md`](docs/engenharia/convencao-de-nomes.md) antes de criar ou alterar tabela ou coluna: tabelas com o tema na frente e sem conectivos (`proposicoes_autorias`); colunas com prefixo de tipo, `id_`, `dt_` e `fl_`, sem duplicar o tipo (`dt_nascimento`); toda tabela e coluna descrita, em todas as camadas. Padronizar nunca apaga a origem: o dado precisa ser auditável pelo público.
+Leia [`docs/03-consultar/02-convencao-de-nomes.md`](docs/03-consultar/02-convencao-de-nomes.md) antes de criar ou alterar tabela ou coluna: tabelas com o tema na frente e sem conectivos (`proposicoes_autorias`); colunas com prefixo de tipo, `id_`, `dt_` e `fl_`, sem duplicar o tipo (`dt_nascimento`); toda tabela e coluna descrita, em todas as camadas. Padronizar nunca apaga a origem: o dado precisa ser auditável pelo público.
+
+## Documentação
+
+Mapa em [`docs/README.md`](docs/README.md): `01-entender` (explica), `02-fazer` (passo a passo), `03-consultar` (referência), `04-dominio` (instituições), `05-decisoes` (ADRs), `99-historico` (não editar). Arquivos levam `NN-` pela ordem de leitura.
+
+- **Um assunto, um lugar:** antes de escrever, procure se já existe; os outros arquivos linkam, não copiam.
+- Todo documento começa dizendo para quem é e o que responde. Explique o porquê e as alternativas, não só o como.
+- O catálogo (`03-consultar/01-catalogo.md`) é gerado; nunca edite à mão.
+- Decisão aceita não se edita: novo ADR, e a situação do antigo muda no índice de `05-decisoes/README.md`.
+- Pendência e decisão aberta são issues, nunca `.md`.
+
+## Lições de experiência
+
+- **Confira antes de afirmar:** leia o arquivo, rode o comando ou busque no código antes de dizer que algo existe, falta ou está desatualizado.
+- Ao mover arquivos, use `git mv` e reescreva os links (inclusive em código e testes); depois confira que nenhum link relativo ficou quebrado.
+- O `uv` pode não estar no PATH do shell do agente (no Windows fica em `~/.local/bin`).
+- Os testes que montam o pipeline sintético levam minutos; rode os arquivos afetados antes da suíte completa.
+- Branch empilhada sobre outra ainda não mergeada: diga isso no PR.

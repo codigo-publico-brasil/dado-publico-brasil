@@ -1,8 +1,12 @@
-# Observabilidade dos dados
+# Operar e publicar
 
-Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou na origem, na carga ou na lógica, sem olhar tabela por tabela. Decisão em [ADR 0018](../adr/0018-observabilidade-dos-dados.md).
+Para quem opera a plataforma. Cobre a observabilidade dos dados e onde cada resultado é publicado.
 
-## Camadas
+## Observabilidade dos dados
+
+Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou na origem, na carga ou na lógica, sem olhar tabela por tabela. Decisão em [ADR 0018](../05-decisoes/0018-observabilidade-dos-dados.md).
+
+### Camadas
 
 | Camada | O que pega | Onde fica |
 | --- | --- | --- |
@@ -34,7 +38,7 @@ Pela página de comparação do Elementary (consultada em 24/10/2026), a versão
 
 | Página desabilitada | O que cobre aqui |
 | --- | --- |
-| Catalog | `docs/dados/catalogo.md`, gerado do dbt (`dado-publico catalog`) |
+| Catalog | `docs/03-consultar/01-catalogo.md`, gerado do dbt (`dado-publico catalog`) |
 | Data health | `dado-publico observe` |
 | Alert rules | alerta por e-mail do `observe` (o Elementary aberto só alerta por Slack e Teams) |
 | Environment | não se aplica: há um ambiente |
@@ -43,3 +47,14 @@ Pela página de comparação do Elementary (consultada em 24/10/2026), a versão
 ## Amostragem manual
 
 A máquina não prova que o dado está certo. A cada fonte nova: comparar a contagem do raw com a das linhas dos arquivos, conferir alguns registros contra a página oficial e olhar quem foi filtrado.
+
+## Onde cada resultado é publicado
+
+| Resultado | Onde está hoje | Como acessar |
+| --- | --- | --- |
+| Marts | PostgreSQL de serviço | `dado-publico publish` ([`01-rodar-localmente.md`](01-rodar-localmente.md)) |
+| Catálogo e dicionário de colunas | Arquivo no repositório | [`03-consultar/01-catalogo.md`](../03-consultar/01-catalogo.md), gerado por `dado-publico catalog` |
+| Site do dbt (linhagem, descrições, links das fontes) | **Só local** | `dado-publico docs`, em http://127.0.0.1:8080, com o pipeline parado |
+| Relatório de observabilidade | Local ou e-mail | `dado-publico observe [--html] [--email]` |
+
+O site do dbt ainda não é publicado na internet. O caminho usual é `dbt docs generate --static` (gera um único HTML) numa etapa do CI e hospedagem em página estática (por exemplo GitHub Pages); a decisão está em aberto numa issue.

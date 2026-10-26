@@ -4,7 +4,7 @@ Como o projeto garante que o dado é confiável, seguro e fácil de manter. Cada
 
 ## 1. Catálogo e dono dos dados
 
-Cada tabela de cada camada é descrita **onde nasce**: o raw nas fontes do dbt (`_<fonte>__sources.yml`) e no contrato `sources/<poder>/<esfera>/<fonte>.yml`; staging, intermediate e marts no YAML do modelo; `identity` e `metadata` nas fontes internas do dbt. Descrição, sensibilidade (`meta.sensitivity`), grain e dono vivem no `meta`. O [catálogo de dados](catalogo.md) é **gerado** do manifesto do dbt (`uv run python -m quem_decidiu_data catalog`), sem lista paralela. Um teste confere que o catálogo cobre as tabelas do pipeline (e que toda descrição está preenchida) e outro que `docs/dados/catalogo.md` está em dia.
+Cada tabela de cada camada é descrita **onde nasce**: o raw nas fontes do dbt (`_<fonte>__sources.yml`) e no contrato `sources/<poder>/<esfera>/<fonte>.yml`; staging, intermediate e marts no YAML do modelo; `identity` e `metadata` nas fontes internas do dbt. Descrição, sensibilidade (`meta.sensitivity`), grain e dono vivem no `meta`. O [catálogo de dados](../03-consultar/01-catalogo.md) é **gerado** do manifesto do dbt (`uv run python -m quem_decidiu_data catalog`), sem lista paralela. Um teste confere que o catálogo cobre as tabelas do pipeline (e que toda descrição está preenchida) e outro que `docs/03-consultar/01-catalogo.md` está em dia.
 
 > **Conceito: catálogo de dados e dono (*data owner / steward*).** Dado sem dono e sem descrição vira dado que ninguém ousa mudar nem apagar. O catálogo responde "o que é isto, de onde vem, quem responde por isso". Aqui o dono é o fundador; com o tempo, cada fonte teria um responsável.
 
@@ -17,7 +17,7 @@ Cada tabela de cada camada é descrita **onde nasce**: o raw nas fontes do dbt (
 | `publico-dados-pessoais-de-terceiros` | dado que a fonte publica e que inclui pessoas que não são agentes públicos (cidadão comum) | favorecidos de emendas (nome e CPF mascarado de pessoa física) |
 | `controle` | metadado operacional | registro de execuções |
 
-**Sinalização em três níveis.** A classe vale para a tabela (`meta.sensitivity`); a coluna que identifica uma pessoa leva `meta: {pii: true}` e aparece marcada no dicionário do [catálogo](catalogo.md); e, nas tabelas que misturam pessoas jurídicas e físicas, uma coluna por linha (`fl_contem_dado_pessoal`) deixa a aplicação decidir como mostrar. A plataforma guarda o que a fonte publica; quem consome decide a exibição. Um teste confere que a classe é uma das acima e que tabela com coluna `pii` não é `publico`.
+**Sinalização em três níveis.** A classe vale para a tabela (`meta.sensitivity`); a coluna que identifica uma pessoa leva `meta: {pii: true}` e aparece marcada no dicionário do [catálogo](../03-consultar/01-catalogo.md); e, nas tabelas que misturam pessoas jurídicas e físicas, uma coluna por linha (`fl_contem_dado_pessoal`) deixa a aplicação decidir como mostrar. A plataforma guarda o que a fonte publica; quem consome decide a exibição. Um teste confere que a classe é uma das acima e que tabela com coluna `pii` não é `publico`.
 
 Regras (princípio IX da constituição do projeto):
 
@@ -60,7 +60,7 @@ O que ainda falta: o agendamento. As etapas já são idempotentes e registram ex
 
 ## 5. Linhagem e auditoria
 
-Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta para a execução que a trouxe. Toda execução registra versão do código, linhas lidas e gravadas e resultado. Nos datasets por item, a captura também aponta para cada resposta (`metadata.capture_items`: status HTTP e hash do corpo), e `dado-publico verify` confere os hashes de todo o landing. O passo a passo de como provar a origem de um dado está em [auditoria](auditoria.md); mais detalhes em [camadas](camadas.md).
+Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta para a execução que a trouxe. Toda execução registra versão do código, linhas lidas e gravadas e resultado. Nos datasets por item, a captura também aponta para cada resposta (`metadata.capture_items`: status HTTP e hash do corpo), e `dado-publico verify` confere os hashes de todo o landing. O passo a passo de como provar a origem de um dado está em [auditoria](../02-fazer/05-auditar.md); mais detalhes em [camadas](03-camadas.md).
 
 ## 6. Segurança
 
@@ -73,7 +73,7 @@ Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta
 | Texto exibido sempre escapado contra injeção de HTML | ativo, com teste |
 | Poucas dependências (a camada de dados usa só a biblioteca padrão do Python) | ativo |
 | Permissão por esquema no banco (usuário da aplicação só em `marts`) | previsto para o PostgreSQL do piloto |
-| Download com identificação (`User-Agent`) e sem credencial | ativo; sem limite de taxa conhecido, ver [fontes](fontes-de-dados.md) |
+| Download com identificação (`User-Agent`) e sem credencial | ativo; sem limite de taxa conhecido, ver [fontes](../03-consultar/03-fontes-de-dados.md) |
 
 > **Conceito: privilégio mínimo.** Cada componente recebe só o acesso de que precisa. A aplicação não precisa ler o raw nem escrever em nada; por isso não terá permissão para isso.
 

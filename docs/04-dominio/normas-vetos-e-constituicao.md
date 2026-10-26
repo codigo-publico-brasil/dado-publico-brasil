@@ -1,6 +1,6 @@
 # Normas, vetos e Constituição: o que os dados dizem
 
-Para quem quer entender os campos que a plataforma traz sobre a lei. As fontes e os limites estão no [catálogo de fontes](../dados/fontes-de-dados.md); a decisão, no [ADR 0015](../adr/0015-normas-vetos-e-constituicao.md).
+Para quem quer entender os campos que a plataforma traz sobre a lei. As fontes e os limites estão no [catálogo de fontes](../03-consultar/03-fontes-de-dados.md); a decisão, no [ADR 0015](../05-decisoes/0015-normas-vetos-e-constituicao.md).
 
 ## Norma
 

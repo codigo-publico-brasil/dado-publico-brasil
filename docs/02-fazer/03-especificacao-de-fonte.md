@@ -85,7 +85,7 @@ Uma chamada para cada linha de outro dataset da mesma fonte. Exemplo (tramitaç�
     columns: [_item, sequencia, dataHora, ...]
 ```
 
-Roda só com `--foreach N` (os N mais recentes que faltam) ou `--foreach all`. Cada lote vai ao landing com a resposta de cada item byte a byte, e `metadata.capture_items` registra status e hash ([ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md)). Conferir com `dado-publico verify` e `dado-publico coverage`. A taxa é `access.rate_limit` (padrão 4 por segundo).
+Roda só com `--foreach N` (os N mais recentes que faltam) ou `--foreach all`. Cada lote vai ao landing com a resposta de cada item byte a byte, e `metadata.capture_items` registra status e hash ([ADR 0012](../05-decisoes/0012-dataset-por-item-lotes-com-envelope.md)). Conferir com `dado-publico verify` e `dado-publico coverage`. A taxa é `access.rate_limit` (padrão 4 por segundo).
 
 ## Credenciais, arquivo compactado, SOAP, robô
 
@@ -117,6 +117,6 @@ O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósi
 
 1. Criar `sources/<poder>/<esfera>/<fonte>.yml` (a fonte é encontrada pela pasta; não há registro a fazer).
 2. Escrever o `_<fonte>__sources.yml` e os modelos `stg_<fonte>__*.sql` (um por tabela do raw) em `dbt/models/staging/<fonte>/`.
-3. Escrever os modelos de intermediate que unem a fonte às entidades do projeto, e a ligação de identidade (`identity/`), com a regra de ligação conservadora ([identidade de pessoas](identidade-de-pessoas.md)).
-4. Declarar descrição, `meta` (sensibilidade, grain, dono) e testes no YAML do dbt; rodar `catalog` e conferir `docs/dados/catalogo.md`.
+3. Escrever os modelos de intermediate que unem a fonte às entidades do projeto, e a ligação de identidade (`identity/`), com a regra de ligação conservadora ([identidade de pessoas](../01-entender/05-identidade-de-pessoas.md)).
+4. Declarar descrição, `meta` (sensibilidade, grain, dono) e testes no YAML do dbt; rodar `catalog` e conferir `docs/03-consultar/01-catalogo.md`.
 5. Testes: o modelo é `tests/ingestion/` (fonte fictícia só com declaração, leitores e `custom`) e `tests/orchestration/` (conjuntos sintéticos da Câmara e do Senado em `tests/support/`).

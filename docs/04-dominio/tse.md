@@ -24,4 +24,4 @@ CPF, título de eleitor, e-mail e nome social do candidato **nunca** entram (a d
 
 ## Como a candidatura chega à pessoa
 
-O TSE não tem identificador da pessoa entre eleições. A plataforma liga a candidatura a um deputado ou senador quando **nome civil e data de nascimento são iguais e únicos** nas duas fontes ([ADR 0013](../adr/0013-tse-ligacao-por-nome-civil-e-nascimento.md)). Candidatura que não passa na regra (homônimo, nome grafado diferente, nascimento ausente) fica sem vínculo, e o teste `eleitos_federais_sem_vinculo` mede quantos eleitos ficaram de fora.
+O TSE não tem identificador da pessoa entre eleições. A plataforma liga a candidatura a um deputado ou senador quando **nome civil e data de nascimento são iguais e únicos** nas duas fontes ([ADR 0013](../05-decisoes/0013-tse-ligacao-por-nome-civil-e-nascimento.md)). Candidatura que não passa na regra (homônimo, nome grafado diferente, nascimento ausente) fica sem vínculo, e o teste `eleitos_federais_sem_vinculo` mede quantos eleitos ficaram de fora.

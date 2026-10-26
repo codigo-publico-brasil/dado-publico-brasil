@@ -12,12 +12,12 @@ from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.transformation import catalog, dbt
 
 ROOT = Path(__file__).resolve().parents[1]
-DOC = ROOT / "docs" / "dados" / "catalogo.md"
+DOC = ROOT / "docs" / "03-consultar" / "01-catalogo.md"
 
 
 def test_catalog_document_is_up_to_date_with_the_dbt_project() -> None:
     assert DOC.read_text(encoding="utf-8") == catalog.markdown(Settings()), (
-        "docs/dados/catalogo.md desatualizado: rode `uv run dado-publico catalog`"
+        "docs/03-consultar/01-catalogo.md desatualizado: rode `uv run dado-publico catalog`"
     )
 
 

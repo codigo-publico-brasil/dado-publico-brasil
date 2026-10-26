@@ -5,12 +5,14 @@ sources:
     description: >
       Senado Federal, dados abertos (API REST, JSON). Carregado pelo dlt em raw_federal_senado, fiel à fonte
       (declaração em sources/legislativo/federal/senado.yml). Listas viram tabelas filhas (`<tabela>__<lista>`).
+      Fonte oficial: [https://legis.senado.leg.br/dadosabertos](https://legis.senado.leg.br/dadosabertos).
     schema: raw_federal_senado
     loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
     freshness:
       warn_after: {count: 3, period: day}
       error_after: {count: 14, period: day}
     meta:
+      url: https://legis.senado.leg.br/dadosabertos
       origin: Senado Federal
       sensitivity: publico-agente-publico
       owner: fundador do projeto
