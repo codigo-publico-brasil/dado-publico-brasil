@@ -11,6 +11,8 @@ Para quem vai trazer uma base nova ao projeto. Responde: que passos seguir, em q
 
 ## 1. Declarar a fonte
 
+Pergunte antes: **com que frequência essa base muda?** Se muda todo dia (ou a partição em curso muda todo dia), `refresh: daily`; se muda em datas pontuais (eleição, fechamento), `refresh: on_request` e a captura é pedida à mão. Detalhes em [`03-camadas.md`](../01-entender/03-camadas.md).
+
 Crie `sources/<poder>/<esfera>/<fonte>.yml` com a URL, o formato e, por dataset, `columns` (lista permitida), `primary_key` e `write`. Não há registro a fazer: a fonte é achada pela pasta. Se a fonte não é CSV/JSON simples (SOAP, robô, zip fora do padrão), acrescente `ingestion/custom/<poder>/<esfera>/<fonte>.py`.
 
 ## 2. Extrair e carregar
