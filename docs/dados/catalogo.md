@@ -144,6 +144,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `int_proposicoes_autorias_ligadas` | Autorias com a pessoa do projeto; autor que não é deputado fica sem pessoa. | publico-agente-publico |  |
 | `int_senado_materias_unicas` | Uma linha por matéria votada no Senado, com os dados da votação mais recente. | publico-agente-publico |  |
 | `int_senadores_unidos` | Todo senador informado pelo Senado (cadastro mais votos). | publico-agente-publico |  |
+| `int_tse_pessoas` | Identificador da mesma pessoa entre as eleições do TSE (nome civil e data de nascimento iguais, a combinação única em cada eleição, sem datas de 1º de janeiro). Uma linha por candidatura ligável. | publico-agente-publico |  |
 | `int_vinculos_propostos` | Vínculos propostos entre fontes pela regra de nome civil e nascimento iguais e únicos: Câmara com Senado (mesma pessoa) e candidatura do TSE com a pessoa. Entrada da identidade. | publico-agente-publico |  |
 | `int_votacoes_proposicoes_unidas` | Proposições de cada votação, com o papel (afetada ou objeto). | publico-agente-publico |  |
 | `int_votacoes_votos_ligados` | Votos com a pessoa do projeto (chave própria). | publico-agente-publico |  |
@@ -160,6 +161,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `eleitos` | Eleitos para presidente, governador, senador, deputado federal, estadual e distrital (eleições gerais) e para prefeito e vereador (eleições municipais), de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito. | publico-agente-publico | eleito |
 | `eleitos_campanhas` | O que cada eleito declarou na campanha, com totais dos bens, das receitas e das despesas contratadas, só fatos e totais. O total fica vazio, e não zero, quando o arquivo ainda não foi carregado. Uma linha por eleito. | publico-agente-publico | eleito |
 | `eleitos_cargos` | Situação de cada cargo em cada unidade eleitoral nas eleições gerais e municipais, com vagas, eleitos e pendentes. Mostra o estado real, sem palpite. Uma linha por eleição, cargo e unidade eleitoral. | publico | cargo por unidade eleitoral e eleição |
+| `eleitos_historico` | As candidaturas anteriores de cada eleito, de qualquer cargo, quando a mesma pessoa é achada nas eleições do TSE (nome civil e data de nascimento iguais e únicos). Uma linha por eleito, eleição e cargo, pelo último turno. O TSE não registra afastamentos. | publico-agente-publico | eleito |
 | `emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
 | `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
 | `emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês. | publico-dados-pessoais-de-terceiros | emenda |
@@ -309,7 +311,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `qtd_votos` | bigint | Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada. Em 2002 a 2014 o TSE não separa os válidos: valem os nominais. |  |
 | `percentual_votos_nominais` | decimal(5,2) | Percentual dos votos nominais válidos do cargo na unidade eleitoral e no turno, sem os votos de legenda; vazio se a votação ainda não foi carregada. |  |
 | `id_pessoa` | bigint | Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos casos sem ligação. |  |
-| `tipo_mandato` | varchar | Só para deputado federal e senador ligados a uma pessoa: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum). Vazio para quem não foi ligado: sem prova do histórico, nada é afirmado. |  |
+| `tipo_mandato` | varchar | Só para deputado federal e senador ligados a uma pessoa: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum). Para quem não é pessoa do projeto vale o histórico do TSE: reeleito se foi eleito para o mesmo cargo na eleição anterior, retorno se foi eleito antes. Vazio sem prova: nada é afirmado. |  |
+| `id_pessoa_tse` | varchar | Identificador da mesma pessoa entre as eleições do TSE (nome civil e data de nascimento iguais e únicos, ADR 0025); vazio sem ligação. Não é uma pessoa do projeto. |  |
 | `vinculo_metodo` | varchar | Como o eleito foi ligado à pessoa: identificador oficial da própria fonte ou nome civil e data de nascimento iguais e únicos; vazio sem ligação. |  |
 | `vinculo_aprovado_por` | varchar | Quem aprovou o vínculo, quando foi aprovado à mão; vazio nos demais. |  |
 | `dt_captura` | date | Data da captura do arquivo de candidaturas de onde vem o resultado. |  |
@@ -353,6 +356,24 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `status` | varchar | eleito_provisorio quando todas as vagas têm eleito pelo resultado do TSE (ainda sem diplomação); aguardando_resultado quando falta eleito. |  |
 | `dt_posse` | date | Data da posse prevista, como o TSE informa. |  |
 | `dt_captura` | date | Data da captura do arquivo de candidaturas de onde vêm os resultados. |  |
+| `fonte_url` | varchar | Página oficial do TSE com os arquivos de candidatos da eleição. |  |
+
+### marts.eleitos_historico
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_candidatura` | varchar | Candidatura do eleito (marts.eleitos) de quem esta é uma candidatura anterior. |  |
+| `ano_eleicao` | integer | Ano da eleição da candidatura anterior. |  |
+| `turno` | integer | Último turno da candidatura anterior. |  |
+| `uf` | varchar | UF da candidatura anterior (BR para presidente). |  |
+| `ue` | varchar | Código da unidade eleitoral da candidatura anterior, como o TSE informa. |  |
+| `ue_nome` | varchar | Nome da unidade eleitoral (município, estado ou Brasil) da candidatura anterior. |  |
+| `cargo` | varchar | Cargo da candidatura anterior. |  |
+| `partido` | varchar | Sigla do partido pelo qual concorreu. |  |
+| `situacao_candidatura` | varchar | Situação da candidatura no TSE (por exemplo, deferido), como o TSE informa. |  |
+| `resultado` | varchar | Resultado como o TSE informa (eleito, suplente, não eleito); vazio se não informado. |  |
+| `dt_captura` | date | Data da captura do arquivo de candidaturas de onde vem o registro. |  |
 | `fonte_url` | varchar | Página oficial do TSE com os arquivos de candidatos da eleição. |  |
 
 ### marts.emendas

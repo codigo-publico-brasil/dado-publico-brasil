@@ -123,16 +123,43 @@ def _municipais() -> list[dict[str, str]]:
     ]  # fmt: skip
 
 
-def _csv(linhas: Sequence[tuple[str, ...]]) -> bytes:
+# A eleição anterior (2018): Carlos foi eleito (reeleito em 2022 pela prova do TSE) e Fulano não foi eleito.
+LINHAS_2018 = [
+    (
+        "DEPUTADO FEDERAL",
+        "2005",
+        "CARLOS ELEITO",
+        "CARLOS",
+        "09/09/1969",
+        "DEFERIDO",
+        "ELEITO POR QP",
+        "MG",
+        "CCC",
+    ),
+    (
+        "DEPUTADO ESTADUAL",
+        "2006",
+        "FULANO ESTADUAL",
+        "FULANO",
+        "10/10/1970",
+        "DEFERIDO",
+        "NÃO ELEITO",
+        "SP",
+        "AAA",
+    ),
+]
+
+
+def _csv(linhas: Sequence[tuple[str, ...]], ano: str = "2022", municipais: bool = True) -> bytes:
     saida = io.StringIO()
     escritor = csv.writer(saida, delimiter=";", quoting=csv.QUOTE_ALL)
     escritor.writerow(COLUNAS)
-    for extra in _municipais():
+    for extra in _municipais() if municipais else []:
         escritor.writerow([({c: "#NULO#" for c in COLUNAS} | extra)[c] for c in COLUNAS])
     for cargo, sq, nome, urna, nasc, situacao, resultado, uf, partido in linhas:
         valores = dict.fromkeys(COLUNAS, "#NULO#")
         valores.update(
-            ANO_ELEICAO="2022", NR_TURNO="1", DS_CARGO=cargo, SQ_CANDIDATO=sq, NR_CANDIDATO="1234", NM_CANDIDATO=nome, SG_UE=uf,
+            ANO_ELEICAO=ano, NR_TURNO="1", DS_CARGO=cargo, SQ_CANDIDATO=sq, NR_CANDIDATO="1234", NM_CANDIDATO=nome, SG_UE=uf,
             NM_URNA_CANDIDATO=urna, DS_SITUACAO_CANDIDATURA=situacao, SG_PARTIDO=partido, NM_PARTIDO=f"PARTIDO {partido}",
             DT_NASCIMENTO=nasc, DS_GENERO="FEMININO", DS_SIT_TOT_TURNO=resultado, SG_UF=uf,
             NR_CPF_CANDIDATO="12345678900", DS_EMAIL="x@exemplo.com", NR_TITULO_ELEITORAL_CANDIDATO="000111222333",
@@ -236,6 +263,16 @@ def tse_files(pasta: Path) -> dict[str, Path]:
         )  # só o _BRASIL.csv é lido
         pacote.writestr("consulta_cand_2022_BRASIL.csv", _csv(LINHAS))
     arquivos = {contrato.url("candidaturas", 2022): destino}
+    # 2018: só candidaturas têm linhas; bens, votos e vagas vêm vazios (o plano pede todos os conjuntos do ano)
+    for dataset, nome, conteudo in (
+        ("candidaturas", "consulta_cand_2018", _csv(LINHAS_2018, "2018", municipais=False)),
+        ("bens", "bem_candidato_2018", _tabela(BENS_COLUNAS, [])),
+        ("votacao", "votacao_candidato_munzona_2018", _tabela(VOTACAO_COLUNAS, [])),
+        ("vagas", "consulta_vagas_2018", _tabela(VAGAS_COLUNAS, [])),
+    ):
+        arquivos[contrato.url(dataset, 2018)] = _pacote(
+            pasta / f"{nome}.zip", {f"{nome}_BRASIL.csv": conteudo}
+        )
     for dataset, nome, conteudo in (
         ("bens", "bem_candidato_2022", _bens()),
         ("votacao", "votacao_candidato_munzona_2022", _votacao()),

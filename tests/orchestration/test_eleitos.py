@@ -18,7 +18,7 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
     found = rows(
         con,
         "SELECT nome, cargo, uf, resultado, qtd_votos, percentual_votos_nominais, id_pessoa IS NOT NULL AS ligado, "
-        "tipo_mandato, vinculo_metodo, ue, ue_nome FROM marts.eleitos ORDER BY nome",
+        "tipo_mandato, vinculo_metodo, ue, ue_nome FROM marts.eleitos WHERE ano_eleicao = 2022 ORDER BY nome",
     )
     assert [r["nome"] for r in found] == [
         "Bia Souza",
@@ -40,7 +40,9 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
     assert (bia["qtd_votos"], bia["percentual_votos_nominais"]) == (1750, Decimal("100.00"))
     assert bia["tipo_mandato"] == "novato"  # o mandato dela começa depois dessa eleição: nenhum anterior
     assert (carlos["ligado"], carlos["qtd_votos"], carlos["percentual_votos_nominais"]) == (False, None, None)
-    assert carlos["tipo_mandato"] is None and carlos["vinculo_metodo"] is None  # sem ligação: nem novato
+    assert (
+        carlos["tipo_mandato"] == "reeleito" and carlos["vinculo_metodo"] is None
+    )  # prova do TSE: eleito em 2018 também
     assert (prefeito["cargo"], prefeito["ue"], prefeito["ue_nome"], prefeito["tipo_mandato"]) == (
         "Prefeito",
         "60011",
@@ -122,3 +124,37 @@ def test_every_elected_of_the_staging_reaches_the_mart(full: tuple[Connection, S
         "SELECT count(*) FROM staging.stg_tse__candidaturas WHERE resultado LIKE 'Eleito%' "
         "AND cargo IN ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital', 'Prefeito', 'Vereador') ",
     ) == scalar(con, "SELECT count(*) FROM marts.eleitos")
+
+
+def test_the_same_person_is_found_across_tse_elections_only_when_name_and_birth_are_unique(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    ligados = {
+        r["id_candidatura"]: r["id_pessoa_tse"]
+        for r in rows(con, "SELECT * FROM intermediate.int_tse_pessoas")
+    }
+    carlos22 = next(k for k in ligados if k.startswith("2022:MG:") and k.endswith(":1005"))
+    carlos18 = "2018:MG:2005"
+    assert ligados[carlos22] == ligados[carlos18]  # mesmo nome civil e nascimento em 2018 e 2022
+    assert not [
+        k for k in ligados if k.endswith(":1003") or k.endswith(":1004")
+    ]  # homônimos na mesma eleição: nenhum liga
+    assert not [
+        k for k in ligados if k.endswith(":1001")
+    ]  # nascimento em 1º de janeiro: o TSE usa para "só o ano"
+
+
+def test_the_history_of_an_elected_has_his_earlier_candidacies_and_never_the_current_one(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    found = rows(
+        con,
+        "SELECT e.nome, h.ano_eleicao, h.cargo, h.resultado FROM marts.eleitos_historico h "
+        "JOIN marts.eleitos e USING (id_candidatura) ORDER BY e.nome, h.ano_eleicao",
+    )
+    assert [(r["nome"], r["ano_eleicao"], r["cargo"], r["resultado"]) for r in found] == [
+        ("Carlos Eleito", 2018, "Deputado federal", "Eleito por qp"),
+        ("Fulano Estadual", 2018, "Deputado estadual", "Não eleito"),
+    ]
