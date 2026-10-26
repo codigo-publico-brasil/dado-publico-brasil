@@ -15,5 +15,7 @@ select
 
 from {{ source('tse', 'bens') }}
 
+where coalesce(ds_eleicao, '') not ilike '%suplementar%'  -- as suplementares repetem o sequencial das ordinárias e ficam só no raw
+
 -- de cada candidato vale a declaração da captura mais recente: bem alterado ou retirado não soma duas vezes
 qualify _source_file_id = max(_source_file_id) over (partition by ano_eleicao, sq_candidato)

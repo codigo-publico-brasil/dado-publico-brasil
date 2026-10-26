@@ -18,10 +18,18 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
     found = rows(
         con,
         "SELECT nome, cargo, uf, resultado, qtd_votos, percentual_votos_nominais, id_pessoa IS NOT NULL AS ligado, "
-        "tipo_mandato, vinculo_metodo FROM marts.eleitos ORDER BY nome",
+        "tipo_mandato, vinculo_metodo, ue, ue_nome FROM marts.eleitos ORDER BY nome",
     )
-    assert [r["nome"] for r in found] == ["Bia Souza", "Carlos Eleito", "Fulano Estadual"]
-    bia, carlos, fulano = found
+    assert [r["nome"] for r in found] == [
+        "Bia Souza",
+        "Carlos Eleito",
+        "Fulano Estadual",
+        "Prefeito Eleito",
+        "Vereador Dois",
+        "Vereador Media",
+        "Vereadora Um",
+    ]  # sem o prefeito da eleição suplementar nem o vereador não eleito
+    bia, carlos, fulano, prefeito, *vereadores = found
     assert (bia["cargo"], bia["uf"], bia["resultado"], bia["ligado"]) == (
         "Deputado federal",
         "RJ",
@@ -32,7 +40,14 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
     assert (bia["qtd_votos"], bia["percentual_votos_nominais"]) == (1750, Decimal("100.00"))
     assert bia["tipo_mandato"] == "novato"  # o mandato dela começa depois dessa eleição: nenhum anterior
     assert (carlos["ligado"], carlos["qtd_votos"], carlos["percentual_votos_nominais"]) == (False, None, None)
-    assert carlos["tipo_mandato"] == "novato" and carlos["vinculo_metodo"] is None
+    assert carlos["tipo_mandato"] is None and carlos["vinculo_metodo"] is None  # sem ligação: nem novato
+    assert (prefeito["cargo"], prefeito["ue"], prefeito["ue_nome"], prefeito["tipo_mandato"]) == (
+        "Prefeito",
+        "60011",
+        "Municipio 60011",
+        None,
+    )
+    assert {v["cargo"] for v in vereadores} == {"Vereador"}
     assert (fulano["cargo"], fulano["uf"], fulano["tipo_mandato"]) == (
         "Deputado estadual",
         "SP",
@@ -43,9 +58,9 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
 def test_each_office_shows_its_real_state_without_guessing(full: tuple[Connection, Settings]) -> None:
     con, _ = full
     found = {
-        (r["uf"], r["cargo"]): (r["qtd_vagas"], r["qtd_eleitos"], r["qtd_pendentes"], r["status"])
+        (r["ue"], r["cargo"]): (r["qtd_vagas"], r["qtd_eleitos"], r["qtd_pendentes"], r["status"])
         for r in rows(
-            con, "SELECT uf, cargo, qtd_vagas, qtd_eleitos, qtd_pendentes, status FROM marts.eleitos_cargos"
+            con, "SELECT ue, cargo, qtd_vagas, qtd_eleitos, qtd_pendentes, status FROM marts.eleitos_cargos"
         )
     }
     assert found == {
@@ -53,6 +68,9 @@ def test_each_office_shows_its_real_state_without_guessing(full: tuple[Connectio
         ("MG", "Deputado federal"): (2, 1, 1, "aguardando_resultado"),
         ("SP", "Senador"): (2, 0, 2, "aguardando_resultado"),
         ("SP", "Deputado estadual"): (70, 1, 69, "aguardando_resultado"),
+        ("60011", "Prefeito"): (1, 1, 0, "eleito_provisorio"),
+        ("60011", "Vereador"): (3, 3, 0, "eleito_provisorio"),
+        ("60012", "Vereador"): (3, 0, 3, "aguardando_resultado"),
     }
 
 
@@ -102,5 +120,5 @@ def test_every_elected_of_the_staging_reaches_the_mart(full: tuple[Connection, S
     assert scalar(
         con,
         "SELECT count(*) FROM staging.stg_tse__candidaturas WHERE resultado LIKE 'Eleito%' "
-        "AND cargo IN ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital')",
+        "AND cargo IN ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital', 'Prefeito', 'Vereador') ",
     ) == scalar(con, "SELECT count(*) FROM marts.eleitos")

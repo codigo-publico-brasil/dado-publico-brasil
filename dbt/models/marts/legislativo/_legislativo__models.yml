@@ -648,7 +648,7 @@ models:
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: eleitos
-    description: Eleitos para presidente, governador, senador, deputado federal, deputado estadual e deputado distrital nas eleições gerais, de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito.
+    description: Eleitos para presidente, governador, senador, deputado federal, estadual e distrital (eleições gerais) e para prefeito e vereador (eleições municipais), de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito.
     meta: {sensitivity: publico-agente-publico, grain: eleito, owner: fundador do projeto, freshness: a cada eleição}
     data_tests: *monitoramento
     columns:
@@ -657,29 +657,33 @@ models:
       - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
       - {name: turno, data_type: integer, description: "Turno em que o resultado de eleito foi registrado."}
       - {name: uf, data_type: varchar, description: "UF da eleição (BR para presidente)."}
+      - {name: ue, data_type: varchar, description: "Código da unidade eleitoral, como o TSE informa: sigla da UF, BR para presidente ou o código do município."}
+      - {name: ue_nome, data_type: varchar, description: "Nome da unidade eleitoral (município, estado ou Brasil), como o TSE informa."}
       - {name: cargo, data_type: varchar, description: "Cargo para o qual foi eleito."}
       - {name: nome_urna, data_type: varchar, description: "Nome de urna, com caixa padronizada."}
       - {name: nome, data_type: varchar, description: "Nome completo, com caixa padronizada."}
       - {name: partido, data_type: varchar, description: "Sigla do partido pelo qual concorreu."}
       - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no TSE (por exemplo, deferido), como o TSE informa."}
       - {name: resultado, data_type: varchar, description: "Resultado como o TSE informa (por exemplo, eleito, eleito por QP ou eleito por média)."}
-      - {name: qtd_votos, data_type: bigint, description: "Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada."}
+      - {name: qtd_votos, data_type: bigint, description: "Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada. Em 2002 a 2014 o TSE não separa os válidos: valem os nominais."}
       - {name: percentual_votos_nominais, data_type: "decimal(5,2)", description: "Percentual dos votos nominais válidos do cargo na unidade eleitoral e no turno, sem os votos de legenda; vazio se a votação ainda não foi carregada."}
-      - {name: id_pessoa, data_type: bigint, description: "Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos novatos e nos casos sem ligação."}
-      - {name: tipo_mandato, data_type: varchar, description: "Só para deputado federal e senador: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum)."}
+      - {name: id_pessoa, data_type: bigint, description: "Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos casos sem ligação."}
+      - {name: tipo_mandato, data_type: varchar, description: "Só para deputado federal e senador ligados a uma pessoa: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum). Vazio para quem não foi ligado: sem prova do histórico, nada é afirmado."}
       - {name: vinculo_metodo, data_type: varchar, description: "Como o eleito foi ligado à pessoa: identificador oficial da própria fonte ou nome civil e data de nascimento iguais e únicos; vazio sem ligação."}
       - {name: vinculo_aprovado_por, data_type: varchar, description: "Quem aprovou o vínculo, quando foi aprovado à mão; vazio nos demais."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de candidaturas de onde vem o resultado."}
       - {name: fonte_url, data_type: varchar, description: "Página oficial do TSE com os arquivos de candidatos da eleição."}
 
   - name: eleitos_cargos
-    description: Situação de cada cargo em cada unidade eleitoral nas eleições gerais, com vagas, eleitos e pendentes. Mostra o estado real, sem palpite. Uma linha por eleição, cargo e unidade eleitoral.
+    description: Situação de cada cargo em cada unidade eleitoral nas eleições gerais e municipais, com vagas, eleitos e pendentes. Mostra o estado real, sem palpite. Uma linha por eleição, cargo e unidade eleitoral.
     meta: {sensitivity: publico, grain: cargo por unidade eleitoral e eleição, owner: fundador do projeto, freshness: a cada eleição}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
       - {name: uf, data_type: varchar, description: "UF da eleição (BR para presidente)."}
+      - {name: ue, data_type: varchar, description: "Código da unidade eleitoral, como o TSE informa: sigla da UF, BR para presidente ou o código do município."}
+      - {name: ue_nome, data_type: varchar, description: "Nome da unidade eleitoral (município, estado ou Brasil), como o TSE informa."}
       - {name: cargo, data_type: varchar, description: "Cargo em disputa."}
       - {name: qtd_vagas, data_type: integer, description: "Quantidade de vagas do cargo na unidade eleitoral, como o TSE informa."}
       - {name: qtd_eleitos, data_type: bigint, description: "Quantos eleitos o resultado do TSE já registra para o cargo."}

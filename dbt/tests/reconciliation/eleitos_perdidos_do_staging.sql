@@ -5,5 +5,5 @@ select s.id_candidatura
 from {{ ref('stg_tse__candidaturas') }} as s
 
 where s.resultado like 'Eleito%'
-    and s.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital')
+    and s.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital', 'Prefeito', 'Vereador')
     and not exists (select 1 from {{ ref('eleitos') }} as e where e.id_candidatura = s.id_candidatura)

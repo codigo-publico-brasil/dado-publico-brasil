@@ -8,7 +8,9 @@ de eleitor e e-mail de propósito: a plataforma não os lê. As candidaturas mon
 - ANA DA SILVA (03/02/1980): deputada federal não eleita; liga-se à deputada 10;
 - ROBERTO BARREIRAS (05/05/1970): duas candidaturas ao Senado no mesmo ano com o mesmo nome e nascimento: ambígua, não liga;
 - CARLOS ELEITO: eleito a deputado federal e sem correspondente: fica sem vínculo (lacuna medida);
-- FULANO ESTADUAL: deputado estadual, fora do que a declaração deixa passar.
+- FULANO ESTADUAL: deputado estadual eleito em SP;
+- MUNICIPAIS: prefeito e vereadores do município 60011 (eleitos e não eleito) e um prefeito de eleição suplementar,
+  que não entra em `eleitos`.
 """
 
 import csv
@@ -78,10 +80,55 @@ LINHAS = [
 ]
 
 
+#               cargo, sq, nome civil, nome de urna, resultado, eleição (CD_ELEICAO, DS_ELEICAO)
+MUNICIPAIS = [
+    ("PREFEITO", "1010", "PREFEITO ELEITO", "PREFEITO", "ELEITO", ("700", "Eleições Ordinárias 2022")),
+    ("VEREADOR", "1011", "VEREADORA UM", "VEREADORA", "ELEITO POR QP", ("700", "Eleições Ordinárias 2022")),
+    (
+        "VEREADOR",
+        "1012",
+        "VEREADOR DOIS",
+        "VEREADOR",
+        "ELEITO POR MÉDIA",
+        ("700", "Eleições Ordinárias 2022"),
+    ),
+    ("VEREADOR", "1013", "VEREADOR TRES", "TRES", "NÃO ELEITO", ("700", "Eleições Ordinárias 2022")),
+    (
+        "VEREADOR",
+        "1015",
+        "VEREADOR MEDIA",
+        "MEDIA",
+        "MÉDIA",
+        ("700", "Eleições Ordinárias 2022"),
+    ),  # nome antigo de eleito por média
+    (
+        "PREFEITO",
+        "1014",
+        "PREFEITO SUPLEMENTAR",
+        "SUPLEMENTAR",
+        "ELEITO",
+        ("701", "Eleição Suplementar Teste 2023"),
+    ),
+]
+
+
+def _municipais() -> list[dict[str, str]]:
+    return [
+        {"ANO_ELEICAO": "2022", "NR_TURNO": "1", "DS_CARGO": cargo, "SQ_CANDIDATO": sq, "NM_CANDIDATO": nome,
+         "NM_URNA_CANDIDATO": urna, "DS_SIT_TOT_TURNO": resultado, "CD_ELEICAO": eleicao[0], "DS_ELEICAO": eleicao[1],
+         "SG_UF": "RJ", "SG_UE": "60011", "NM_UE": "MUNICIPIO 60011", "DS_SITUACAO_CANDIDATURA": "DEFERIDO",
+         "SG_PARTIDO": "AAA", "NM_PARTIDO": "PARTIDO AAA", "DT_NASCIMENTO": "02/02/1975", "DS_GENERO": "MASCULINO",
+         "NR_CANDIDATO": "12345"}
+        for cargo, sq, nome, urna, resultado, eleicao in MUNICIPAIS
+    ]  # fmt: skip
+
+
 def _csv(linhas: Sequence[tuple[str, ...]]) -> bytes:
     saida = io.StringIO()
     escritor = csv.writer(saida, delimiter=";", quoting=csv.QUOTE_ALL)
     escritor.writerow(COLUNAS)
+    for extra in _municipais():
+        escritor.writerow([({c: "#NULO#" for c in COLUNAS} | extra)[c] for c in COLUNAS])
     for cargo, sq, nome, urna, nasc, situacao, resultado, uf, partido in linhas:
         valores = dict.fromkeys(COLUNAS, "#NULO#")
         valores.update(
@@ -265,7 +312,13 @@ def _vagas() -> bytes:
         "DS_ELEICAO": "Eleição Suplementar Governador 2026",
         "DT_POSSE": "01/01/2027",
     }
-    return _tabela(VAGAS_COLUNAS, [*gerais, suplementar])
+    municipais = [
+        {"SG_UF": "RJ", "SG_UE": ue, "DS_CARGO": cargo, "QT_VAGA": vagas, "CD_CARGO": codigo, "CD_ELEICAO": "700",
+         "DS_ELEICAO": "Eleições Ordinárias 2022", "DT_POSSE": "01/01/2023", "NM_UE": f"MUNICIPIO {ue}"}
+        for ue, cargo, vagas, codigo in (("60011", "Prefeito", "1", "11"), ("60011", "Vereador", "3", "13"),
+                                         ("60012", "Vereador", "3", "13"))
+    ]  # fmt: skip
+    return _tabela(VAGAS_COLUNAS, [*gerais, suplementar, *municipais])
 
 
 def _contas(
