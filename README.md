@@ -1,6 +1,12 @@
-# Plataforma de dados
+# Dado Público Brasil
 
-Camada de dados oficial do projeto [Código Público Brasil](https://github.com/codigo-publico-brasil): captura dados abertos do poder público, organiza em camadas e os entrega prontos, com fonte, URL e data de captura, para qualquer aplicação consumir. Código aberto (AGPL-3.0) e dados curados abertos (CC BY 4.0), a confirmar. A documentação também é material de estudo: explica cada decisão.
+Os dados abertos do poder público brasileiro, capturados da fonte oficial, organizados em tabelas prontas para consulta e **auditáveis**: cada dado carrega a fonte, a URL e a data de captura.
+
+Este repositório é a camada de dados do projeto [Código Público Brasil](https://github.com/codigo-publico-brasil). Ele alimenta aplicações, como o [quem-decidiu](https://github.com/codigo-publico-brasil/quem-decidiu) (quem propôs, quem votou e quem aprovou cada decisão), e serve também de material de estudo de engenharia de dados: a documentação explica cada decisão e as alternativas.
+
+## Por que existe
+
+Os dados públicos estão espalhados em portais com formatos diferentes, mudam sem aviso e raramente dizem de onde vieram. Aqui eles são capturados sem alteração, tratados em etapas que se refazem a partir do original e entregues com o rastro até a página oficial.
 
 ## Regras de dados (nunca violar)
 
@@ -11,29 +17,50 @@ Camada de dados oficial do projeto [Código Público Brasil](https://github.com/
 5. Sem métricas avaliativas derivadas (nota, ranking): a plataforma entrega fatos.
 6. Conteúdo gerado por IA fica em tabelas próprias, rotulado com modelo e versão, nunca misturado ao dado oficial.
 
+## O que você encontra
+
+| Fonte oficial | O que entra | Tabelas principais |
+| --- | --- | --- |
+| Câmara dos Deputados | deputados, proposições, autorias, tramitações, votações e voto de cada deputado, órgãos, frentes | `pessoas`, `proposicoes`, `votacoes`, `votacoes_votos` |
+| Senado Federal | senadores, votações e votos, normas, vetos | `normas`, `vetos`, `vetos_votos` |
+| TSE | candidaturas, eleitos, bens, votos e contas de campanha | `candidaturas`, `eleitos`, `candidaturas_bens` |
+| Portal da Transparência | emendas parlamentares, convênios e favorecidos | `emendas`, `emendas_convenios` |
+| Constituição de 1988 | texto por dispositivo | `constituicao_dispositivos` |
+| Diário Oficial da União | arquivos originais, só guardados | (sem tabela) |
+
+Pessoas são ligadas entre as fontes por uma chave própria (`id_pessoa`), com regras conservadoras ([identidade de pessoas](docs/01-entender/05-identidade-de-pessoas.md)). Todas as tabelas e colunas estão no [catálogo](docs/03-consultar/01-catalogo.md); o que cada fonte não entrega, em [cobertura e lacunas](docs/03-consultar/04-cobertura-e-lacunas.md).
+
+## Como funciona
+
+```text
+fonte oficial ─► landing ─► raw ─► staging ─► intermediate ─► marts ─► PostgreSQL ─► aplicações
+                (arquivos   (dlt)   └──────── dbt ────────┘     (publish)  (só leitura)
+                 + hash)
+```
+
+O arquivo original nunca é alterado; o resto se refaz a partir dele. Cada camada, o porquê das ferramentas (dlt, dbt, DuckDB, Dagster, PostgreSQL) e as alternativas descartadas estão em [arquitetura](docs/01-entender/02-arquitetura.md) e [camadas](docs/01-entender/03-camadas.md).
+
 ## Estado
 
-| Parte | Situação |
-| --- | --- |
-| Ingestão (Câmara, Senado, TSE, Transparência, Constituição, DOU) | Funcionando: captura com hash, carga no raw, monitoramento e datasets por item em lotes auditáveis |
-| Transformação | Funcionando: dbt em camadas, identidade de pessoas, testes, catálogo |
-| Orquestração | Linha de comando e Dagster |
-| PostgreSQL de serviço | Funcionando em desenvolvimento local (`dado-publico publish`) |
-| Documentos e vetores, infraestrutura de produção | A fazer |
+Projeto em desenvolvimento, **ainda sem versão publicada e sem garantia de estabilidade** dos nomes de tabelas e colunas.
 
-## Começar
+- **Funciona hoje:** captura com hash e monitoramento das fontes; carga e transformação em camadas com testes de qualidade; identidade de pessoas; catálogo e dicionário de colunas; cópia dos marts para um PostgreSQL local de leitura.
+- **Falta:** infraestrutura de produção, trilha de documentos com busca vetorial, estados e municípios, e a publicação aberta dos dados.
+- **Pendências e decisões abertas:** [issues do repositório](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues).
+
+## Começar em poucos minutos
 
 Requisitos: Python 3.13 e [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --all-extras                          # instala o ambiente
-uv run dado-publico run --years 2025 2026     # captura, carrega e transforma
+uv run dado-publico run --years 2025 2026     # captura, carrega e transforma (os dados ficam em data_store/)
 uv run dado-publico query --sql "SELECT * FROM marts.pessoas LIMIT 10"
 ```
 
-Antes de um PR: `uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest` (o que cada um confere está em [`04-ferramentas.md`](docs/01-entender/04-ferramentas.md)). Os dados ficam em `data_store/`, fora do git; conexões e segredos vão no `.env` (modelo em `.env.example`).
+Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). PostgreSQL, Dagster, auditoria e os outros modos de execução: [rodar localmente](docs/02-fazer/01-rodar-localmente.md).
 
-## Pastas
+## Estrutura das pastas
 
 | Pasta | O que é |
 | --- | --- |
@@ -41,12 +68,10 @@ Antes de um PR: `uv run ruff check . && uv run ruff format --check . && uv run m
 | `src/dado_publico_brasil/` | o código: `core` (base), `ingestion`, `transformation` e `orchestration` (liga os dois) |
 | `dbt/` | modelos SQL: staging, intermediate, marts, com testes |
 | `ddl/` | migrações das tabelas próprias (`metadata`, `identity`) |
-| `docs/` | a documentação (mapa abaixo) |
+| `docs/` | a documentação |
 | `tests/` | testes |
 | `docker/`, `compose.yaml` | PostgreSQL de desenvolvimento |
 | `data_store/` | landing e warehouse (fora do git) |
-
-O fluxo: fonte oficial → `landing` (arquivos com hash) → `raw` (dlt) → `staging` → `intermediate` → `marts` (dbt). Explicado em [`03-camadas.md`](docs/01-entender/03-camadas.md).
 
 ## Documentação
 
@@ -55,12 +80,18 @@ Ordem de leitura e regras em [`docs/README.md`](docs/README.md).
 | Quero... | Leia |
 | --- | --- |
 | entender o que é e por quê | [`docs/01-entender/`](docs/01-entender/): visão geral, arquitetura, camadas, ferramentas |
-| rodar, operar, auditar ou acrescentar uma fonte | [`docs/02-fazer/`](docs/02-fazer/) |
+| rodar, operar, auditar ou acrescentar uma fonte | [`docs/02-fazer/`](docs/02-fazer/), com o [tutorial de nova fonte](docs/02-fazer/02-tutorial-nova-fonte.md) |
 | saber quais tabelas e colunas existem, os nomes e as lacunas | [`docs/03-consultar/`](docs/03-consultar/) |
 | entender a Câmara, o Senado, o TSE | [`docs/04-dominio/`](docs/04-dominio/) |
 | ver por que cada decisão foi tomada | [`docs/05-decisoes/`](docs/05-decisoes/) |
 | trabalhar com IA neste repositório | [`AGENTS.md`](AGENTS.md) |
 
-## Como contribuir
+## Contribuir e pedir ajuda
 
-Ainda não recebemos contribuições de código. Para sugerir correção de dado, abra uma issue com o link da fonte oficial. Pendências e decisões abertas ficam nas issues deste repositório.
+- **Dúvida, erro ou sugestão:** abra uma [issue](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues). Para corrigir um dado, inclua o link da fonte oficial.
+- **Código e documentação:** veja [`CONTRIBUTING.md`](CONTRIBUTING.md). Quem revisa e faz o merge é sempre uma pessoa.
+- **Vulnerabilidade ou dado pessoal exposto:** veja [`SECURITY.md`](SECURITY.md).
+
+## Licença
+
+Pretende-se AGPL-3.0 para o código e CC BY 4.0 para os dados curados, **ainda não confirmadas**: por isso o repositório não traz um arquivo `LICENSE` e nenhuma permissão de uso está concedida até a decisão. Os dados de origem seguem os termos de cada fonte oficial.
