@@ -78,30 +78,6 @@ Os marts são **por entidade** (`pessoas`, `proposicoes`, `votacoes`...), não p
 
 Três passos por dataset ([ADR 0011](../05-decisoes/0011-buscar-ler-custom-e-chave-por-fonte.md)): **buscar** (`ingestion/fetch.py`: HTTP com nova tentativa, cabeçalhos e credenciais por variável de ambiente), **guardar** (`landing.py`: arquivo com hash e registro da captura, igual para toda fonte) e **ler** (`read.py`: CSV e JSON). Uma fonte que precise de outro jeito (SOAP, robô, pacote compactado) tem um módulo em `ingestion/custom/<poder>/<esfera>/<fonte>.py` que substitui só o passo necessário; a saída de `buscar` é sempre um arquivo com hash, então o resto não muda. Passo a passo em [especificação de fonte](../02-fazer/03-especificacao-de-fonte.md).
 
-## Datasets por item e auditoria
-
-Tramitação e situação só existem por item (uma chamada por proposição). Um dataset `load: foreach` busca, em lotes e a uma taxa educada, os itens que faltam ou mudaram, começando pelos mais recentes; roda só com `--foreach N` ou `--foreach all`. Cada lote guarda a resposta de cada item byte a byte, e dois comandos auditam: `dado-publico verify` (hashes do landing e do índice `metadata.capture_items`) e `dado-publico coverage` (itens esperados, obtidos, inexistentes, com falha e faltantes). Detalhes no [ADR 0012](../05-decisoes/0012-dataset-por-item-lotes-com-envelope.md). Um dataset por item pode listar os itens de outro dataset por item (os dispositivos vetados saem dos vetos, e os votos saem dos dispositivos): na execução completa o raw é carregado depois de cada um, então a cadeia roda numa vez; pelos comandos `extract` e `load` em separado, uma etapa por rodada.
-
-## Monitoramento das fontes
-
-Cada captura grava em `metadata.source_checks` (status `ok`, `warn` ou `error`): `availability` (a fonte respondeu?), `schema` (coluna do contrato ausente é erro; coluna nova ou removida é aviso) e `volume` (menos de 80% das linhas da carga anterior é aviso). O frescor do dado carregado é medido pelo `freshness` do dbt. Nada interrompe o pipeline; a execução devolve `source_errors`. Consulta:
-
-```bash
-uv run dado-publico query --sql "SELECT * FROM metadata.source_checks WHERE status <> 'ok' ORDER BY id DESC LIMIT 20"
-```
-
-Onde mudar cada coisa:
-
-| Quero mudar... | Edito... |
-| --- | --- |
-| a pasta dos dados ou o arquivo do warehouse | variáveis `DADO_PUBLICO_STORAGE_ROOT` e `DADO_PUBLICO_WAREHOUSE` |
-| a URL de uma fonte, ou as colunas que se carregam | `sources/<poder>/<esfera>/<fonte>.yml` |
-| um jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/dado_publico_brasil/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
-| uma regra de transformação (nome, tipo, caixa, junção) | o modelo SQL em `dbt/models/` |
-| uma regra de limpeza de texto | `dbt/macros/text_functions.sql` |
-| um teste de dados | `schema.yml` do modelo ou SQL em `dbt/tests/` |
-| a ordem das etapas ou o agendamento | `src/dado_publico_brasil/orchestration/` (Dagster ou `pipeline.py`) |
-
 ## O dbt seguindo as práticas da dbt Labs
 
 O projeto segue o guia oficial de estrutura (“How we structure our dbt projects”):
@@ -116,37 +92,6 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 - **Duas fases**: o dbt roda em duas passadas, separadas por tag, porque a identidade (código Python) fica no meio: primeiro `staging` e os modelos `pre_identity`; depois a resolução de identidade; depois o resto.
 
 > **Conceito: contrato de dados.** Um contrato declara colunas e tipos que o produtor garante ao consumidor. Se o SQL do mart mudar de forma incompatível, o `dbt build` falha em vez de entregar dado quebrado à aplicação.
-
-## Como executar
-
-A pasta de armazenamento (`data_store/`, fora do git) vem de `DADO_PUBLICO_STORAGE_ROOT` (padrão `data_store`). Tudo a partir da raiz do repositório:
-
-```bash
-uv run dado-publico run --incremental                               # só a partição em curso (cada fonte declara `refresh`)
-uv run dado-publico run --historical --from-year 2000   # carga massiva
-uv run dado-publico run --years 2024 2025 2026 --extra-years 2019   # anos escolhidos
-uv run dado-publico run --incremental --source senado               # só uma fonte
-uv run dado-publico run --incremental --foreach 300                 # + os 300 itens mais recentes que faltam nos datasets por item
-```
-
-- **Incremental:** datasets completos mais o ano corrente e o anterior (anos antigos são estáveis). Antes de baixar, pergunta-se à fonte (`ETag`, `Last-Modified`, tamanho) se o arquivo mudou; se não mudou, só se atualiza a data da última verificação. Se nada novo foi carregado, o dbt nem roda.
-- **Histórico:** todos os anos do intervalo, para a primeira carga ou uma recarga.
-- Etapas separadas: `extract`, `load [--rebuild]`, `transform`, `identity`, `catalog`, `docs`, `query`.
-- **Datasets por item** (tramitação da Câmara, processo e detalhe do senador, detalhe das normas, vetos) só rodam com `--foreach N` ou `--foreach all`; a carga total é decisão de quem opera, por levar horas.
-- O Dagster ainda não tem ativo para `--foreach`: os datasets por item rodam pela linha de comando.
-- **Auditoria:** `uv run dado-publico verify` (hashes do landing e das respostas) e `uv run dado-publico coverage` (o que já foi buscado e o que falta). Ver [auditoria](../02-fazer/05-auditar.md).
-- **Dagster** (interface, agendamento diário às 6h, linhagem entre ativos): `DAGSTER_HOME=<pasta absoluta> uv run dagster dev -m dado_publico_brasil.orchestration.definitions`, com interface em http://127.0.0.1:3000 (ou `DAGSTER_HOME` no `.env`). Os ativos de cada fonte (`landing_<fonte>`, `raw_<fonte>`) saem de `sources/`; o job `daily_pipeline` roda tudo, e os ativos `landing_*` recebem a configuração do modo (`incremental`, `historical`, `years`). Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez), e o resultado do dbt também vai para `metadata.dbt_results`, como na linha de comando. Rodar o dia a dia pelo Dagster leva cerca de 1 a 2 minutos quando nada mudou na fonte.
-
-## Como acessar os dados
-
-O warehouse é `data_store/warehouse.duckdb`. Um arquivo DuckDB aceita um escritor por vez; com o pipeline parado, qualquer um dos três serve:
-
-```bash
-uv run dado-publico query --sql "SELECT * FROM marts.pessoas WHERE nome_busca LIKE '%reginaldo%'"
-uv run python -c "import duckdb; print(duckdb.connect('data_store/warehouse.duckdb', read_only=True).sql('SELECT COUNT(*) FROM marts.votacoes_votos'))"
-```
-
-O [catálogo](../03-consultar/01-catalogo.md) lista todas as tabelas, gerado do dbt (`uv run dado-publico catalog`).
 
 ## Propriedades que o pipeline garante
 
@@ -183,7 +128,3 @@ A fonte traz nomes e ementas ora em maiúsculas, ora em minúsculas. A regra ún
 - O que a regra não resolve fica visível no teste `pessoas_com_nome_em_maiusculas`.
 
 Reescrever ementa em linguagem simples com IA **não** é padronização; se vier a existir, será campo derivado à parte, rotulado como gerado por IA (ver [governança](06-governanca.md)).
-
-## Adicionar uma fonte nova
-
-Passo a passo em [especificacao-de-fonte](../02-fazer/03-especificacao-de-fonte.md).

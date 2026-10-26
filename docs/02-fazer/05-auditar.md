@@ -42,3 +42,16 @@ Toda execução (`metadata.runs`) registra a versão do código (commit), linhas
 - Amostragem contra as páginas oficiais (cada número conferido à mão) e relatório periódico de `verify`.
 - Alerta (e-mail ou mensagem) quando `verify`, `schema` ou `volume` falham; hoje o registro é em tabela.
 - Exibir a linhagem na página da aplicação.
+
+## Datasets por item e auditoria
+
+Tramitação e situação só existem por item (uma chamada por proposição). Um dataset `load: foreach` busca, em lotes e a uma taxa educada, os itens que faltam ou mudaram, começando pelos mais recentes; roda só com `--foreach N` ou `--foreach all`. Cada lote guarda a resposta de cada item byte a byte, e dois comandos auditam: `dado-publico verify` (hashes do landing e do índice `metadata.capture_items`) e `dado-publico coverage` (itens esperados, obtidos, inexistentes, com falha e faltantes). Detalhes no [ADR 0012](../05-decisoes/0012-dataset-por-item-lotes-com-envelope.md). Um dataset por item pode listar os itens de outro dataset por item (os dispositivos vetados saem dos vetos, e os votos saem dos dispositivos): na execução completa o raw é carregado depois de cada um, então a cadeia roda numa vez; pelos comandos `extract` e `load` em separado, uma etapa por rodada.
+
+
+## Monitoramento das fontes
+
+Cada captura grava em `metadata.source_checks` (status `ok`, `warn` ou `error`): `availability` (a fonte respondeu?), `schema` (coluna do contrato ausente é erro; coluna nova ou removida é aviso) e `volume` (menos de 80% das linhas da carga anterior é aviso). O frescor do dado carregado é medido pelo `freshness` do dbt. Nada interrompe o pipeline; a execução devolve `source_errors`. Consulta:
+
+```bash
+uv run dado-publico query --sql "SELECT * FROM metadata.source_checks WHERE status <> 'ok' ORDER BY id DESC LIMIT 20"
+```

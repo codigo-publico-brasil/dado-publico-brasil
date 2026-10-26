@@ -15,11 +15,8 @@ Para quem chega ao projeto: onde cada coisa mora em `docs/` e em que ordem ler. 
 
 1. [`01-entender/`](01-entender/), na ordem: visão geral, arquitetura, camadas, ferramentas.
 2. [`01-entender/05-identidade-de-pessoas.md`](01-entender/05-identidade-de-pessoas.md) e [`06-governanca.md`](01-entender/06-governanca.md).
-3. [`02-fazer/01-rodar-localmente.md`](02-fazer/01-rodar-localmente.md).
-4. [`02-fazer/03-especificacao-de-fonte.md`](02-fazer/03-especificacao-de-fonte.md), [`04-operar-e-publicar.md`](02-fazer/04-operar-e-publicar.md) e [`05-auditar.md`](02-fazer/05-auditar.md).
+3. [`02-fazer/`](02-fazer/), na ordem: rodar localmente, tutorial de nova fonte, especificação da fonte, operar e publicar, auditar.
 5. [`03-consultar/`](03-consultar/): conforme a necessidade.
-
-O número que falta (`02-fazer/02`, tutorial de nova fonte) ainda será escrito.
 
 ## Regras
 

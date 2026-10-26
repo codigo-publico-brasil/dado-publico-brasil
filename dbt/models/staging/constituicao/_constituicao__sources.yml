@@ -6,12 +6,14 @@ sources:
       Constituição de 1988, texto atualizado como a Câmara dos Deputados publica (arquivo HTML guardado no landing).
       Carregado em raw_federal_constituicao (declaração em sources/legislativo/federal/constituicao.yml): uma linha
       por parágrafo de texto, na ordem do arquivo.
+      Fonte oficial: [https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988](https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988).
     schema: raw_federal_constituicao
     loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
     freshness:
       warn_after: {count: 120, period: day}
       error_after: {count: 400, period: day}
     meta:
+      url: https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988
       origin: Câmara dos Deputados
       sensitivity: publico
       owner: fundador do projeto
