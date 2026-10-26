@@ -156,6 +156,35 @@ def test_loading_again_is_idempotent(raw: tuple[Connection, Settings], contract:
     assert before == after
 
 
+def test_backfill_fills_old_rows_with_the_load_time_of_their_capture(
+    raw: tuple[Connection, Settings], contract: SourceContract
+) -> None:
+    con, _ = raw
+    con.execute(
+        "UPDATE raw_federal_camara.deputados SET _ingested_at = NULL"
+    )  # como as linhas de antes da coluna
+    assert loader.backfill_ingested_at(con, contract) > 0
+    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_camara.deputados WHERE _ingested_at IS NULL") == 0
+    assert (
+        scalar(
+            con,
+            "SELECT COUNT(*) FROM raw_federal_camara.deputados t JOIN metadata.captures c ON c.id = t._source_file_id "
+            "WHERE t._ingested_at <> c.loaded_at::TIMESTAMPTZ",
+        )
+        == 0
+    )
+    assert loader.backfill_ingested_at(con, contract) == 0  # de novo, nada a fazer
+
+
+def test_recheck_headers_reads_the_landing_files_again(
+    raw: tuple[Connection, Settings], contract: SourceContract
+) -> None:
+    con, settings = raw
+    antes = scalar(con, "SELECT COUNT(*) FROM metadata.source_checks WHERE check_name = 'schema'")
+    assert loader.recheck_headers(con, settings, contract) > 0
+    assert scalar(con, "SELECT COUNT(*) FROM metadata.source_checks WHERE check_name = 'schema'") > antes
+
+
 def test_load_marks_the_capture_as_loaded(raw: tuple[Connection, Settings]) -> None:
     con, _ = raw
     assert scalar(con, "SELECT COUNT(*) FROM metadata.captures WHERE loaded_at IS NULL") == 0
