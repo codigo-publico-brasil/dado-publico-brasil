@@ -162,6 +162,7 @@ models:
       - {name: id_tipo, description: "Identificador do tipo, como a fonte informa."}
       - {name: id_na_fonte, description: "Identificador do registro na fonte de origem."}
       - {name: nome_chave, description: "Nome padronizado (sem acento e em minúsculas), usado só para comparar nomes entre fontes."}
+      - {name: nome_urna_chave, description: "Nome parlamentar padronizado (sem acento e em minúsculas), usado só como segunda chave de comparação com o nome de urna do TSE."}
       - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
   - name: int_vinculos_propostos
     description: >
@@ -178,7 +179,7 @@ models:
       - {name: id_destino, description: "Identificador do registro de destino do vínculo, na fonte de destino.", tests: ["not_null"]}
       - {name: metodo, description: "Regra que ligou as duas chaves."}
   - name: int_tse_pessoas
-    description: Identificador da mesma pessoa entre as eleições do TSE (nome civil e data de nascimento iguais, a combinação única em cada eleição, sem datas de 1º de janeiro). Uma linha por candidatura ligável.
+    description: Identificador da mesma pessoa entre as eleições do TSE, por nome civil ou nome de urna com a mesma data de nascimento (cada chave única em cada eleição e sem datas de 1º de janeiro); a ligação se propaga entre candidaturas que partilham uma chave. Uma linha por candidatura ligável.
     columns:
       - {name: id_candidatura, description: "Identificador da candidatura (ano, unidade eleitoral e sequencial do candidato).", tests: ["unique", "not_null"]}
       - {name: id_pessoa_tse, description: "Identificador da pessoa entre as eleições do TSE, derivado do nome civil e da data de nascimento; não é uma pessoa do projeto.", tests: ["not_null"]}

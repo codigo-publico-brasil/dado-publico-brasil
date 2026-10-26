@@ -144,7 +144,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `int_proposicoes_autorias_ligadas` | Autorias com a pessoa do projeto; autor que não é deputado fica sem pessoa. | publico-agente-publico |  |
 | `int_senado_materias_unicas` | Uma linha por matéria votada no Senado, com os dados da votação mais recente. | publico-agente-publico |  |
 | `int_senadores_unidos` | Todo senador informado pelo Senado (cadastro mais votos). | publico-agente-publico |  |
-| `int_tse_pessoas` | Identificador da mesma pessoa entre as eleições do TSE (nome civil e data de nascimento iguais, a combinação única em cada eleição, sem datas de 1º de janeiro). Uma linha por candidatura ligável. | publico-agente-publico |  |
+| `int_tse_pessoas` | Identificador da mesma pessoa entre as eleições do TSE, por nome civil ou nome de urna com a mesma data de nascimento (cada chave única em cada eleição e sem datas de 1º de janeiro); a ligação se propaga entre candidaturas que partilham uma chave. Uma linha por candidatura ligável. | publico-agente-publico |  |
 | `int_vinculos_propostos` | Vínculos propostos entre fontes pela regra de nome civil e nascimento iguais e únicos: Câmara com Senado (mesma pessoa) e candidatura do TSE com a pessoa. Entrada da identidade. | publico-agente-publico |  |
 | `int_votacoes_proposicoes_unidas` | Proposições de cada votação, com o papel (afetada ou objeto). | publico-agente-publico |  |
 | `int_votacoes_votos_ligados` | Votos com a pessoa do projeto (chave própria). | publico-agente-publico |  |
@@ -313,7 +313,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_pessoa` | bigint | Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos casos sem ligação. |  |
 | `tipo_mandato` | varchar | Só para deputado federal e senador ligados a uma pessoa: reeleito (tinha mandato na mesma casa na legislatura em curso na eleição), retorno (já teve mandato na mesma casa antes) ou novato (nenhum). Para quem não é pessoa do projeto vale o histórico do TSE: reeleito se foi eleito para o mesmo cargo na eleição anterior, retorno se foi eleito antes. Vazio sem prova: nada é afirmado. |  |
 | `id_pessoa_tse` | varchar | Identificador da mesma pessoa entre as eleições do TSE (nome civil e data de nascimento iguais e únicos, ADR 0025); vazio sem ligação. Não é uma pessoa do projeto. |  |
-| `vinculo_metodo` | varchar | Como o eleito foi ligado à pessoa: identificador oficial da própria fonte ou nome civil e data de nascimento iguais e únicos; vazio sem ligação. |  |
+| `vinculo_metodo` | varchar | Como o eleito foi ligado à pessoa: identificador oficial da própria fonte, nome civil e data de nascimento iguais e únicos, ou (para quem mudou de nome civil) nome de urna igual ao nome parlamentar e data de nascimento iguais e únicos; vazio sem ligação. |  |
 | `vinculo_aprovado_por` | varchar | Quem aprovou o vínculo, quando foi aprovado à mão; vazio nos demais. |  |
 | `dt_captura` | date | Data da captura do arquivo de candidaturas de onde vem o resultado. |  |
 | `fonte_url` | varchar | Página oficial do TSE com os arquivos de candidatos da eleição. |  |

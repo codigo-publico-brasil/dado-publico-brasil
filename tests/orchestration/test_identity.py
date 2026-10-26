@@ -21,6 +21,7 @@ def test_each_deputy_gets_a_person_with_its_own_key_and_a_traceable_method(
         ("camara", "deputado", "10"),
         ("camara", "deputado", "11"),
         ("camara", "deputado", "12"),
+        ("tse", "candidato", "2018:SP:2007"),  # Ana mudou de nome civil: ligada pelo nome de urna
         ("tse", "candidato", "2022:RJ:1001"),
         ("tse", "candidato", "2022:SP:1002"),
         ("senado", "senador", "5000"),

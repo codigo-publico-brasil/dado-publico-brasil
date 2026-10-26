@@ -1,6 +1,6 @@
 # Plataforma de dados
 
-Camada de dados oficial do projeto [Código Público Brasil](https://github.com/codigo-publico-brasil): captura dados abertos do poder público, organiza em camadas e os entrega prontos, com fonte, URL e data de captura, para qualquer aplicação consumir. O [Quem Decidiu](../quem-decidiu/) (quem propôs, quem votou e quem aprovou cada decisão) é a primeira aplicação e fica em outra pasta (depois, outro repositório); outras podem usar os mesmos dados.
+Camada de dados oficial do projeto [Código Público Brasil](https://github.com/codigo-publico-brasil): captura dados abertos do poder público, organiza em camadas e os entrega prontos, com fonte, URL e data de captura, para qualquer aplicação consumir.
 
 ## Propósito
 
