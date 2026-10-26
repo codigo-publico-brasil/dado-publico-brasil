@@ -147,6 +147,29 @@ LINHAS_2018 = [
         "SP",
         "AAA",
     ),
+    # Ana mudou de nome civil entre as eleições: o nome de urna e o nascimento a ligam (ADR 0026)
+    (
+        "DEPUTADO FEDERAL",
+        "2007",
+        "ANA CLARA DA SILVA",
+        "ANA ÁRVORE",
+        "03/02/1980",
+        "DEFERIDO",
+        "NÃO ELEITO",
+        "SP",
+        "AAA",
+    ),
+    (
+        "DEPUTADO FEDERAL",
+        "2008",
+        "ANA MARIA SILVA",
+        "ANA SILVA",
+        "03/02/1980",
+        "DEFERIDO",
+        "NÃO ELEITO",
+        "SP",
+        "AAA",
+    ),
 ]
 
 

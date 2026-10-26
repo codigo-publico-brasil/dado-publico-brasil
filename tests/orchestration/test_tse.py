@@ -30,6 +30,8 @@ def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_
         "1015",
         "2005",
         "2006",
+        "2007",
+        "2008",
     }
     leaked = scalar(con, "SELECT COUNT(*) FROM raw_federal_tse.candidaturas WHERE nm_candidato LIKE '%@%'")
     assert leaked == 0
@@ -42,6 +44,15 @@ def test_candidacy_is_linked_to_the_person_by_civil_name_and_birth_date(full: En
         "FROM marts.candidaturas c JOIN marts.pessoas p USING (id_pessoa) ORDER BY c.id_candidatura"
     ).fetchall()
     assert found == [
+        (
+            "Ana Árvore",
+            2018,
+            "Deputado federal",
+            "AAA",
+            "Deferido",
+            "Não eleito",
+            "SP",
+        ),  # ligada pelo nome de urna
         ("Bia", 2022, "Deputado federal", "BBB", "Deferido", "Eleito por qp", "RJ"),
         ("Ana Árvore", 2022, "Deputado federal", "AAA", "Deferido", "Não eleito", "SP"),
     ]
@@ -53,6 +64,7 @@ def test_homonyms_in_the_same_election_and_unmatched_candidates_are_not_linked_a
     con, _ = full
     linked = {r["id_candidatura"] for r in rows(con, "SELECT id_candidatura FROM marts.candidaturas")}
     assert linked == {
+        "2018:SP:2007",  # ligada pelo nome de urna (mudou de nome civil)
         "2022:RJ:1001",
         "2022:SP:1002",
     }  # 1003 e 1004 (mesmo nome e nascimento) e 1005 (sem pessoa) ficam de fora

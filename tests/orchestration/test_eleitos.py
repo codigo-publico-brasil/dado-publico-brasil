@@ -137,9 +137,10 @@ def test_the_same_person_is_found_across_tse_elections_only_when_name_and_birth_
     carlos22 = next(k for k in ligados if k.startswith("2022:MG:") and k.endswith(":1005"))
     carlos18 = "2018:MG:2005"
     assert ligados[carlos22] == ligados[carlos18]  # mesmo nome civil e nascimento em 2018 e 2022
-    assert not [
-        k for k in ligados if k.endswith(":1003") or k.endswith(":1004")
-    ]  # homônimos na mesma eleição: nenhum liga
+    roberto = {ligados[k] for k in ligados if k.endswith(":1003") or k.endswith(":1004")}
+    assert (
+        len(roberto) == 2
+    )  # homônimos na mesma eleição: o nome civil não os junta (cada um fica com a sua chave de urna)
     assert not [
         k for k in ligados if k.endswith(":1001")
     ]  # nascimento em 1º de janeiro: o TSE usa para "só o ano"
@@ -158,3 +159,34 @@ def test_the_history_of_an_elected_has_his_earlier_candidacies_and_never_the_cur
         ("Carlos Eleito", 2018, "Deputado federal", "Eleito por qp"),
         ("Fulano Estadual", 2018, "Deputado estadual", "Não eleito"),
     ]
+
+
+def test_who_changed_civil_name_is_linked_by_the_ballot_name_and_birth_date(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    ligacoes = {
+        r["id_na_fonte"]: (r["id_pessoa"], r["metodo"])
+        for r in rows(
+            con, "SELECT id_na_fonte, id_pessoa, metodo FROM staging.stg_identity__pessoa_identificadores"
+        )
+        if str(r["id_na_fonte"]).startswith(("2018:SP:", "2022:SP:"))
+    }
+    ana18, ana22 = ligacoes["2018:SP:2007"], next(v for k, v in ligacoes.items() if k.endswith(":1002"))
+    assert ana18[0] == ana22[0]  # mesma pessoa da Câmara, embora o nome civil de 2018 seja outro
+    assert ana18[1] == "nome de urna e data de nascimento iguais e únicos"
+    assert ana22[1] == "nome civil e data de nascimento iguais e únicos"  # a regra de base vale primeiro
+    assert "2018:SP:2008" not in ligacoes  # o nome de urna dela não é o de nenhum parlamentar
+
+
+def test_the_same_person_is_found_across_elections_also_by_the_ballot_name(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    ligados = {
+        r["id_candidatura"]: r["id_pessoa_tse"]
+        for r in rows(con, "SELECT * FROM intermediate.int_tse_pessoas")
+    }
+    ana22 = next(k for k in ligados if k.startswith("2022:SP:") and k.endswith(":1002"))
+    assert ligados[ana22] == ligados["2018:SP:2008"]  # nome civil diferente, mesmo nome de urna e nascimento
+    assert ligados["2018:SP:2007"] != ligados[ana22]  # outro nome civil e outro nome de urna: nada os liga
