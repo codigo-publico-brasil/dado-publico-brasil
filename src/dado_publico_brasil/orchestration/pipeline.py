@@ -81,5 +81,5 @@ REFRESH_TAG = (
 
 
 def registers_update(captures: int, refresh: bool, never_registered: bool) -> bool:
-    """O raw registra atualização (libera o que depende dele) com captura nova, ao refazer ou na primeira vez."""
+    """O raw registra atualização (libera o que vem depois) com captura nova, ao refazer ou na 1ª vez."""
     return bool(captures) or refresh or never_registered
