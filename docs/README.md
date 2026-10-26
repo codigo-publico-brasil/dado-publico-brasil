@@ -13,13 +13,13 @@ Para quem chega ao projeto: onde cada coisa mora em `docs/` e em que ordem ler. 
 
 ## Ordem de leitura
 
-1. [`01-entender/02-arquitetura.md`](01-entender/02-arquitetura.md): a arquitetura e os motivos.
-2. [`01-entender/03-camadas.md`](01-entender/03-camadas.md): as camadas do dado, do original ao consumo.
-3. [`01-entender/05-identidade-de-pessoas.md`](01-entender/05-identidade-de-pessoas.md) e [`06-governanca.md`](01-entender/06-governanca.md).
+1. [`01-entender/`](01-entender/), na ordem: visão geral, arquitetura, camadas, ferramentas.
+2. [`01-entender/05-identidade-de-pessoas.md`](01-entender/05-identidade-de-pessoas.md) e [`06-governanca.md`](01-entender/06-governanca.md).
+3. [`02-fazer/01-rodar-localmente.md`](02-fazer/01-rodar-localmente.md).
 4. [`02-fazer/03-especificacao-de-fonte.md`](02-fazer/03-especificacao-de-fonte.md), [`04-operar-e-publicar.md`](02-fazer/04-operar-e-publicar.md) e [`05-auditar.md`](02-fazer/05-auditar.md).
 5. [`03-consultar/`](03-consultar/): conforme a necessidade.
 
-Os números que faltam (`01-visao-geral`, `04-ferramentas`, `02-fazer/01` e `02`) são os documentos que ainda serão escritos.
+O número que falta (`02-fazer/02`, tutorial de nova fonte) ainda será escrito.
 
 ## Regras
 

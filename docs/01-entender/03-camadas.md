@@ -45,6 +45,13 @@ Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e 
 
 O dbt, por padrão, grava em `<schema do perfil>_<schema do modelo>`; aqui a macro `generate_schema_name` usa só o nome do schema do modelo, o que é permitido e recomendado quando cada ambiente tem o seu banco. As tabelas `_dlt_loads`, `_dlt_pipeline_state` e `_dlt_version` dentro de `raw_federal_camara` são controle do dlt.
 
+## Por que `identity` e `metadata`
+
+As outras camadas guardam o **dado da fonte** em estágios de tratamento. Estas duas guardam o que o projeto **acrescenta**:
+
+- **`identity` (identidade):** a chave própria `id_pessoa`, que liga a mesma pessoa em fontes diferentes (um deputado na Câmara, candidato no TSE). É a única camada que **não se reconstrói** do landing: uma chave já entregue a uma aplicação não pode mudar, então ela nasce por código com migração e ganha cópia imutável a cada execução. Detalhes em [`05-identidade-de-pessoas.md`](05-identidade-de-pessoas.md).
+- **`metadata` (metadados):** dados *sobre* o pipeline, não sobre o poder público: cada captura (URL, hash, data, caminho do arquivo), cada execução (versão do código, linhas, resultado), o resultado dos testes do dbt e as verificações das fontes. É o que torna o dado **auditável**: toda linha do raw aponta para `metadata.captures`. O nome segue o uso do mercado ("metadata" = dado que descreve dado). As aplicações leem os marts e, para a página de qualidade, `metadata.captures`, `metadata.dbt_results` e `metadata.source_checks`.
+
 ## Descrições e dicionário de colunas
 
 Cada tabela e coluna dos marts é descrita **uma vez**, no YAML do dbt (`_legislativo__models.yml`). Daí saem:
@@ -54,25 +61,6 @@ Cada tabela e coluna dos marts é descrita **uma vez**, no YAML do dbt (`_legisl
 - o site navegável do dbt, com o **grafo de linhagem**: `uv run dado-publico docs` (abre em http://127.0.0.1:8080; pipeline parado).
 
 Um teste falha se alguma coluna dos marts ficar sem descrição.
-
-## Estrutura do repositório
-
-```text
-src/dado_publico_brasil/       um só pacote Python, com extras por motor (`uv sync --all-extras`)
-  documents/                trilha de documentos e vetores (a fazer; só o esqueleto)
-  core/                     configuração, warehouse, execuções, migrações
-  ingestion/                MOTOR DE INGESTÃO: fetch (buscar), landing (guardar), read (ler), loader (raw), monitoring;
-                            custom/<poder>/<esfera>/<fonte>.py só para o que o padrão não cobre
-  transformation/           MOTOR DE TRANSFORMAÇÃO: identidade, qualidade, catálogo, execução do dbt
-  orchestration/            liga os motores: comando `dado-publico` e Dagster
-sources/<poder>/<esfera>/   declaração das fontes (YAML)
-dbt/                        projeto dbt: models/{staging,intermediate,marts}, tests/, macros/
-ddl/                        migrações SQL das tabelas próprias (metadata, identity)
-docs/  tests/                 documentação e testes
-.env.example                modelo das variáveis de ambiente
-```
-
-A **fronteira entre os motores é de dados**: o schema `raw_<esfera>_<fonte>` e a tabela `metadata.captures`. Um teste garante que `ingestion` e `transformation` só importam `core` e que só `orchestration` conhece os dois ([ADR 0009](../05-decisoes/0009-repositorio-de-dados-pacote-unico.md)). As aplicações leem só o contrato publicado: o esquema `marts`, mais `metadata.captures`, `metadata.dbt_results` e `metadata.source_checks` para a página de qualidade.
 
 ## Poder, esfera e fonte
 
