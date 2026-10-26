@@ -151,6 +151,44 @@ def load_capture(
         return stats["loaded"]
 
 
+def backfill_ingested_at(con: Connection, contract: SourceContract) -> int:
+    """Cria `_ingested_at` nas tabelas do raw que ainda não a têm e preenche as linhas antigas com a data da
+    carga do arquivo de origem (`metadata.captures.loaded_at`). Devolve as linhas preenchidas."""
+    filled = 0
+    for dataset in contract.datasets.values():
+        table = f"{contract.schema}.{normalize(dataset.name)}"
+        if (
+            not dataset.raw
+            or not con.execute(
+                "SELECT 1 FROM duckdb_tables() WHERE schema_name = ? AND table_name = ?",
+                (contract.schema, normalize(dataset.name)),
+            ).fetchone()
+        ):
+            continue
+        con.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS _ingested_at TIMESTAMP WITH TIME ZONE")
+        n = con.execute(f"SELECT count(*) FROM {table} WHERE _ingested_at IS NULL").fetchone()
+        con.execute(
+            f"UPDATE {table} AS t SET _ingested_at = c.loaded_at::TIMESTAMPTZ FROM metadata.captures AS c "
+            "WHERE c.id = t._source_file_id AND t._ingested_at IS NULL"
+        )
+        filled += int(n[0]) if n else 0
+    return filled
+
+
+def recheck_headers(con: Connection, settings: Settings, contract: SourceContract) -> int:
+    """Refaz a checagem de cabeçalho dos arquivos vigentes do landing, sem baixar nada (por exemplo, depois de
+    mudar o contrato). Devolve quantos arquivos foram conferidos."""
+    n = 0
+    for capture in landing.current_captures(con, contract.source):
+        dataset = contract.datasets[capture["dataset"]]
+        if dataset.raw and not dataset.foreach:
+            monitoring.check_header(
+                con, contract, dataset, capture["year"], settings.storage_root / capture["path"]
+            )
+            n += 1
+    return n
+
+
 def load_pending(
     con: Connection,
     settings: Settings,

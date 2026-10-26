@@ -8,6 +8,8 @@ A pasta de armazenamento e o warehouse vêm de DADO_PUBLICO_STORAGE_ROOT e DADO_
     uv run dado-publico run --incremental --source senado
     uv run dado-publico run --years 2024 2025 2026 --extra-years 2019
 
+Reparos sem baixar nada: backfill (cria `_ingested_at` no raw e preenche as linhas antigas) e recheck
+(refaz a checagem de cabeçalho dos arquivos do landing).
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
 Publicação: publish copia os marts para o PostgreSQL de serviço (DADO_PUBLICO_POSTGRES_DSN).
 Auditoria: verify (hashes do landing e cópia da identidade) e coverage (itens obtidos nos datasets por item).
@@ -34,6 +36,8 @@ COMMANDS = (
     "run",
     "extract",
     "load",
+    "backfill",
+    "recheck",
     "transform",
     "identity",
     "publish",
@@ -102,6 +106,11 @@ def _ingest(settings: Settings, args: argparse.Namespace) -> None:
                     for name, dataset in source.datasets.items():
                         if dataset.foreach and args.foreach and args.dataset in (None, name):
                             foreach.capture(con, settings, source, name, _per_item(args))
+                elif args.command == "backfill":
+                    print(f"{source.source}: {loader.backfill_ingested_at(con, source)} linhas preenchidas")
+                elif args.command == "recheck":
+                    n = loader.recheck_headers(con, settings, source)
+                    print(f"{source.source}: {n} arquivos conferidos")
                 else:
                     captures, rows = loader.load_pending(con, settings, source, args.rebuild, args.dataset)
                     print(f"{source.source}: {captures} capturas carregadas, {rows} linhas")
