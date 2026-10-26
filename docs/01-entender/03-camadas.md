@@ -78,6 +78,8 @@ Os marts são **por entidade** (`pessoas`, `proposicoes`, `votacoes`...), não p
 
 Três passos por dataset ([ADR 0011](../05-decisoes/0011-buscar-ler-custom-e-chave-por-fonte.md)): **buscar** (`ingestion/fetch.py`: HTTP com nova tentativa, cabeçalhos e credenciais por variável de ambiente), **guardar** (`landing.py`: arquivo com hash e registro da captura, igual para toda fonte) e **ler** (`read.py`: CSV e JSON). Uma fonte que precise de outro jeito (SOAP, robô, pacote compactado) tem um módulo em `ingestion/custom/<poder>/<esfera>/<fonte>.py` que substitui só o passo necessário; a saída de `buscar` é sempre um arquivo com hash, então o resto não muda. Passo a passo em [especificação de fonte](../02-fazer/03-especificacao-de-fonte.md).
 
+**Com que frequência cada fonte atualiza.** Cada fonte declara `refresh` no YAML (e cada dataset pode sobrescrever): `daily` entra na execução diária, que captura só a partição em curso (o ano ou o mês corrente) e antes de baixar pergunta à fonte (`ETag`, `Last-Modified`, tamanho) se o arquivo mudou; `on_request` só roda quando alguém pede (o TSE, que muda em datas pontuais). O agendamento do Dagster é um só, diário, às 6h. Ainda não existe cadência semanal ou mensal por fonte: o DOU, por exemplo, tem partição mensal, mas o zip do mês é reescrito a cada dia útil, então roda como `daily`. Como saber o que está parado: [`04-operar-e-publicar.md`](../02-fazer/04-operar-e-publicar.md#como-saber-o-que-está-desatualizado).
+
 ## O dbt seguindo as práticas da dbt Labs
 
 O projeto segue o guia oficial de estrutura (“How we structure our dbt projects”):

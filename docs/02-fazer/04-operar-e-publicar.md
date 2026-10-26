@@ -58,3 +58,19 @@ A máquina não prova que o dado está certo. A cada fonte nova: comparar a cont
 | Relatório de observabilidade | Local ou e-mail | `dado-publico observe [--html] [--email]` |
 
 O site do dbt ainda não é publicado na internet. O caminho usual é `dbt docs generate --static` (gera um único HTML) numa etapa do CI e hospedagem em página estática (por exemplo GitHub Pages); a decisão está em aberto numa issue.
+
+## Como saber o que está desatualizado
+
+Dois tempos diferentes, os dois em `metadata.captures`: `captured_at` (quando **chegou conteúdo novo** da fonte) e `last_checked_at` (quando o pipeline **perguntou** à fonte pela última vez). Dataset com `last_checked_at` antigo está sem rodar; com `captured_at` antigo mas verificação recente, a fonte é que não publicou nada.
+
+```bash
+uv run dado-publico query --sql "SELECT source, dataset, max(captured_at) AS ultimo_dado_novo, max(last_checked_at) AS ultima_verificacao FROM metadata.captures GROUP BY 1, 2 ORDER BY 4"
+```
+
+Outras visões que já existem:
+
+- `dado-publico observe`: resumo da saúde das fontes, da carga e dos testes (falha se houver problema).
+- **Frescor do dbt:** cada fonte declara `freshness` (`warn_after`, `error_after`) e o `dbt source freshness` roda no `transform`, gravando em `metadata.dbt_results`. Ele mede a idade da **última carga nossa**, não se a origem publicou algo novo.
+- **Dagster:** a verificação `saude_da_fonte` de cada ativo mostra o último monitor da fonte (fora do ar, coluna que mudou, queda de volume). O Dagster não mostra ainda a idade de cada ativo nem alerta por atraso.
+
+**O que ainda não existe:** um comando que pergunte às origens "há dado novo?" sem baixar, e um alerta de dataset parado. Hoje a pergunta é feita dentro da captura (o pedido leve de `ETag`/`Last-Modified` antes de baixar) e só para o que está no plano do dia; as fontes `on_request` não são consultadas sozinhas. Está em aberto numa issue.
