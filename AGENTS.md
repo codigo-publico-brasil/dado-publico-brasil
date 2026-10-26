@@ -8,7 +8,7 @@ Regras para agentes de IA neste repositório. `CLAUDE.md` aponta para cá. Quem 
 
 ## Antes de começar
 
-Leia `README.md` e `docs/dados/camadas.md`. Não contrarie um ADR de `docs/adr/` sem propor outro. **Proponha antes de executar** qualquer mudança de arquitetura, estrutura ou ferramenta e espere aprovação. Se faltar contexto, pergunte.
+Leia `README.md` e `docs/01-entender/03-camadas.md`. Não contrarie um ADR de `docs/05-decisoes/` sem propor outro. **Proponha antes de executar** qualquer mudança de arquitetura, estrutura ou ferramenta e espere aprovação. Se faltar contexto, pergunte.
 
 ## Dados (nunca violar)
 
@@ -49,4 +49,4 @@ O fundador usa o projeto para aprender arquitetura de dados e de sistemas: expli
 
 ## Nomes e descrições
 
-Leia [`docs/engenharia/convencao-de-nomes.md`](docs/engenharia/convencao-de-nomes.md) antes de criar ou alterar tabela ou coluna: tabelas com o tema na frente e sem conectivos (`proposicoes_autorias`); colunas com prefixo de tipo, `id_`, `dt_` e `fl_`, sem duplicar o tipo (`dt_nascimento`); toda tabela e coluna descrita, em todas as camadas. Padronizar nunca apaga a origem: o dado precisa ser auditável pelo público.
+Leia [`docs/03-consultar/02-convencao-de-nomes.md`](docs/03-consultar/02-convencao-de-nomes.md) antes de criar ou alterar tabela ou coluna: tabelas com o tema na frente e sem conectivos (`proposicoes_autorias`); colunas com prefixo de tipo, `id_`, `dt_` e `fl_`, sem duplicar o tipo (`dt_nascimento`); toda tabela e coluna descrita, em todas as camadas. Padronizar nunca apaga a origem: o dado precisa ser auditável pelo público.

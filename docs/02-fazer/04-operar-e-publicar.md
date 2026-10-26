@@ -1,6 +1,6 @@
 # Observabilidade dos dados
 
-Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou na origem, na carga ou na lógica, sem olhar tabela por tabela. Decisão em [ADR 0018](../adr/0018-observabilidade-dos-dados.md).
+Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou na origem, na carga ou na lógica, sem olhar tabela por tabela. Decisão em [ADR 0018](../05-decisoes/0018-observabilidade-dos-dados.md).
 
 ## Camadas
 
@@ -34,7 +34,7 @@ Pela página de comparação do Elementary (consultada em 24/10/2026), a versão
 
 | Página desabilitada | O que cobre aqui |
 | --- | --- |
-| Catalog | `docs/dados/catalogo.md`, gerado do dbt (`dado-publico catalog`) |
+| Catalog | `docs/03-consultar/01-catalogo.md`, gerado do dbt (`dado-publico catalog`) |
 | Data health | `dado-publico observe` |
 | Alert rules | alerta por e-mail do `observe` (o Elementary aberto só alerta por Slack e Teams) |
 | Environment | não se aplica: há um ambiente |

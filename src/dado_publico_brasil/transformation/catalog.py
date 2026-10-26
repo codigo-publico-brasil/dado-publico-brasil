@@ -71,7 +71,7 @@ def _entry(schema: str, name: str, node: dict[str, Any], meta: dict[str, Any]) -
 
 
 def markdown(settings: Settings) -> str:
-    """O catálogo como documento (`docs/dados/catalogo.md`)."""
+    """O catálogo como documento (`docs/03-consultar/01-catalogo.md`)."""
     lines = [
         "# Catálogo de dados",
         "",

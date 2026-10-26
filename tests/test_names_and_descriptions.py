@@ -4,7 +4,7 @@ import re
 
 from dado_publico_brasil.core.warehouse import Connection, rows
 
-CONVENTION = "docs/engenharia/convencao-de-nomes.md"
+CONVENTION = "docs/03-consultar/02-convencao-de-nomes.md"
 OWN_LAYERS = ("staging", "intermediate", "marts")
 CONNECTIVES = {
     "a",

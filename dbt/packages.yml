@@ -1,4 +1,4 @@
-# Monitoramento de anomalias dos marts (ADR 0018). O relatório HTML usa o `edr`, rodado sob demanda (ver docs/dados/observabilidade.md).
+# Monitoramento de anomalias dos marts (ADR 0018). O relatório HTML usa o `edr`, rodado sob demanda (ver docs/02-fazer/04-operar-e-publicar.md).
 packages:
   - package: elementary-data/elementary
     version: 0.26.1

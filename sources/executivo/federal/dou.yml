@@ -8,7 +8,7 @@ refresh: daily
 
 access:
   # A página do mês lista um zip por seção. Licença CC BY-ND 3.0: guardar e ler é livre; redistribuir
-  # trecho modificado não (ver docs/dados/fontes-de-dados.md). Sem tabela no raw: só o landing.
+  # trecho modificado não (ver docs/03-consultar/03-fontes-de-dados.md). Sem tabela no raw: só o landing.
   base_url: https://www.in.gov.br/acesso-a-informacao/dados-abertos/base-de-dados
   headers:
     Accept: "*/*"

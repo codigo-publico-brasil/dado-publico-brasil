@@ -3,7 +3,7 @@
 - **Status:** aceito (2026-10-23, pelo fundador)
 - **Data:** 2026-10-23
 - **Altera:** [ADR 0002](0002-pilha-tecnologica.md) (dados curados em PostgreSQL; lakehouse descartado) e o próximo passo do [ADR 0009](0009-repositorio-de-dados-pacote-unico.md) (dbt com macros de portabilidade para o PostgreSQL).
-- **Desenho completo (componentes e infraestrutura):** [`../engenharia/arquitetura-producao.html`](../engenharia/arquitetura-producao.html)
+- **Desenho completo (componentes e infraestrutura):** [`../engenharia/arquitetura-producao.html`](../01-entender/arquitetura-producao.html)
 
 ## Contexto
 
@@ -17,7 +17,7 @@ Hoje o warehouse tem 1,4 GiB e o landing 3,1 GB; a maior tabela tem 2,2 milhões
 4. **A identidade (`id_pessoa`) fica no DuckDB e ganha *snapshot* imutável a cada execução** no armazenamento de objetos, com teste de restauração. As chaves já entregues a aplicações não podem mudar.
 5. **O armazenamento de objetos, o servidor e o PostgreSQL são componentes, não produtos:** o código fala S3 e SQL padrão; a nuvem (ou servidor próprio) é decisão posterior.
 6. **Portões de revisão, medidos e não presumidos:** (a) o arquivo DuckDB passar de ~300 GB ou uma execução completa passar de ~6 horas: exportar os curados para Parquet particionado e ler por ele; (b) um dataset não caber num nó (provável: Judiciário): movê-lo, só ele, para ClickHouse ou Trino, mantendo o contrato dos marts; (c) o PostgreSQL de serviço passar de ~500 GB ou de carga de leitura que pese: réplica de leitura e particionamento; (d) auditoria por versão, estado fora do disco local ou escrita concorrente virarem necessidade: rodar o experimento do DuckLake. Os limites numéricos são hipóteses a corrigir pela medição.
-7. **Antes de implementar cada fonte nova, medir o tamanho dela** e registrar em `docs/dados/fontes-de-dados.md`.
+7. **Antes de implementar cada fonte nova, medir o tamanho dela** e registrar em `docs/03-consultar/03-fontes-de-dados.md`.
 
 ## Alternativas consideradas
 

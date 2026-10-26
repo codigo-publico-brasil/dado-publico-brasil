@@ -14,8 +14,8 @@ Os nomes de tabelas e colunas dos marts não têm padrão: `autorias` não diz a
 3. **Raw espelha a fonte** nos nomes, mas também é descrito.
 4. **Toda tabela e coluna, em todas as camadas, tem descrição**, e o `publish` a leva ao Postgres.
 5. **Auditabilidade:** nenhuma regra de nome ou transformação pode esconder a origem da informação.
-6. **Garantia:** a convenção fica em [documento próprio](../engenharia/convencao-de-nomes.md), citado no `CLAUDE.md`, no `AGENTS.md` e no modelo de PR, com teste no CI.
-7. **Os marts são renomeados** conforme [`renomeacao-dos-marts.md`](../dados/renomeacao-dos-marts.md); o staging e o intermediate seguem a mesma regra.
+6. **Garantia:** a convenção fica em [documento próprio](../03-consultar/02-convencao-de-nomes.md), citado no `CLAUDE.md`, no `AGENTS.md` e no modelo de PR, com teste no CI.
+7. **Os marts são renomeados** conforme [`renomeacao-dos-marts.md`](../99-historico/renomeacao-dos-marts.md); o staging e o intermediate seguem a mesma regra.
 
 ## Alternativas consideradas
 

@@ -27,7 +27,7 @@ As regras de apresentação (neutralidade, sem recomendação de voto) pertencem
 | Ingestão (Câmara e Senado) | Funcionando: captura com hash (CSV e JSON), carga no raw (dlt), monitoramento de disponibilidade, colunas e volume; datasets por item (tramitação, processos) em lotes auditáveis, por amostra até a carga total ser pedida; código próprio por fonte só quando preciso |
 | Transformação | Funcionando: dbt em camadas, identidade de pessoas, testes de qualidade, catálogo e dicionário de colunas |
 | Orquestração | Linha de comando e Dagster, com os ativos gerados a partir de `sources/` |
-| PostgreSQL de serviço | Funcionando em desenvolvimento local: `dado-publico publish` copia os marts e o papel `leitor` só lê; a identidade tem cópia imutável a cada execução ([ADR 0014](docs/adr/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)) |
+| PostgreSQL de serviço | Funcionando em desenvolvimento local: `dado-publico publish` copia os marts e o papel `leitor` só lê; a identidade tem cópia imutável a cada execução ([ADR 0014](docs/05-decisoes/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)) |
 | Documentos e vetores (esqueleto em `documents/`), infraestrutura de produção | A fazer |
 
 Última carga real (2000 a 2026): 190 mil votações, 1,9 milhão de votos, 886 mil proposições, 7,9 mil pessoas.
@@ -43,7 +43,7 @@ docs/  tests/             documentação e testes
 .env.example            modelo das variáveis de ambiente (o `.env` fica fora do git)
 ```
 
-O fluxo: fonte oficial → `landing` (arquivos com hash) → `raw_<esfera>_<fonte>` (dlt) → `staging` → `intermediate` → `marts` (dbt). Detalhes em [`docs/dados/camadas.md`](docs/dados/camadas.md).
+O fluxo: fonte oficial → `landing` (arquivos com hash) → `raw_<esfera>_<fonte>` (dlt) → `staging` → `intermediate` → `marts` (dbt). Detalhes em [`docs/01-entender/03-camadas.md`](docs/01-entender/03-camadas.md).
 
 ## Como subir o ambiente
 
@@ -102,14 +102,14 @@ uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pyt
 
 | Quero... | Leia |
 | --- | --- |
-| ver as camadas e como executar | [`docs/dados/camadas.md`](docs/dados/camadas.md) |
-| saber quais tabelas e colunas existem | [`docs/dados/catalogo.md`](docs/dados/catalogo.md) |
-| conferir de onde veio um dado e o que falta | [`docs/dados/auditoria.md`](docs/dados/auditoria.md) |
-| acrescentar uma fonte | [`docs/dados/especificacao-de-fonte.md`](docs/dados/especificacao-de-fonte.md) |
-| ver o que falta e o que cada fonte não entrega | [`docs/dados/cobertura-e-lacunas.md`](docs/dados/cobertura-e-lacunas.md) |
-| entender a ligação de pessoas entre fontes | [`docs/dados/identidade-de-pessoas.md`](docs/dados/identidade-de-pessoas.md) |
-| entender a Câmara e como se vota | [`docs/dominio/camara-dos-deputados.md`](docs/dominio/camara-dos-deputados.md) |
-| ver por que cada decisão foi tomada | [`docs/adr/`](docs/adr/) |
+| ver as camadas e como executar | [`docs/01-entender/03-camadas.md`](docs/01-entender/03-camadas.md) |
+| saber quais tabelas e colunas existem | [`docs/03-consultar/01-catalogo.md`](docs/03-consultar/01-catalogo.md) |
+| conferir de onde veio um dado e o que falta | [`docs/02-fazer/05-auditar.md`](docs/02-fazer/05-auditar.md) |
+| acrescentar uma fonte | [`docs/02-fazer/03-especificacao-de-fonte.md`](docs/02-fazer/03-especificacao-de-fonte.md) |
+| ver o que falta e o que cada fonte não entrega | [`docs/03-consultar/04-cobertura-e-lacunas.md`](docs/03-consultar/04-cobertura-e-lacunas.md) |
+| entender a ligação de pessoas entre fontes | [`docs/01-entender/05-identidade-de-pessoas.md`](docs/01-entender/05-identidade-de-pessoas.md) |
+| entender a Câmara e como se vota | [`docs/04-dominio/camara-dos-deputados.md`](docs/04-dominio/camara-dos-deputados.md) |
+| ver por que cada decisão foi tomada | [`docs/05-decisoes/`](docs/05-decisoes/) |
 | trabalhar com IA neste repositório | [`AGENTS.md`](AGENTS.md) |
 
 Índice completo em [`docs/README.md`](docs/README.md). O trabalho é conduzido em itens pequenos no quadro do GitHub Projects.

@@ -1,6 +1,6 @@
 # Camadas da plataforma de dados
 
-Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas fazem cada passo e onde mudar cada coisa. Serve também de material de estudo: os quadros **Conceito** nomeiam a prática de engenharia de dados por trás de cada decisão. Decisões formais: ADRs [0004](../adr/0004-camadas-da-plataforma-de-dados.md), [0005](../adr/0005-fontes-declarativas-e-portabilidade.md), [0006](../adr/0006-adotar-dlt-dbt-e-dagster.md), [0007](../adr/0007-dois-pacotes-e-camadas-de-mercado.md), [0008](../adr/0008-motores-separados-e-organizacao-por-poder-e-esfera.md) [0009](../adr/0009-repositorio-de-dados-pacote-unico.md), [0010](../adr/0010-duas-pastas-env-e-specs-fora.md) [0011](../adr/0011-buscar-ler-custom-e-chave-por-fonte.md) e [0012](../adr/0012-dataset-por-item-lotes-com-envelope.md).
+Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas fazem cada passo e onde mudar cada coisa. Serve também de material de estudo: os quadros **Conceito** nomeiam a prática de engenharia de dados por trás de cada decisão. Decisões formais: ADRs [0004](../05-decisoes/0004-camadas-da-plataforma-de-dados.md), [0005](../05-decisoes/0005-fontes-declarativas-e-portabilidade.md), [0006](../05-decisoes/0006-adotar-dlt-dbt-e-dagster.md), [0007](../05-decisoes/0007-dois-pacotes-e-camadas-de-mercado.md), [0008](../05-decisoes/0008-motores-separados-e-organizacao-por-poder-e-esfera.md) [0009](../05-decisoes/0009-repositorio-de-dados-pacote-unico.md), [0010](../05-decisoes/0010-duas-pastas-env-e-specs-fora.md) [0011](../05-decisoes/0011-buscar-ler-custom-e-chave-por-fonte.md) e [0012](../05-decisoes/0012-dataset-por-item-lotes-com-envelope.md).
 
 ## O desenho
 
@@ -49,7 +49,7 @@ O dbt, por padrão, grava em `<schema do perfil>_<schema do modelo>`; aqui a mac
 
 Cada tabela e coluna dos marts é descrita **uma vez**, no YAML do dbt (`_legislativo__models.yml`). Daí saem:
 
-- o [catálogo e o dicionário de colunas](catalogo.md), gerados por `uv run dado-publico catalog`;
+- o [catálogo e o dicionário de colunas](../03-consultar/01-catalogo.md), gerados por `uv run dado-publico catalog`;
 - os comentários gravados no próprio banco (`persist_docs`), visíveis em `duckdb_tables()` e `duckdb_columns()` e em ferramentas como o DBeaver;
 - o site navegável do dbt, com o **grafo de linhagem**: `uv run dado-publico docs` (abre em http://127.0.0.1:8080; pipeline parado).
 
@@ -72,7 +72,7 @@ docs/  tests/                 documentação e testes
 .env.example                modelo das variáveis de ambiente
 ```
 
-A **fronteira entre os motores é de dados**: o schema `raw_<esfera>_<fonte>` e a tabela `metadata.captures`. Um teste garante que `ingestion` e `transformation` só importam `core` e que só `orchestration` conhece os dois ([ADR 0009](../adr/0009-repositorio-de-dados-pacote-unico.md)). As aplicações leem só o contrato publicado: o esquema `marts`, mais `metadata.captures`, `metadata.dbt_results` e `metadata.source_checks` para a página de qualidade.
+A **fronteira entre os motores é de dados**: o schema `raw_<esfera>_<fonte>` e a tabela `metadata.captures`. Um teste garante que `ingestion` e `transformation` só importam `core` e que só `orchestration` conhece os dois ([ADR 0009](../05-decisoes/0009-repositorio-de-dados-pacote-unico.md)). As aplicações leem só o contrato publicado: o esquema `marts`, mais `metadata.captures`, `metadata.dbt_results` e `metadata.source_checks` para a página de qualidade.
 
 ## Poder, esfera e fonte
 
@@ -84,15 +84,15 @@ O projeto vai capturar dados dos três poderes (legislativo, executivo, judiciá
 | esfera | pasta `sources/<poder>/<esfera>/...`, campo `level` e o nome do schema `raw_<esfera>_<fonte>` |
 | fonte | nome do arquivo da declaração, prefixo `stg_<fonte>__` e a coluna `fonte` dos marts |
 
-Os marts são **por entidade** (`pessoas`, `proposicoes`, `votacoes`...), não por fonte, para que Câmara e Senado sejam consultados juntos. Para fonte nova: declaração em `sources/`, modelos de staging e, se for entidade nova, um mart (ver [especificação de fonte](especificacao-de-fonte.md)).
+Os marts são **por entidade** (`pessoas`, `proposicoes`, `votacoes`...), não por fonte, para que Câmara e Senado sejam consultados juntos. Para fonte nova: declaração em `sources/`, modelos de staging e, se for entidade nova, um mart (ver [especificação de fonte](../02-fazer/03-especificacao-de-fonte.md)).
 
 ## Como a captura é flexível
 
-Três passos por dataset ([ADR 0011](../adr/0011-buscar-ler-custom-e-chave-por-fonte.md)): **buscar** (`ingestion/fetch.py`: HTTP com nova tentativa, cabeçalhos e credenciais por variável de ambiente), **guardar** (`landing.py`: arquivo com hash e registro da captura, igual para toda fonte) e **ler** (`read.py`: CSV e JSON). Uma fonte que precise de outro jeito (SOAP, robô, pacote compactado) tem um módulo em `ingestion/custom/<poder>/<esfera>/<fonte>.py` que substitui só o passo necessário; a saída de `buscar` é sempre um arquivo com hash, então o resto não muda. Passo a passo em [especificação de fonte](especificacao-de-fonte.md).
+Três passos por dataset ([ADR 0011](../05-decisoes/0011-buscar-ler-custom-e-chave-por-fonte.md)): **buscar** (`ingestion/fetch.py`: HTTP com nova tentativa, cabeçalhos e credenciais por variável de ambiente), **guardar** (`landing.py`: arquivo com hash e registro da captura, igual para toda fonte) e **ler** (`read.py`: CSV e JSON). Uma fonte que precise de outro jeito (SOAP, robô, pacote compactado) tem um módulo em `ingestion/custom/<poder>/<esfera>/<fonte>.py` que substitui só o passo necessário; a saída de `buscar` é sempre um arquivo com hash, então o resto não muda. Passo a passo em [especificação de fonte](../02-fazer/03-especificacao-de-fonte.md).
 
 ## Datasets por item e auditoria
 
-Tramitação e situação só existem por item (uma chamada por proposição). Um dataset `load: foreach` busca, em lotes e a uma taxa educada, os itens que faltam ou mudaram, começando pelos mais recentes; roda só com `--foreach N` ou `--foreach all`. Cada lote guarda a resposta de cada item byte a byte, e dois comandos auditam: `dado-publico verify` (hashes do landing e do índice `metadata.capture_items`) e `dado-publico coverage` (itens esperados, obtidos, inexistentes, com falha e faltantes). Detalhes no [ADR 0012](../adr/0012-dataset-por-item-lotes-com-envelope.md). Um dataset por item pode listar os itens de outro dataset por item (os dispositivos vetados saem dos vetos, e os votos saem dos dispositivos): na execução completa o raw é carregado depois de cada um, então a cadeia roda numa vez; pelos comandos `extract` e `load` em separado, uma etapa por rodada.
+Tramitação e situação só existem por item (uma chamada por proposição). Um dataset `load: foreach` busca, em lotes e a uma taxa educada, os itens que faltam ou mudaram, começando pelos mais recentes; roda só com `--foreach N` ou `--foreach all`. Cada lote guarda a resposta de cada item byte a byte, e dois comandos auditam: `dado-publico verify` (hashes do landing e do índice `metadata.capture_items`) e `dado-publico coverage` (itens esperados, obtidos, inexistentes, com falha e faltantes). Detalhes no [ADR 0012](../05-decisoes/0012-dataset-por-item-lotes-com-envelope.md). Um dataset por item pode listar os itens de outro dataset por item (os dispositivos vetados saem dos vetos, e os votos saem dos dispositivos): na execução completa o raw é carregado depois de cada um, então a cadeia roda numa vez; pelos comandos `extract` e `load` em separado, uma etapa por rodada.
 
 ## Monitoramento das fontes
 
@@ -146,7 +146,7 @@ uv run dado-publico run --incremental --foreach 300                 # + os 300 i
 - Etapas separadas: `extract`, `load [--rebuild]`, `transform`, `identity`, `catalog`, `docs`, `query`.
 - **Datasets por item** (tramitação da Câmara, processo e detalhe do senador, detalhe das normas, vetos) só rodam com `--foreach N` ou `--foreach all`; a carga total é decisão de quem opera, por levar horas.
 - O Dagster ainda não tem ativo para `--foreach`: os datasets por item rodam pela linha de comando.
-- **Auditoria:** `uv run dado-publico verify` (hashes do landing e das respostas) e `uv run dado-publico coverage` (o que já foi buscado e o que falta). Ver [auditoria](auditoria.md).
+- **Auditoria:** `uv run dado-publico verify` (hashes do landing e das respostas) e `uv run dado-publico coverage` (o que já foi buscado e o que falta). Ver [auditoria](../02-fazer/05-auditar.md).
 - **Dagster** (interface, agendamento diário às 6h, linhagem entre ativos): `DAGSTER_HOME=<pasta absoluta> uv run dagster dev -m dado_publico_brasil.orchestration.definitions`, com interface em http://127.0.0.1:3000 (ou `DAGSTER_HOME` no `.env`). Os ativos de cada fonte (`landing_<fonte>`, `raw_<fonte>`) saem de `sources/`; o job `daily_pipeline` roda tudo, e os ativos `landing_*` recebem a configuração do modo (`incremental`, `historical`, `years`). Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez), e o resultado do dbt também vai para `metadata.dbt_results`, como na linha de comando. Rodar o dia a dia pelo Dagster leva cerca de 1 a 2 minutos quando nada mudou na fonte.
 
 ## Como acessar os dados
@@ -158,7 +158,7 @@ uv run dado-publico query --sql "SELECT * FROM marts.pessoas WHERE nome_busca LI
 uv run python -c "import duckdb; print(duckdb.connect('data_store/warehouse.duckdb', read_only=True).sql('SELECT COUNT(*) FROM marts.votacoes_votos'))"
 ```
 
-O [catálogo](catalogo.md) lista todas as tabelas, gerado do dbt (`uv run dado-publico catalog`).
+O [catálogo](../03-consultar/01-catalogo.md) lista todas as tabelas, gerado do dbt (`uv run dado-publico catalog`).
 
 ## Propriedades que o pipeline garante
 
@@ -166,7 +166,7 @@ O [catálogo](catalogo.md) lista todas as tabelas, gerado do dbt (`uv run dado-p
 
 **Imutabilidade do landing.** O arquivo é salvo com o hash no nome e nunca é sobrescrito. Se a fonte mudar o conteúdo, nasce um segundo arquivo.
 
-**Organização do landing.** O caminho diz a origem, a referência e a data da extração: `landing/<fonte>/<dataset>/<referência>/<AAAAMMDD>/<nome>-<hash>.<ext>`. A referência é o ano, o mês (`AAAAMM`, no DOU) ou a legislatura do arquivo, ou `completo` quando o dataset não é particionado (lotes de datasets por item também ficam em `completo`). A data é a da captura. Capturar de novo o mesmo conteúdo em outro dia não cria arquivo: vale o primeiro e só a data da última verificação muda ([ADR 0021](../adr/0021-landing-por-fonte-dataset-e-data.md)).
+**Organização do landing.** O caminho diz a origem, a referência e a data da extração: `landing/<fonte>/<dataset>/<referência>/<AAAAMMDD>/<nome>-<hash>.<ext>`. A referência é o ano, o mês (`AAAAMM`, no DOU) ou a legislatura do arquivo, ou `completo` quando o dataset não é particionado (lotes de datasets por item também ficam em `completo`). A data é a da captura. Capturar de novo o mesmo conteúdo em outro dia não cria arquivo: vale o primeiro e só a data da última verificação muda ([ADR 0021](../05-decisoes/0021-landing-por-fonte-dataset-e-data.md)).
 
 **Linhagem.** Toda linha do raw leva `_source_file_id`, que aponta para `metadata.captures` (URL, hash, tamanho, datas, caminho); nos datasets por item, `metadata.capture_items` aponta para cada resposta dentro do lote. Cada execução registra a versão do código (commit). O dlt grava `_dlt_load_id` por carga e o Dagster mostra o grafo entre ativos.
 
@@ -180,7 +180,7 @@ O [catálogo](catalogo.md) lista todas as tabelas, gerado do dbt (`uv run dado-p
 
 Um único arquivo DuckDB, com um esquema por camada (`raw_<esfera>_<fonte>`, `staging`, `intermediate`, `marts`, `identity`, `metadata`). Limite do DuckDB em arquivo: um processo escritor por vez. Por isso o dbt roda em outro processo, com a conexão do chamador fechada, e a aplicação abre em modo somente leitura. 
 
-**PostgreSQL de serviço** ([ADR 0014](../adr/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)). O dbt roda só no DuckDB; o PostgreSQL só recebe os marts já prontos, pelo comando `publish`: as tabelas vão para um esquema de trabalho (`marts_novo`) e são trocadas por `marts` num único comando atômico, então quem lê vê os marts antigos ou os novos, nunca metade. Depois da troca o comando confere que cada tabela chegou com as mesmas linhas. O papel `leitor` (somente leitura) é criado pela infraestrutura (em desenvolvimento, por `docker/postgres-init.sh`); o código nunca cria papéis. Ainda não há índices: entram quando uma aplicação declarar como consulta cada mart. A extensão `postgres` do DuckDB é baixada na primeira execução (precisa de rede).
+**PostgreSQL de serviço** ([ADR 0014](../05-decisoes/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)). O dbt roda só no DuckDB; o PostgreSQL só recebe os marts já prontos, pelo comando `publish`: as tabelas vão para um esquema de trabalho (`marts_novo`) e são trocadas por `marts` num único comando atômico, então quem lê vê os marts antigos ou os novos, nunca metade. Depois da troca o comando confere que cada tabela chegou com as mesmas linhas. O papel `leitor` (somente leitura) é criado pela infraestrutura (em desenvolvimento, por `docker/postgres-init.sh`); o código nunca cria papéis. Ainda não há índices: entram quando uma aplicação declarar como consulta cada mart. A extensão `postgres` do DuckDB é baixada na primeira execução (precisa de rede).
 
 **Cópia imutável da identidade.** A chave `id_pessoa` não pode mudar depois de entregue a uma aplicação, e reconstruir a partir do landing não garante as mesmas chaves. Cada execução da identidade grava `snapshots/identity/<data-hora>/` (um Parquet por tabela de `identity`) dentro da pasta de armazenamento; nunca se sobrescreve. `dado-publico verify` confere se a cópia mais recente é igual à identidade do warehouse.
 
@@ -194,8 +194,8 @@ A fonte traz nomes e ementas ora em maiúsculas, ora em minúsculas. A regra ún
 - **Ementas:** o texto oficial vai em `ementa_oficial` e a versão padronizada em `ementa`. As siglas que a fonte escreve em maiúsculas dentro de outras ementas (`BNDES`) são mantidas (modelo `int_ementas_siglas_extraidas`).
 - O que a regra não resolve fica visível no teste `pessoas_com_nome_em_maiusculas`.
 
-Reescrever ementa em linguagem simples com IA **não** é padronização; se vier a existir, será campo derivado à parte, rotulado como gerado por IA (ver [governança](governanca.md)).
+Reescrever ementa em linguagem simples com IA **não** é padronização; se vier a existir, será campo derivado à parte, rotulado como gerado por IA (ver [governança](06-governanca.md)).
 
 ## Adicionar uma fonte nova
 
-Passo a passo em [especificacao-de-fonte](especificacao-de-fonte.md).
+Passo a passo em [especificacao-de-fonte](../02-fazer/03-especificacao-de-fonte.md).

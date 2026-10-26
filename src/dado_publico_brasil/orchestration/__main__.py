@@ -148,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
         case "query":
             _query(settings, args.sql)
         case "catalog":
-            output = args.output or Path("docs/dados/catalogo.md")
+            output = args.output or Path("docs/03-consultar/01-catalogo.md")
             output.write_text(catalog.markdown(settings), encoding="utf-8")
             print(f"Catálogo escrito em {output}")
         case "docs":

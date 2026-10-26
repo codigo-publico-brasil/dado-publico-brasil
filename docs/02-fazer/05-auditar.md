@@ -1,6 +1,6 @@
 # Auditoria e qualidade: como provar o que o dado diz
 
-Para quem precisa **confiar** nos dados ou **conferir** de onde veio cada um. Responde: o que a plataforma guarda para poder provar a origem, como conferir que nada mudou e como saber o que falta. As regras estão em [governança](governanca.md); o desenho das camadas, em [camadas](camadas.md).
+Para quem precisa **confiar** nos dados ou **conferir** de onde veio cada um. Responde: o que a plataforma guarda para poder provar a origem, como conferir que nada mudou e como saber o que falta. As regras estão em [governança](../01-entender/06-governanca.md); o desenho das camadas, em [camadas](../01-entender/03-camadas.md).
 
 ## O rastro de um dado, da tabela até a resposta da fonte
 
@@ -25,7 +25,7 @@ Toda execução (`metadata.runs`) registra a versão do código (commit), linhas
 | A fonte respondeu, mudou de colunas, encolheu? | `metadata.source_checks` (`availability`, `schema`, `volume`, `coverage`) |
 | O dado está fresco? | `freshness` do dbt, em `metadata.dbt_results`; atraso por arquivo na página de qualidade do explorador |
 | Alguma linha se perdeu entre as camadas? | testes de reconciliação do dbt (severidade erro), por exemplo `votos_perdidos_do_staging_aos_marts` |
-| Quais lacunas conhecidas existem e de que tamanho? | testes `warn` do dbt (a contagem de linhas que falham mede a lacuna) e [cobertura e lacunas](cobertura-e-lacunas.md) |
+| Quais lacunas conhecidas existem e de que tamanho? | testes `warn` do dbt (a contagem de linhas que falham mede a lacuna) e [cobertura e lacunas](../03-consultar/04-cobertura-e-lacunas.md) |
 
 `verify` sai com erro se algo não confere, o que serve para agendar. Os testes automatizados cobrem o caso adulterado: um arquivo ou uma resposta alterada depois da captura é apontada.
 

@@ -100,7 +100,7 @@ Tramitação (Câmara) e processo (Senado) vêm por item, uma chamada para cada 
 | --- | --- | --- |
 | Candidaturas de todos os cargos, com partido, situação e resultado | `candidaturas` (um pacote por eleição) | eleições gerais de 1998, 2002, 2006, 2010, 2014, 2018, 2022 e 2026 |
 
-- **Ligação** por nome civil e nascimento iguais e únicos ([ADR 0013](../adr/0013-tse-ligacao-por-nome-civil-e-nascimento.md)): 10.790 candidaturas ligadas (10.997 linhas no mart, 3.201 pessoas). As demais (candidatos de fora do Congresso e quem não foi eleito) ficam no staging.
+- **Ligação** por nome civil e nascimento iguais e únicos ([ADR 0013](../05-decisoes/0013-tse-ligacao-por-nome-civil-e-nascimento.md)): 10.790 candidaturas ligadas (10.997 linhas no mart, 3.201 pessoas). As demais (candidatos de fora do Congresso e quem não foi eleito) ficam no staging.
 - **Eleitos sem vínculo:** 398 candidaturas marcadas como eleitas não foram ligadas (teste `eleitos_federais_sem_vinculo`). Medido em 2026-10-24: 194 são da eleição de 2026 (outras 33 de 2002 e 22 de 2006 também sem registro digital), cujos eleitos ainda não tomaram posse (não há registro na Câmara nem no Senado, então não é falha de ligação); 130 têm alguém com a mesma data de nascimento mas nome civil diferente (candidatos à aprovação manual em `vinculos_aprovados`); 5 têm nome e data iguais a mais de um registro (homônimo); 34 não têm ninguém com a mesma data (por exemplo, eleitos de 1998 que não aparecem nas séries digitais).
 - **Nascimento ausente:** 971 pessoas sem data de nascimento, o que impede a ligação por esta regra. O detalhe de todos os 843 senadores foi obtido; o que falta não vem na fonte.
 - **Ambiguidade:** o teste `pessoas_ambiguas_entre_fontes` mede nome civil e nascimento repetidos dentro de uma fonte.
@@ -124,7 +124,7 @@ Números de 23/10/2026: catálogo com **244.020 normas distintas** (as listas an
 Lacunas conhecidas, medidas ou registradas:
 
 - **Catálogo:** 12 normas vêm sem o campo `tipo` e 103 sem ementa na própria fonte; ficam vazios (o teste `normas_sem_tipo` mede).
-- **Texto das leis comuns:** não está na API documentada do Senado (ver o [catálogo de fontes](fontes-de-dados.md)). Hoje há só metadados e links; o texto virá de outra fonte, a decidir.
+- **Texto das leis comuns:** não está na API documentada do Senado (ver o [catálogo de fontes](03-fontes-de-dados.md)). Hoje há só metadados e links; o texto virá de outra fonte, a decidir.
 - **Vetos antes de 1994:** a API não devolve.
 - **Voto nominal dos vetos sem código do parlamentar:** a fonte traz nome, partido e UF. A regra de ligação (ADR 0013) não liga só por nome, então esses votos ficam fora de `pessoas`, com a fonte como está. Ligá-los exigiria uma regra nova, decidida em ADR.
 - **Relações só das normas detalhadas:** o detalhe por norma vem por amostra; o teste `relacoes_de_norma_fora_do_catalogo` mede as que ainda não estão no catálogo (por exemplo, a Constituição enquanto 1988 não foi carregado).
@@ -149,9 +149,9 @@ Lacunas conhecidas, medidas ou registradas:
 - **Candidaturas sem voto** (`candidaturas_sem_votos_carregados`, 26 em 2022): resultados em branco ou candidaturas sem votação na fonte. Suplentes de senador e vices não têm voto próprio e ficam de fora do teste.
 - **Votos e bens de quem não é pessoa do projeto** (candidatos sem ligação): ficam no staging. Os eleitos entram em `eleitos` e `eleitos_campanhas` mesmo sem ligação, inclusive os deputados estaduais e distritais.
 - **Emenda sem ligação a pessoa:** o autor vem pelo nome e por um código orçamentário que não é o do parlamentar. 15.962 emendas (as antigas, sobretudo) vêm sem autor (`emendas_sem_autor_conhecido`).
-- **Favorecido pessoa física:** entra como o portal publica, com CPF mascarado ([ADR 0017](../adr/0017-revisao-de-filtros-e-dados-pessoais.md)); a tabela, as colunas `favorecido` e `cd_favorecido` e cada linha (`fl_contem_dado_pessoal`) são sinalizadas como dado pessoal. Quem consome precisa tratar assim (LGPD).
+- **Favorecido pessoa física:** entra como o portal publica, com CPF mascarado ([ADR 0017](../05-decisoes/0017-revisao-de-filtros-e-dados-pessoais.md)); a tabela, as colunas `favorecido` e `cd_favorecido` e cada linha (`fl_contem_dado_pessoal`) são sinalizadas como dado pessoal. Quem consome precisa tratar assim (LGPD).
 - **Termos do portal:** as páginas de termos de uso e de dicionário de dados do Portal da Transparência pedem verificação anti-robô e não foram lidas; vale a licença de livre utilização do Decreto 8.777/2016.
-- **Despesas (empenhos) e TCU:** não carregados. O DOU está só no landing, de ago a out de 2026 ([ADR 0019](../adr/0019-dou-so-no-landing.md)); o TCU não tem licença aberta (ver o [catálogo de fontes](fontes-de-dados.md)).
+- **Despesas (empenhos) e TCU:** não carregados. O DOU está só no landing, de ago a out de 2026 ([ADR 0019](../05-decisoes/0019-dou-so-no-landing.md)); o TCU não tem licença aberta (ver o [catálogo de fontes](03-fontes-de-dados.md)).
 
 ## Eleitos das eleições gerais
 
@@ -182,7 +182,7 @@ Lacunas conhecidas, medidas ou registradas:
 ## 4. Limitações do carregamento atual
 
 - **Foto só para quem votou ou esteve em frente parlamentar.** O cadastro não traz foto; ela vem dos arquivos de votos e de frentes. Quem não aparece neles fica "sem foto"; o teste `pessoas_sem_foto` mede a lacuna.
-- **Mandato por votos observados.** Início e fim do mandato de cada pessoa ficam vazios, porque a fonte não os publica em lote (suplentes entram e saem no meio da legislatura). O mart traz, ao lado, as datas oficiais da legislatura (`dt_legislatura_inicio`, `dt_legislatura_fim`), que **não** são as do mandato (ver [identidade de pessoas](identidade-de-pessoas.md)).
+- **Mandato por votos observados.** Início e fim do mandato de cada pessoa ficam vazios, porque a fonte não os publica em lote (suplentes entram e saem no meio da legislatura). O mart traz, ao lado, as datas oficiais da legislatura (`dt_legislatura_inicio`, `dt_legislatura_fim`), que **não** são as do mandato (ver [identidade de pessoas](../01-entender/05-identidade-de-pessoas.md)).
 - **Órgãos citados e ausentes da lista de órgãos.** A composição cita 129 órgãos (como o Congresso Nacional e comissões especiais) que `orgaos.csv` não lista. As participações ficam, com a sigla informada na própria linha, e o teste de relação do dbt mede a lacuna.
 - **Participações em frentes sem deputado.** 256 linhas de coordenação antiga não identificam o deputado; ficam no staging e saem dos marts.
 - **Linhas repetidas com `dataFim` diferente.** Na composição de órgãos, a fonte traz às vezes a mesma participação duas vezes, uma aberta e outra encerrada. As duas são mantidas (o raw identifica a linha pelo conteúdo, `_row_hash`); quem consome deve considerar a encerrada.

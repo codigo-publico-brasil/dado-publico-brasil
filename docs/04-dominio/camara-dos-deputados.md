@@ -117,7 +117,7 @@ Antes de votações importantes, os líderes de partidos e blocos **orientam** c
 | `votacoesOrientacoes` | orientação de bancada | `camara_orientacao` |
 | `votacoesProposicoes`, `votacoesObjetos` | proposições afetadas e objeto de cada votação | `camara_votacao_proposicao` |
 
-A cobertura e o que ainda não vem da Câmara estão em [cobertura-e-lacunas](../dados/cobertura-e-lacunas.md).
+A cobertura e o que ainda não vem da Câmara estão em [cobertura-e-lacunas](../03-consultar/04-cobertura-e-lacunas.md).
 
 ## Vocabulário rápido
 

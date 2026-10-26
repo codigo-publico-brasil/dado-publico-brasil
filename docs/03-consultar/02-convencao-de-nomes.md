@@ -1,6 +1,6 @@
 # Convenção de nomes e descrições
 
-Para quem cria ou altera tabelas e colunas (pessoas e agentes de IA): como nomear e descrever. Decisão em [ADR 0022](../adr/0022-convencao-de-nomes-e-descricoes.md). **Leia antes de criar qualquer tabela ou coluna.**
+Para quem cria ou altera tabelas e colunas (pessoas e agentes de IA): como nomear e descrever. Decisão em [ADR 0022](../05-decisoes/0022-convencao-de-nomes-e-descricoes.md). **Leia antes de criar qualquer tabela ou coluna.**
 
 ## Tabelas
 
@@ -48,8 +48,8 @@ O projeto e os dados gerados precisam ser fáceis de auditar pelo público: cada
 ## Como renomear
 
 1. Renomeie o modelo ou a coluna no SQL e no YAML do dbt, com a descrição.
-2. Atualize testes, `docs/dados/catalogo.md` (`uv run dado-publico catalog`) e quem lê o mart (a aplicação quem-decidiu).
-3. Registre o nome antigo e o novo em [`renomeacao-dos-marts.md`](../dados/renomeacao-dos-marts.md), para quem consome os dados.
+2. Atualize testes, `docs/03-consultar/01-catalogo.md` (`uv run dado-publico catalog`) e quem lê o mart (a aplicação quem-decidiu).
+3. Registre o nome antigo e o novo em [`renomeacao-dos-marts.md`](../99-historico/renomeacao-dos-marts.md), para quem consome os dados.
 
 ## Como é garantido
 

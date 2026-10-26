@@ -10,6 +10,6 @@ Resumo curto e o item/issue relacionado.
 - [ ] Testes passam (inclusive os escritos antes do código)
 - [ ] Nenhuma linha vermelha violada (ranking, recomendação de voto, linguagem avaliativa)
 - [ ] Todo dado novo exibido tem fonte, URL e data de captura
-- [ ] Nomes e descrições seguem `docs/engenharia/convencao-de-nomes.md`
+- [ ] Nomes e descrições seguem `docs/03-consultar/02-convencao-de-nomes.md`
 - [ ] Nenhuma dependência nova sem ADR
 - [ ] Nenhum segredo ou dado pessoal no código

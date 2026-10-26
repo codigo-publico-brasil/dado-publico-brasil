@@ -62,5 +62,5 @@ A chave própria de pessoa é código Python e depende de modelos do dbt (a list
 
 - Muitos arquivos mudam de lugar e de nome; a carga real foi refeita e comparada com a anterior.
 - O contrato de colunas dos marts torna mudança incompatível um erro de build, não um dado quebrado na aplicação.
-- Mais um conceito para quem chega (duas fases do dbt), compensado pela documentação em `docs/dados/camadas.md`.
+- Mais um conceito para quem chega (duas fases do dbt), compensado pela documentação em `docs/01-entender/03-camadas.md`.
 - Limites conhecidos: DuckDB em arquivo aceita um escritor por vez; o caminho do PostgreSQL não foi exercitado; a interface do Dagster não foi aberta (as definições carregam e a linhagem foi validada em teste).

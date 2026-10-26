@@ -2,10 +2,10 @@
 
 Este repositório é a camada de dados do projeto Código Público Brasil (dado-publico-brasil).
 
-**Nomes e descrições:** antes de criar ou alterar tabela ou coluna, leia `docs/engenharia/convencao-de-nomes.md` (tema na frente; colunas `id_`, `dt_`, `fl_`; toda tabela e coluna descrita). Os dados precisam ser auditáveis pelo público: sempre rastreáveis até a fonte.
+**Nomes e descrições:** antes de criar ou alterar tabela ou coluna, leia `docs/03-consultar/02-convencao-de-nomes.md` (tema na frente; colunas `id_`, `dt_`, `fl_`; toda tabela e coluna descrita). Os dados precisam ser auditáveis pelo público: sempre rastreáveis até a fonte.
 
 Pendências, melhorias e decisões abertas são **issues deste repositório**, não arquivos `.md`.
 
 @AGENTS.md
 
-Antes de qualquer tarefa, leia `README.md` e `docs/dados/camadas.md`. Consulte conforme a tarefa: `docs/adr/` (decisões aceitas) e `docs/dados/`.
+Antes de qualquer tarefa, leia `README.md` e `docs/README.md`. Consulte conforme a tarefa: `docs/05-decisoes/` (decisões aceitas) e `docs/`.
