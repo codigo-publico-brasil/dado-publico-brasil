@@ -690,7 +690,7 @@ models:
       - {name: qtd_eleitos, data_type: bigint, description: "Quantos eleitos o resultado do TSE já registra para o cargo."}
       - {name: qtd_pendentes, data_type: bigint, description: "Vagas ainda sem eleito (vagas menos eleitos)."}
       - {name: status, data_type: varchar, description: "eleito_provisorio quando todas as vagas têm eleito pelo resultado do TSE (ainda sem diplomação); aguardando_resultado quando falta eleito."}
-      - {name: dt_posse, data_type: date, description: "Data da posse prevista, como o TSE informa."}
+      - {name: dt_posse, data_type: date, description: "Data de posse prevista, como o TSE informa. Não confirmada: em 2026 o arquivo de vagas traz 02/05/2027 para deputados e senadores, que não bate com a posse real (issue #71); não use como data legal da posse."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de candidaturas de onde vêm os resultados."}
       - {name: fonte_url, data_type: varchar, description: "Página oficial do TSE com os arquivos de candidatos da eleição."}
 
