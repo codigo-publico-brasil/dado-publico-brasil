@@ -43,7 +43,8 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0012](0012-dataset-por-item-lotes-com-envelope.md) | Dataset por item, lotes com envelope | vigente |
 | [0019](0019-dou-so-no-landing.md) | Diário Oficial só no landing | vigente |
 | [0021](0021-landing-por-fonte-dataset-e-data.md) | Landing por fonte, dataset, referência e data | vigente |
-| [0024](0024-regras-de-extracao-por-fonte.md) | Regras de extração e carga diária | vigente |
+| [0024](0024-regras-de-extracao-por-fonte.md) | Regras de extração e carga diária | em parte (`refresh` virou `schedule`: [0027](0027-orquestracao-automatica-por-fonte.md)) |
+| [0027](0027-orquestracao-automatica-por-fonte.md) | Agendamento por fonte, propagação automática e serviço contínuo | vigente |
 
 ### Nomes, qualidade e dados pessoais
 

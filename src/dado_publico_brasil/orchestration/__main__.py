@@ -123,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--from-year", type=int, help="primeiro ano do histórico")
     p.add_argument("--to-year", type=int, help="último ano do histórico (padrão: o ano corrente)")
     p.add_argument(
-        "--incremental", action="store_true", help="só a partição em curso dos datasets de `refresh: daily`"
+        "--incremental", action="store_true", help="só a partição em curso das fontes com `schedule`"
     )
     p.add_argument("--force", action="store_true", help="baixa mesmo que a fonte diga que não mudou")
     p.add_argument("--rebuild", action="store_true", help="carrega tudo de novo no raw")

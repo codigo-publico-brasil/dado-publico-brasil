@@ -11,7 +11,7 @@ level: federal
 description: Portal da Transparência (CGU), emendas parlamentares
 
 # Regra de extração: o portal atualiza todo dia; a execução diária confere os arquivos completos (só baixa se mudaram).
-refresh: daily
+schedule: "0 7 * * *"            # captura automática (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
 
 access:
   base_url: https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares/UNICO

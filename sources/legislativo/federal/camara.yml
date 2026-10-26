@@ -8,7 +8,7 @@
 #   url               endereço oficial; `{year}` nos anuais
 #   load              full (um arquivo) | yearly (um arquivo por partição)
 #   partition         (yearly) year (padrão, `{year}`) | legislature (`{legislature}`, derivada do ano) | month (AAAAMM)
-#   refresh           daily (execução diária confere a partição em curso) | on_request (só quando pedido); padrão: o da fonte
+#   schedule          cron de 5 campos (fuso America/Sao_Paulo) da captura automática; sem ele, só quando pedido
 #   first_year        (yearly) primeiro ano que a fonte publica; anos anteriores não são pedidos
 #   extra_years       (yearly) aceita anos só deste dataset (opção --extra-years)
 #   write             merge (upsert pela chave) | replace (troca o conteúdo anterior)
@@ -23,7 +23,7 @@ description: Câmara dos Deputados, dados abertos (arquivos em lote)
 
 # Regra de extração: a Câmara muda todo dia; a execução diária confere só o ano em curso (e os datasets completos). O que
 # é retroativo (anos anteriores) só roda quando pedido: `--years` ou `--historical --from-year`.
-refresh: daily
+schedule: "0 6 * * *"            # captura automática (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
 
 access:
   base_url: https://dadosabertos.camara.leg.br/arquivos

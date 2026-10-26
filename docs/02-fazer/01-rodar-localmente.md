@@ -9,7 +9,7 @@ uv sync --all-extras
 uv run dado-publico run --years 2025 2026
 ```
 
-Outros modos: `--incremental` (a execução diária: só a partição em curso dos datasets que cada fonte declara como `refresh: daily`) e `--historical --from-year 2000` (carga massiva). Os dados ficam em `data_store/` (fora do git).
+Outros modos: `--incremental` (a execução automática: só a partição em curso das fontes que declaram `schedule`) e `--historical --from-year 2000` (carga massiva). Os dados ficam em `data_store/` (fora do git).
 
 **Conexões e segredos** vão em variáveis de ambiente: copie `.env.example` para `.env` (fora do git) e use `uv run --env-file .env dado-publico ...` (o `dagster dev` já carrega o `.env` da pasta). Em produção, a infraestrutura injeta as variáveis, de preferência a partir de um gerenciador de segredos.
 
@@ -44,7 +44,7 @@ uv run dado-publico run --incremental --foreach 300
 A pasta de armazenamento (`data_store/`, fora do git) vem de `DADO_PUBLICO_STORAGE_ROOT` (padrão `data_store`). Tudo a partir da raiz do repositório:
 
 ```bash
-uv run dado-publico run --incremental                               # só a partição em curso (cada fonte declara `refresh`)
+uv run dado-publico run --incremental                               # só a partição em curso (só as fontes com `schedule`)
 uv run dado-publico run --historical --from-year 2000   # carga massiva
 uv run dado-publico run --years 2024 2025 2026 --extra-years 2019   # anos escolhidos
 uv run dado-publico run --incremental --source senado               # só uma fonte
@@ -60,18 +60,22 @@ uv run dado-publico run --incremental --foreach 300                 # + os 300 i
 
 ## Dagster (interface, agendamento e linhagem)
 
-O Dagster orquestra as etapas e mostra o grafo de linhagem entre os ativos. Os ativos de cada fonte (`landing_<fonte>`, `raw_<fonte>`) saem de `sources/`; o job `daily_pipeline` roda tudo, com agendamento diário às 6h.
+O Dagster roda o pipeline sozinho: um agendamento por fonte (o cron `schedule` do YAML), a propagação automática do que depende do dado novo e o aviso de atraso. Detalhes em [`04-operar-e-publicar.md`](04-operar-e-publicar.md#dagster-o-pipeline-sozinho).
 
-1. Escolha uma pasta **absoluta** para o estado do Dagster (por exemplo `data_store/.state/dagster`, que fica fora do git) e defina `DAGSTER_HOME`, no `.env` ou no terminal.
-2. Suba a interface, a partir da raiz do repositório:
+**Na sua máquina:**
+
+1. Escolha uma pasta **absoluta** para o estado (por exemplo `data_store/.state/dagster`, fora do git), copie para ela o [`dagster.yaml`](../../dagster.yaml) (uma execução por vez) e defina `DAGSTER_HOME`, no `.env` ou no terminal.
+2. A partir da raiz do repositório:
 
 ```bash
 DAGSTER_HOME=<pasta absoluta> uv run dagster dev -m dado_publico_brasil.orchestration.definitions
 ```
 
-3. Abra http://127.0.0.1:3000, escolha o job `daily_pipeline` e use *Materialize all*. Os ativos `landing_*` recebem a configuração do modo (`incremental`, `historical`, `years`).
+3. Abra http://127.0.0.1:3000. Os agendamentos e sensores já sobem ligados; deixe o processo rodando. Na primeira vez, rode o job `atualizar_tudo` uma vez (o Dagster só propaga a partir do que ele mesmo já materializou).
 
-Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez), e o resultado do dbt também vai para `metadata.dbt_results`, como na linha de comando. Com nada novo na fonte, o dia a dia leva 1 a 2 minutos. O Dagster ainda não tem ativo para `--foreach`: os datasets por item rodam pela linha de comando.
+**Em servidor (ou com Docker):** `docker compose --profile pipeline up -d --build` sobe o PostgreSQL e o Dagster, que reinicia sozinho e guarda o estado em um volume.
+
+Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez). O Dagster ainda não tem ativo para `--foreach`: os datasets por item rodam pela linha de comando.
 
 ## Como acessar os dados
 

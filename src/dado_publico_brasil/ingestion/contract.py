@@ -18,7 +18,6 @@ FORMATS = {"csv", "json", "html"}  # html não tem leitor padrão: exige `record
 POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
-REFRESHES = {"daily", "on_request"}  # daily: entra na execução diária; on_request: só quando pedido
 ARCHIVES = {"zip"}
 PARTITIONS = {"year", "legislature", "month"}  # month: o valor da partição é AAAAMM
 WRITES = {"merge", "replace"}
@@ -55,7 +54,6 @@ class Dataset:
     write: str
     columns: tuple[str, ...]
     primary_key: tuple[str, ...] = ()
-    refresh: str = "daily"  # frequência de atualização da fonte (ver REFRESHES); padrão: o da fonte
     extra_years: bool = False
     first_year: int | None = None
     partition: str = "year"
@@ -91,6 +89,7 @@ class SourceContract:
     format: str = "csv"
     headers: dict[str, str] = field(default_factory=dict)  # aceita ${VARIAVEL} do ambiente
     rate_limit: float = 4.0  # chamadas por segundo nos datasets por item (educação com a fonte)
+    schedule: str | None = None  # cron (5 campos) da captura automática; None: só quando pedido
     custom: ModuleType | None = None
     datasets: dict[str, Dataset] = field(default_factory=dict)
 
@@ -121,12 +120,9 @@ class SourceContract:
         return f"raw_{self.level}_{self.source}"
 
 
-def _dataset(source: str, name: str, data: dict[str, Any], default_refresh: str = "daily") -> Dataset:
+def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
     where = f"{source}.{name}"
     raw = bool(data.get("raw", True))
-    refresh = data.get("refresh", default_refresh)
-    if refresh not in REFRESHES:
-        raise InvalidContract(f"{where}: refresh '{refresh}' inválido ({sorted(REFRESHES)})")
     for required in ("url", "load", "write", "columns") if raw else ("url", "load"):
         if required not in data:
             raise InvalidContract(f"{where}: falta '{required}'")
@@ -168,7 +164,6 @@ def _dataset(source: str, name: str, data: dict[str, Any], default_refresh: str 
         write=data.get("write", "replace"),
         columns=columns,
         primary_key=key,
-        refresh=refresh,
         extra_years=bool(data.get("extra_years", False)),
         partition=str(data.get("partition", "year")),
         records=data.get("records"),
@@ -228,7 +223,12 @@ def load_contract(path: Path) -> SourceContract:
     for field_name, allowed in (("power", POWERS), ("level", LEVELS)):
         if data.get(field_name) not in allowed:
             raise InvalidContract(f"{source}: {field_name} deve ser um de {sorted(allowed)}")
-    datasets = {n: _dataset(source, n, d, data.get("refresh", "daily")) for n, d in data["datasets"].items()}
+    schedule = data.get("schedule")
+    if schedule is not None and (not isinstance(schedule, str) or len(schedule.split()) != 5):
+        raise InvalidContract(
+            f"{source}: schedule deve ser um cron de 5 campos (ex.: '0 6 * * *'), não {schedule!r}"
+        )
+    datasets = {n: _dataset(source, n, d) for n, d in data["datasets"].items()}
     for name, dataset in datasets.items():
         if dataset.foreach and dataset.foreach.source not in datasets:
             raise InvalidContract(
@@ -250,6 +250,7 @@ def load_contract(path: Path) -> SourceContract:
         encoding=access.get("encoding", "utf-8-sig"),
         format=access.get("format", "csv"),
         rate_limit=float(access.get("rate_limit", 4)),
+        schedule=schedule,
         headers=dict(access.get("headers", {})),
         custom=custom,
         datasets=datasets,
