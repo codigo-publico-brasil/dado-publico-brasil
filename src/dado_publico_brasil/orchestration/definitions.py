@@ -64,6 +64,7 @@ PROJECT = DbtProject(
 )
 PROJECT.prepare_if_dev()
 
+REFRESH = {pipeline.REFRESH_TAG: "true"}  # nos jobs `atualizar_*`: refaz o que vem depois do raw
 TIMEZONE = "America/Sao_Paulo"  # fuso dos `schedule` das fontes
 EAGER = AutomationCondition.eager()  # roda quando uma dependência recebe dado novo
 
@@ -124,17 +125,20 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
         specs=[AssetSpec(key=k, group_name="raw", deps=[captured], skippable=True) for k in raw_tables],
         name=f"raw_{source.source}",
     )
-    def raw_asset() -> Iterator[MaterializeResult[Any]]:
+    def raw_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult[Any]]:
         """O dlt carrega todos os arquivos novos; as tabelas do raw saem juntas.
 
-        Sem captura nova nada é registrado: o que depende do raw só roda quando há dado novo.
+        Sem captura nova nada é registrado, e o que depende do raw só roda quando há dado novo, salvo nos jobs
+        `atualizar_*` (que pedem para refazer) e na primeira vez (o Dagster ainda não conhece o ativo).
         """
         con = migrations.open_warehouse(SETTINGS)
         try:
             captures, rows = loader.load_pending(con, SETTINGS, source)
         finally:
             con.close()
-        if captures:
+        refresh = context.run.tags.get(pipeline.REFRESH_TAG) == "true"
+        never = any(context.instance.get_latest_materialization_event(k) is None for k in raw_tables)
+        if pipeline.registers_update(captures, refresh, never):
             for key in raw_tables:
                 yield MaterializeResult(asset_key=key, metadata={"captures": captures, "rows_total": rows})
 
@@ -262,9 +266,11 @@ EXTRA = (
     [publish_asset] if SETTINGS.service_dsn else []
 )  # sem o banco de serviço configurado, não há o que publicar
 jobs = [
-    define_asset_job("atualizar_tudo", selection="*"),
+    define_asset_job("atualizar_tudo", selection="*", tags=REFRESH),
     *(
-        define_asset_job(f"atualizar_{s.source}", selection=AssetSelection.assets(*_keys(s)).downstream())
+        define_asset_job(
+            f"atualizar_{s.source}", selection=AssetSelection.assets(*_keys(s)).downstream(), tags=REFRESH
+        )
         for s in SOURCES
     ),
     *(define_asset_job(f"captura_{s.source}", selection=AssetSelection.assets(*_keys(s))) for s in SOURCES),

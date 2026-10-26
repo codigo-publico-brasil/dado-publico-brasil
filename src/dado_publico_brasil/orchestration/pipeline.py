@@ -73,3 +73,13 @@ def run_all(
         summary.new_people = build.run(settings)
         summary.transformed = True
     return summary
+
+
+REFRESH_TAG = (
+    "dado_publico/refazer"  # tag dos jobs `atualizar_*`: refazem o que depende do raw mesmo sem dado novo
+)
+
+
+def registers_update(captures: int, refresh: bool, never_registered: bool) -> bool:
+    """O raw registra atualização (libera o que depende dele) com captura nova, ao refazer ou na primeira vez."""
+    return bool(captures) or refresh or never_registered
