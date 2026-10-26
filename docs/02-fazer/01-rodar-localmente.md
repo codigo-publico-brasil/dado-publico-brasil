@@ -55,9 +55,23 @@ uv run dado-publico run --incremental --foreach 300                 # + os 300 i
 - **Histórico:** todos os anos do intervalo, para a primeira carga ou uma recarga.
 - Etapas separadas: `extract`, `load [--rebuild]`, `transform`, `identity`, `catalog`, `docs`, `query`.
 - **Datasets por item** (tramitação da Câmara, processo e detalhe do senador, detalhe das normas, vetos) só rodam com `--foreach N` ou `--foreach all`; a carga total é decisão de quem opera, por levar horas.
-- O Dagster ainda não tem ativo para `--foreach`: os datasets por item rodam pela linha de comando.
 - **Auditoria:** `uv run dado-publico verify` (hashes do landing e das respostas) e `uv run dado-publico coverage` (o que já foi buscado e o que falta). Ver [auditoria](../02-fazer/05-auditar.md).
-- **Dagster** (interface, agendamento diário às 6h, linhagem entre ativos): `DAGSTER_HOME=<pasta absoluta> uv run dagster dev -m dado_publico_brasil.orchestration.definitions`, com interface em http://127.0.0.1:3000 (guarde o estado em uma pasta absoluta, por exemplo `data_store/.state/dagster`, em `DAGSTER_HOME`, ou no `.env`). Os ativos de cada fonte (`landing_<fonte>`, `raw_<fonte>`) saem de `sources/`; o job `daily_pipeline` roda tudo, e os ativos `landing_*` recebem a configuração do modo (`incremental`, `historical`, `years`). Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez), e o resultado do dbt também vai para `metadata.dbt_results`, como na linha de comando. Rodar o dia a dia pelo Dagster leva cerca de 1 a 2 minutos quando nada mudou na fonte.
+- **Dagster:** ver a seção seguinte.
+
+## Dagster (interface, agendamento e linhagem)
+
+O Dagster orquestra as etapas e mostra o grafo de linhagem entre os ativos. Os ativos de cada fonte (`landing_<fonte>`, `raw_<fonte>`) saem de `sources/`; o job `daily_pipeline` roda tudo, com agendamento diário às 6h.
+
+1. Escolha uma pasta **absoluta** para o estado do Dagster (por exemplo `data_store/.state/dagster`, que fica fora do git) e defina `DAGSTER_HOME`, no `.env` ou no terminal.
+2. Suba a interface, a partir da raiz do repositório:
+
+```bash
+DAGSTER_HOME=<pasta absoluta> uv run dagster dev -m dado_publico_brasil.orchestration.definitions
+```
+
+3. Abra http://127.0.0.1:3000, escolha o job `daily_pipeline` e use *Materialize all*. Os ativos `landing_*` recebem a configuração do modo (`incremental`, `historical`, `years`).
+
+Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez), e o resultado do dbt também vai para `metadata.dbt_results`, como na linha de comando. Com nada novo na fonte, o dia a dia leva 1 a 2 minutos. O Dagster ainda não tem ativo para `--foreach`: os datasets por item rodam pela linha de comando.
 
 ## Como acessar os dados
 

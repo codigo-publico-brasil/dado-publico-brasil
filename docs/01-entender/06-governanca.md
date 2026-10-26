@@ -4,7 +4,7 @@ Como o projeto garante que o dado é confiável, seguro e fácil de manter. Cada
 
 ## 1. Catálogo e dono dos dados
 
-Cada tabela de cada camada é descrita **onde nasce**: o raw nas fontes do dbt (`_<fonte>__sources.yml`) e no contrato `sources/<poder>/<esfera>/<fonte>.yml`; staging, intermediate e marts no YAML do modelo; `identity` e `metadata` nas fontes internas do dbt. Descrição, sensibilidade (`meta.sensitivity`), grain e dono vivem no `meta`. O [catálogo de dados](../03-consultar/01-catalogo.md) é **gerado** do manifesto do dbt (`uv run python -m quem_decidiu_data catalog`), sem lista paralela. Um teste confere que o catálogo cobre as tabelas do pipeline (e que toda descrição está preenchida) e outro que `docs/03-consultar/01-catalogo.md` está em dia.
+Cada tabela de cada camada é descrita **onde nasce**: o raw nas fontes do dbt (`_<fonte>__sources.yml`) e no contrato `sources/<poder>/<esfera>/<fonte>.yml`; staging, intermediate e marts no YAML do modelo; `identity` e `metadata` nas fontes internas do dbt. Descrição, sensibilidade (`meta.sensitivity`), grain e dono vivem no `meta`. O [catálogo de dados](../03-consultar/01-catalogo.md) é **gerado** do manifesto do dbt (`uv run dado-publico catalog`), sem lista paralela. Um teste confere que o catálogo cobre as tabelas do pipeline (e que toda descrição está preenchida) e outro que `docs/03-consultar/01-catalogo.md` está em dia.
 
 > **Conceito: catálogo de dados e dono (*data owner / steward*).** Dado sem dono e sem descrição vira dado que ninguém ousa mudar nem apagar. O catálogo responde "o que é isto, de onde vem, quem responde por isso". Aqui o dono é o fundador; com o tempo, cada fonte teria um responsável.
 

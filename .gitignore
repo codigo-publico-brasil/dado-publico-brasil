@@ -25,3 +25,4 @@ dagster_home/
 
 # Saída do `edr report` (Elementary), se rodado de dentro do projeto
 **/edr_target/
+.tmp_dagster_home_*/
