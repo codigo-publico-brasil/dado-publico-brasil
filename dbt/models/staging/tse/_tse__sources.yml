@@ -5,12 +5,14 @@ sources:
     description: >
       Tribunal Superior Eleitoral, dados abertos (pacotes .zip com CSV). Carregado pelo dlt em raw_federal_tse (declaração em
       sources/judiciario/federal/tse.yml): só candidaturas ao Congresso, sem CPF, título de eleitor nem e-mail.
+      Fonte oficial: [https://dadosabertos.tse.jus.br](https://dadosabertos.tse.jus.br).
     schema: raw_federal_tse
     loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
     freshness:
       warn_after: {count: 400, period: day}
       error_after: {count: 1500, period: day}
     meta:
+      url: https://dadosabertos.tse.jus.br
       origin: Tribunal Superior Eleitoral
       sensitivity: publico-agente-publico
       owner: fundador do projeto
