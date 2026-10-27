@@ -109,8 +109,10 @@ def test_the_merged_person_has_one_row_with_both_sources_and_the_chamber_data(fu
     con, _ = full
     found = con.execute("SELECT fonte, fontes, nome FROM marts.pessoas WHERE nome = 'Bia'").fetchall()
     assert found == [("camara", "camara, senado", "Bia")]
+    # marts.pessoas só tem parlamentares; as pessoas só do TSE (todo eleito, ADR 0031) estão em core.pessoas
     assert scalar(con, "SELECT COUNT(*) FROM marts.pessoas") == scalar(
-        con, "SELECT COUNT(*) FROM identity.pessoa"
+        con,
+        "SELECT COUNT(DISTINCT id_pessoa) FROM identity.pessoa_identificador WHERE source IN ('camara', 'senado')",
     )
 
 

@@ -3,4 +3,5 @@
 select 1
 where (
     select count(*) from {{ ref('stg_identity__pessoa_identificadores') }} where fonte = '{{ var("source_tse") }}'
+        and id_tipo = '{{ var("id_type_tse") }}'
 ) <> (select count(distinct id_candidatura) from {{ ref('candidaturas') }})

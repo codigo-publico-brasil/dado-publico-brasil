@@ -83,6 +83,7 @@ select
     t.fl_eleito,
     u.fl_mais_votado_no_turno as fl_mais_votado_no_ultimo_turno,
     p.id_pessoa_tse,
+    pe.id_pessoa,
     f.arquivo as foto_arquivo,
     if(
         f.arquivo is not null,
@@ -114,5 +115,8 @@ left join {{ ref('partidos_siglas') }} as ps
 left join ultimo_turno as u on u.id_candidatura = c.id_candidatura
 
 left join {{ ref('int_tse_pessoas') }} as p on p.id_candidatura = c.id_candidatura
+
+left join {{ ref('stg_identity__pessoa_identificadores') }} as pe
+    on pe.fonte = '{{ var("source_tse") }}' and pe.id_tipo = '{{ var("id_type_tse_eleito") }}' and pe.id_na_fonte = c.id_candidatura
 
 left join fotos as f on f.ano_eleicao = c.ano_eleicao and f.sq_candidato = c.sq_candidato
