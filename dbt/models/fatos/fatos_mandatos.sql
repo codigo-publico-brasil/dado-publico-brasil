@@ -1,10 +1,12 @@
 -- Um mandato por candidatura eleita (informada pelo TSE ou, em disputa de uma vaga que o TSE não fecha, derivada dos votos;
 -- `base_eleicao` diz qual) (titular, vice e suplente eleito junto, de todos os cargos, inclusive vereador): o
 -- mandato nasce da eleição, não do exercício. Quem assume depois como suplente é exercício (fatos.exercicios).
--- Início: a data de posse que o TSE informa na disputa vale quando cai no ano seguinte ao da eleição; fora disso o TSE
--- traz data impossível (posse antes da eleição, ano 8002) e ela não é usada. Só para prefeito e vice-prefeito a Constituição
--- fixa a posse (art. 29, III: 1º de janeiro do ano seguinte) e então ela é derivada. Nos demais cargos o início fica vazio
--- e o teste mede a lacuna. O fim é sempre derivado da duração do mandato na Constituição.
+-- Início, por ordem: (1) a regra da Constituição para o cargo, com a vigência por ano de eleição (core.cargos_posse; derivado,
+-- porque a data do TSE traz 1º de janeiro para deputados e senadores e posse de 2026 que não bate com a Constituição);
+-- (2) sem regra na Constituição (vereador, deputado estadual), a data de posse que o TSE informa na disputa, só se cai no
+-- ano seguinte ao da eleição e a eleição não é a do ano corrente (o arquivo de vagas traz data provisória); fora disso o início
+-- fica vazio e o teste mede a lacuna. A data original do TSE fica em dt_posse_tse. O fim é sempre derivado da duração do
+-- mandato na Constituição.
 select
     'tse' as fonte,
     c.id_candidatura,
@@ -32,15 +34,18 @@ left join {{ ref('eleicoes') }} as e on e.id_eleicao = d.id_eleicao
 
 left join {{ ref('cargos') }} as k on k.id_cargo = d.id_cargo
 
+left join {{ ref('cargos_posse') }} as p
+    on p.id_cargo = d.id_cargo and e.ano_eleicao between p.ano_eleicao_de and p.ano_eleicao_ate
+
 cross join lateral (
     select
         case
-            when year(d.dt_posse) = e.ano_eleicao + 1 then d.dt_posse
-            when d.id_cargo in ('prefeito', 'vice_prefeito') then make_date(e.ano_eleicao + 1, 1, 1)
+            when p.id_cargo is not null then make_date(e.ano_eleicao + 1, p.mes_posse, p.dia_posse)
+            when year(d.dt_posse) = e.ano_eleicao + 1 and e.ano_eleicao < year(current_date) then d.dt_posse
         end as dt_inicio,
         case
-            when year(d.dt_posse) = e.ano_eleicao + 1 then 'informado'
-            when d.id_cargo in ('prefeito', 'vice_prefeito') then 'derivado'
+            when p.id_cargo is not null then 'derivado'
+            when year(d.dt_posse) = e.ano_eleicao + 1 and e.ano_eleicao < year(current_date) then 'informado'
         end as base_dt_inicio
 ) as i
 

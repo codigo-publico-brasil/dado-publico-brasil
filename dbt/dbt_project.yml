@@ -89,7 +89,7 @@ seeds:
       +column_types: {dt_aprovacao: date, ano: integer}
     core:
       +schema: core
-      +column_types: {cd_cargo_tse: integer, duracao_anos: integer, id_partido: integer, id_partido_sucessor: integer, ano_fim: integer, nr_partido: integer, ano_inicio: integer}
+      +column_types: {cd_cargo_tse: integer, duracao_anos: integer, id_partido: integer, id_partido_sucessor: integer, ano_fim: integer, nr_partido: integer, ano_inicio: integer, ano_eleicao_de: integer, ano_eleicao_ate: integer, mes_posse: integer, dia_posse: integer}
 
 data_tests:
   dado_publico_brasil:
