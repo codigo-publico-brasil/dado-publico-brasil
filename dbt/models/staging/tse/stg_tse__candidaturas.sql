@@ -1,6 +1,36 @@
+-- O arquivo traz, junto da eleição ordinária, as renovadas e suplementares do ano (cada uma com o seu `cd_eleicao`, e
+-- uma descrição escrita de dezenas de jeitos: `Sup.`, `Suplem.`, `Nova Eleição`, `Majoritária - X`). Em cada ano,
+-- unidade, cargo e turno vale o código de eleição que cobre mais unidades no ano: a ordinária cobre milhares, a
+-- suplementar uma ou duas (issue 74).
 with source as (
 
     select * from {{ source('tse', 'candidaturas') }}
+
+),
+
+coverage as (
+
+    select ano_eleicao, ds_cargo, cd_eleicao, count(distinct sg_ue) as unidades
+
+    from source
+
+    group by all
+
+),
+
+ordinary as (
+
+    select s.*
+
+    from source as s
+
+    left join coverage as c
+        on c.ano_eleicao = s.ano_eleicao and c.ds_cargo = s.ds_cargo and c.cd_eleicao is not distinct from s.cd_eleicao
+
+    qualify dense_rank() over (
+        partition by s.ano_eleicao, s.sg_ue, s.ds_cargo, s.nr_turno
+        order by c.unidades desc nulls last, try_cast(s.cd_eleicao as integer)
+    ) = 1
 
 )
 
@@ -36,6 +66,6 @@ select
     tse_value(ds_composicao_federacao) as federacao_composicao,
     _source_file_id as id_captura
 
-from source
+from ordinary
 
 where coalesce(ds_eleicao, '') not ilike '%suplementar%'  -- as eleições suplementares repetem o sequencial das ordinárias e ficam no raw

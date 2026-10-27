@@ -21,6 +21,7 @@ datasets:
     partition: month
     first_month: 202608
     archive: zip
+    member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
 
   secao2:
@@ -30,6 +31,7 @@ datasets:
     partition: month
     first_month: 202608
     archive: zip
+    member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
 
   secao3:
@@ -39,4 +41,5 @@ datasets:
     partition: month
     first_month: 202608
     archive: zip
+    member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false

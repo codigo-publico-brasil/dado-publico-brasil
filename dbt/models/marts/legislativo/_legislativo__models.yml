@@ -44,7 +44,7 @@ models:
       - {name: dt_captura, data_type: date, description: "Data da captura do cadastro de deputados."}
 
   - name: mandatos
-    description: Mandatos por legislatura, a partir de votos observados. Início e fim do exercício vêm do Senado e do histórico dos deputados, quando a fonte informa. Uma linha por pessoa e legislatura.
+    description: Mandatos por legislatura, a partir de votos observados. Início e fim do exercício vêm do Senado e do histórico dos deputados, quando a fonte informa. No Senado, quem tem exercício oficial só tem mandato nas legislaturas desses exercícios (votações com data errada na fonte não criam mandato). Uma linha por pessoa e legislatura.
     meta: {sensitivity: publico-agente-publico, grain: pessoa e legislatura, owner: fundador do projeto, freshness: diário}
     data_tests: *monitoramento
     columns:

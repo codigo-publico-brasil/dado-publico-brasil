@@ -5,7 +5,9 @@ orquestração e a página de qualidade leem. Nada aqui interrompe a captura: o 
 quebrou, não parar o que ainda funciona. O frescor (idade do dado carregado) é medido pelo dbt.
 """
 
+import fnmatch
 import json
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -72,6 +74,48 @@ def check_header(
         record(con, source, name, partition, "schema_mudou", "ok")
     if old is None or changed:
         record(con, source, name, partition, "header", "ok", json.dumps(header))
+
+
+def check_integrity(
+    con: Connection,
+    source: str,
+    dataset: Dataset,
+    partition: int | None,
+    file: Path,
+    url: str,
+    expected_size: str | None = None,
+    expected_format: str = "csv",
+) -> bool:
+    """Confere o arquivo recebido antes de virar captura.
+
+    Não pode ser uma página HTML no lugar do arquivo; o tamanho bate com o `Content-Length` informado;
+    nos pacotes `.zip`, o zip abre sem erro e tem os membros esperados.
+
+    Devolve falso e registra `integridade` com erro (data e endereço). O arquivo fica no landing como
+    evidência, mas não vira captura vigente, e a próxima execução tenta de novo.
+    """
+    problems: list[str] = []
+    with file.open("rb") as f:
+        start = f.read(512).lstrip().lower()
+    if expected_format != "html" and start.startswith((b"<!doctype html", b"<html")):
+        problems.append("o conteúdo é uma página HTML, não o arquivo esperado")
+    if expected_size and expected_size.isdigit() and int(expected_size) != file.stat().st_size:
+        problems.append(f"recebidos {file.stat().st_size} bytes, a fonte informou {expected_size}")
+    if dataset.archive == "zip" and not problems:
+        try:
+            with zipfile.ZipFile(file) as archive:
+                broken = archive.testzip()
+                if broken:
+                    problems.append(f"membro corrompido no zip: {broken}")
+                elif not any(fnmatch.fnmatch(n, dataset.member) for n in archive.namelist()):
+                    problems.append(f"nenhum membro {dataset.member} no zip")
+        except zipfile.BadZipFile as error:
+            problems.append(f"zip inválido: {error}")
+    if problems:
+        record(con, source, dataset.name, partition, "integridade", "error", f"{url}: {'; '.join(problems)}")
+        return False
+    record(con, source, dataset.name, partition, "integridade", "ok")
+    return True
 
 
 def check_volume(con: Connection, source: str, dataset: str, partition: int | None, rows: int) -> None:

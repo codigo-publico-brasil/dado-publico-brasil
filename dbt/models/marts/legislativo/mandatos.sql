@@ -1,4 +1,5 @@
--- Um mandato por pessoa e legislatura em que há voto registrado. Início e fim vêm do exercício oficial
+-- Um mandato por pessoa e legislatura em que há voto registrado (no Senado, só nas legislaturas de um exercício oficial,
+-- para quem o tem). Início e fim vêm do exercício oficial
 -- quando a fonte publica: o Senado (`mandatos_exercicios`) e o histórico dos deputados da Câmara. As datas do
 -- primeiro e do último voto são só o observado e as da legislatura são as oficiais dela.
 with votos as (
@@ -83,3 +84,11 @@ select
 from votos as v
 
 left join exercicios as x on x.id_pessoa = v.id_pessoa and x.id_legislatura = v.id_legislatura
+
+-- O Senado carimba datas impossíveis em algumas votações antigas (a de 1999 a 2003 sai com 2015; ver a issue #100). Quem tem
+-- exercício oficial só tem mandato nas legislaturas desses exercícios; o voto de data impossível não cria mandato.
+where not (
+    v.fonte = '{{ var("source_senado") }}'
+    and x.dt_inicio is null
+    and exists (select 1 from {{ ref('mandatos_exercicios') }} as e where e.id_pessoa = v.id_pessoa)
+)

@@ -120,7 +120,14 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
         """Arquivos da fonte, intactos, com hash e data."""
         con = migrations.open_warehouse(SETTINGS)
         try:
-            n = landing.extract_plan(con, SETTINGS, source, _plan(config)(source), force=config.force)
+            n = landing.extract_plan(
+                con,
+                SETTINGS,
+                source,
+                _plan(config)(source),
+                force=config.force,
+                recover=config.mode == "incremental",
+            )
         finally:
             con.close()
         return MaterializeResult(metadata={"datasets": n, "mode": config.mode})

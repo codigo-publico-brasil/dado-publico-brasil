@@ -85,19 +85,36 @@ def test_each_voted_matter_appears_once_with_its_official_page(full: tuple[Conne
     assert url == "https://www25.senado.leg.br/web/atividade/materias/-/materia/700"
 
 
-def test_senate_mandates_come_from_observed_votes_with_the_official_legislature_dates(
+def test_senate_mandate_without_official_exercise_comes_from_votes_and_one_outside_the_exercise_does_not_exist(
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
+    # Diogo só aparece nos votos (sem exercício oficial): o mandato vem dos votos, com as datas oficiais da legislatura
     row = con.execute(
         "SELECT m.cargo, m.casa, m.id_legislatura, m.uf, m.dt_inicio, m.dt_legislatura_inicio, m.base "
         "FROM marts.mandatos m JOIN marts.pessoas p USING (id_pessoa) "
-        "WHERE m.fonte = 'senado' AND p.nome = 'Beto Barreiras'"
+        "WHERE m.fonte = 'senado' AND p.nome = 'Diogo'"
     ).fetchone()
     assert row is not None
-    assert row[:4] == ("Senador", "Senado Federal", 57, "SP")
-    assert row[4] is None  # o início do mandato de cada pessoa a fonte não informa neste arquivo
+    assert row[:4] == ("Senador", "Senado Federal", 57, "MG")
+    assert row[4] is None and row[6] == "votos observados"
     assert str(row[5]) == "2023-02-01"
+    # Beto tem exercício oficial (2019 a 2020) e vota em 2023: a data do voto não cria mandato na 57ª legislatura (#100)
+    assert (
+        scalar(
+            con,
+            "SELECT COUNT(*) FROM marts.mandatos m JOIN marts.pessoas p USING (id_pessoa) "
+            "WHERE m.fonte = 'senado' AND p.nome = 'Beto Barreiras' AND m.id_legislatura = 57",
+        )
+        == 0
+    )
+    assert (
+        scalar(
+            con,
+            "SELECT COUNT(*) FROM marts.votacoes_votos v JOIN marts.pessoas p USING (id_pessoa) WHERE p.nome = 'Beto Barreiras'",
+        )
+        > 0
+    )  # o voto fica
 
 
 def test_official_exercises_come_from_the_senate_with_the_reason_each_period_ended(

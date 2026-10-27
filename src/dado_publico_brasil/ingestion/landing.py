@@ -109,7 +109,7 @@ def legislature_of(year: int) -> int:
     return 56 + (year - 2019) // 4
 
 
-def partitions(dataset: Dataset, years: list[int] | set[int]) -> list[int]:
+def partitions(dataset: Dataset, years: list[int] | set[int], today: date | None = None) -> list[int]:
     """Valores de partição de um dataset para os anos pedidos: os próprios anos ou suas legislaturas."""
     first = dataset.first_year
     valid = [
@@ -120,9 +120,9 @@ def partitions(dataset: Dataset, years: list[int] | set[int]) -> list[int]:
     if dataset.partition == "legislature":
         return sorted({legislature_of(y) for y in valid})
     if dataset.partition == "month":
-        today = datetime.now(UTC)
+        now = today or datetime.now(UTC).date()
         months = (y * 100 + m for y in valid for m in range(1, 13))
-        return sorted(v for v in months if (dataset.first_month or 0) <= v <= today.year * 100 + today.month)
+        return sorted(v for v in months if (dataset.first_month or 0) <= v <= now.year * 100 + now.month)
     return sorted(valid)
 
 
@@ -185,6 +185,92 @@ def plan_incremental(contract: SourceContract, today: date | None = None) -> lis
     return items
 
 
+# ---------------------------------------------------------------- lacunas e recuperação
+
+RECOVERY_LIMIT = 3  # partições antigas por dataset e execução: pausa longa não vira carga gigante
+
+
+def expected_partitions(dataset: Dataset, today: date) -> list[int]:
+    """Todas as partições que a fonte deveria ter até hoje, de `first_year` (ou `first_month`) em diante."""
+    if not dataset.yearly:
+        return []
+    first = dataset.first_year or (dataset.first_month // 100 if dataset.first_month else None)
+    if first is None:
+        return []
+    return partitions(dataset, set(range(first, today.year + 1)), today)
+
+
+def partition_gaps(
+    con: Connection, contract: SourceContract, today: date | None = None
+) -> dict[str, dict[str, Any]]:
+    """Por dataset com partição: partições esperadas, capturadas, indisponíveis e faltantes.
+
+    Indisponível é a partição que a fonte não publica (a última tentativa deu 404): não vira tentativa eterna
+    e só é pedida de novo de forma explícita (`--years`). Faltante é o resto, falta nossa a recuperar."""
+    today = today or datetime.now(UTC).date()
+    result: dict[str, dict[str, Any]] = {}
+    for d in contract.datasets.values():
+        expected = expected_partitions(d, today)
+        if d.foreach or not expected:
+            continue
+        got = {
+            int(r["year"])
+            for r in rows(
+                con,
+                "SELECT DISTINCT year FROM metadata.captures "
+                "WHERE source = ? AND dataset = ? AND year IS NOT NULL",
+                (contract.source, d.name),
+            )
+        }
+        latest = rows(
+            con,
+            "SELECT partition, status, detail FROM metadata.source_checks WHERE source = ? AND dataset = ? "
+            "AND check_name = 'availability' AND partition IS NOT NULL "
+            "QUALIFY ROW_NUMBER() OVER (PARTITION BY partition ORDER BY id DESC) = 1",
+            (contract.source, d.name),
+        )
+        unavailable = {
+            int(r["partition"]) for r in latest if r["status"] == "error" and "404" in str(r["detail"])
+        } - got
+        missing = [p for p in expected if p not in got and p not in unavailable]
+        result[d.name] = {
+            "esperadas": len(expected),
+            "capturadas": len(got & set(expected)),
+            "indisponiveis": sorted(unavailable & set(expected)),
+            "faltam": missing,
+        }
+    return result
+
+
+def plan_recovery(
+    con: Connection, contract: SourceContract, today: date | None = None, limit: int = RECOVERY_LIMIT
+) -> list[Item]:
+    """As partições passadas ainda não capturadas, as mais recentes primeiro, até `limit` por dataset.
+
+    Só para fontes com `schedule`. A partição em curso fica com `plan_incremental` (o zip do mês corrente do
+    DOU muda todo dia e não entra aqui)."""
+    today = today or datetime.now(UTC).date()
+    if contract.schedule is None:
+        return []
+    items: list[Item] = []
+    for name, gap in partition_gaps(con, contract, today).items():
+        current = current_partition(contract.datasets[name], today)
+        items += [(name, p) for p in sorted(gap["faltam"], reverse=True) if p != current][:limit]
+    return items
+
+
+def record_gaps(con: Connection, contract: SourceContract) -> None:
+    """Grava em `source_checks` (`particoes`) as partições de cada dataset: aviso se faltam, ok se não."""
+    for name, gap in partition_gaps(con, contract).items():
+        missing = gap["faltam"]
+        detail = f"{gap['capturadas']} de {gap['esperadas']} partições"
+        if gap["indisponiveis"]:
+            detail += f"; a fonte não publica: {gap['indisponiveis']}"
+        if missing:
+            detail += f"; faltam: {missing}"
+        monitoring.record(con, contract.source, name, None, "particoes", "warn" if missing else "ok", detail)
+
+
 # ---------------------------------------------------------------- extração
 
 
@@ -230,6 +316,17 @@ def extract(
             run.rows_in = 1
             return int(previous["id"])
         monitoring.record(con, contract.source, dataset, year, "availability", "ok", f"{size} bytes")
+        if not monitoring.check_integrity(
+            con,
+            contract.source,
+            contract.datasets[dataset],
+            year,
+            file,
+            url,
+            headers.get("size"),
+            contract.format_of(dataset),
+        ):
+            return -1  # o arquivo fica no landing como evidência, mas não vira captura (tenta de novo)
         if contract.datasets[dataset].raw:
             monitoring.check_header(con, contract, contract.datasets[dataset], year, file)
         run.rows_in = run.rows_out = 1
@@ -247,9 +344,16 @@ def extract_plan(
     downloader: Downloader | None = None,
     head_request: HeadRequest | None = None,
     force: bool = False,
+    recover: bool = False,
 ) -> int:
-    """Executa um plano, item a item. Devolve quantos itens foram processados."""
+    """Executa um plano, item a item. Devolve quantos itens foram processados.
+
+    Com `recover` (a execução incremental), soma ao plano as partições passadas que faltam (`plan_recovery`).
+    Ao fim, registra por dataset o estado das partições (`particoes` em `source_checks`)."""
+    if recover:
+        items = [*items, *plan_recovery(con, contract)]
     for dataset, year in items:
         print(f"Extraindo {dataset} {year or ''}".strip(), flush=True)
         extract(con, settings, contract, dataset, year, downloader, head_request, force)
+    record_gaps(con, contract)
     return len(items)

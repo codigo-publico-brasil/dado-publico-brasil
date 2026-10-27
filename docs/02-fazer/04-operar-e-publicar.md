@@ -11,6 +11,8 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 | Camada | O que pega | Onde fica |
 | --- | --- | --- |
 | Monitor da fonte | Fonte fora do ar, coluna que sumiu ou apareceu (`schema`, `schema_mudou`), queda de volume | `metadata.source_checks` |
+| Integridade do download | Antes de virar captura, o arquivo não pode ser uma página HTML no lugar do esperado, o tamanho tem de bater com o `Content-Length` informado e, nos `.zip`, o pacote abre sem erro e tem o membro esperado (`member`, como `*.xml` no DOU). Reprovado vira `integridade` com erro, o arquivo fica no landing como evidência, não vira captura e a próxima execução tenta de novo | `metadata.source_checks` |
+| Partições que faltam | Por dataset anual, mensal ou por legislatura, as partições esperadas contra as capturadas (`particoes`). A execução incremental recupera sozinha as que faltam (as mais recentes primeiro, até 3 por dataset e por execução); a que a fonte não publica (404) vira "indisponível" e não é tentada de novo. `dado-publico coverage` lista as lacunas | `metadata.source_checks` |
 | Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`); linhas de capturas anteriores que a atual não traz (`linhas_removidas`) | `metadata.source_checks` |
 | Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.dbt_results` |
 | Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam; nas marts com data de evento (`votacoes`, `votacoes_votos`, `proposicoes`, `normas`, `emendas_convenios`), volume por dia com sazonalidade de dia da semana e frescor (a fonte parou de atualizar) | `metadata.dbt_results` e esquema `elementary` |
@@ -28,6 +30,7 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 
 - Nas marts sem data de evento, a anomalia de volume só começa a valer depois de cerca de 7 execuções de histórico. Nas cinco com data, o histórico vem do próprio dado.
 - Recesso do Congresso (julho e dezembro a janeiro) pode gerar aviso de volume e de frescor: é esperado, e o aviso é só informação.
+- `load --rebuild` descarta a tabela raw do dataset (e as tabelas filhas) e o estado do dlt antes de recarregar do landing; por isso mudar a chave primária de um contrato não exige apagar nada à mão.
 - O `merge` do dlt não apaga: uma linha que a fonte removeu continua no raw. O aviso `linhas_removidas` conta as que vieram de capturas anteriores do mesmo arquivo e a atual não traz; decidir o que fazer com elas é manual.
 - Uma coluna nova legítima gera um aviso do `schema_changes` uma vez; depois vira a nova referência.
 - O Elementary não enxerga o `raw`: ali valem o balanço da carga e o monitor da fonte.
