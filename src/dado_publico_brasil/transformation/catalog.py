@@ -10,7 +10,7 @@ from typing import Any
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.transformation import dbt
 
-LAYERS = ("raw", "staging", "intermediate", "core", "marts", "identity", "metadata")
+LAYERS = ("raw", "staging", "intermediate", "core", "fatos", "marts", "identity", "metadata")
 
 
 def manifest(settings: Settings) -> dict[str, Any]:
@@ -46,7 +46,7 @@ def columns(settings: Settings) -> list[dict[str, str]]:
     """Colunas do núcleo e dos marts (o contrato com a aplicação), com tipo e descrição."""
     found: list[dict[str, str]] = []
     for node in manifest(settings)["nodes"].values():
-        if node["resource_type"] == "model" and node["schema"] in ("core", "marts"):
+        if node["resource_type"] == "model" and node["schema"] in ("core", "fatos", "marts"):
             for column in node["columns"].values():
                 found.append(
                     {

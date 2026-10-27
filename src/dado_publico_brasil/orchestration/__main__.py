@@ -28,7 +28,7 @@ from pathlib import Path
 from dado_publico_brasil.core import alert, migrations, warehouse
 from dado_publico_brasil.core import settings as settings_module
 from dado_publico_brasil.core.settings import Settings
-from dado_publico_brasil.ingestion import contract, foreach, landing, loader
+from dado_publico_brasil.ingestion import contract, foreach, landing, loader, photos
 from dado_publico_brasil.orchestration import pipeline
 from dado_publico_brasil.transformation import build, catalog, dbt, observability, publish, snapshot
 
@@ -47,6 +47,7 @@ COMMANDS = (
     "verify",
     "coverage",
     "observe",
+    "fotos",
 )
 
 
@@ -205,6 +206,11 @@ def main(argv: list[str] | None = None) -> int:
             return 1 if failed else 0
         case "coverage":
             _coverage(settings, args.source)
+        case "fotos":
+            con = migrations.open_warehouse(settings)
+            n = photos.extract_all(con, settings)
+            con.close()
+            print(f"{n} fotos extraídas para {settings.storage_root / 'fotos'}")
         case "identity":
             print(f"{build.resolve_identity(settings)} pessoas novas")
         case "publish":

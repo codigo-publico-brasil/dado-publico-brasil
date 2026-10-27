@@ -13,7 +13,7 @@ schedule: "0 6 * * *"             # quando capturar (cron, fuso America/Sao_Paul
 
 access:
   base_url: https://dadosabertos.camara.leg.br/arquivos
-  format: csv                       # csv | json | html (html exige `records` no módulo próprio)
+  format: csv                       # csv | json | html (html exige `records` no módulo próprio) | members (lista os arquivos de dentro do zip, com `member` como padrão do nome; guarda `member` e `size`, sem ler o conteúdo)
   delimiter: ";"                    # (csv)
   encoding: utf-8-sig               # com BOM
   headers: {}                       # cabeçalhos HTTP; aceita ${VARIAVEL} do ambiente (credenciais)

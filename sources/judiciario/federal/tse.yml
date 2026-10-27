@@ -123,3 +123,100 @@ datasets:
     columns:
       [AA_ELEICAO, ST_TURNO, TP_PRESTACAO_CONTAS, DT_PRESTACAO_CONTAS, SQ_PRESTADOR_CONTAS, SG_UF, SG_UE, DS_CARGO,
        SQ_CANDIDATO, SQ_DESPESA, DT_DESPESA, DS_DESPESA, VR_DESPESA_CONTRATADA]
+
+  # Fotos oficiais dos candidatos das eleições gerais (2006 em diante): um pacote por UF (BR traz presidente e vice).
+  # O pacote fica guardado no landing com hash; o raw só lista o que há dentro (`format: members`, sem extrair). O
+  # arquivo de cada foto é `F<UF><SQ_CANDIDATO>_div.jpg` (ou `.jpeg`), e o SQ_CANDIDATO liga à candidatura. As eleições
+  # municipais não entram (o pacote de um estado passa de 2 GB). As fotos vêm do TSE sob a licença dos dados abertos dele.
+  fotos_br: &fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_BR_div.zip"
+    load: yearly
+    first_year: 2006
+    step: 4
+    format: members
+    archive: zip
+    member: "F*_div.jp*g"
+    write: merge
+    primary_key: [member]
+    columns: [member, size]
+  fotos_ac:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_AC_div.zip"
+  fotos_al:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_AL_div.zip"
+  fotos_am:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_AM_div.zip"
+  fotos_ap:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_AP_div.zip"
+  fotos_ba:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_BA_div.zip"
+  fotos_ce:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_CE_div.zip"
+  fotos_df:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_DF_div.zip"
+  fotos_es:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_ES_div.zip"
+  fotos_go:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_GO_div.zip"
+  fotos_ma:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_MA_div.zip"
+  fotos_mg:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_MG_div.zip"
+  fotos_ms:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_MS_div.zip"
+  fotos_mt:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_MT_div.zip"
+  fotos_pa:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_PA_div.zip"
+  fotos_pb:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_PB_div.zip"
+  fotos_pe:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_PE_div.zip"
+  fotos_pi:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_PI_div.zip"
+  fotos_pr:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_PR_div.zip"
+  fotos_rj:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_RJ_div.zip"
+  fotos_rn:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_RN_div.zip"
+  fotos_ro:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_RO_div.zip"
+  fotos_rr:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_RR_div.zip"
+  fotos_rs:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_RS_div.zip"
+  fotos_sc:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_SC_div.zip"
+  fotos_se:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_SE_div.zip"
+  fotos_sp:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_SP_div.zip"
+  fotos_to:
+    <<: *fotos
+    url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_TO_div.zip"

@@ -1,0 +1,97 @@
+version: 2
+
+models:
+  - name: fatos_candidaturas
+    config: {alias: candidaturas}
+    description: >
+      Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era,
+      por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do
+      projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em
+      eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer
+      novato. O nome do modelo leva o prefixo fatos_ só porque marts.candidaturas ainda existe; a tabela é fatos.candidaturas.
+    meta: {sensitivity: publico-agente-publico, grain: candidatura, owner: fundador do projeto, freshness: a cada eleição}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - {name: id_candidatura, data_type: varchar, tests: [unique, not_null], description: "Identificador da candidatura: ano da eleição, unidade eleitoral e sequencial do candidato, como o TSE informa."}
+      - name: id_disputa
+        data_type: varchar
+        tests:
+          - relationships: {to: ref('disputas'), field: id_disputa}
+          - not_null: {config: {severity: warn}}
+        description: "Disputa da candidatura (core.disputas); vazio quando o arquivo de vagas do TSE não traz a unidade do candidato. O teste de aviso mede quantas ficam assim."
+      - {name: sq_candidato, data_type: bigint, description: "Número sequencial do candidato na eleição, como o TSE informa; liga ao nome do arquivo de foto."}
+      - {name: numero, data_type: varchar, description: "Número do candidato na urna."}
+      - {name: nome, data_type: varchar, description: "Nome civil do candidato, com caixa padronizada."}
+      - {name: nome_urna, data_type: varchar, description: "Nome de urna, com caixa padronizada."}
+      - {name: nome_social, data_type: varchar, meta: {pii: true}, description: "Nome social declarado pelo candidato; o TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido)."}
+      - {name: genero, data_type: varchar, description: "Gênero do candidato, como o TSE informa."}
+      - {name: grau_instrucao, data_type: varchar, meta: {pii: true}, description: "Grau de instrução declarado; Não divulgável quando o TSE protege o dado."}
+      - {name: estado_civil, data_type: varchar, meta: {pii: true}, description: "Estado civil declarado na candidatura; Não divulgável quando o TSE protege o dado."}
+      - {name: ocupacao, data_type: varchar, description: "Ocupação declarada, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: partido, data_type: varchar, description: "Sigla do partido na eleição, como o TSE informa."}
+      - {name: partido_nome, data_type: varchar, description: "Nome do partido na eleição."}
+      - {name: federacao, data_type: varchar, description: "Sigla da federação partidária (desde 2022); vazia nos anos anteriores."}
+      - {name: coligacao, data_type: varchar, description: "Nome da coligação da candidatura; vazio sem coligação."}
+      - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no último turno em que consta, como o TSE informa (por exemplo, deferido, indeferido)."}
+      - {name: qtd_turnos, data_type: integer, description: "Número do último turno em que a candidatura consta (2 quando foi ao segundo turno)."}
+      - {name: resultado, data_type: varchar, description: "Resultado do último turno como o arquivo de candidaturas do TSE informa (eleito, suplente, não eleito, 2º turno); vazio quando o TSE não informa, como o 2º turno de presidente de 2006."}
+      - {name: fl_eleito, data_type: boolean, description: "Verdadeiro quando o TSE marca a candidatura como eleita em algum turno. Falso não quer dizer derrota quando o resultado está vazio."}
+      - {name: fl_mais_votado_no_ultimo_turno, data_type: boolean, description: "DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no último turno com votos. Vazio sem votos carregados ou em cargo de várias vagas."}
+      - {name: id_pessoa_tse, data_type: varchar, description: "Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato."}
+      - {name: foto_arquivo, data_type: varchar, description: "Nome do arquivo da foto oficial no pacote do TSE; vazio quando o pacote não traz foto do candidato."}
+      - {name: foto_caminho, data_type: varchar, description: "Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto."}
+      - {name: foto_pacote_url, data_type: varchar, description: "Endereço oficial do pacote de fotos do TSE que contém a foto."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__captures'), field: id_captura}}], description: "Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures)."}
+
+  - name: resultados
+    description: >
+      O que aconteceu em cada turno da eleição, candidatura a candidatura, só com arquivos do TSE. Uma linha por
+      candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo
+      do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente).
+      fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE.
+    meta: {sensitivity: publico-agente-publico, grain: candidatura e turno, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [id_candidatura, turno]}}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - name: id_candidatura
+        data_type: varchar
+        tests:
+          - not_null
+          - relationships: {to: ref('fatos_candidaturas'), field: id_candidatura}
+        description: "Candidatura (fatos.candidaturas)."
+      - {name: turno, data_type: integer, description: "Turno da votação."}
+      - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no turno, como o arquivo de candidaturas informa."}
+      - {name: resultado, data_type: varchar, description: "Resultado do turno como o arquivo de candidaturas do TSE informa; vazio quando não informa."}
+      - {name: resultado_votacao, data_type: varchar, description: "Resultado do turno como o arquivo de votação do TSE informa; vazio quando não informa."}
+      - {name: qtd_votos_validos, data_type: bigint, description: "Votos válidos do candidato no turno, somados de todos os municípios e zonas; vazio se a votação não foi carregada."}
+      - {name: qtd_votos_nominais, data_type: bigint, description: "Votos nominais do candidato no turno, somados de todos os municípios e zonas."}
+      - {name: percentual_votos_validos, data_type: "decimal(5,2)", description: "Percentual dos votos válidos do candidato sobre os votos válidos de todos os candidatos da mesma disputa e turno, sem votos de legenda; vazio sem votos carregados."}
+      - {name: fl_mais_votado_no_turno, data_type: boolean, description: "DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no turno; vazio sem votos carregados ou em cargo de várias vagas."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__captures'), field: id_captura}}], description: "Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures)."}
+
+  - name: campanhas
+    description: >
+      A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de
+      contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o
+      arquivo daquele dado não foi carregado ou não traz o candidato.
+    meta: {sensitivity: publico-agente-publico, grain: candidatura, owner: fundador do projeto, freshness: a cada prestação de contas}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - name: id_candidatura
+        data_type: varchar
+        tests:
+          - unique
+          - not_null
+          - relationships: {to: ref('fatos_candidaturas'), field: id_candidatura, config: {severity: warn}}
+        description: "Candidatura (fatos.candidaturas). 434 candidaturas com bens (2012, 2016, 2020 e 2024) são de eleições suplementares ou renovadas, que as candidaturas não trazem (issue 74); o teste de aviso mede essas."
+      - {name: qtd_bens, data_type: bigint, description: "Quantidade de bens declarados; vazio se o candidato não declarou ou o arquivo não foi carregado."}
+      - {name: valor_bens, data_type: "decimal(18,2)", description: "Soma dos valores dos bens declarados, em reais, sem correção."}
+      - {name: qtd_receitas, data_type: bigint, description: "Quantidade de receitas na prestação de contas; vazio se o arquivo não foi carregado ou não traz o candidato."}
+      - {name: valor_receitas, data_type: "decimal(18,2)", description: "Soma das receitas declaradas, em reais."}
+      - {name: qtd_despesas, data_type: bigint, description: "Quantidade de despesas contratadas na prestação de contas; vazio se o arquivo não foi carregado ou não traz o candidato."}
+      - {name: valor_despesas, data_type: "decimal(18,2)", description: "Soma das despesas contratadas declaradas, em reais."}
+      - {name: dt_prestacao, data_type: date, description: "Data mais recente da prestação de contas entre receitas e despesas."}
+      - {name: id_captura_bens, data_type: bigint, description: "Captura do arquivo de bens de origem; vazia sem bens."}
+      - {name: id_captura_receitas, data_type: bigint, description: "Captura do arquivo de receitas de origem; vazia sem receitas."}
+      - {name: id_captura_despesas, data_type: bigint, description: "Captura do arquivo de despesas de origem; vazia sem despesas."}
