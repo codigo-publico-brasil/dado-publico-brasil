@@ -1,6 +1,6 @@
 -- Exercício oficial no cargo, como o Senado informa: titulares e suplentes, com início, fim e causa de
--- afastamento. Só quem assumiu aparece (suplente que nunca assumiu não tem exercício). A Câmara não publica
--- este dado, então a tabela só tem o Senado.
+-- afastamento. Só quem assumiu aparece (suplente que nunca assumiu não tem exercício). A Câmara não tem
+-- exercícios por período: suas datas de mandato vêm do histórico do deputado, direto em `mandatos`.
 select
     '{{ var("source_senado") }}' as fonte,
     i.id_pessoa,

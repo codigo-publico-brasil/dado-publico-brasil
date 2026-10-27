@@ -37,7 +37,7 @@ models:
       - {name: dt_captura, data_type: date, description: "Data da captura do cadastro de deputados."}
 
   - name: mandatos
-    description: Mandatos por legislatura, a partir de votos observados (início e fim oficiais vazios). Uma linha por pessoa e legislatura.
+    description: Mandatos por legislatura, a partir de votos observados. Início e fim do exercício vêm do Senado e do histórico dos deputados, quando a fonte informa. Uma linha por pessoa e legislatura.
     meta: {sensitivity: publico-agente-publico, grain: pessoa e legislatura, owner: fundador do projeto, freshness: diário}
     data_tests: *monitoramento
     columns:
@@ -52,11 +52,11 @@ models:
       - {name: casa, data_type: varchar, description: "Casa legislativa."}
       - {name: id_legislatura, data_type: integer, description: "Número da legislatura."}
       - {name: uf, data_type: varchar, description: "UF de eleição ou representação nos votos da legislatura."}
-      - {name: dt_inicio, data_type: date, description: "Início oficial do mandato; vazio quando a fonte não informa."}
-      - {name: dt_fim, data_type: date, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: dt_inicio, data_type: date, description: "Início do exercício oficial que toca a legislatura: exercício do Senado ou primeira posse no histórico do deputado; vazio quando a fonte não informa."}
+      - {name: dt_fim, data_type: date, description: "Fim do exercício oficial que toca a legislatura (fim do exercício no Senado; registro de fim de mandato na Câmara); vazio quando a fonte não informa ou o mandato está em curso."}
       - {name: dt_primeiro_voto_observado, data_type: timestamp, description: "Primeiro voto registrado na legislatura."}
       - {name: dt_ultimo_voto_observado, data_type: timestamp, description: "Último voto registrado na legislatura."}
-      - {name: base, data_type: varchar, description: "Origem do período: votos observados, não ato oficial."}
+      - {name: base, data_type: varchar, description: "Origem do período: exercício oficial (Senado e histórico do deputado) ou votos observados (sem ato oficial)."}
       - {name: dt_legislatura_inicio, data_type: date, description: "Início oficial da legislatura (não do mandato da pessoa)."}
       - {name: dt_legislatura_fim, data_type: date, description: "Fim oficial da legislatura (não do mandato da pessoa)."}
 

@@ -178,3 +178,10 @@ def test_a_null_object_and_a_filled_one_have_the_same_fields(tmp_path: Path) -> 
     nulo = read.fields(file, contract, dataset)
     file.write_text(json.dumps({"dados": {"itens": [{"id": 1, "orgao": {"sigla": "X"}}]}}), encoding="utf-8")
     assert nulo == ["id", "orgao"] and read.fields(file, contract, dataset) == ["id", "orgao__sigla"]
+
+
+def test_user_agent_carries_the_repository_url_as_contact() -> None:
+    request = fetch._request("https://example.org/arquivo.csv", {})
+    assert "https://github.com/codigo-publico-brasil/dado-publico-brasil" in (
+        request.get_header("User-agent") or ""
+    )

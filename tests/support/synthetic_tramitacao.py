@@ -95,11 +95,49 @@ DETALHES = {
 }
 
 
+def _historico(item: str) -> bytes:
+    """Histórico do deputado: início da legislatura, posse e uma licença; o e-mail e a foto não devem entrar."""
+    base = {
+        "id": int(item),
+        "nome": "Ana Árvore",
+        "nomeEleitoral": "ANA ÁRVORE",
+        "siglaPartido": "AAA",
+        "siglaUf": "SP",
+        "idLegislatura": 57,
+        "email": "nao.entra@exemplo.gov.br",
+        "urlFoto": "http://foto/d.jpg",
+        "condicaoEleitoral": "Titular",
+    }
+    dados = [
+        {
+            **base,
+            "dataHora": "2023-02-01T00:00",
+            "situacao": None,
+            "descricaoStatus": "Nome no início da legislatura",
+        },
+        {
+            **base,
+            "dataHora": "2023-02-01T12:05",
+            "situacao": "Exercício",
+            "descricaoStatus": "Entrada - Posse",
+        },
+        {
+            **base,
+            "dataHora": "2024-03-01T09:00",
+            "situacao": "Licença",
+            "descricaoStatus": "Saída - Afastamento",
+        },
+    ]
+    return json.dumps({"dados": dados, "links": []}).encode()
+
+
 def fake_get(url: str) -> tuple[int, bytes]:
     """Substitui a chamada à API: 100 e 101 têm tramitação, 102 não existe na fonte (404)."""
     for item in ("100", "101"):
         if url == CAMARA.format(item):
             return 200, _camara_corpo(item)
+    if url == "https://dadosabertos.camara.leg.br/api/v2/deputados/10/historico":
+        return 200, _historico("10")
     if url == SENADO.format("1"):
         return 200, _senado_corpo()
     for codigo, (civil, nascimento, foto) in DETALHES.items():

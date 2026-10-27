@@ -164,6 +164,26 @@ datasets:
       [id, deputado_.id, deputado_.idLegislatura, deputado_.urlFoto, deputado_.codTitulo, deputado_.titulo,
        dataInicio, dataFim]
 
+  deputados_historico:
+    # Por item: o histórico de situação de cada deputado (posse, licença, fim de mandato). Dá o início e o fim do
+    # mandato em `marts.mandatos`. O item é o endereço do deputado em `deputados` (`uri`); e-mail e foto que a
+    # resposta traz não estão em `columns` e nunca entram no raw. Roda só com `--foreach N` ou `--foreach all`.
+    url: "{item}/historico"
+    load: foreach
+    format: json
+    headers: {Accept: application/json}
+    records: dados
+    write: merge
+    foreach:
+      from: deputados
+      item: uri
+      refresh_after_days: 30
+      batch_size: 500
+    primary_key: [_item, _row_hash]
+    columns:
+      [_item, idLegislatura, dataHora, situacao, condicaoEleitoral, descricaoStatus, nome, nomeEleitoral,
+       siglaPartido, siglaUf]
+
   proposicoes_tramitacoes:
     # Por item: uma chamada à API para cada proposição que pode virar norma (não existe arquivo em lote).
     # Só entram PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC; requerimentos, pareceres e emendas ficam de fora.

@@ -7,6 +7,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
 | `deputados` | Cadastro de deputados (sem documentos pessoais). | publico-agente-publico |  |
+| `deputados_historico` | Histórico de situação de cada deputado (posse, licença, fim de mandato), buscado por item na API (`_item` é o endereço do deputado), só dos que já foram buscados. | publico-agente-publico |  |
 | `deputados_ocupacoes` | Ocupações anteriores declaradas pelos deputados (arquivo completo). | publico-agente-publico |  |
 | `deputados_profissoes` | Profissões declaradas pelos deputados (arquivo completo, substituído a cada carga). | publico-agente-publico |  |
 | `frentes` | Frentes parlamentares, com legislatura de criação e coordenador. | publico-agente-publico |  |
@@ -82,6 +83,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
 | `stg_camara__deputados` | Deputados, uma linha por deputado, com nomes padronizados e tipos corretos. | publico-agente-publico |  |
+| `stg_camara__deputados_historico` | Histórico de situação dos deputados (só dos já buscados), uma linha por registro de status. | publico-agente-publico |  |
 | `stg_camara__deputados_ocupacoes` | Ocupações anteriores declaradas por deputado. | publico-agente-publico |  |
 | `stg_camara__deputados_profissoes` | Profissões declaradas por deputado (linhas sem título descartadas pela padronização). | publico-agente-publico |  |
 | `stg_camara__frentes` | Frentes parlamentares, uma por frente. | publico-agente-publico |  |
@@ -168,7 +170,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `frentes` | Frentes parlamentares, com legislatura de criação e coordenador. Uma linha por frente. | publico | frente parlamentar |
 | `frentes_membros` | Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título. | publico-agente-publico | pessoa |
 | `legislaturas` | Legislaturas da Câmara, com datas oficiais de início e fim. Uma linha por legislatura. | publico | legislatura |
-| `mandatos` | Mandatos por legislatura, a partir de votos observados (início e fim oficiais vazios). Uma linha por pessoa e legislatura. | publico-agente-publico | pessoa e legislatura |
+| `mandatos` | Mandatos por legislatura, a partir de votos observados. Início e fim do exercício vêm do Senado e do histórico dos deputados, quando a fonte informa. Uma linha por pessoa e legislatura. | publico-agente-publico | pessoa e legislatura |
 | `mandatos_exercicios` | Exercício oficial no cargo como o Senado informa (titular e suplentes), com início, fim e causa de afastamento. Só o Senado; a Câmara não publica. Uma linha por pessoa, mandato e exercício. | publico-agente-publico | pessoa |
 | `normas` | Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...) desde 1808, só metadados; o texto integral não vem desta fonte. Uma linha por norma. | publico | norma |
 | `normas_geradas` | Norma jurídica que resultou de uma matéria, com número, datas e veículo de publicação. Só o Senado informa por enquanto. Uma linha por matéria. | publico | matéria |
@@ -490,11 +492,11 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `casa` | varchar | Casa legislativa. |  |
 | `id_legislatura` | integer | Número da legislatura. |  |
 | `uf` | varchar | UF de eleição ou representação nos votos da legislatura. |  |
-| `dt_inicio` | date | Início oficial do mandato; vazio quando a fonte não informa. |  |
-| `dt_fim` | date | Fim oficial do mandato; vazio quando a fonte não informa. |  |
+| `dt_inicio` | date | Início do exercício oficial que toca a legislatura: exercício do Senado ou primeira posse no histórico do deputado; vazio quando a fonte não informa. |  |
+| `dt_fim` | date | Fim do exercício oficial que toca a legislatura (fim do exercício no Senado; registro de fim de mandato na Câmara); vazio quando a fonte não informa ou o mandato está em curso. |  |
 | `dt_primeiro_voto_observado` | timestamp | Primeiro voto registrado na legislatura. |  |
 | `dt_ultimo_voto_observado` | timestamp | Último voto registrado na legislatura. |  |
-| `base` | varchar | Origem do período: votos observados, não ato oficial. |  |
+| `base` | varchar | Origem do período: exercício oficial (Senado e histórico do deputado) ou votos observados (sem ato oficial). |  |
 | `dt_legislatura_inicio` | date | Início oficial da legislatura (não do mandato da pessoa). |  |
 | `dt_legislatura_fim` | date | Fim oficial da legislatura (não do mandato da pessoa). |  |
 
