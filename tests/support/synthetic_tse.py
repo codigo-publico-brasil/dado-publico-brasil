@@ -32,6 +32,7 @@ COLUNAS = (
 
 #       cargo, sq, nome civil, nome de urna, nascimento, situação, resultado, uf, partido
 LINHAS = [
+    ("GOVERNADOR", "3001", "GOVERNO REELEITO", "GOV", "02/03/1960", "DEFERIDO", "ELEITO", "SP", "AAA"),
     (
         "DEPUTADO FEDERAL",
         "1001",
@@ -134,6 +135,8 @@ def _municipais() -> list[dict[str, str]]:
 
 # A eleição anterior (2018): Carlos foi eleito (reeleito em 2022 pela prova do TSE) e Fulano não foi eleito.
 LINHAS_2018 = [
+    # governador eleito em 2018 e de novo em 2022 (mesmo nome civil e nascimento): reeleito pela prova do TSE
+    ("GOVERNADOR", "2010", "GOVERNO REELEITO", "GOV", "02/03/1960", "DEFERIDO", "ELEITO", "SP", "AAA"),
     (
         "DEPUTADO FEDERAL",
         "2005",

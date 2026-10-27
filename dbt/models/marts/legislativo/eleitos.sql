@@ -3,7 +3,7 @@
 -- os partidos e inclusive de quem ainda não é pessoa do projeto. O resultado é o que o TSE informa na data da
 -- captura: provisório até a diplomação. Votos e percentual vêm da votação por município e zona, quando carregada.
 -- O percentual é sobre os votos nominais válidos do cargo na unidade eleitoral (sem os votos de legenda).
--- `tipo_mandato` só existe para quem foi eleito à Câmara ou ao Senado: reeleito (tinha mandato na mesma casa na
+-- `tipo_mandato` para quem foi eleito à Câmara ou ao Senado: reeleito (tinha mandato na mesma casa na
 -- legislatura em curso na eleição), retorno (já teve mandato na mesma casa, antes) ou novato (pessoa ligada, sem mandato
 -- na casa). Quem não é pessoa do projeto usa o histórico do TSE (a mesma pessoa em outras eleições, ADR 0025): reeleito
 -- se foi eleito para o mesmo cargo na eleição anterior, retorno se foi eleito antes. Sem prova, fica sem tipo (nem novato).
@@ -28,9 +28,9 @@ with eleitos as (
 
 vitorias as (
 
-    -- eleições ganhas por cada pessoa do TSE, por cargo e ano
+    -- eleições ganhas por cada pessoa do TSE, por cargo, unidade eleitoral e ano
 
-    select p.id_pessoa_tse, c.cargo, c.ano_eleicao
+    select p.id_pessoa_tse, c.cargo, c.ue, c.ano_eleicao
 
     from {{ ref('stg_tse__candidaturas') }} as c
 
@@ -59,6 +59,29 @@ totais as (
     from votos
 
     group by all
+
+),
+
+historico as (
+
+    -- eleito de novo (4 anos antes) ou de volta (antes disso) no mesmo cargo, pela mesma pessoa do TSE (ADR 0025)
+    select
+        e.id_candidatura,
+        case
+            when bool_or(w.ano_eleicao = e.ano_eleicao - 4) then 'reeleito'
+            when bool_or(w.ano_eleicao < e.ano_eleicao - 4) then 'retorno'
+        end as tipo
+
+    from eleitos as e
+
+    inner join {{ ref('int_tse_pessoas') }} as p on p.id_candidatura = e.id_candidatura
+
+    inner join vitorias as w
+        on w.id_pessoa_tse = p.id_pessoa_tse and w.cargo = e.cargo and w.ano_eleicao < e.ano_eleicao
+        -- prefeito e vereador são de um município: quem foi eleito em outra cidade não é reeleito nem retorno nesta
+        and (e.cargo not in ('Prefeito', 'Vereador') or w.ue = e.ue)
+
+    group by e.id_candidatura
 
 )
 
@@ -89,15 +112,9 @@ select
     cast(round(100.0 * v.qtd_votos / nullif(t.total_votos, 0), 2) as decimal(5, 2)) as percentual_votos_nominais,
     i.id_pessoa,
     case
-        when e.casa is null then null
-        when i.id_pessoa is null then (
-            select case
-                when bool_or(w.ano_eleicao = e.ano_eleicao - 4) then 'reeleito'
-                when bool_or(w.ano_eleicao < e.ano_eleicao - 4) then 'retorno'
-            end
-            from vitorias as w
-            where w.id_pessoa_tse = pt.id_pessoa_tse and w.cargo = e.cargo and w.ano_eleicao < e.ano_eleicao
-        )
+        -- cargos sem base de mandatos (presidente, governador, deputado estadual e distrital, prefeito, vereador) e quem
+        -- não é pessoa do projeto: só a prova do histórico do TSE; sem prova fica sem tipo, nunca novato
+        when e.casa is null or i.id_pessoa is null then h.tipo
         when exists (
             select 1 from {{ ref('mandatos') }} as m
             where m.id_pessoa = i.id_pessoa and m.casa = e.casa
@@ -131,5 +148,7 @@ left join {{ ref('stg_identity__pessoa_identificadores') }} as i
     and i.id_na_fonte = e.id_candidatura
 
 left join {{ ref('int_tse_pessoas') }} as pt on pt.id_candidatura = e.id_candidatura
+
+left join historico as h on h.id_candidatura = e.id_candidatura
 
 left join {{ ref('stg_metadata__captures') }} as k on k.id_captura = e.id_captura
