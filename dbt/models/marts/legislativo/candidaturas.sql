@@ -14,6 +14,15 @@ select
     c.partido_nome,
     c.situacao_candidatura,
     c.resultado,
+    c.nome_social,
+    c.grau_instrucao,
+    c.estado_civil,
+    c.ocupacao,
+    c.uf_nascimento,
+    c.coligacao_nome,
+    c.coligacao_composicao,
+    c.federacao_sigla,
+    c.federacao_composicao,
     cast(k.dt_captura as date) as dt_captura
 
 from {{ ref('stg_tse__candidaturas') }} as c

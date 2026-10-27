@@ -70,8 +70,8 @@ datasets:
     nested: [autoriaIniciativa]
 
   senadores_detalhe:
-    # Por item: uma chamada por senador, para a data de nascimento, a naturalidade e a foto. E-mail, telefone e
-    # endereço do gabinete que a resposta traz não estão em `columns` e nunca entram no raw.
+    # Por item: uma chamada por senador, para a data de nascimento, a naturalidade, a foto, as páginas oficiais e o
+    # contato institucional do gabinete (e-mail, telefones e endereço; ADR 0029, que altera o item 6 do ADR 0013).
     url: "{base_url}/senador/{item}"
     load: foreach
     write: merge
@@ -84,7 +84,11 @@ datasets:
     columns:
       [_item, IdentificacaoParlamentar__CodigoParlamentar, IdentificacaoParlamentar__NomeCompletoParlamentar,
        IdentificacaoParlamentar__UrlFotoParlamentar, DadosBasicosParlamentar__DataNascimento,
-       DadosBasicosParlamentar__Naturalidade, DadosBasicosParlamentar__UfNaturalidade]
+       DadosBasicosParlamentar__Naturalidade, DadosBasicosParlamentar__UfNaturalidade,
+       IdentificacaoParlamentar__UrlPaginaParlamentar, IdentificacaoParlamentar__UrlPaginaParticular,
+       IdentificacaoParlamentar__EmailParlamentar, DadosBasicosParlamentar__EnderecoParlamentar,
+       Telefones__Telefone]
+    nested: [Telefones__Telefone]
 
 
   normas:

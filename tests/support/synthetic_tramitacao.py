@@ -74,7 +74,14 @@ def _detalhe(codigo: str, civil: str, nascimento: str, foto: str) -> bytes:
                     "CodigoParlamentar": codigo,
                     "NomeCompletoParlamentar": civil,
                     "UrlFotoParlamentar": foto,
-                    "EmailParlamentar": "nao.entra@exemplo.gov.br",
+                    "EmailParlamentar": "sen.exemplo@senado.leg.br",
+                    "UrlPaginaParlamentar": "http://senado/perfil/" + codigo,
+                },
+                "Telefones": {
+                    "Telefone": [
+                        {"NumeroTelefone": "33036777", "OrdemPublicacao": "1"},
+                        {"NumeroTelefone": "33036568", "OrdemPublicacao": "2"},
+                    ]
                 },
                 "DadosBasicosParlamentar": {
                     "DataNascimento": nascimento,
@@ -93,6 +100,38 @@ DETALHES = {
     "5001": ("Ana Aparecida da Silva", "1975-06-06", "http://foto/s5001.jpg"),
     "5003": ("Bia Souza", "1990-01-01", "http://foto/s5003.jpg"),
 }
+
+
+def _deputado(item: str) -> bytes:
+    """Cadastro do deputado: CPF e e-mail pessoal vêm na resposta e nunca devem entrar no raw."""
+    corpo = {
+        "dados": {
+            "id": int(item),
+            "cpf": "11122233344",
+            "escolaridade": "SUPERIOR",
+            "ultimoStatus": {
+                "nomeEleitoral": "Ana Árvore",
+                "siglaPartido": "AAA",
+                "siglaUf": "SP",
+                "idLegislatura": 57,
+                "email": "pessoal@exemplo.com",
+                "urlFoto": "http://foto/d.jpg",
+                "situacao": "Exercício",
+                "condicaoEleitoral": "Titular",
+                "data": "2023-02-01",
+                "gabinete": {
+                    "nome": "979",
+                    "predio": "3",
+                    "sala": "979",
+                    "andar": None,
+                    "telefone": "3215-5979",
+                    "email": "dep.ana@camara.leg.br",
+                },
+            },
+        },
+        "links": [],
+    }
+    return json.dumps(corpo).encode()
 
 
 def _historico(item: str) -> bytes:
@@ -117,7 +156,7 @@ def _historico(item: str) -> bytes:
         },
         {
             **base,
-            "dataHora": "2023-02-01T12:05",
+            "dataHora": "2023-02-03T12:05",
             "situacao": "Exercício",
             "descricaoStatus": "Entrada - Posse",
         },
@@ -136,6 +175,8 @@ def fake_get(url: str) -> tuple[int, bytes]:
     for item in ("100", "101"):
         if url == CAMARA.format(item):
             return 200, _camara_corpo(item)
+    if url == "https://dadosabertos.camara.leg.br/api/v2/deputados/10":
+        return 200, _deputado("10")
     if url == "https://dadosabertos.camara.leg.br/api/v2/deputados/10/historico":
         return 200, _historico("10")
     if url == SENADO.format("1"):

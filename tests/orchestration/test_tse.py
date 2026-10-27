@@ -11,7 +11,12 @@ def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_
 ) -> None:
     con, _ = full
     cols = set(columns(con, "raw_federal_tse", "candidaturas"))
-    assert not {"nr_cpf_candidato", "ds_email", "nr_titulo_eleitoral_candidato", "nm_social_candidato"} & cols
+    assert not {"nr_cpf_candidato", "ds_email", "nr_titulo_eleitoral_candidato"} & cols
+    assert {
+        "nm_social_candidato",
+        "ds_estado_civil",
+        "ds_ocupacao",
+    } <= cols  # ADR 0029: o que o candidato declara
     found = {r["sq_candidato"] for r in rows(con, "SELECT sq_candidato FROM raw_federal_tse.candidaturas")}
     # 1006 é deputado estadual, 1010 a 1015 são municipais e 2005 e 2006 são de 2018: entram no raw (todos os cargos); 9999 só existe no
     # arquivo do estado (só o _BRASIL.csv é lido)
@@ -106,7 +111,7 @@ def test_the_merged_person_has_one_row_with_both_sources_and_the_chamber_data(fu
     )
 
 
-def test_senator_detail_gives_birth_naturality_and_photo_but_not_email_or_address(full: Env) -> None:
+def test_senator_detail_gives_birth_naturality_photo_and_the_institutional_contact(full: Env) -> None:
     con, _ = full
     row = con.execute(
         "SELECT dt_nascimento, municipio_nascimento, uf_nascimento, foto_url FROM marts.pessoas "
@@ -117,8 +122,27 @@ def test_senator_detail_gives_birth_naturality_and_photo_but_not_email_or_addres
         and str(row[0]) == "1970-05-05"
         and row[1:] == ("Santos", "SP", "http://foto/s5000.jpg")
     )
-    cols = set(columns(con, "raw_federal_senado", "senadores_detalhe"))
-    assert not {c for c in cols if "email" in c or "endereco" in c}
+    contact = con.execute(
+        "SELECT email_institucional, telefone_institucional, gabinete_endereco, pagina_url FROM marts.pessoas "
+        "WHERE fonte = 'senado' AND nome = 'Beto Barreiras'"
+    ).fetchone()
+    assert contact == (
+        "sen.exemplo@senado.leg.br",
+        "33036777; 33036568",
+        "Anexo 2, gabinete 5",
+        "http://senado/perfil/5000",
+    )
+
+
+def test_candidate_declarations_reach_the_marts_and_documents_never_do(full: Env) -> None:
+    con, _ = full
+    row = con.execute(
+        "SELECT nome_social, grau_instrucao, estado_civil, ocupacao, coligacao_nome, federacao_sigla "
+        "FROM marts.eleitos WHERE id_candidatura LIKE '2022:%:1001'"
+    ).fetchone()
+    assert row == ("Bia Social", "Superior completo", "Solteiro(a)", "Advogado", "COLIGACAO TESTE", "FED")
+    all_columns = {c for t in ("eleitos", "candidaturas", "pessoas") for c in columns(con, "marts", t)}
+    assert not {c for c in all_columns if "cpf" in c or "titulo" in c or "cor_raca" in c}
 
 
 def test_linking_again_changes_nothing(full: Env) -> None:

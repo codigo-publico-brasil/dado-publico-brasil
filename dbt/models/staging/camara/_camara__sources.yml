@@ -70,6 +70,10 @@ sources:
             tests: [unique, not_null]
       - name: frentes_deputados
         description: Deputados em cada frente parlamentar, com o título (coordenador, membro) na legislatura.
+      - name: deputados_detalhe
+        description: >
+          Cadastro de cada deputado (escolaridade, último status e gabinete institucional), buscado por item na API
+          (`_item` é o endereço do deputado), só dos que já foram buscados.
       - name: deputados_historico
         description: >
           Histórico de situação de cada deputado (posse, licença, fim de mandato), buscado por item na API

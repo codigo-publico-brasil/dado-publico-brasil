@@ -12,7 +12,14 @@ select
     c.uf_nascimento,
     coalesce(n.foto_url, f.foto_url) as foto_url,
     c.rede_social_url,
-    c.site_url
+    c.site_url,
+    g.escolaridade,
+    g.situacao as situacao_atual,
+    g.condicao_eleitoral,
+    g.gabinete_email as email_institucional,
+    g.gabinete_telefone as telefone_institucional,
+    g.gabinete_endereco,
+    cast(null as varchar) as pagina_url
 
 from {{ ref('stg_identity__pessoa_identificadores') }} as i
 
@@ -22,6 +29,8 @@ inner join {{ ref('int_deputados_ids_unidos') }} as d
     and i.id_na_fonte = cast(d.id_deputado as varchar)
 
 left join {{ ref('stg_camara__deputados') }} as c on c.id_deputado = d.id_deputado
+
+left join {{ ref('stg_camara__deputados_detalhe') }} as g on g.id_deputado = d.id_deputado
 
 left join {{ ref('int_deputados_votos_agregados') }} as n on n.id_deputado = d.id_deputado
 

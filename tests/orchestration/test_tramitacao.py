@@ -65,8 +65,8 @@ def test_raw_keeps_the_list_of_authors_of_the_process_as_a_child_table(full: Env
 def test_the_whole_landing_verifies_and_each_item_is_indexed(full: Env) -> None:
     con, settings = full
     assert foreach.verify(con, settings) == []  # arquivos, respostas dentro dos lotes e índice conferem
-    assert scalar(con, "SELECT COUNT(*) FROM metadata.capture_items WHERE source = 'camara'") == 5
-    assert scalar(con, "SELECT COUNT(*) FROM metadata.capture_items WHERE status = 404") == 2
+    assert scalar(con, "SELECT COUNT(*) FROM metadata.capture_items WHERE source = 'camara'") == 7
+    assert scalar(con, "SELECT COUNT(*) FROM metadata.capture_items WHERE status = 404") == 3
 
 
 def test_coverage_is_reported_per_dataset(full: Env) -> None:

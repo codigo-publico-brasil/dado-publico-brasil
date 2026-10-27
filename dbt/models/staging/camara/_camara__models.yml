@@ -185,6 +185,18 @@ models:
       - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
       - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+  - name: stg_camara__deputados_detalhe
+    description: Cadastro dos deputados (só dos já buscados), uma linha por deputado.
+    columns:
+      - {name: id_deputado, description: "Identificador do deputado na fonte.", tests: ["unique", "not_null"]}
+      - {name: escolaridade, description: "Escolaridade informada pela fonte, com caixa padronizada."}
+      - {name: situacao, description: "Situação do deputado no último status (por exemplo, Exercício, Licença)."}
+      - {name: condicao_eleitoral, description: "Titular ou suplente no último status, como a fonte informa."}
+      - {name: gabinete_email, description: "E-mail institucional do gabinete."}
+      - {name: gabinete_telefone, description: "Telefone institucional do gabinete."}
+      - {name: gabinete_endereco, description: "Prédio, sala e andar do gabinete, como a fonte informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+
   - name: stg_camara__deputados_historico
     description: Histórico de situação dos deputados (só dos já buscados), uma linha por registro de status.
     columns:

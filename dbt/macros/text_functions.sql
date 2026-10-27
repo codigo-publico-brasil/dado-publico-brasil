@@ -13,9 +13,14 @@
                                    em maiúsculas)
     standardize_summary(x, siglas) caixa de frase para ementas, mantendo em maiúsculas as palavras de `siglas`
     name_key(x)                    chave para comparar nomes entre fontes: sem acento, minúsculas e espaços únicos
+    tse_value(x)                   vazio no lugar dos marcadores do TSE (#NULO, #NULO#, #NE, #NE#); nomes que começam
+                                   com # (como uma coligação #JUNTOS) são valores legítimos e ficam
 #}
 {% macro create_text_functions() %}
 create or replace macro clean_text(x) as trim(regexp_replace(x, '\s+', ' ', 'g'));
+
+create or replace macro tse_value(x) as
+    case when clean_text(x) in ('#NULO', '#NULO#', '#NE', '#NE#') then null else nullif(clean_text(x), '') end;
 
 create or replace macro name_key(x) as nullif(lower(strip_accents(clean_text(x))), '');
 
