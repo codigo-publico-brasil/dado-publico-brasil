@@ -18,7 +18,7 @@ def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_
         "ds_ocupacao",
     } <= cols  # ADR 0029: o que o candidato declara
     found = {r["sq_candidato"] for r in rows(con, "SELECT sq_candidato FROM raw_federal_tse.candidaturas")}
-    # 1006 é deputado estadual, 1010 a 1015 são municipais e 2005 e 2006 são de 2018: entram no raw (todos os cargos); 9999 só existe no
+    # 1006 é deputado estadual, 1010 a 1016 são municipais e 2005 e 2006 são de 2018: entram no raw (todos os cargos); 9999 só existe no
     # arquivo do estado (só o _BRASIL.csv é lido)
     assert found == {
         "1001",
@@ -33,6 +33,7 @@ def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_
         "1013",
         "1014",
         "1015",
+        "1016",
         "2005",
         "2006",
         "2007",
@@ -170,3 +171,13 @@ def test_a_derived_tse_link_that_is_no_longer_proposed_is_removed_and_the_valid_
     assert (
         scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador WHERE source_id = '2022:XX:777'") == 0
     )
+
+
+def test_a_renewed_election_with_another_code_does_not_enter_even_without_the_word_supplementary(
+    full: Env,
+) -> None:
+    con, _ = full
+    found = {r[0] for r in con.execute("SELECT sq_candidato FROM staging.stg_tse__candidaturas").fetchall()}
+    assert 1010 in found  # a eleição ordinária entra
+    assert 1014 not in found and 1016 not in found  # a suplementar e a renovada ficam só no raw
+    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_tse.candidaturas WHERE sq_candidato = '1016'") == 1

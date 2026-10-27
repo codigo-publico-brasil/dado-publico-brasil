@@ -1,6 +1,8 @@
 """Fonte do DOU: um zip por seção e mês, só no landing (sem tabela no raw)."""
 
 import hashlib
+import io
+import zipfile
 from datetime import date
 from pathlib import Path
 
@@ -66,7 +68,10 @@ def test_a_landing_only_dataset_is_kept_with_hash_and_never_loaded_into_the_raw(
     con: Connection, settings: Settings, tmp_path: Path
 ) -> None:
     source = contracts.find("dou")
-    content = b"PK\x03\x04 zip de teste"
+    buffer = io.BytesIO()  # um zip de verdade: a conferência de integridade abre o pacote e exige um XML
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("ato.xml", "<xml/>")
+    content = buffer.getvalue()
 
     def downloader(url: str, folder: Path) -> tuple[Path, str, int]:
         folder.mkdir(parents=True, exist_ok=True)

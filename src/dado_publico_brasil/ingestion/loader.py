@@ -19,6 +19,7 @@ from typing import Any
 import dlt
 from dlt.common.normalizers.naming.snake_case import NamingConvention
 from dlt.extract import DltResource
+from dlt.pipeline.helpers import pipeline_drop
 
 from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.settings import Settings
@@ -132,6 +133,17 @@ def load_file(
     return stats
 
 
+def reset_dataset(settings: Settings, contract: SourceContract, dataset: Dataset) -> None:
+    """Descarta a tabela raw do dataset (e as tabelas filhas) e o estado do dlt, para recarregar do zero.
+
+    Necessário quando o contrato muda a chave primária: o dlt não acrescenta uma coluna de chave a uma tabela
+    que já existe. O landing não é tocado; a tabela é refeita pelos arquivos dele."""
+    name = normalize(dataset.name)
+    p = pipeline(settings, contract)
+    if p.default_schema_name and name in p.default_schema.tables:
+        pipeline_drop(p, resources=[name])()
+
+
 def load_capture(
     con: Connection, settings: Settings, contract: SourceContract, capture: dict[str, Any]
 ) -> int:
@@ -201,11 +213,15 @@ def load_pending(
     Devolve (capturas carregadas, linhas carregadas).
     """
     captures = rows = 0
+    reset: set[str] = set()
     for capture in landing.current_captures(con, contract.source):
         if only_dataset not in (None, capture["dataset"]) or not contract.datasets[capture["dataset"]].raw:
             continue
         if capture["loaded_at"] is not None and not rebuild:
             continue
+        if rebuild and capture["dataset"] not in reset:
+            reset.add(capture["dataset"])
+            reset_dataset(settings, contract, contract.datasets[capture["dataset"]])
         rows += load_capture(con, settings, contract, capture)
         captures += 1
     return captures, rows

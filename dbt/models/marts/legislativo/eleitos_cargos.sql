@@ -1,7 +1,28 @@
 -- Situação de cada cargo em cada unidade eleitoral: quantas vagas existem, quantas já têm eleito e o que falta. Mostra o
 -- estado real: o cargo sem todos os eleitos fica `aguardando_resultado` (por exemplo, governador no 2º turno), nunca
 -- um palpite. `eleito_provisorio` quer dizer que todas as vagas têm eleito pelo resultado do TSE, ainda sem diplomação.
-with eleitos_por_cargo as (
+with vagas as (
+
+    -- o arquivo de vagas também traz as eleições suplementares e renovadas do ano, com outro `cd_eleicao`: em cada ano,
+    -- unidade e cargo vale o código que cobre mais unidades (a ordinária cobre milhares; a suplementar, uma ou duas)
+    select v.*
+
+    from {{ ref('stg_tse__vagas') }} as v
+
+    left join (
+        select ano_eleicao, cargo, cd_eleicao, count(distinct ue) as unidades
+        from {{ ref('stg_tse__vagas') }}
+        group by all
+    ) as c
+        on c.ano_eleicao = v.ano_eleicao and c.cargo = v.cargo and c.cd_eleicao is not distinct from v.cd_eleicao
+
+    qualify dense_rank() over (
+        partition by v.ano_eleicao, v.ue, v.cargo order by c.unidades desc nulls last, v.cd_eleicao
+    ) = 1
+
+),
+
+eleitos_por_cargo as (
 
     select ano_eleicao, ue, cargo, count(distinct id_candidatura) as qtd_eleitos
 
@@ -38,7 +59,7 @@ select
     k.dt_captura,
     'https://dadosabertos.tse.jus.br/dataset/candidatos-' || v.ano_eleicao as fonte_url
 
-from {{ ref('stg_tse__vagas') }} as v
+from vagas as v
 
 left join eleitos_por_cargo as e
     on e.ano_eleicao = v.ano_eleicao and e.ue = v.ue and e.cargo = v.cargo
@@ -46,4 +67,4 @@ left join eleitos_por_cargo as e
 left join capturas as k on k.ano_eleicao = v.ano_eleicao
 
 where v.cargo in ('Presidente', 'Governador', 'Senador', 'Deputado federal', 'Deputado estadual', 'Deputado distrital', 'Prefeito', 'Vereador')
-    and v.eleicao not ilike '%suplementar%'  -- só as eleições gerais; as suplementares não entram aqui
+    and v.eleicao not ilike '%suplementar%'  -- só as eleições ordinárias; as suplementares e renovadas não entram aqui
