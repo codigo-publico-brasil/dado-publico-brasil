@@ -25,7 +25,7 @@ from dado_publico_brasil.ingestion.contract import SourceContract
 Downloader = Callable[[str, Path], tuple[Path, str, int]]
 HeadRequest = Callable[[str], dict[str, str | None]]
 
-AGENT = "dado-publico-brasil/0.1 (projeto civico aberto)"
+AGENT = "dado-publico-brasil/0.1 (projeto civico aberto; +https://github.com/codigo-publico-brasil/dado-publico-brasil)"
 CHUNK = 1024 * 1024
 TRIES = 3
 
