@@ -110,6 +110,14 @@ MUNICIPAIS = [
         "ELEITO",
         ("701", "Eleição Suplementar Teste 2023"),
     ),
+    (  # renovada: a descrição não diz "suplementar", só o código de eleição a distingue (issue 74)
+        "PREFEITO",
+        "1016",
+        "PREFEITO RENOVADA",
+        "RENOVADA",
+        "ELEITO",
+        ("702", "Nova Eleição Teste 2013"),
+    ),
 ]
 
 

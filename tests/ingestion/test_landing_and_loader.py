@@ -359,3 +359,23 @@ def test_rows_that_a_previous_capture_had_and_the_current_one_lacks_are_a_warnin
     assert [(s, d[:8]) for s, d in checks()] == [("warn", "1 linhas")]
     loader.load_capture(con, settings, contract, capture("codigo,nome\n1,Ana\n3,Cid\n", "c"))
     assert [s for s, _ in checks()][-1] == "warn"  # a linha 2 continua no raw, de uma captura antiga
+
+
+def test_reset_lets_a_table_be_reloaded_when_the_contract_changes_the_primary_key(tmp_path: Path) -> None:
+    settings = Settings(storage_root=tmp_path / "store")
+    contract = make_contract(tmp_path)
+    load(settings, contract, "pessoas", "codigo,nome\n1,Ana\n2,Bia\n", 1)
+    file = tmp_path / "contract.yml"  # a chave passa a ser o conteúdo da linha
+    file.write_text(
+        file.read_text(encoding="utf-8").replace("primary_key: [codigo]", "primary_key: [_row_hash]")
+    )
+    changed = load_contract(file)
+    loader.reset_dataset(settings, changed, changed.datasets["pessoas"])
+    load(settings, changed, "pessoas", "codigo,nome\n1,Ana\n1,Ana\n3,Caio\n", 2)
+    assert read_all(
+        settings, "SELECT codigo, nome, _source_file_id FROM raw_municipal_teste.pessoas ORDER BY 1"
+    ) == [
+        ("1", "Ana", 2),
+        ("1", "Ana", 2),
+        ("3", "Caio", 2),
+    ]  # nada da carga anterior sobrou, e as linhas idênticas da fonte ficam todas

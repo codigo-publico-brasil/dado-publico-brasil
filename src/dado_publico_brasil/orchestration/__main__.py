@@ -91,6 +91,12 @@ def _coverage(settings: Settings, only: str | None) -> None:
                 if dataset.foreach and only in (None, source.source):
                     counts = foreach.coverage(con, source, name)
                     print(f"{source.source}.{name}: " + ", ".join(f"{k} {v}" for k, v in counts.items()))
+            if only in (None, source.source):
+                for name, gap in landing.partition_gaps(con, source).items():
+                    line = f"{source.source}.{name}: {gap['capturadas']} de {gap['esperadas']} partições"
+                    if gap["indisponiveis"]:
+                        line += f"; a fonte não publica {gap['indisponiveis']}"
+                    print(line + (f"; faltam {gap['faltam']}" if gap["faltam"] else ""))
     finally:
         con.close()
 
@@ -101,7 +107,9 @@ def _ingest(settings: Settings, args: argparse.Namespace) -> None:
         for source in contract.find_all():
             if args.source in (None, source.source):
                 if args.command == "extract":
-                    n = landing.extract_plan(con, settings, source, _plan(args)(source), force=args.force)
+                    n = landing.extract_plan(
+                        con, settings, source, _plan(args)(source), force=args.force, recover=args.incremental
+                    )
                     print(f"{source.source}: {n} datasets processados")
                     for name, dataset in source.datasets.items():
                         if dataset.foreach and args.foreach and args.dataset in (None, name):
