@@ -1,6 +1,5 @@
--- O que aconteceu em cada turno da eleição, candidatura a candidatura, SÓ com os arquivos do TSE (sem Câmara, Senado nem
--- identidade de pessoa). Uma linha por candidatura e turno, de todos os cargos menos vereador (candidaturas de vereador
--- são milhões; os eleitos estão em `eleitos`).
+-- O que aconteceu em cada turno da eleição, candidatura a candidatura, SÓ com arquivos do TSE. Uma linha por candidatura
+-- e turno, de todos os cargos (inclusive vereador).
 --  - `resultado` é o que o arquivo de candidaturas informa; `resultado_votacao`, o que o arquivo de votação informa. Os
 --    dois podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente, nem 2010 na votação).
 --  - `fl_mais_votado_no_turno` é DERIVADO dos votos, não é resultado do TSE: só existe para cargo de uma vaga (presidente,
@@ -36,22 +35,12 @@ votos_da_disputa as (
 
     inner join votos as v on v.id_candidatura = c.id_candidatura and v.turno = c.turno
 
-    where c.cargo <> 'Vereador'
-
 )
 
 select
     '{{ var("source_tse") }}' as fonte,
     c.id_candidatura,
     c.turno,
-    c.ano_eleicao,
-    c.uf,
-    c.ue,
-    c.ue_nome,
-    c.cargo,
-    c.numero,
-    c.nome_urna,
-    c.partido_sigla as partido,
     c.situacao_candidatura,
     c.resultado,
     v.resultado_votacao,
@@ -63,15 +52,10 @@ select
         d.posicao = 1 and d.qtd_votos_validos > 0,
         null
     ) as fl_mais_votado_no_turno,
-    cast(k.dt_captura as date) as dt_captura,
-    'https://dadosabertos.tse.jus.br/dataset/candidatos-' || c.ano_eleicao as fonte_url
+    c.id_captura
 
 from {{ ref('stg_tse__candidaturas') }} as c
 
 left join votos as v on v.id_candidatura = c.id_candidatura and v.turno = c.turno
 
 left join votos_da_disputa as d on d.id_candidatura = c.id_candidatura and d.turno = c.turno
-
-left join {{ ref('stg_metadata__captures') }} as k on k.id_captura = c.id_captura
-
-where c.cargo <> 'Vereador'

@@ -198,6 +198,7 @@ def _csv(linhas: Sequence[tuple[str, ...]], ano: str = "2022", municipais: bool 
             NM_URNA_CANDIDATO=urna, DS_SITUACAO_CANDIDATURA=situacao, SG_PARTIDO=partido, NM_PARTIDO=f"PARTIDO {partido}",
             DT_NASCIMENTO=nasc, DS_GENERO="FEMININO", DS_SIT_TOT_TURNO=resultado, SG_UF=uf,
             NR_CPF_CANDIDATO="12345678900", DS_EMAIL="x@exemplo.com", NR_TITULO_ELEITORAL_CANDIDATO="000111222333",
+            CD_ELEICAO="544" if ano == "2022" else "#NULO#",  # o código da eleição geral, o mesmo do arquivo de vagas
         )  # fmt: skip
         if sq == "1001":  # o que o candidato declara (ADR 0029)
             valores.update(
@@ -322,6 +323,13 @@ def tse_files(pasta: Path) -> dict[str, Path]:
             pacote.writestr(f"{nome}_SP.csv", conteudo)  # o `_BRASIL.csv` é o único lido; este é só ruído
             pacote.writestr(f"{nome}_BRASIL.csv", conteudo)
         arquivos[contrato.url(dataset, 2022)] = pacote_destino
+    # fotos oficiais: um pacote por UF e ano; só o do RJ em 2022 traz a foto da BIA (sq 1001), os demais não têm imagem
+    for ano in (2018, 2022):
+        for dataset in (d for d in contrato.datasets if d.startswith("fotos_")):
+            membros = {"leiame.txt": b"sem fotos"}
+            if (ano, dataset) == (2022, "fotos_rj"):
+                membros = {"FRJ1001_div.jpg": FOTO}
+            arquivos[contrato.url(dataset, ano)] = _pacote(pasta / f"{dataset}_{ano}.zip", membros)
     arquivos[contrato.url("vagas", 2022)] = _pacote(
         pasta / "consulta_vagas_2022.zip", {"consulta_vagas_2022_BRASIL.csv": _vagas()}
     )
@@ -336,6 +344,11 @@ def tse_files(pasta: Path) -> dict[str, Path]:
     arquivos[contrato.url("receitas_candidatos", 2022)] = contas
     arquivos[contrato.url("despesas_candidatos", 2022)] = contas
     return arquivos
+
+
+FOTO = (
+    bytes([0xFF, 0xD8, 0xFF, 0xE0]) + b" foto sintetica"
+)  # um JPEG de mentira: só o nome do arquivo e os bytes importam
 
 
 VAGAS_COLUNAS = "DT_GERACAO HH_GERACAO ANO_ELEICAO CD_TIPO_ELEICAO NM_TIPO_ELEICAO CD_ELEICAO DS_ELEICAO DT_ELEICAO DT_POSSE SG_UF SG_UE NM_UE CD_CARGO DS_CARGO QT_VAGA".split()  # noqa: E501

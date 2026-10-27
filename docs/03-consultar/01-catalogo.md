@@ -82,6 +82,34 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `bens` | Bens declarados pelos candidatos de todos os cargos nas eleições gerais de 2006 em diante, uma linha por bem. | publico-agente-publico |  |
 | `candidaturas` | Candidaturas a deputado federal e senador (e suplentes) nas eleições gerais, uma linha por candidatura. | publico-agente-publico |  |
 | `despesas_candidatos` | Despesas contratadas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por despesa, só com as colunas do total (sem nome nem documento do fornecedor), como o TSE publica. | publico-agente-publico |  |
+| `fotos_ac` | Arquivos de foto do pacote do TSE para AC (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_al` | Arquivos de foto do pacote do TSE para AL (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_am` | Arquivos de foto do pacote do TSE para AM (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_ap` | Arquivos de foto do pacote do TSE para AP (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_ba` | Arquivos de foto do pacote do TSE para BA (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_br` | Arquivos de foto do pacote do TSE para BR (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_ce` | Arquivos de foto do pacote do TSE para CE (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_df` | Arquivos de foto do pacote do TSE para DF (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_es` | Arquivos de foto do pacote do TSE para ES (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_go` | Arquivos de foto do pacote do TSE para GO (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_ma` | Arquivos de foto do pacote do TSE para MA (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_mg` | Arquivos de foto do pacote do TSE para MG (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_ms` | Arquivos de foto do pacote do TSE para MS (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_mt` | Arquivos de foto do pacote do TSE para MT (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_pa` | Arquivos de foto do pacote do TSE para PA (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_pb` | Arquivos de foto do pacote do TSE para PB (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_pe` | Arquivos de foto do pacote do TSE para PE (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_pi` | Arquivos de foto do pacote do TSE para PI (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_pr` | Arquivos de foto do pacote do TSE para PR (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_rj` | Arquivos de foto do pacote do TSE para RJ (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_rn` | Arquivos de foto do pacote do TSE para RN (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_ro` | Arquivos de foto do pacote do TSE para RO (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_rr` | Arquivos de foto do pacote do TSE para RR (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_rs` | Arquivos de foto do pacote do TSE para RS (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_sc` | Arquivos de foto do pacote do TSE para SC (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_se` | Arquivos de foto do pacote do TSE para SE (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_sp` | Arquivos de foto do pacote do TSE para SP (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
+| `fotos_to` | Arquivos de foto do pacote do TSE para TO (nome e tamanho de cada imagem; o pacote original está no landing). | publico-agente-publico |  |
 | `receitas_candidatos` | Receitas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por receita, só com as colunas do total (sem nome nem documento de quem doou), como o TSE publica. | publico-agente-publico |  |
 | `vagas` | Quantidade de vagas de cada cargo em cada unidade eleitoral nas eleições gerais (por exemplo, 513 de deputado federal), uma linha por cargo e unidade, como o TSE publica. | publico-agente-publico |  |
 | `votacao` | Votos de cada candidato (todos os cargos) por município e zona nas eleições gerais já carregadas, como o TSE publica. | publico-agente-publico |  |
@@ -133,6 +161,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_tse__bens` | Bens declarados pelos candidatos de todos os cargos, uma linha por bem. | publico-agente-publico |  |
 | `stg_tse__candidaturas` | Candidaturas de todos os cargos nas eleições gerais e municipais, uma linha por candidatura e turno. | publico-agente-publico |  |
 | `stg_tse__despesas_candidatos` | Despesas contratadas declaradas pelos candidatos de todos os cargos, uma linha por despesa; o valor é o declarado, sem nome nem documento do fornecedor. | publico-agente-publico |  |
+| `stg_tse__fotos` | Arquivos de foto oficial das candidaturas das eleições gerais, um por imagem dentro de cada pacote por UF do TSE. | publico-agente-publico |  |
 | `stg_tse__receitas_candidatos` | Receitas declaradas pelos candidatos de todos os cargos, uma linha por receita; o valor é o declarado, sem nome nem documento de quem doou. | publico-agente-publico |  |
 | `stg_tse__vagas` | Vagas de cada cargo em cada unidade eleitoral, uma linha por eleição, cargo e unidade, como o TSE publica; traz também as eleições suplementares. | publico-agente-publico |  |
 | `stg_tse__votacao` | Votos de cada candidato (todos os cargos) por município e zona, como o TSE publica. | publico-agente-publico |  |
@@ -168,6 +197,14 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `disputas` | Cada cargo em cada unidade eleitoral de uma eleição, com o número de vagas que o TSE informa. Uma linha por eleição, cargo e unidade. É a base das candidaturas e dos resultados, e permite medir se alguma vaga ficou sem eleito. | publico | eleição |
 | `eleicoes` | Eleições do arquivo de vagas do TSE, uma por ano e código do TSE, ordinárias e suplementares. Se a eleição é ordinária é regra do projeto (cobertura de unidades por ano e cargo), e não informação do TSE. | publico | eleição |
 | `territorios` | Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato que fala de lugar (ADR 0030). | publico | território |
+
+## fatos
+
+| Tabela | O que é | Sensibilidade | Grain |
+| --- | --- | --- | --- |
+| `campanhas` | A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o arquivo daquele dado não foi carregado ou não traz o candidato. | publico-agente-publico | candidatura |
+| `candidaturas` | Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era, por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer novato. O nome do modelo leva o prefixo fatos_ só porque marts.candidaturas ainda existe; a tabela é fatos.candidaturas. | publico-agente-publico | candidatura |
+| `resultados` | O que aconteceu em cada turno da eleição, candidatura a candidatura, só com arquivos do TSE. Uma linha por candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente). fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE. | publico-agente-publico | candidatura e turno |
 
 ## marts
 
@@ -231,10 +268,53 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 ## Dicionário de colunas dos marts
 
+### marts.campanhas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_candidatura` | varchar | Candidatura (fatos.candidaturas). 434 candidaturas com bens (2012, 2016, 2020 e 2024) são de eleições suplementares ou renovadas, que as candidaturas não trazem (issue 74); o teste de aviso mede essas. |  |
+| `qtd_bens` | bigint | Quantidade de bens declarados; vazio se o candidato não declarou ou o arquivo não foi carregado. |  |
+| `valor_bens` | decimal(18,2) | Soma dos valores dos bens declarados, em reais, sem correção. |  |
+| `qtd_receitas` | bigint | Quantidade de receitas na prestação de contas; vazio se o arquivo não foi carregado ou não traz o candidato. |  |
+| `valor_receitas` | decimal(18,2) | Soma das receitas declaradas, em reais. |  |
+| `qtd_despesas` | bigint | Quantidade de despesas contratadas na prestação de contas; vazio se o arquivo não foi carregado ou não traz o candidato. |  |
+| `valor_despesas` | decimal(18,2) | Soma das despesas contratadas declaradas, em reais. |  |
+| `dt_prestacao` | date | Data mais recente da prestação de contas entre receitas e despesas. |  |
+| `id_captura_bens` | bigint | Captura do arquivo de bens de origem; vazia sem bens. |  |
+| `id_captura_receitas` | bigint | Captura do arquivo de receitas de origem; vazia sem receitas. |  |
+| `id_captura_despesas` | bigint | Captura do arquivo de despesas de origem; vazia sem despesas. |  |
+
 ### marts.candidaturas
 
 | Coluna | Tipo | Descrição | Dado pessoal |
 | --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_candidatura` | varchar | Identificador da candidatura: ano da eleição, unidade eleitoral e sequencial do candidato, como o TSE informa. |  |
+| `id_disputa` | varchar | Disputa da candidatura (core.disputas); vazio quando o arquivo de vagas do TSE não traz a unidade do candidato. O teste de aviso mede quantas ficam assim. |  |
+| `sq_candidato` | bigint | Número sequencial do candidato na eleição, como o TSE informa; liga ao nome do arquivo de foto. |  |
+| `numero` | varchar | Número do candidato na urna. |  |
+| `nome` | varchar | Nome civil do candidato, com caixa padronizada. |  |
+| `nome_urna` | varchar | Nome de urna, com caixa padronizada. |  |
+| `nome_social` | varchar | Nome social declarado pelo candidato; o TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido). | sim |
+| `genero` | varchar | Gênero do candidato, como o TSE informa. |  |
+| `grau_instrucao` | varchar | Grau de instrução declarado; Não divulgável quando o TSE protege o dado. | sim |
+| `estado_civil` | varchar | Estado civil declarado na candidatura; Não divulgável quando o TSE protege o dado. | sim |
+| `ocupacao` | varchar | Ocupação declarada, como o TSE informa; Não divulgável quando o TSE protege o dado. |  |
+| `partido` | varchar | Sigla do partido na eleição, como o TSE informa. |  |
+| `partido_nome` | varchar | Nome do partido na eleição. |  |
+| `federacao` | varchar | Sigla da federação partidária (desde 2022); vazia nos anos anteriores. |  |
+| `coligacao` | varchar | Nome da coligação da candidatura; vazio sem coligação. |  |
+| `situacao_candidatura` | varchar | Situação da candidatura no último turno em que consta, como o TSE informa (por exemplo, deferido, indeferido). |  |
+| `qtd_turnos` | integer | Número do último turno em que a candidatura consta (2 quando foi ao segundo turno). |  |
+| `resultado` | varchar | Resultado do último turno como o arquivo de candidaturas do TSE informa (eleito, suplente, não eleito, 2º turno); vazio quando o TSE não informa, como o 2º turno de presidente de 2006. |  |
+| `fl_eleito` | boolean | Verdadeiro quando o TSE marca a candidatura como eleita em algum turno. Falso não quer dizer derrota quando o resultado está vazio. |  |
+| `fl_mais_votado_no_ultimo_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no último turno com votos. Vazio sem votos carregados ou em cargo de várias vagas. |  |
+| `id_pessoa_tse` | varchar | Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato. |  |
+| `foto_arquivo` | varchar | Nome do arquivo da foto oficial no pacote do TSE; vazio quando o pacote não traz foto do candidato. |  |
+| `foto_caminho` | varchar | Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto. |  |
+| `foto_pacote_url` | varchar | Endereço oficial do pacote de fotos do TSE que contém a foto. |  |
+| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
 | `fonte` | varchar | Fonte oficial do registro (tse). |  |
 | `id_pessoa` | bigint | Chave da pessoa (marts.pessoas), ligada por nome civil e data de nascimento iguais e únicos. |  |
 | `id_candidatura` | varchar | Identificador da candidatura na fonte: ano da eleição e sequencial do candidato. |  |
@@ -851,6 +931,22 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `situacao` | varchar | Situação da proposição após o andamento. |  |
 | `despacho` | varchar | Texto do despacho, como a fonte informa. |  |
 | `dt_captura` | date | Data da captura do lote de origem. |  |
+
+### marts.resultados
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_candidatura` | varchar | Candidatura (fatos.candidaturas). |  |
+| `turno` | integer | Turno da votação. |  |
+| `situacao_candidatura` | varchar | Situação da candidatura no turno, como o arquivo de candidaturas informa. |  |
+| `resultado` | varchar | Resultado do turno como o arquivo de candidaturas do TSE informa; vazio quando não informa. |  |
+| `resultado_votacao` | varchar | Resultado do turno como o arquivo de votação do TSE informa; vazio quando não informa. |  |
+| `qtd_votos_validos` | bigint | Votos válidos do candidato no turno, somados de todos os municípios e zonas; vazio se a votação não foi carregada. |  |
+| `qtd_votos_nominais` | bigint | Votos nominais do candidato no turno, somados de todos os municípios e zonas. |  |
+| `percentual_votos_validos` | decimal(5,2) | Percentual dos votos válidos do candidato sobre os votos válidos de todos os candidatos da mesma disputa e turno, sem votos de legenda; vazio sem votos carregados. |  |
+| `fl_mais_votado_no_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no turno; vazio sem votos carregados ou em cargo de várias vagas. |  |
+| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
 
 ### marts.territorios
 

@@ -43,6 +43,7 @@ Pela página de comparação do Elementary (consultada em 24/10/2026), a versão
 | --- | --- |
 | Catalog | `docs/03-consultar/01-catalogo.md`, gerado do dbt (`dado-publico catalog`) |
 | Data health | `dado-publico observe` |
+| Fotos dos candidatos | `uv run dado-publico fotos` extrai as imagens dos pacotes do TSE (já no landing) para `<pasta de dados>/fotos/<ano>/<UF>/<sq>.jpg`, só o que falta ou mudou; o caminho está em `fatos.candidaturas.foto_caminho`. Hospedagem pública das fotos depende da decisão do VPS (#30) |
 | Alert rules | alerta por e-mail do `observe` (o Elementary aberto só alerta por Slack e Teams) |
 | Environment | não se aplica: há um ambiente |
 | Pull requests | o próprio GitHub |

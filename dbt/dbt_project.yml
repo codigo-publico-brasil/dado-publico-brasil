@@ -2,6 +2,7 @@
 #   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
 #   core          referências do modelo (ADR 0030): territórios, cargos, eleições, disputas, tipos de evento.
+#   fatos         o que aconteceu, datado e com a fonte: candidaturas, resultados, campanhas (ADR 0030).
 #   marts         entidades prontas para consumo, uma por grain, com contrato de colunas.
 name: dado_publico_brasil
 version: "0.1.0"
@@ -55,6 +56,13 @@ models:
         owner: fundador do projeto
     core:
       +schema: core
+      +materialized: table
+      +contract:
+        enforced: true
+      +meta:
+        owner: fundador do projeto
+    fatos:
+      +schema: fatos
       +materialized: table
       +contract:
         enforced: true
