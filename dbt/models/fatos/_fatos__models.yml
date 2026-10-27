@@ -134,3 +134,28 @@ models:
       - {name: dt_fim_prevista, data_type: date, description: "DERIVADO: dt_inicio mais a duração do cargo na Constituição, menos um dia. É o fim previsto, não o fim real (cassação, renúncia e morte não entram)."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures)."}
 
+  - name: fatos_exercicios
+    config: {alias: exercicios}
+    description: >
+      Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais
+      (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Nada é derivado de
+      regra. Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois
+      não há fonte oficial de exercício carregada para eles (o mandato deles está em fatos.mandatos). O nome do modelo
+      leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fatos.exercicios.
+    meta: {sensitivity: publico-agente-publico, grain: período de exercício, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara ou senado)."}
+      - {name: id_exercicio, data_type: varchar, tests: [unique, not_null], description: "Identificador do período: fonte e identificador da fonte (Câmara: deputado, legislatura e momento da entrada)."}
+      - name: id_pessoa
+        data_type: bigint
+        tests: [{not_null: {config: {severity: warn}}}]
+        description: "Pessoa do projeto (marts.pessoas); vazio se a ligação não existe (o teste de aviso mede)."
+      - {name: id_cargo, data_type: varchar, tests: [{relationships: {to: ref('cargos'), field: id_cargo}}], description: "Cargo exercido (core.cargos): deputado_federal ou senador (suplente em exercício ocupa a vaga do titular)."}
+      - {name: condicao_na_fonte, data_type: varchar, description: "Condição como a fonte informa (Câmara: Titular, Suplente, Efetivado; Senado: Titular, 1º Suplente, 2º Suplente); vazia quando a fonte não informa."}
+      - {name: id_legislatura, data_type: integer, description: "Legislatura do período, só na Câmara; vazia no Senado, onde o mandato dura oito anos."}
+      - {name: uf, data_type: varchar, description: "UF representada, como a fonte informa."}
+      - {name: dt_inicio, data_type: date, tests: [not_null], description: "Início do período, como a fonte informa."}
+      - {name: dt_fim, data_type: date, description: "Fim do período; vazio enquanto está em exercício."}
+      - {name: causa_fim, data_type: varchar, description: "Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+

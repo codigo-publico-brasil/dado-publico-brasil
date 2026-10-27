@@ -204,6 +204,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `campanhas` | A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o arquivo daquele dado não foi carregado ou não traz o candidato. | publico-agente-publico | candidatura |
 | `candidaturas` | Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era, por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer novato. O nome do modelo leva o prefixo fatos_ só porque marts.candidaturas ainda existe; a tabela é fatos.candidaturas. | publico-agente-publico | candidatura |
+| `exercicios` | Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Nada é derivado de regra. Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fatos.mandatos). O nome do modelo leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fatos.exercicios. | publico-agente-publico | período de exercício |
 | `mandatos` | Um mandato por candidatura eleita, de todos os cargos (inclusive vereador e o vice e os suplentes eleitos junto): o mandato nasce da eleição, não do exercício. Quem assumiu depois como suplente não tem linha aqui (será fatos.exercicios). O início é a data de posse do TSE quando cai no ano seguinte ao da eleição; para prefeito e vice-prefeito, sem data válida, é derivado do art. 29, III da Constituição e marcado. O fim é sempre derivado da duração do cargo. Só TSE; a ligação com a pessoa do projeto virá com as pessoas de todos os eleitos. O nome do modelo leva o prefixo fatos_ só porque marts.mandatos ainda existe; a tabela é fatos.mandatos. | publico-agente-publico | mandato (candidatura eleita) |
 | `resultados` | O que aconteceu em cada turno da eleição, candidatura a candidatura, só com arquivos do TSE. Uma linha por candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente). fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE. | publico-agente-publico | candidatura e turno |
 
@@ -359,6 +360,22 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `foto_caminho` | varchar | Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto. |  |
 | `foto_pacote_url` | varchar | Endereço oficial do pacote de fotos do TSE que contém a foto. |  |
 | `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
+
+### fatos.exercicios
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (camara ou senado). |  |
+| `id_exercicio` | varchar | Identificador do período: fonte e identificador da fonte (Câmara: deputado, legislatura e momento da entrada). |  |
+| `id_pessoa` | bigint | Pessoa do projeto (marts.pessoas); vazio se a ligação não existe (o teste de aviso mede). |  |
+| `id_cargo` | varchar | Cargo exercido (core.cargos): deputado_federal ou senador (suplente em exercício ocupa a vaga do titular). |  |
+| `condicao_na_fonte` | varchar | Condição como a fonte informa (Câmara: Titular, Suplente, Efetivado; Senado: Titular, 1º Suplente, 2º Suplente); vazia quando a fonte não informa. |  |
+| `id_legislatura` | integer | Legislatura do período, só na Câmara; vazia no Senado, onde o mandato dura oito anos. |  |
+| `uf` | varchar | UF representada, como a fonte informa. |  |
+| `dt_inicio` | date | Início do período, como a fonte informa. |  |
+| `dt_fim` | date | Fim do período; vazio enquanto está em exercício. |  |
+| `causa_fim` | varchar | Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
 
 ### fatos.mandatos
 
