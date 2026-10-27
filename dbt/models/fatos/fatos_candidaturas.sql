@@ -49,30 +49,12 @@ cadastro as (
 
     -- dados de cadastro da candidatura (iguais nos turnos): vale o primeiro turno
     select distinct on (id_candidatura)
-        id_candidatura, ano_eleicao, cd_eleicao, ue, cargo, sq_candidato, numero, nome, nome_urna, nome_social, genero,
+        id_candidatura, ano_eleicao, cd_eleicao, ue, cd_cargo, sq_candidato, numero, numero_partido, nome, nome_urna, nome_social, genero,
         grau_instrucao, estado_civil, ocupacao, partido_sigla, partido_nome, federacao_sigla, coligacao_nome
 
     from {{ ref('stg_tse__candidaturas') }}
 
     order by id_candidatura, turno
-
-),
-
--- a disputa vem do arquivo de vagas; o cargo do arquivo de candidaturas é texto, então liga por nome sem acento nem pontuação
-vagas as (
-
-    select
-        d.id_disputa,
-        d.id_eleicao,
-        d.ue,
-        lower(regexp_replace(strip_accents(v.cargo), '[^a-zA-Z0-9]', '', 'g')) as chave_cargo
-
-    from {{ ref('stg_tse__vagas') }} as v
-
-    inner join {{ ref('cargos') }} as k on k.cd_cargo_tse = v.cd_cargo
-
-    inner join {{ ref('disputas') }} as d
-        on d.id_eleicao = v.ano_eleicao || '-' || v.cd_eleicao and d.ue = v.ue and d.id_cargo = k.id_cargo
 
 )
 
@@ -82,6 +64,7 @@ select
     v.id_disputa,
     c.sq_candidato,
     c.numero,
+    c.numero_partido,
     c.nome,
     c.nome_urna,
     c.nome_social,
@@ -117,9 +100,10 @@ from cadastro as c
 
 inner join turnos as t on t.id_candidatura = c.id_candidatura
 
-left join vagas as v
-    on v.id_eleicao = c.ano_eleicao || '-' || c.cd_eleicao and v.ue = c.ue
-    and v.chave_cargo = lower(regexp_replace(strip_accents(c.cargo), '[^a-zA-Z0-9]', '', 'g'))
+left join {{ ref('cargos') }} as k on k.cd_cargo_tse = c.cd_cargo
+
+left join {{ ref('disputas') }} as v
+    on v.id_eleicao = c.ano_eleicao || '-' || c.cd_eleicao and v.ue = c.ue and v.id_cargo = k.id_cargo
 
 left join ultimo_turno as u on u.id_candidatura = c.id_candidatura
 

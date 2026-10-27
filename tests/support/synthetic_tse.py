@@ -198,6 +198,7 @@ def _csv(linhas: Sequence[tuple[str, ...]], ano: str = "2022", municipais: bool 
             NM_URNA_CANDIDATO=urna, DS_SITUACAO_CANDIDATURA=situacao, SG_PARTIDO=partido, NM_PARTIDO=f"PARTIDO {partido}",
             DT_NASCIMENTO=nasc, DS_GENERO="FEMININO", DS_SIT_TOT_TURNO=resultado, SG_UF=uf,
             NR_CPF_CANDIDATO="12345678900", DS_EMAIL="x@exemplo.com", NR_TITULO_ELEITORAL_CANDIDATO="000111222333",
+            CD_CARGO=CODIGO_DO_CARGO.get(cargo.title(), "#NULO#"), NR_PARTIDO="10",
             CD_ELEICAO="544" if ano == "2022" else "#NULO#",  # o código da eleição geral, o mesmo do arquivo de vagas
         )  # fmt: skip
         if sq == "1001":  # o que o candidato declara (ADR 0029)

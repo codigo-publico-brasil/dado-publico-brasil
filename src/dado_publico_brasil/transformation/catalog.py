@@ -50,6 +50,7 @@ def columns(settings: Settings) -> list[dict[str, str]]:
             for column in node["columns"].values():
                 found.append(
                     {
+                        "schema": node["schema"],
                         "table": node.get("alias") or node["name"],
                         "name": column["name"],
                         "type": str(column.get("data_type") or ""),
@@ -91,19 +92,20 @@ def markdown(settings: Settings) -> str:
         for t in chosen:
             lines.append(f"| `{t['name']}` | {t['description']} | {t['sensitivity']} | {t['grain']} |")
         lines.append("")
-    lines += ["## Dicionário de colunas dos marts", ""]
-    by_table: dict[str, list[dict[str, str]]] = {}
+    lines += ["## Dicionário de colunas do núcleo, dos fatos e dos marts", ""]
+    by_table: dict[tuple[str, str], list[dict[str, str]]] = {}
     for c in columns(settings):
-        by_table.setdefault(c["table"], []).append(c)
-    for table in sorted(by_table):
+        by_table.setdefault((c["schema"], c["table"]), []).append(c)
+    for schema, table in sorted(by_table, key=lambda k: (_rank(k[0]), k[1])):
         lines += [
-            f"### marts.{table}",
+            f"### {schema}.{table}",
             "",
             "| Coluna | Tipo | Descrição | Dado pessoal |",
             "| --- | --- | --- | --- |",
         ]
         lines += [
-            f"| `{c['name']}` | {c['type']} | {c['description']} | {c['pii']} |" for c in by_table[table]
+            f"| `{c['name']}` | {c['type']} | {c['description']} | {c['pii']} |"
+            for c in by_table[(schema, table)]
         ]
         lines.append("")
     return "\n".join(lines)

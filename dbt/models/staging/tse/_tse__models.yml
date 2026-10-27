@@ -14,6 +14,8 @@ models:
       - {name: ue_nome, description: "Nome da unidade eleitoral (município, estado ou Brasil), como o TSE informa."}
       - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
       - {name: cargo, description: "Cargo exercido."}
+      - {name: cd_cargo, description: "Código do cargo no TSE (1 presidente, 3 governador, 5 senador, 6 deputado federal, 11 prefeito, 13 vereador...), como a fonte informa."}
+      - {name: numero_partido, description: "Número do partido na urna, como o TSE informa. Não identifica o partido ao longo do tempo: o mesmo número já foi usado por partidos diferentes."}
       - {name: numero, description: "Número da norma."}
       - {name: nome, description: "Nome parlamentar, com caixa padronizada.", tests: ["not_null"]}
       - {name: nome_urna, description: "Nome de urna, com caixa padronizada."}
