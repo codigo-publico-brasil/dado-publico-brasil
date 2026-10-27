@@ -24,12 +24,13 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
         "Bia Souza",
         "Carlos Eleito",
         "Fulano Estadual",
+        "Governo Reeleito",
         "Prefeito Eleito",
         "Vereador Dois",
         "Vereador Media",
         "Vereadora Um",
     ]  # sem o prefeito da eleição suplementar nem o vereador não eleito
-    bia, carlos, fulano, prefeito, *vereadores = found
+    bia, carlos, fulano, governador, prefeito, *vereadores = found
     assert (bia["cargo"], bia["uf"], bia["resultado"], bia["ligado"]) == (
         "Deputado federal",
         "RJ",
@@ -54,7 +55,8 @@ def test_the_elected_of_every_office_include_the_ones_without_a_link_and_state_d
         "Deputado estadual",
         "SP",
         None,
-    )  # sem base de mandatos
+    )  # só em 2022 (em 2018 não foi eleito): sem prova no TSE, fica sem tipo
+    assert (governador["cargo"], governador["tipo_mandato"]) == ("Governador", "reeleito")
 
 
 def test_each_office_shows_its_real_state_without_guessing(full: tuple[Connection, Settings]) -> None:
@@ -158,6 +160,7 @@ def test_the_history_of_an_elected_has_his_earlier_candidacies_and_never_the_cur
     assert [(r["nome"], r["ano_eleicao"], r["cargo"], r["resultado"]) for r in found] == [
         ("Carlos Eleito", 2018, "Deputado federal", "Eleito por qp"),
         ("Fulano Estadual", 2018, "Deputado estadual", "Não eleito"),
+        ("Governo Reeleito", 2018, "Governador", "Eleito"),
     ]
 
 
@@ -190,3 +193,18 @@ def test_the_same_person_is_found_across_elections_also_by_the_ballot_name(
     ana22 = next(k for k in ligados if k.startswith("2022:SP:") and k.endswith(":1002"))
     assert ligados[ana22] == ligados["2018:SP:2008"]  # nome civil diferente, mesmo nome de urna e nascimento
     assert ligados["2018:SP:2007"] != ligados[ana22]  # outro nome civil e outro nome de urna: nada os liga
+
+
+def test_tipo_mandato_for_the_other_offices_comes_only_from_the_tse_history_and_is_never_novato(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    types = dict(
+        con.execute(
+            "SELECT cargo, tipo_mandato FROM marts.eleitos WHERE ano_eleicao = 2022 "
+            "AND cargo IN ('Governador', 'Prefeito', 'Vereador')"
+        ).fetchall()
+    )
+    assert types["Governador"] == "reeleito"  # eleito em 2018 e em 2022, pela mesma pessoa do TSE
+    assert types["Prefeito"] is None  # sem eleição anterior no TSE: nada é afirmado, e nunca vira novato
+    assert types["Vereador"] is None

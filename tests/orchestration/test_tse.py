@@ -38,6 +38,8 @@ def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_
         "2006",
         "2007",
         "2008",
+        "2010",
+        "3001",
     }
     leaked = scalar(con, "SELECT COUNT(*) FROM raw_federal_tse.candidaturas WHERE nm_candidato LIKE '%@%'")
     assert leaked == 0
