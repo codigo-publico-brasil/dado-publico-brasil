@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from synthetic_camara import fake_downloader, no_headers, synthetic_files
+from synthetic_ibge import ibge_files
 from synthetic_normas import normas_files, normas_get
 from synthetic_senado import senado_files
 from synthetic_tramitacao import fake_get
@@ -66,6 +67,7 @@ def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract
                 **tse_files(base / "origin_tse"),
                 **normas_files(base / "origin_normas"),
                 **transparencia_files(base / "origin_transparencia"),
+                **ibge_files(base / "origin_ibge"),
             }
         ),
         head_request=no_headers,

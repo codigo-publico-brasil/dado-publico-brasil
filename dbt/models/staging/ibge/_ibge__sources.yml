@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+  - name: ibge
+    description: >
+      IBGE, API de localidades: a lista oficial dos municípios (código, nome, UF e região). Carregado em
+      raw_federal_ibge (declaração em sources/executivo/federal/ibge.yml). Licença pela política de dados abertos do
+      Poder Executivo federal (Decreto 8.777/2016); a página da API não traz termos próprios.
+      Fonte oficial: [https://servicodados.ibge.gov.br/api/docs/localidades](https://servicodados.ibge.gov.br/api/docs/localidades).
+    schema: raw_federal_ibge
+    loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
+    freshness:
+      warn_after: {count: 400, period: day}
+      error_after: {count: 1500, period: day}
+    meta:
+      url: https://servicodados.ibge.gov.br/api/docs/localidades
+      origin: Instituto Brasileiro de Geografia e Estatística (IBGE)
+      sensitivity: publico
+      owner: fundador do projeto
+    tables:
+      - name: municipios
+        description: Municípios do Brasil, uma linha por município, com a hierarquia regional imediata e intermediária.

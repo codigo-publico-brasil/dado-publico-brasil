@@ -663,6 +663,29 @@ models:
       - {name: fl_contem_dado_pessoal, data_type: boolean, description: "Verdadeiro quando a linha identifica uma pessoa física (CPF mascarado, tipo pessoa física ou inscrição genérica)."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
 
+  - name: eleitos_chapas
+    description: Vice e suplentes da chapa eleita de quem foi eleito presidente, governador ou senador (o candidato substituído antes da eleição não entra), ligados ao titular pelo número, a unidade eleitoral, a eleição e o turno. Vice e suplente não são o eleito (assumem só em vacância); o resultado é o que o TSE informa, provisório até a diplomação. Uma linha por integrante da chapa.
+    meta: {sensitivity: publico-agente-publico, grain: integrante da chapa, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - {name: id_candidatura_titular, data_type: varchar, tests: [not_null], description: "Candidatura do titular da chapa eleito (marts.eleitos)."}
+      - {name: id_candidatura, data_type: varchar, tests: [unique, not_null], description: "Identificador da candidatura do vice ou suplente (ano, unidade eleitoral e sequencial, como o TSE informa)."}
+      - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
+      - {name: turno, data_type: integer, description: "Turno da chapa, o mesmo do titular eleito."}
+      - {name: uf, data_type: varchar, description: "UF da unidade eleitoral (BR para presidente)."}
+      - {name: ue, data_type: varchar, description: "Unidade eleitoral, como o TSE informa."}
+      - {name: cargo_titular, data_type: varchar, description: "Cargo do titular da chapa (Presidente, Governador ou Senador)."}
+      - {name: papel, data_type: varchar, description: "Lugar na chapa: Vice-presidente, Vice-governador, 1º suplente ou 2º suplente."}
+      - {name: numero, data_type: varchar, description: "Número da chapa na urna, igual ao do titular."}
+      - {name: nome, data_type: varchar, description: "Nome do candidato, com caixa padronizada."}
+      - {name: nome_urna, data_type: varchar, description: "Nome de urna, com caixa padronizada."}
+      - {name: partido, data_type: varchar, description: "Sigla do partido na eleição."}
+      - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura segundo o TSE (por exemplo, apto)."}
+      - {name: resultado, data_type: varchar, description: "Resultado como o TSE informa para o integrante da chapa; vazio se não informado."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+      - {name: fonte_url, data_type: varchar, description: "Página oficial do conjunto de dados de origem."}
+
   - name: eleitos
     description: Eleitos para presidente, governador, senador, deputado federal, estadual e distrital (eleições gerais) e para prefeito e vereador (eleições municipais), de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito.
     meta: {sensitivity: publico-agente-publico, grain: eleito, owner: fundador do projeto, freshness: a cada eleição}
