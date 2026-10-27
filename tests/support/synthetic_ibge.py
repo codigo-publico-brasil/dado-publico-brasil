@@ -37,7 +37,7 @@ def ibge_files(pasta: Path) -> dict[str, Path]:
     municipios = [
         _municipio(3300001, "Município 60011", "RJ", "Rio de Janeiro", "SE", "Sudeste"),
         _municipio(3500002, "São Paulo", "SP", "São Paulo", "SE", "Sudeste"),
-        _municipio(3500003, "São Paulo", "RJ", "Rio de Janeiro", "SE", "Sudeste"),  # mesmo nome em outra UF
+        _municipio(3300003, "São Paulo", "RJ", "Rio de Janeiro", "SE", "Sudeste"),  # mesmo nome em outra UF
     ]
     arquivo.write_text(json.dumps(municipios, ensure_ascii=False), encoding="utf-8")
     return {contracts.find("ibge").url("municipios", None): arquivo}

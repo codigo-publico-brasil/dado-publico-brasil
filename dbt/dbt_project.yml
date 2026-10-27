@@ -1,6 +1,7 @@
 # Projeto dbt da camada de dados (ADR 0006). Segue o guia de estrutura da dbt Labs:
 #   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
+#   core          referências do modelo (ADR 0030): territórios, cargos, eleições, disputas, tipos de evento.
 #   marts         entidades prontas para consumo, uma por grain, com contrato de colunas.
 name: dado_publico_brasil
 version: "0.1.0"
@@ -52,6 +53,13 @@ models:
       +meta:
         sensitivity: publico-agente-publico
         owner: fundador do projeto
+    core:
+      +schema: core
+      +materialized: table
+      +contract:
+        enforced: true
+      +meta:
+        owner: fundador do projeto
     marts:
       +schema: marts
       +materialized: table
@@ -69,6 +77,9 @@ seeds:
       +column_types: {id_origem: varchar, id_destino: varchar, dt_aprovacao: date}
     partidos_eventos:
       +column_types: {dt_aprovacao: date, ano: integer}
+    core:
+      +schema: core
+      +column_types: {cd_cargo_tse: integer, duracao_anos: integer}
 
 data_tests:
   dado_publico_brasil:

@@ -1,0 +1,35 @@
+version: 2
+
+seeds:
+  - name: cargos
+    description: >
+      Catálogo dos cargos eletivos, um por cargo, com poder, esfera, forma de investidura, duração do mandato e a regra
+      legal que a sustenta, com o artigo da Constituição. Curado à mão a partir do texto da Constituição carregado no
+      projeto (constituicao_dispositivos). Onde a Constituição não fixa a data de posse, o campo diz isso e nenhuma
+      data é inventada. Vice e suplente apontam para o cargo do titular.
+    meta: {sensitivity: publico, grain: cargo, owner: fundador do projeto, freshness: a cada emenda constitucional}
+    columns:
+      - {name: id_cargo, description: "Identificador do cargo, em texto legível (por exemplo, deputado_federal).", data_tests: [unique, not_null]}
+      - {name: cd_cargo_tse, description: "Código do cargo no TSE (CD_CARGO nos arquivos de vagas e candidaturas).", data_tests: [unique, not_null]}
+      - {name: nome, description: "Nome do cargo.", data_tests: [not_null]}
+      - {name: poder, description: "Poder ao qual o cargo pertence (executivo ou legislativo).", data_tests: [{accepted_values: {arguments: {values: [executivo, legislativo]}}}]}
+      - {name: esfera, description: "Esfera do cargo (federal, estadual, distrital ou municipal).", data_tests: [{accepted_values: {arguments: {values: [federal, estadual, distrital, municipal]}}}]}
+      - {name: investidura, description: "Como o cargo é preenchido: majoritaria, proporcional ou suplencia.", data_tests: [{accepted_values: {arguments: {values: [majoritaria, proporcional, suplencia]}}}]}
+      - {name: id_cargo_titular, description: "Cargo do titular, quando o cargo é de vice ou de suplente; vazio nos demais.", data_tests: [{relationships: {to: ref('cargos'), field: id_cargo}}]}
+      - {name: duracao_anos, description: "Duração do mandato, em anos, segundo a Constituição."}
+      - {name: regra_legal, description: "Regra legal do mandato, com o artigo da Constituição que a sustenta."}
+      - {name: fonte_url, description: "Texto oficial da Constituição no Planalto."}
+
+  - name: evento_tipos
+    description: >
+      Catálogo fechado dos tipos de evento da pessoa (nascimento, eleito, posse, troca de partido...). A tabela de eventos
+      só aceita tipo que exista aqui. Cada tipo diz de qual fato nasce, que contexto exige e se o evento é informado pela
+      fonte ou derivado de regra do projeto. Tipo novo entra com linha aqui, regra e teste. Desenho aprovado no ADR 0030.
+    meta: {sensitivity: publico, grain: tipo de evento, owner: fundador do projeto, freshness: a cada tipo novo}
+    columns:
+      - {name: id_tipo_evento, description: "Identificador do tipo, em texto legível (por exemplo, troca_de_partido).", data_tests: [unique, not_null]}
+      - {name: categoria, description: "Grupo do tipo: vida, eleicao, mandato, partido, nomeacao ou vinculo.", data_tests: [{accepted_values: {arguments: {values: [vida, eleicao, mandato, partido, nomeacao, vinculo]}}}]}
+      - {name: descricao, description: "O que o evento significa.", data_tests: [not_null]}
+      - {name: fato_origem, description: "Tabela de fatos da qual o evento nasce; vazia quando ainda não há fonte aberta."}
+      - {name: contexto_exigido, description: "Contexto que o evento precisa trazer (disputa, partido, órgão, cargo, território); vazio quando nenhum."}
+      - {name: base, description: "Como o evento é obtido: informado pela fonte, derivado de regra do projeto ou os dois.", data_tests: [{accepted_values: {arguments: {values: [informado, derivado, informado ou derivado]}}}]}

@@ -68,7 +68,7 @@ Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). Pos
 | --- | --- |
 | `sources/` | declaração das fontes: `sources/<poder>/<esfera>/<fonte>.yml` |
 | `src/dado_publico_brasil/` | o código: `core` (base), `ingestion`, `transformation` e `orchestration` (liga os dois) |
-| `dbt/` | modelos SQL: staging, intermediate, marts, com testes |
+| `dbt/` | modelos SQL: staging, intermediate, core, marts, com testes |
 | `ddl/` | migrações das tabelas próprias (`metadata`, `identity`) |
 | `docs/` | a documentação |
 | `tests/` | testes |
