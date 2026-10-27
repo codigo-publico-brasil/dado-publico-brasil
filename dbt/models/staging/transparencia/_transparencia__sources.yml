@@ -5,7 +5,7 @@ sources:
     description: >
       Portal da Transparência do Governo Federal (CGU), emendas parlamentares (pacote .zip nacional com três tabelas).
       Carregado em raw_federal_transparencia (declaração em sources/executivo/federal/transparencia.yml): favorecido
-      pessoa física entra como a fonte publica (marcado como dado pessoal). Licença pela política de dados abertos (Decreto 8.777/2016); as páginas de termos do portal pedem verificação anti-robô e não foram lidas.
+      pessoa física entra como a fonte publica (marcado como dado pessoal). Licença pela política de dados abertos (Decreto 8.777/2016); o Termo de Uso do portal (lido em 27/10/2026) permite utilizar os dados "da forma que melhor lhe convier", sem licença própria nem citação obrigatória.
       Fonte oficial: [https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares](https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares).
     schema: raw_federal_transparencia
     loaded_at_field: to_timestamp(cast(_dlt_load_id as double))

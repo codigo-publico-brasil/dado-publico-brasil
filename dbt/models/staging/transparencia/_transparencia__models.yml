@@ -4,14 +4,14 @@ models:
   - name: stg_transparencia__emendas
     description: Emendas parlamentares, uma linha por emenda, localidade, função, programa e ação.
     columns:
-      - {name: cd_emenda, description: "Código da emenda; vazio em registros antigos sem código."}
+      - {name: cd_emenda, description: "Identificador da emenda, de 12 dígitos: 4 do ano da emenda, 4 do código do autor e 4 do número da emenda do autor (dicionário de dados do portal); vazio em registros antigos sem código."}
       - {name: ano, description: "Ano do evento.", tests: ["not_null"]}
       - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
-      - {name: cd_autor, description: "Código orçamentário do autor; vazio quando a fonte não informa."}
-      - {name: autor_nome, description: "Nome do autor (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada."}
+      - {name: cd_autor, description: "Código do autor da emenda como registrado no SIAFI (não é o código do parlamentar); vazio quando a fonte não informa."}
+      - {name: autor_nome, description: "Nome do autor da emenda como registrado no SIAFI (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada."}
       - {name: numero, description: "Número da norma."}
-      - {name: localidade, description: "Localidade de aplicação do recurso, como a fonte informa."}
-      - {name: municipio_ibge, description: "Código IBGE do município."}
+      - {name: localidade, description: "Atributo do Plano de Trabalho que indica a região onde a despesa ocorre, como a fonte informa."}
+      - {name: municipio_ibge, description: "Código IBGE do município de destinação do recurso; pode estar em branco, conforme a localidade de aplicação."}
       - {name: municipio, description: "Município de aplicação."}
       - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
       - {name: regiao, description: "Região."}
@@ -34,25 +34,25 @@ models:
   - name: stg_transparencia__emendas_convenios
     description: Convênios firmados com recursos de emendas parlamentares.
     columns:
-      - {name: cd_emenda, description: "Código da emenda; vazio em registros antigos sem código."}
+      - {name: cd_emenda, description: "Identificador da emenda, de 12 dígitos: 4 do ano da emenda, 4 do código do autor e 4 do número da emenda do autor (dicionário de dados do portal); vazio em registros antigos sem código."}
       - {name: cd_funcao, description: "Código da função orçamentária, como o Portal da Transparência informa."}
       - {name: funcao, description: "Função orçamentária."}
       - {name: cd_subfuncao, description: "Código da subfunção orçamentária, como o Portal da Transparência informa."}
       - {name: subfuncao, description: "Subfunção orçamentária."}
-      - {name: localidade, description: "Localidade de aplicação do recurso, como a fonte informa."}
+      - {name: localidade, description: "Atributo do Plano de Trabalho que indica a região onde a despesa ocorre, como a fonte informa."}
       - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
       - {name: dt_publicacao, description: "Data de publicação."}
-      - {name: convenente, description: "Quem firmou o convênio."}
-      - {name: objeto, description: "Objeto do convênio."}
+      - {name: convenente, description: "Quem recebe os recursos do Governo Federal: órgão ou entidade pública de qualquer esfera de governo, ou organização particular com a qual a administração federal pactua o convênio."}
+      - {name: objeto, description: "O que foi pactuado entre o concedente federal e o convenente."}
       - {name: convenio_numero, description: "Número do convênio."}
       - {name: valor, description: "Valor declarado em reais, sem correção."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_transparencia__emendas_favorecidos
     description: Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica (inclui pessoa física, com CPF mascarado).
     columns:
-      - {name: cd_emenda, description: "Código da emenda; vazio em registros antigos sem código."}
-      - {name: cd_autor, description: "Código orçamentário do autor; vazio quando a fonte não informa."}
-      - {name: autor_nome, description: "Nome do autor (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada."}
+      - {name: cd_emenda, description: "Identificador da emenda, de 12 dígitos: 4 do ano da emenda, 4 do código do autor e 4 do número da emenda do autor (dicionário de dados do portal); vazio em registros antigos sem código."}
+      - {name: cd_autor, description: "Código do autor da emenda como registrado no SIAFI (não é o código do parlamentar); vazio quando a fonte não informa."}
+      - {name: autor_nome, description: "Nome do autor da emenda como registrado no SIAFI (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada."}
       - {name: numero, description: "Número da norma."}
       - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
       - {name: ano, description: "Ano do evento."}
@@ -60,7 +60,7 @@ models:
       - {name: cd_favorecido, description: "CNPJ, código da unidade gestora ou CPF mascarado do favorecido, como a fonte informa."}
       - {name: favorecido, description: "Nome do favorecido (pessoa física inclusive)."}
       - {name: natureza_juridica, description: "Natureza jurídica do favorecido."}
-      - {name: tipo_favorecido, description: "Pessoa jurídica ou unidade gestora."}
+      - {name: tipo_favorecido, description: "Tipo do favorecido como a fonte informa: Pessoa Jurídica, Pessoa Fisica, Unidade Gestora, Inscrição Genérica, Sem informação ou Inválido (o dicionário do portal cita só pessoa física e jurídica; em parte das linhas a fonte grafa Inscrição Genéric, truncado)."}
       - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
       - {name: municipio, description: "Município de aplicação."}
       - {name: valor, description: "Valor declarado em reais, sem correção."}

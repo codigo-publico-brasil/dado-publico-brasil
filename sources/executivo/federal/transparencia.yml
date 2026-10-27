@@ -2,8 +2,10 @@
 # Emendas parlamentares: um pacote .zip nacional com três tabelas, atualizado todo dia. Os três datasets usam o
 # mesmo arquivo e se distinguem por um fragmento na URL (`#...`), que nunca vai ao servidor, só ao registro de
 # captura. Os favorecidos entram como a fonte publica, inclusive pessoa física (cidadão comum, com CPF mascarado):
-# o marts sinaliza o dado pessoal por coluna e por linha (ADR 0017). Licença: livre utilização pela política de dados abertos (Decreto 8.777/2016). As
-# páginas de termos de uso e de dicionário de dados do portal não puderam ser lidas (pedem verificação anti-robô).
+# o marts sinaliza o dado pessoal por coluna e por linha (ADR 0017). Licença: livre utilização pela política de dados abertos
+# (Decreto 8.777/2016). O Termo de Uso do portal (lido em 27/10/2026) permite "visualizar e utilizar os dados disponíveis da forma
+# que melhor lhe convier", sem licença própria, citação obrigatória nem limite para o download em lote. O dicionário de dados das
+# emendas (lido em 27/10/2026) descreve as três tabelas: o código da emenda tem 12 dígitos (ano, código do autor no SIAFI e número).
 
 source: transparencia
 power: executivo
