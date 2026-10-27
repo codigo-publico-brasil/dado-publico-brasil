@@ -33,3 +33,38 @@ seeds:
       - {name: fato_origem, description: "Tabela de fatos da qual o evento nasce; vazia quando ainda não há fonte aberta."}
       - {name: contexto_exigido, description: "Contexto que o evento precisa trazer (disputa, partido, órgão, cargo, território); vazio quando nenhum."}
       - {name: base, description: "Como o evento é obtido: informado pela fonte, derivado de regra do projeto ou os dois.", data_tests: [{accepted_values: {arguments: {values: [informado, derivado, informado ou derivado]}}}]}
+
+  - name: core_partidos
+    config: {alias: partidos}
+    description: >
+      Cada partido político como entidade, e não como sigla: a sigla e o número do TSE mudam e se repetem entre partidos
+      diferentes (o 18 foi PST e depois REDE; o PL de antes de 2006 não é o PL de hoje; o Podemos passou do 19 ao 20). Uma
+      linha por partido, com o ano em que deixou de existir e o sucessor (fusão ou incorporação), conferidos à mão nos
+      eventos de partidos_eventos. Fusão cria partido novo; incorporação mantém o do incorporador. Onde nenhum evento
+      conferido liga duas siglas, elas ficam como partidos separados e a observação diz isso. Curado à mão; não é inferido
+      do número. O nome do arquivo leva o prefixo core_ só porque marts.partidos (identificador da Câmara, com o mesmo nome
+      de coluna) ainda existe; a tabela é core.partidos.
+    meta: {sensitivity: publico, grain: partido, owner: fundador do projeto, freshness: a cada fusão, incorporação ou novo partido}
+    columns:
+      - {name: id_partido, description: "Identificador do partido, estável: nunca muda nem é reaproveitado.", data_tests: [unique, not_null]}
+      - {name: sigla, description: "Sigla mais recente do partido nos arquivos do TSE (ou a última, se foi extinto), com o período entre parênteses quando outro partido usou a mesma sigla.", data_tests: [not_null]}
+      - {name: ano_fim, description: "Ano em que o partido deixou de existir por fusão ou incorporação; vazio se continua."}
+      - {name: id_partido_sucessor, description: "Partido que o sucedeu (resultante da fusão ou incorporador); vazio se continua.", data_tests: [{relationships: {to: ref('core_partidos'), field: id_partido}}]}
+      - {name: fonte_url, description: "Página oficial do TSE que registra o fim do partido; vazia se continua."}
+      - {name: observacao, description: "Nomes anteriores, ressalvas e ligações não conferidas."}
+
+  - name: partidos_siglas
+    description: >
+      Sigla e número que cada partido usou nos arquivos do TSE, por período de eleições. Liga o texto da fonte ao
+      id_partido sem inferir pelo número: o mesmo número serve a partidos diferentes em anos diferentes. Uma linha por
+      partido, sigla e número; os períodos de uma mesma sigla e número não se sobrepõem. Os anos são os das eleições em que
+      a sigla e o número aparecem nas candidaturas carregadas.
+    meta: {sensitivity: publico, grain: partido, sigla e número, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [sigla_na_fonte, nr_partido, ano_inicio]}}
+    columns:
+      - {name: id_partido, description: "Partido (core.partidos).", data_tests: [not_null, {relationships: {to: ref('core_partidos'), field: id_partido}}]}
+      - {name: sigla_na_fonte, description: "Sigla como o TSE grava na candidatura.", data_tests: [not_null]}
+      - {name: nr_partido, description: "Número do partido na urna.", data_tests: [not_null]}
+      - {name: ano_inicio, description: "Primeira eleição em que a sigla e o número aparecem.", data_tests: [not_null]}
+      - {name: ano_fim, description: "Última eleição em que a sigla e o número aparecem (inclusive).", data_tests: [not_null]}

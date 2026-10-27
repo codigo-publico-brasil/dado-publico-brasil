@@ -72,6 +72,7 @@ select
     c.grau_instrucao,
     c.estado_civil,
     c.ocupacao,
+    ps.id_partido,
     c.partido_sigla as partido,
     c.partido_nome,
     c.federacao_sigla as federacao,
@@ -104,6 +105,11 @@ left join {{ ref('cargos') }} as k on k.cd_cargo_tse = c.cd_cargo
 
 left join {{ ref('disputas') }} as v
     on v.id_eleicao = c.ano_eleicao || '-' || c.cd_eleicao and v.ue = c.ue and v.id_cargo = k.id_cargo
+
+left join {{ ref('partidos_siglas') }} as ps
+    on ps.sigla_na_fonte = c.partido_sigla
+    and ps.nr_partido = try_cast(c.numero_partido as integer)
+    and try_cast(c.ano_eleicao as integer) between ps.ano_inicio and ps.ano_fim
 
 left join ultimo_turno as u on u.id_candidatura = c.id_candidatura
 

@@ -1,0 +1,48 @@
+id_partido,sigla,ano_fim,id_partido_sucessor,fonte_url,observacao
+1,PT,,,,
+2,PDT,,,,
+3,PSB,,,,
+4,PSDB,,,,
+5,PV,,,,
+6,PCB,,,,
+7,PSTU,,,,
+8,PCO,,,,
+9,PRTB,,,,
+10,PSOL,,,,
+11,NOVO,,,,
+12,UP,,,,
+13,MDB,,,,Chamado PMDB até 2018.
+14,PP,,,,Chamado PPB até 2003 (mudança de nome de 29/05/2003).
+15,PTB,2023,24,https://www.tse.jus.br/comunicacao/noticias/2023/Novembro/tse-aprova-criacao-do-partido-renovacao-democratica-prd,Fusão com o Patriota formou o PRD (09/11/2023).
+16,PL (até 2006),2006,17,https://agenciaje.tse.jus.br/noticias/2006/dezembro/plenario-do-tse-aprova-criacao-do-partido-da,Fusão com o PRONA formou o PR (19/12/2006). Não é o mesmo partido do PL atual.
+17,PL,,,,Criado em 2006 como PR (fusão do PL com o PRONA); virou PL em 07/05/2019. Não é o PL anterior a 2006.
+18,PRONA,2006,17,https://agenciaje.tse.jus.br/noticias/2006/dezembro/plenario-do-tse-aprova-criacao-do-partido-da,Fusão com o PL formou o PR (19/12/2006).
+19,PSL,2022,20,https://www.tse.jus.br/comunicacao/noticias/2022/Fevereiro/tse-aprova-registro-do-partido-uniao-brasil,Fusão com o DEM formou o União Brasil (08/02/2022).
+20,UNIÃO,,,,Criado em 2022 pela fusão do DEM com o PSL.
+21,DEM,2022,20,https://www.tse.jus.br/comunicacao/noticias/2022/Fevereiro/tse-aprova-registro-do-partido-uniao-brasil,Chamado PFL até 2007. Fusão com o PSL formou o União Brasil (08/02/2022).
+22,PRP,2019,23,https://www.tse.jus.br/comunicacao/noticias/2019/Marco/tse-aprova-incorporacao-do-prp-ao-patriota,Incorporado ao Patriota (28/03/2019).
+23,PATRIOTA,2023,24,https://www.tse.jus.br/comunicacao/noticias/2023/Novembro/tse-aprova-criacao-do-partido-renovacao-democratica-prd,Chamado PEN e PATRI antes de 2019. Fusão com o PTB formou o PRD (09/11/2023).
+24,PRD,,,,Criado em 2023 pela fusão do PTB com o Patriota.
+25,PODE,,,,Chamado PTN até 2017.
+26,PSC,2023,25,https://www.tse.jus.br/comunicacao/noticias/2023/Junho/tse-aprova-incorporacao-do-partido-social-cristao-pelo-podemos,Incorporado ao Podemos (15/06/2023).
+27,PHS,2019,25,https://www.tse.jus.br/comunicacao/noticias/2019/Setembro/plenario-aprova-incorporacao-do-phs-ao-podemos,Incorporado ao Podemos (setembro de 2019).
+28,PSN,,,,Usou o número 31 em 1996 e 1998. O PHS usa o 31 desde 2000; nenhum evento conferido liga os dois (issue 116).
+29,REDE,,,,
+30,PST,2003,16,https://www.tse.jus.br/servicos-eleitorais/glossario/termos/partido-politico,Incorporado ao PL anterior a 2006 (01/04/2003).
+31,PGT,2003,16,https://www.tse.jus.br/servicos-eleitorais/glossario/termos/partido-politico,Incorporado ao PL anterior a 2006 junto com o PST (Res.-TSE 21.374).
+32,PAN,2007,15,https://www.tse.jus.br/partidos/contas-partidarias/prestacao-de-contas/relacao-de-processos/relacao-de-processos-partido-pan,Incorporado ao PTB (15/03/2007).
+33,CIDADANIA,,,,Chamado PPS até 2019.
+34,PSD,,,,Aparece nas eleições a partir de 2012 com o número 55. Não é o PSD que disputou as eleições de 1996 a 2002.
+35,PSD (1996-2002),,,,Disputou as eleições de 1996 a 2002 com o número 41. Não é o PSD atual; o destino do partido não foi conferido (issue 116).
+36,MOBILIZA,,,,Chamado PMN até 2023.
+37,DEMOCRATA,,,,Chamado PMB até 2025.
+38,AGIR,,,,Chamado PTC até 2022.
+39,PRN,,,,Usou o número 36 de 1996 a 2000. O PTC usa o 36 desde 2002; nenhum evento conferido liga os dois (issue 116).
+40,DC,,,,Chamado PSDC até 2018.
+41,REPUBLICANOS,,,,Chamado PMR e PRB antes de 2019.
+42,PCDOB,,,,Escrito PC do B na maioria dos arquivos do TSE.
+43,AVANTE,,,,Chamado PTdoB até 2017.
+44,SOLIDARIEDADE,,,,Chamado SD até 2018.
+45,PROS,2023,44,https://www.tse.jus.br/comunicacao/noticias/2023/Fevereiro/partido-republicano-da-ordem-social-pros-e-incorporado-ao-solidariedade,Incorporado ao Solidariedade (14/02/2023).
+46,PPL,2019,42,https://www.tse.jus.br/comunicacao/noticias/2019/Maio/plenario-aprova-incorporacao-do-ppl-ao-pcdob,Incorporado ao PCdoB (maio de 2019).
+47,MISSÃO,,,,Aparece no TSE só em 2026.
