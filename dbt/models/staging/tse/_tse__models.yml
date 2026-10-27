@@ -91,7 +91,7 @@ models:
       - {name: cd_cargo, description: "Código do cargo disputado, como o TSE informa."}
       - {name: cargo, description: "Cargo em disputa, com caixa padronizada."}
       - {name: qtd_vagas, description: "Quantidade de vagas do cargo na unidade eleitoral."}
-      - {name: dt_posse, description: "Data da posse prevista, como o TSE informa."}
+      - {name: dt_posse, description: "Data de posse prevista, como o TSE informa. Não confirmada: em 2026 o arquivo de vagas traz 02/05/2027 para deputados e senadores, que não bate com a posse real (issue #71); não use como data legal da posse."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
 
   - name: stg_tse__receitas_candidatos

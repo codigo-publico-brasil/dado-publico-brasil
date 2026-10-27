@@ -377,7 +377,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `qtd_eleitos` | bigint | Quantos eleitos o resultado do TSE já registra para o cargo. |  |
 | `qtd_pendentes` | bigint | Vagas ainda sem eleito (vagas menos eleitos). |  |
 | `status` | varchar | eleito_provisorio quando todas as vagas têm eleito pelo resultado do TSE (ainda sem diplomação); aguardando_resultado quando falta eleito. |  |
-| `dt_posse` | date | Data da posse prevista, como o TSE informa. |  |
+| `dt_posse` | date | Data de posse prevista, como o TSE informa. Não confirmada: em 2026 o arquivo de vagas traz 02/05/2027 para deputados e senadores, que não bate com a posse real (issue #71); não use como data legal da posse. |  |
 | `dt_captura` | date | Data da captura do arquivo de candidaturas de onde vêm os resultados. |  |
 | `fonte_url` | varchar | Página oficial do TSE com os arquivos de candidatos da eleição. |  |
 
