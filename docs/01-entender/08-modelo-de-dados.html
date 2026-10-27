@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Modelo de Dados do Dado Público Brasil</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Conceito: documento técnico de leitura longa, com índice lateral fixo, tinta azul de urna como único acento
+   e cores semânticas separadas (informado, derivado, falta) para o leitor varrer as matrizes. */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --ink: #15202b;
+  --muted: #566574;
+  --line: #d5dce3;
+  --accent: #2a4fc4;
+  --accent-soft: #e3e9fb;
+  --ok: #1d7a4d;
+  --ok-soft: #dff2e8;
+  --warn: #8a5a00;
+  --warn-soft: #fbefcf;
+  --bad: #b3261e;
+  --bad-soft: #f9dfdc;
+  --code-bg: #eaeef2;
+  --font-display: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e141b; --surface: #151d27; --ink: #e6ecf2; --muted: #9aa9b8; --line: #2a3644;
+    --accent: #8ba5ff; --accent-soft: #1d2a4d; --ok: #5cc48e; --ok-soft: #14301f;
+    --warn: #e0b34a; --warn-soft: #38300f; --bad: #f08178; --bad-soft: #3d1a18; --code-bg: #1b2531;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e141b; --surface: #151d27; --ink: #e6ecf2; --muted: #9aa9b8; --line: #2a3644;
+  --accent: #8ba5ff; --accent-soft: #1d2a4d; --ok: #5cc48e; --ok-soft: #14301f;
+  --warn: #e0b34a; --warn-soft: #38300f; --bad: #f08178; --bad-soft: #3d1a18; --code-bg: #1b2531;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-block: 24px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; }
+nav.toc { position: sticky; top: 16px; align-self: start; font-size: 13px; line-height: 1.35; max-height: calc(100vh - 32px); overflow: auto; }
+nav.toc p { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc a { display: block; padding: 5px 8px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+main { min-width: 0; }
+header.doc { padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 36px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 5vw, 46px); line-height: 1.08; margin: 0 0 16px; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 26px; line-height: 1.2; margin: 52px 0 14px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-family: var(--font-display); font-weight: 700; font-size: 18px; margin: 28px 0 8px; }
+p { margin: 0 0 14px; max-width: 72ch; }
+ul, ol.plain { margin: 0 0 16px; padding-left: 22px; max-width: 72ch; }
+li { margin-bottom: 6px; }
+.lede { font-size: 18px; color: var(--ink); max-width: 66ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--muted); margin: 18px 0 0; }
+.meta b { color: var(--ink); font-weight: 600; }
+code, .mono { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+.callout { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 14px 16px; margin: 18px 0; max-width: 76ch; }
+.callout p:last-child { margin-bottom: 0; }
+.callout.warn { background: var(--warn-soft); border-left-color: var(--warn); }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 18px 0; }
+.q { background: var(--surface); border: 1px solid var(--line); padding: 16px; min-width: 0; }
+.q h3 { margin-top: 0; color: var(--accent); }
+.q p { font-size: 14.5px; }
+.q ul { font-size: 14px; padding-left: 18px; }
+figure { margin: 22px 0 28px; }
+figure .fig { background: var(--surface); border: 1px solid var(--line); padding: 14px; overflow-x: auto; }
+figure svg { display: block; width: 100%; min-width: 640px; height: auto; color: var(--ink); }
+figcaption { font-size: 13.5px; color: var(--muted); margin-top: 8px; max-width: 80ch; }
+svg text { font-family: var(--font-body); fill: currentColor; }
+svg .t { font-size: 13px; font-weight: 600; }
+svg .s { font-size: 11px; fill: var(--muted); }
+svg .m { font-family: var(--font-mono); font-size: 11px; }
+svg .box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+svg .core { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+svg .ln { stroke: currentColor; stroke-width: 1.4; fill: none; }
+svg .dash { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; fill: none; }
+svg .bar { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.3; }
+svg .sup { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 1.3; }
+.scroll { overflow-x: auto; margin: 14px 0 24px; border: 1px solid var(--line); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--bg); position: sticky; top: 0; }
+tr:last-child td { border-bottom: 0; }
+td.k { font-weight: 600; white-space: nowrap; }
+td.num, th.num { font-variant-numeric: tabular-nums; }
+.chip { display: inline-block; font-family: var(--font-mono); font-size: 11px; letter-spacing: .03em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+.chip.part { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+.chip.miss { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+.chip.der { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 13px; color: var(--muted); margin: 8px 0 4px; align-items: center; }
+.decision { background: var(--surface); border: 1px solid var(--line); padding: 14px 16px; margin: 12px 0; max-width: 80ch; }
+.decision h3 { margin: 0 0 6px; font-size: 16px; }
+.decision .rec { font-size: 14px; color: var(--ok); font-weight: 600; margin: 8px 0 0; }
+.decision p { font-size: 14.5px; margin-bottom: 8px; }
+.phase { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
+.phase .n { font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--accent); }
+.phase h3 { margin: 0 0 4px; }
+.phase p { font-size: 14.5px; margin-bottom: 6px; }
+footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+pre { background: var(--code-bg); border: 1px solid var(--line); padding: 12px 14px; overflow-x: auto; margin: 10px 0 18px; font-size: 13px; line-height: 1.5; max-width: 100%; }
+pre code { background: none; padding: 0; font-size: inherit; }
+a { color: var(--accent); }
+@media (max-width: 960px) {
+  .page { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  nav.toc { position: static; max-height: none; }
+  nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="page">
+<nav class="toc" aria-label="Índice">
+  <p>Índice</p>
+  <ol>
+    <li><a href="#problema">1 O que está errado hoje</a></li>
+    <li><a href="#perguntas">2 O que o modelo responde</a></li>
+    <li><a href="#principios">3 Princípios</a></li>
+    <li><a href="#camadas">4 Camadas</a></li>
+    <li><a href="#nucleo">5 Núcleo: pessoas e referências</a></li>
+    <li><a href="#eventos">6 Eventos da pessoa</a></li>
+    <li><a href="#mandatos">7 Mandatos e composição</a></li>
+    <li><a href="#atuacao">8 Quem governa, por que, como</a></li>
+    <li><a href="#exemplos">9 Exemplos de views</a></li>
+    <li><a href="#destino">10 Do que existe ao destino</a></li>
+    <li><a href="#buscar">11 Dados a buscar</a></li>
+    <li><a href="#fases">12 Plano em fases</a></li>
+    <li><a href="#decisoes">13 Decisões para validar</a></li>
+    <li><a href="#referencias">14 Referências</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="doc">
+  <p class="eyebrow">Aprovado pelo fundador em 27/10/2026 · decisão registrada no ADR 0030</p>
+  <h1>Modelo de dados do Dado Público Brasil</h1>
+  <p class="lede">Para quem decide como os dados são organizados. Responde: quem governa, por que governa e como governa, com uma pessoa no centro, eventos datados em volta dela e a origem de cada fato registrada. Nada aqui foi executado ainda.</p>
+  <div class="meta">
+    <span><b>Data</b> 27/10/2026</span>
+    <span><b>Estado</b> aprovado, sem código nem carga ainda</span>
+    <span><b>Revisão</b> 2, aprovada</span>
+    <span><b>Substitui</b> a criação de marts por pergunta</span>
+  </div>
+</header>
+
+<div class="callout">
+  <p><b>O que mudou nesta revisão.</b> (1) Eventos agora têm tipo de catálogo fechado e a tabela única ficou derivada: seção 6. (2) <code>pessoas</code> passa a ter quem já teve pelo menos um cargo: seção 5 e decisão 1. (3) A análise da estrutura inteira gerou oito ajustes: seção 1.1. (4) Nova seção com exemplos de views para o No Cargo e o Quem Decidiu, com dados reais de hoje: seção 9.</p>
+</div>
+
+<h2 id="problema">1 O que está errado hoje</h2>
+<p>Os dados estão certos na fonte, mas espalhados. A mesma pessoa aparece em quatro tabelas com chaves diferentes, e cada pergunta nova virou uma tabela nova. Os casos de Lula e de Flávio Bolsonaro no No Cargo mostram o padrão.</p>
+<ul>
+  <li><b>Fontes misturadas na mesma linha.</b> <code>eleitos</code> junta TSE com Câmara e Senado (pessoa, mandato, tipo de mandato). O resultado muda conforme qual fonte conseguiu ligar a pessoa.</li>
+  <li><b>Campanha, foto e histórico só existem para eleito.</b> Quem ainda não foi eleito, como os dois candidatos do segundo turno de 2026, fica sem nada, embora os dados de campanha já estejam carregados.</li>
+  <li><b>Mandato só existe para deputado federal e senador.</b> Governador, prefeito e vereador têm eleição, mas não têm mandato com início e fim.</li>
+  <li><b>Pessoa só cobre Câmara e Senado.</b> Os demais eleitos ficam com um identificador do TSE e sem cadastro.</li>
+  <li><b>Não há catálogo de cargos nem de órgãos.</b> Saber a composição de uma casa em um ano exige reconstruir tudo a cada consulta.</li>
+  <li><b>Nomes que colidem.</b> <code>candidaturas</code> (só Congresso ligado a pessoa) e o novo <code>eleicoes_candidaturas</code> (em rascunho) respondem perguntas parecidas com grãos diferentes.</li>
+</ul>
+
+<h3 id="achados">1.1 O que a análise da estrutura inteira encontrou</h3>
+<p>Medido no warehouse local em 27/10/2026: 39 tabelas em <code>marts</code>, 21 em <code>intermediate</code> e 3 em <code>identity</code>. Cada achado vira um ajuste do desenho.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Achado</th><th>Evidência hoje</th><th>Ajuste</th><th>Fase</th></tr></thead>
+  <tbody>
+    <tr><td class="k">Texto no lugar de chave</td><td><code>partido</code> aparece em 7 tabelas, <code>cargo</code> em 8 e <code>uf</code> em 16, todos como texto, sem ligação com um catálogo. A sigla PL já designou dois partidos diferentes ao longo do tempo (<code>partidos_linhagem</code>).</td><td>Todo fato ganha <code>id_partido</code>, <code>id_cargo</code>, <code>id_orgao</code> e <code>id_territorio</code>. O texto da fonte fica ao lado, em coluna <code>*_na_fonte</code>, para auditoria.</td><td>F1, F2</td></tr>
+    <tr><td class="k">Rastreio desigual até a fonte</td><td>16 das 39 tabelas não têm <code>dt_captura</code> e 5 não têm <code>fonte</code>. <code>fonte_url</code> e <code>dt_captura</code> se repetem em tabelas diferentes, com sentidos diferentes.</td><td>Toda tabela de fato carrega <code>id_captura</code>, que liga a <code>metadata.captures</code> (URL, data, hash). Um teste exige a coluna. Some a repetição.</td><td>todas</td></tr>
+    <tr><td class="k"><code>pessoas</code> mistura cadastro e atividade</td><td>Junto do cadastro há <code>qtd_propostas</code>, <code>qtd_votos</code>, <code>ultimo_partido</code>, <code>ultima_uf</code> e legislaturas com voto, valores que mudam a cada carga.</td><td><code>pessoas</code> fica só com cadastro. Os agregados vão para <code>analise.pessoas_atividade</code>.</td><td>F3</td></tr>
+    <tr><td class="k"><code>eleitos</code> faz três trabalhos</td><td>31 colunas misturam o que o TSE informa, a ligação com a pessoa (<code>id_pessoa</code>, <code>vinculo_metodo</code>) e uma regra nossa (<code>tipo_mandato</code>).</td><td>Candidatura e resultado só TSE; vínculo no mandato; <code>tipo_mandato</code> derivado na análise, marcado como tal.</td><td>F2, F4</td></tr>
+    <tr><td class="k">Lista dentro de coluna de texto</td><td><code>votacoes.proposicoes</code> guarda, em uma célula, mais de 60 itens (<code>EMP 4/0, PLP 186/2026, REQ 3756/2026…</code>) e não diz qual é o objeto da votação.</td><td>Relação <code>votacoes_proposicoes</code>, uma linha por item, com o papel quando a fonte informar.</td><td>F4</td></tr>
+    <tr><td class="k">Mesmo tema, nomes diferentes</td><td><code>tipo</code> existe em 9 tabelas com sentidos diferentes; há <code>ano</code> e <code>ano_eleicao</code>; <code>orgao_sigla</code> é texto.</td><td>Nomes pelo tema e pelo prefixo de tipo (<code>cd_tipo_evento</code>, <code>cd_tipo_composicao</code>), conforme a convenção do projeto.</td><td>F1, F2</td></tr>
+    <tr><td class="k">Dado curado vivendo como intermediário</td><td><code>partidos_eventos</code> e <code>vinculos_aprovados</code> são tabelas de referência editadas à mão, mas ficam em <code>intermediate</code>.</td><td>Passam a referência curada do núcleo, com a fonte declarada em cada linha.</td><td>F1</td></tr>
+    <tr><td class="k"><code>pessoas</code> não alcança quem exerce cargo</td><td>Tabela abaixo: só 3 dos 6 presidentes eleitos e 135 dos 210 governadores têm pessoa. Câmara e Senado cobrem o resto.</td><td>Escopo de <code>pessoas</code> passa a ser quem já teve pelo menos um cargo (decisão 1, validada).</td><td>F3</td></tr>
+  </tbody>
+</table></div>
+<p><b>Cobertura de pessoa por cargo hoje</b>, nas linhas de <code>eleitos</code> de todas as eleições carregadas (cada linha é uma eleição de uma pessoa):</p>
+<div class="scroll"><table>
+  <thead><tr><th>Cargo</th><th class="num">Eleitos</th><th class="num">Com <code>id_pessoa</code></th><th class="num">%</th></tr></thead>
+  <tbody>
+    <tr><td>Deputado federal</td><td class="num">4.107</td><td class="num">3.807</td><td class="num">93</td></tr>
+    <tr><td>Senador</td><td class="num">323</td><td class="num">299</td><td class="num">93</td></tr>
+    <tr><td>Governador</td><td class="num">210</td><td class="num">135</td><td class="num">64</td></tr>
+    <tr><td>Presidente</td><td class="num">6</td><td class="num">3</td><td class="num">50</td></tr>
+    <tr><td>Deputado estadual</td><td class="num">8.282</td><td class="num">1.115</td><td class="num">13</td></tr>
+    <tr><td>Deputado distrital</td><td class="num">192</td><td class="num">44</td><td class="num">23</td></tr>
+    <tr><td>Prefeito</td><td class="num">44.150</td><td class="num">847</td><td class="num">2</td></tr>
+    <tr><td>Vereador</td><td class="num">454.093</td><td class="num">932</td><td class="num">0,2</td></tr>
+  </tbody>
+</table></div>
+<p>Quem não tem <code>id_pessoa</code> mantém o identificador do TSE (<code>id_pessoa_tse</code>) quando o nome civil e o nascimento são únicos, então o histórico entre eleições ainda se acha. O que falta é a ficha: cadastro, foto e vínculo com Câmara ou Senado.</p>
+
+<h2 id="perguntas">2 O que o modelo responde</h2>
+<p>As três perguntas do projeto viram três famílias de fatos, todas ligadas à mesma pessoa, ao mesmo órgão e ao mesmo território.</p>
+<div class="grid3">
+  <div class="q">
+    <h3>Quem governa</h3>
+    <p>Quem ocupa cada cargo, desde quando, e como chegou lá.</p>
+    <ul><li>candidaturas e resultados</li><li>mandatos e exercícios</li><li>composição de cada casa em cada data</li></ul>
+  </div>
+  <div class="q">
+    <h3>Por que governa</h3>
+    <p>O que levou a pessoa ao cargo.</p>
+    <ul><li>votos por turno, município e zona</li><li>campanha: receitas, despesas, bens</li><li>partido, coligação, federação</li><li>indicações e nomeações</li></ul>
+  </div>
+  <div class="q">
+    <h3>Como governa</h3>
+    <p>O que a pessoa fez no cargo.</p>
+    <ul><li>votos, autorias, comissões</li><li>emendas e para onde foram</li><li>gastos e remuneração</li><li>normas e vetos</li></ul>
+  </div>
+</div>
+
+<h2 id="principios">3 Princípios</h2>
+<ul>
+  <li><b>A pessoa é o eixo.</b> Toda tabela de fato que fala de gente carrega <code>id_pessoa</code>, ou o identificador da fonte quando a ligação ainda não existe. Assim TSE, Câmara e Senado se cruzam sem copiar dados.</li>
+  <li><b>Tudo que acontece tem data.</b> Cada fato tem início e fim de vigência (quando valeu no mundo) e aponta para a captura que o trouxe (quando soubemos). São dois tempos, o que permite responder "como era conhecido em tal data".</li>
+  <li><b>Cada linha diz de onde veio e se é informada ou derivada.</b> Fonte, endereço, captura e hash. Quando um valor sai de uma regra nossa, a coluna diz qual, e o valor da fonte nunca é sobrescrito.</li>
+  <li><b>O que falta fica vazio e medido.</b> Nada é inventado nem completado. A lacuna aparece em teste, não escondida em zero.</li>
+  <li><b>Um grão por tabela.</b> Uma tabela nova só entra se declarar o grão em uma frase e explicar por que nenhuma tabela do modelo comporta o dado. Isso encerra a criação de marts por pergunta.</li>
+  <li><b>Texto repetido vira chave.</b> Partido, cargo, órgão, território e tipo de evento são catálogos. O texto da fonte fica ao lado, nunca apagado, para o público auditar a padronização.</li>
+  <li><b>Aberto, curado e auditável.</b> O landing guarda o arquivo original com hash. O raw espelha a fonte. A curadoria acontece só depois, em código versionado e com teste de reconciliação.</li>
+</ul>
+
+<h2 id="camadas">4 Camadas</h2>
+<p>A cadeia de captura continua como é (landing, raw, staging). A mudança está no que vem depois: um núcleo pequeno e estável, os fatos datados e uma camada de análise, e só então as visões que o aplicativo consome.</p>
+<figure>
+  <div class="fig">
+  <svg viewBox="0 0 980 270" role="img" aria-label="Fluxo das camadas: fonte, landing, raw, staging, núcleo e fatos, análise e serviço">
+    <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+    <rect class="box" x="8" y="40" width="118" height="96" rx="3"/>
+    <text class="t" x="67" y="66" text-anchor="middle">Fontes</text><text class="s" x="67" y="84" text-anchor="middle">TSE, Câmara,</text><text class="s" x="67" y="98" text-anchor="middle">Senado, IBGE,</text><text class="s" x="67" y="112" text-anchor="middle">Transparência</text>
+    <line class="ln" x1="126" y1="88" x2="152" y2="88" marker-end="url(#a1)"/>
+    <rect class="box" x="154" y="40" width="118" height="96" rx="3"/>
+    <text class="t" x="213" y="66" text-anchor="middle">Landing</text><text class="s" x="213" y="84" text-anchor="middle">arquivo original</text><text class="s" x="213" y="98" text-anchor="middle">com hash e data,</text><text class="s" x="213" y="112" text-anchor="middle">imutável</text>
+    <line class="ln" x1="272" y1="88" x2="298" y2="88" marker-end="url(#a1)"/>
+    <rect class="box" x="300" y="40" width="118" height="96" rx="3"/>
+    <text class="t" x="359" y="66" text-anchor="middle">Raw</text><text class="s" x="359" y="84" text-anchor="middle">espelho da fonte,</text><text class="s" x="359" y="98" text-anchor="middle">só colunas</text><text class="s" x="359" y="112" text-anchor="middle">permitidas</text>
+    <line class="ln" x1="418" y1="88" x2="444" y2="88" marker-end="url(#a1)"/>
+    <rect class="box" x="446" y="40" width="118" height="96" rx="3"/>
+    <text class="t" x="505" y="66" text-anchor="middle">Staging</text><text class="s" x="505" y="84" text-anchor="middle">uma por fonte,</text><text class="s" x="505" y="98" text-anchor="middle">tipos e nomes</text><text class="s" x="505" y="112" text-anchor="middle">padronizados</text>
+    <line class="ln" x1="564" y1="88" x2="590" y2="88" marker-end="url(#a1)"/>
+    <rect class="core" x="592" y="12" width="132" height="70" rx="3"/>
+    <text class="t" x="658" y="36" text-anchor="middle">Núcleo (core)</text><text class="s" x="658" y="54" text-anchor="middle">pessoas, órgãos,</text><text class="s" x="658" y="68" text-anchor="middle">cargos, territórios</text>
+    <rect class="core" x="592" y="96" width="132" height="70" rx="3"/>
+    <text class="t" x="658" y="120" text-anchor="middle">Fatos</text><text class="s" x="658" y="138" text-anchor="middle">candidaturas,</text><text class="s" x="658" y="152" text-anchor="middle">mandatos, atos</text>
+    <line class="ln" x1="658" y1="82" x2="658" y2="96" marker-end="url(#a1)"/>
+    <line class="ln" x1="724" y1="88" x2="750" y2="88" marker-end="url(#a1)"/>
+    <rect class="box" x="752" y="40" width="108" height="96" rx="3"/>
+    <text class="t" x="806" y="66" text-anchor="middle">Análise</text><text class="s" x="806" y="84" text-anchor="middle">composições,</text><text class="s" x="806" y="98" text-anchor="middle">cortes no tempo,</text><text class="s" x="806" y="112" text-anchor="middle">comparações</text>
+    <line class="ln" x1="860" y1="88" x2="878" y2="88" marker-end="url(#a1)"/>
+    <rect class="box" x="880" y="40" width="94" height="96" rx="3"/>
+    <text class="t" x="927" y="66" text-anchor="middle">Serviço</text><text class="s" x="927" y="84" text-anchor="middle">visões que o</text><text class="s" x="927" y="98" text-anchor="middle">app consome,</text><text class="s" x="927" y="112" text-anchor="middle">sem lógica</text>
+    <path class="dash" d="M8 176 H564"/><text class="s" x="8" y="196">o que a fonte entrega (já existe)</text>
+    <path class="dash" d="M592 176 H974"/><text class="s" x="592" y="196">o que se consulta (este desenho)</text>
+    <text class="s" x="8" y="236">Regra de passagem: cada seta para a direita só acrescenta, nunca reescreve o dado da fonte.</text>
+  </svg>
+  </div>
+  <figcaption>Figura 1. As quatro primeiras camadas já existem. O desenho novo ocupa as três últimas colunas: núcleo e fatos conformam as fontes, a análise responde por período, e o serviço só expõe.</figcaption>
+</figure>
+<p>Nos nomes, as tabelas do núcleo e dos fatos seguem a convenção de nomes atual (tema na frente, colunas <code>id_</code>, <code>dt_</code>, <code>fl_</code>). A proposta é separá-las em esquemas de papel claro: <code>core</code>, <code>fatos</code>, <code>analise</code> e <code>servico</code>. O esquema <code>marts</code> atual vai sendo esvaziado conforme cada tabela é absorvida (seção 10).</p>
+
+<h2 id="nucleo">5 Núcleo: pessoas e referências</h2>
+<h3>5.1 A pessoa e tudo que se liga a ela</h3>
+<figure>
+  <div class="fig">
+  <svg viewBox="0 0 980 450" role="img" aria-label="A tabela de pessoas no centro, com satélites cadastrais à esquerda, fatos à direita e eventos e atos embaixo">
+    <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+    <rect class="box" x="8" y="14" width="270" height="78" rx="3"/>
+    <text class="m" x="20" y="36">pessoas_identificadores</text><text class="s" x="20" y="54">fonte · tipo · id na fonte · método · confiança</text><text class="s" x="20" y="70">liga Câmara, Senado e TSE à mesma pessoa</text>
+    <rect class="box" x="8" y="106" width="270" height="78" rx="3"/>
+    <text class="m" x="20" y="128">pessoas_atributos</text><text class="s" x="20" y="146">um valor por fonte, o valor resolvido</text><text class="s" x="20" y="162">e o conflito quando as fontes divergem</text>
+    <rect class="box" x="8" y="198" width="270" height="78" rx="3"/>
+    <text class="m" x="20" y="220">pessoas_declaracoes</text><text class="s" x="20" y="238">estado civil, instrução, ocupação e bens,</text><text class="s" x="20" y="254">na data de cada candidatura</text>
+    <rect class="core" x="360" y="96" width="250" height="124" rx="3"/>
+    <text class="m" x="376" y="122" style="font-size:13px;font-weight:500">pessoas</text>
+    <text class="s" x="376" y="142">id_pessoa · nome · nome_civil</text><text class="s" x="376" y="158">dt_nascimento · dt_falecimento · sexo</text><text class="s" x="376" y="174">naturalidade · foto resolvida</text><text class="s" x="376" y="190">escopo: quem já teve pelo menos um cargo</text><text class="s" x="376" y="206">(decisão 1, validada)</text>
+    <line class="ln" x1="278" y1="53" x2="360" y2="130" marker-end="url(#a2)"/>
+    <line class="ln" x1="278" y1="145" x2="360" y2="158" marker-end="url(#a2)"/>
+    <line class="ln" x1="278" y1="237" x2="360" y2="186" marker-end="url(#a2)"/>
+    <rect class="box" x="700" y="8" width="272" height="52" rx="3"/>
+    <text class="m" x="712" y="28">candidaturas · resultados</text><text class="s" x="712" y="46">pessoa × disputa × partido, por turno</text>
+    <rect class="box" x="700" y="68" width="272" height="52" rx="3"/>
+    <text class="m" x="712" y="88">mandatos · exercicios</text><text class="s" x="712" y="106">pessoa × cargo × período, e o que houve dentro</text>
+    <rect class="box" x="700" y="128" width="272" height="52" rx="3"/>
+    <text class="m" x="712" y="148">filiacoes</text><text class="s" x="712" y="166">pessoa × partido × período (vigência)</text>
+    <rect class="box" x="700" y="188" width="272" height="52" rx="3"/>
+    <text class="m" x="712" y="208">vinculos_orgao</text><text class="s" x="712" y="226">comissão, mesa, frente, ministério, tribunal</text>
+    <rect class="box" x="700" y="248" width="272" height="52" rx="3"/>
+    <text class="m" x="712" y="268">campanhas</text><text class="s" x="712" y="286">receitas, despesas e bens por candidatura</text>
+    <line class="ln" x1="610" y1="140" x2="700" y2="34" marker-end="url(#a2)"/>
+    <line class="ln" x1="610" y1="150" x2="700" y2="94" marker-end="url(#a2)"/>
+    <line class="ln" x1="610" y1="160" x2="700" y2="154" marker-end="url(#a2)"/>
+    <line class="ln" x1="610" y1="170" x2="700" y2="214" marker-end="url(#a2)"/>
+    <line class="ln" x1="610" y1="180" x2="700" y2="274" marker-end="url(#a2)"/>
+    <line class="ln" x1="485" y1="220" x2="485" y2="352" marker-end="url(#a2)"/>
+    <rect class="core" x="8" y="352" width="470" height="84" rx="3"/>
+    <text class="m" x="20" y="376">eventos</text><text class="s" x="20" y="394">a linha do tempo da pessoa, derivada dos fatos, com tipo de catálogo:</text><text class="s" x="20" y="410">candidatou-se, foi eleito, tomou posse, afastou-se, mudou de partido</text><text class="s" x="20" y="426">cada evento aponta para o fato e para a captura de origem</text>
+    <rect class="box" x="492" y="352" width="480" height="84" rx="3"/>
+    <text class="m" x="504" y="376">atos de atuação</text><text class="s" x="504" y="394">votos, autorias, emendas, gastos, presença, nomeações</text><text class="s" x="504" y="410">cada um mantém a própria tabela e o próprio grão,</text><text class="s" x="504" y="426">todos com id_pessoa, id_orgao e id_territorio</text>
+  </svg>
+  </div>
+  <figcaption>Figura 2. A pessoa no centro. À esquerda, o cadastro com a proveniência de cada valor. À direita, os fatos datados. Embaixo, a linha do tempo derivada e os atos de atuação, que já existem em tabelas próprias.</figcaption>
+</figure>
+
+<h3>Quem entra em <code>pessoas</code></h3>
+<p>Entra quem já teve pelo menos um cargo: eleito titular, suplente que assumiu e nomeado. Isso inclui os vereadores eleitos. O cadastro guarda só o que descreve a pessoa (nome, nascimento, naturalidade, foto); contagens e "último partido" saem de <code>pessoas</code> e vão para a análise (seção 1.1).</p>
+<p>Quem se candidatou e nunca teve cargo <b>não ganha linha em <code>pessoas</code></b>. A candidatura dele continua inteira em <code>candidaturas</code>, com o identificador do TSE, a foto oficial, a campanha e o resultado, e o aplicativo a mostra por ali. Isso evita milhões de pessoas privadas que só concorreram (LGPD).</p>
+<p><b>Decidido:</b> a pessoa entra em <code>pessoas</code> no momento de ser eleita, a partir do evento <code>eleito</code>, mesmo antes da posse. O mandato eleito já existe, ainda sem exercício.</p>
+<h3>Como as pessoas se ligam entre fontes</h3>
+<p>A ligação já existe e continua com os mesmos limites do ADR 0013, 0025 e 0026. O que muda é registrar a força de cada ligação em <code>pessoas_identificadores</code>, para o consumidor saber quanto confiar.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Nível</th><th>Regra</th><th>Hoje</th></tr></thead>
+  <tbody>
+    <tr><td class="k">A</td><td>Identificador oficial da própria fonte (código do deputado, código do senador).</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td class="k">B</td><td>Nome civil e nascimento iguais e únicos; ou nome de urna, nascimento e UF iguais e únicos. Datas de 1º de janeiro ficam de fora. Ambíguo não liga.</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td class="k">C</td><td>Vínculo aprovado por uma pessoa, com evidência escrita (arquivo <code>vinculos_aprovados</code>).</td><td><span class="chip part">Parcial</span> 192 pares esperando conferência</td></tr>
+    <tr><td class="k">D</td><td>Sem ligação. Fica com o identificador da fonte. Nunca se liga só por nome.</td><td><span class="chip ok">Temos</span></td></tr>
+  </tbody>
+</table></div>
+<p>O cadastro de uma pessoa pode divergir entre fontes (por exemplo, o nascimento). Em vez de escolher em silêncio, <code>pessoas_atributos</code> guarda o valor de cada fonte, indica o que foi adotado e por qual regra de precedência, e marca o conflito. A foto segue a mesma lógica: oficial da casa quando existe, senão a do TSE.</p>
+
+<h3>5.2 Referências: quem, onde e em qual cargo</h3>
+<figure>
+  <div class="fig">
+  <svg viewBox="0 0 980 240" role="img" aria-label="Órgão tem cargo; eleição, cargo e território formam a disputa; partido é referência isolada">
+    <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+    <rect class="box" x="8" y="14" width="210" height="66" rx="3"/>
+    <text class="m" x="20" y="36">orgaos</text><text class="s" x="20" y="54">tipo · poder · esfera · território</text><text class="s" x="20" y="68">órgão pai · vigência</text>
+    <line class="ln" x1="218" y1="47" x2="276" y2="47" marker-end="url(#a3)"/><text class="s" x="224" y="40">tem</text>
+    <rect class="box" x="278" y="14" width="250" height="66" rx="3"/>
+    <text class="m" x="290" y="36">cargos</text><text class="s" x="290" y="54">forma de investidura · duração do mandato</text><text class="s" x="290" y="68">regra legal com o artigo que a sustenta</text>
+    <rect class="box" x="580" y="14" width="190" height="66" rx="3"/>
+    <text class="m" x="592" y="36">eleicoes</text><text class="s" x="592" y="54">ano · turno · tipo (ordinária,</text><text class="s" x="592" y="68">suplementar, renovada) · data</text>
+    <rect class="box" x="800" y="14" width="172" height="66" rx="3"/>
+    <text class="m" x="812" y="36">territorios</text><text class="s" x="812" y="54">país, UF, município</text><text class="s" x="812" y="68">códigos IBGE e TSE</text>
+    <rect class="core" x="330" y="146" width="320" height="72" rx="3"/>
+    <text class="m" x="346" y="168">disputas</text><text class="s" x="346" y="186">eleição × cargo × território</text><text class="s" x="346" y="202">vagas, turnos, apurada ou não</text>
+    <line class="ln" x1="420" y1="80" x2="440" y2="146" marker-end="url(#a3)"/>
+    <line class="ln" x1="640" y1="80" x2="560" y2="146" marker-end="url(#a3)"/>
+    <line class="ln" x1="886" y1="80" x2="650" y2="182" marker-end="url(#a3)"/>
+    <rect class="box" x="8" y="146" width="250" height="72" rx="3"/>
+    <text class="m" x="20" y="168">partidos</text><text class="s" x="20" y="186">sigla · nome · linhagem (fusões,</text><text class="s" x="20" y="202">incorporações, mudanças de nome)</text>
+    <text class="s" x="680" y="214">candidaturas apontam para a disputa</text>
+  </svg>
+  </div>
+  <figcaption>Figura 3. Três catálogos pequenos (órgãos, cargos, territórios) e um calendário (eleições) formam a disputa. Os partidos já têm linhagem curada e ficam como estão.</figcaption>
+</figure>
+<div class="scroll"><table>
+  <thead><tr><th>Tabela</th><th>Grão</th><th>O que carrega</th><th>De onde vem</th><th>Hoje</th></tr></thead>
+  <tbody>
+    <tr><td class="k">territorios</td><td>um por UF ou município</td><td>códigos IBGE e TSE, hierarquia, região</td><td>IBGE e o de-para já feito por nome e UF</td><td><span class="chip ok">Temos</span> 5.571 municípios</td></tr>
+    <tr><td class="k">orgaos</td><td>um por órgão</td><td>Câmara, Senado, Assembleias, Câmaras Municipais, Presidência, governos, prefeituras, tribunais, comissões</td><td>Câmara e Senado hoje; o resto, a construir</td><td><span class="chip part">Parcial</span></td></tr>
+    <tr><td class="k">cargos</td><td>um por cargo e órgão</td><td>forma de investidura (majoritária, proporcional, suplência, nomeação), duração, regra legal com artigo</td><td>Constituição e leis; vagas vêm do TSE</td><td><span class="chip miss">Falta</span></td></tr>
+    <tr><td class="k">eleicoes</td><td>uma por ano, turno e tipo</td><td>código do TSE, tipo, data</td><td>TSE (candidaturas e vagas)</td><td><span class="chip part">Parcial</span> só no texto dos arquivos</td></tr>
+    <tr><td class="k">disputas</td><td>eleição × cargo × território</td><td>vagas, turnos, se foi apurada</td><td>TSE vagas e candidaturas</td><td><span class="chip part">Parcial</span> em <code>eleitos_cargos</code></td></tr>
+    <tr><td class="k">partidos</td><td>um por partido</td><td>sigla, nome, linhagem</td><td>Câmara e TSE, curada à mão</td><td><span class="chip ok">Temos</span></td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="eventos">6 Eventos da pessoa</h2>
+<p>Cada pessoa tem uma história feita de eventos: candidatou-se, foi eleita, tomou posse, afastou-se, trocou de partido. Quase nenhuma fonte entrega a história pronta. Os eventos nascem das tabelas de fatos, e a tabela <code>eventos</code> é a linha do tempo derivada delas. O ponto central desta revisão: <b>o tipo do evento nunca é texto solto</b>. Ele vem de um catálogo fechado (<code>evento_tipos</code>), e um teste recusa qualquer tipo que não esteja lá.</p>
+
+<h3>6.1 Uma tabela única é a melhor prática?</h3>
+<p>Depende do papel da tabela. Uma linha do tempo única é prática comum (registro de eventos, <i>activity stream</i>, tabela de fatos sem medida de Kimball), mas só funciona quando o tipo é um vocabulário controlado e a tabela não é a fonte da verdade. Sem isso ela vira o padrão conhecido como EAV (entidade-atributo-valor): flexível, sem tipo, sem teste e sem coluna descrita. Foi isso que você apontou na primeira versão.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Opção</th><th>Como é</th><th>Ganha</th><th>Perde</th><th>Veredito</th></tr></thead>
+  <tbody>
+    <tr><td class="k">A. Só fatos tipados</td><td>Cada fato com as suas colunas; a linha do tempo é um <code>UNION</code> em cada consulta.</td><td>Máxima precisão e teste por fato.</td><td>Cada aplicativo reescreve a linha do tempo; evento novo muda todas as consultas.</td><td><span class="chip part">Insuficiente sozinha</span></td></tr>
+    <tr><td class="k">B. Tabela única como verdade, atributos soltos</td><td>Uma tabela, qualquer evento, detalhe em texto ou JSON.</td><td>Flexível.</td><td>Sem tipo, sem teste, sem descrição de coluna; não é auditável.</td><td><span class="chip miss">Não</span></td></tr>
+    <tr><td class="k">C. Fatos tipados mais <code>eventos</code> derivada, com tipo de catálogo</td><td>Os fatos continuam a verdade. <code>eventos</code> é uma linha do tempo reconstruída deles, com chave estrangeira para <code>evento_tipos</code>.</td><td>Uma consulta serve todo aplicativo; tipo validado; evento novo é uma linha no catálogo e uma regra.</td><td>É derivada: nunca se edita, sempre se reconstrói do fato.</td><td><span class="chip ok">Recomendada</span></td></tr>
+  </tbody>
+</table></div>
+<p>A tabela única só aguenta isso porque <b>não tem coluna de texto livre</b>. Todo detalhe de um evento (o motivo, o valor, o texto do ato) fica no fato de origem, que a linha aponta.</p>
+
+<h3>6.2 O catálogo de tipos</h3>
+<p><code>evento_tipos</code> é uma tabela pequena e curada, uma linha por tipo, com descrição, o fato de onde o evento nasce e quais colunas de contexto ele exige. Um tipo novo só entra com a linha no catálogo, a regra que o deriva e o teste. Casamento, separação e estado civil <b>não têm tipo</b>: não existem em dado aberto, e o estado civil é declaração (<code>pessoas_declaracoes</code>), não evento.</p>
+<div class="legend"><span><span class="chip ok">Temos</span> fonte carregada</span><span><span class="chip part">Parcial</span> cobre só parte</span><span><span class="chip miss">Falta</span> sem fonte hoje</span><span><span class="chip der">Derivado</span> regra nossa, marcada</span></div>
+<div class="scroll"><table>
+  <thead><tr><th>cd_tipo_evento</th><th>Categoria</th><th>Fato de origem</th><th>Contexto exigido</th><th>Base</th><th>Hoje</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>nascimento</code></td><td>vida</td><td>pessoas_atributos</td><td>(território, se houver)</td><td>informado</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td class="k"><code>falecimento</code></td><td>vida</td><td>pessoas_atributos</td><td>—</td><td>informado</td><td><span class="chip part">Parcial</span> só Câmara</td></tr>
+    <tr><td class="k"><code>candidatura_registrada</code></td><td>eleição</td><td>candidaturas</td><td>disputa, partido</td><td>informado</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td class="k"><code>candidatura_deferida</code></td><td>eleição</td><td>candidaturas (situação)</td><td>disputa</td><td>informado</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td class="k"><code>candidatura_indeferida</code></td><td>eleição</td><td>candidaturas (situação)</td><td>disputa</td><td>informado</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td class="k"><code>candidatura_cassada</code></td><td>eleição</td><td>candidaturas (situação)</td><td>disputa</td><td>informado</td><td><span class="chip part">Parcial</span> sem o motivo</td></tr>
+    <tr><td class="k"><code>eleito</code></td><td>eleição</td><td>resultados</td><td>disputa, partido</td><td>informado; <span class="chip der">derivado</span> quando o TSE não diz e a disputa é de uma vaga</td><td><span class="chip part">Parcial</span></td></tr>
+    <tr><td class="k"><code>nao_eleito</code></td><td>eleição</td><td>resultados</td><td>disputa</td><td>informado</td><td><span class="chip part">Parcial</span></td></tr>
+    <tr><td class="k"><code>suplente_eleito</code></td><td>eleição</td><td>resultados</td><td>disputa, partido</td><td>informado</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td class="k"><code>segundo_turno_disputado</code></td><td>eleição</td><td>resultados</td><td>disputa</td><td>informado</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td class="k"><code>diplomacao</code></td><td>eleição</td><td>(sem fonte aberta)</td><td>disputa</td><td>—</td><td><span class="chip miss">Falta</span></td></tr>
+    <tr><td class="k"><code>posse</code></td><td>mandato</td><td>mandatos</td><td>órgão, cargo, território</td><td>informado (Câmara, Senado); <span class="chip der">derivado</span> do calendário legal nos demais</td><td><span class="chip part">Parcial</span></td></tr>
+    <tr><td class="k"><code>assuncao_por_suplencia</code></td><td>mandato</td><td>exercicios</td><td>órgão, cargo</td><td>informado</td><td><span class="chip part">Parcial</span> Câmara e Senado</td></tr>
+    <tr><td class="k"><code>afastamento</code></td><td>mandato</td><td>exercicios</td><td>órgão, cargo</td><td>informado</td><td><span class="chip part">Parcial</span> Câmara e Senado</td></tr>
+    <tr><td class="k"><code>retorno</code></td><td>mandato</td><td>exercicios</td><td>órgão, cargo</td><td>informado</td><td><span class="chip part">Parcial</span> Câmara e Senado</td></tr>
+    <tr><td class="k"><code>termino_de_mandato</code></td><td>mandato</td><td>mandatos</td><td>órgão, cargo</td><td>informado; <span class="chip der">derivado</span> do calendário legal</td><td><span class="chip part">Parcial</span></td></tr>
+    <tr><td class="k"><code>renuncia</code></td><td>mandato</td><td>mandatos</td><td>órgão, cargo</td><td>informado</td><td><span class="chip part">Parcial</span> Câmara e Senado</td></tr>
+    <tr><td class="k"><code>cassacao_de_mandato</code></td><td>mandato</td><td>mandatos</td><td>órgão, cargo</td><td>informado</td><td><span class="chip part">Parcial</span> Câmara e Senado</td></tr>
+    <tr><td class="k"><code>filiacao</code></td><td>partido</td><td>filiacoes</td><td>partido</td><td>informado</td><td><span class="chip part">Parcial</span> só Câmara</td></tr>
+    <tr><td class="k"><code>troca_de_partido</code></td><td>partido</td><td>filiacoes</td><td>partido novo</td><td>informado</td><td><span class="chip part">Parcial</span> só Câmara</td></tr>
+    <tr><td class="k"><code>desfiliacao</code></td><td>partido</td><td>filiacoes</td><td>partido</td><td>informado</td><td><span class="chip miss">Falta</span></td></tr>
+    <tr><td class="k"><code>nomeacao</code></td><td>nomeação</td><td>nomeacoes</td><td>órgão, cargo</td><td>informado</td><td><span class="chip miss">Falta</span></td></tr>
+    <tr><td class="k"><code>exoneracao</code></td><td>nomeação</td><td>nomeacoes</td><td>órgão, cargo</td><td>informado</td><td><span class="chip miss">Falta</span></td></tr>
+    <tr><td class="k"><code>entrada_em_orgao</code></td><td>vínculo</td><td>vinculos_orgao</td><td>órgão</td><td>informado</td><td><span class="chip part">Parcial</span> só Câmara</td></tr>
+    <tr><td class="k"><code>saida_de_orgao</code></td><td>vínculo</td><td>vinculos_orgao</td><td>órgão</td><td>informado</td><td><span class="chip part">Parcial</span> só Câmara</td></tr>
+  </tbody>
+</table></div>
+
+<h3>6.3 A tabela <code>eventos</code></h3>
+<p>Uma linha por pessoa, tipo e fato de origem. As colunas de contexto são chaves dos catálogos, nunca texto, e o catálogo diz quais são obrigatórias para cada tipo (um teste confere).</p>
+<div class="scroll"><table>
+  <thead><tr><th>Coluna</th><th>Para quê</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>id_evento</code></td><td>Chave estável: resumo do tipo, do fato de origem e da pessoa. Reconstruir a tabela devolve os mesmos identificadores.</td></tr>
+    <tr><td class="k"><code>id_pessoa</code></td><td>Quem.</td></tr>
+    <tr><td class="k"><code>cd_tipo_evento</code></td><td>Chave estrangeira de <code>evento_tipos</code>. Sem texto livre.</td></tr>
+    <tr><td class="k"><code>dt_evento</code> e <code>cd_precisao_data</code></td><td>Quando aconteceu e com que precisão (dia, mês ou ano). A fonte que só dá o ano não vira o dia 1º de janeiro.</td></tr>
+    <tr><td class="k"><code>id_orgao</code>, <code>id_cargo</code>, <code>id_territorio</code>, <code>id_partido</code></td><td>Onde e por qual partido. Chaves dos catálogos do núcleo; vazias quando o tipo não exige.</td></tr>
+    <tr><td class="k"><code>cd_fato_origem</code> e <code>id_fato_origem</code></td><td>Qual tabela de fatos e qual linha geraram o evento. O detalhe (motivo, texto, valores) está lá.</td></tr>
+    <tr><td class="k"><code>cd_base</code> e <code>id_regra</code></td><td><code>informado</code> ou <code>derivado</code>; quando derivado, qual regra (por exemplo, calendário legal do cargo, com o artigo).</td></tr>
+    <tr><td class="k"><code>id_captura</code></td><td>Liga à captura do arquivo original (URL, data, hash). Faz o evento rastreável até a fonte.</td></tr>
+  </tbody>
+</table></div>
+
+<h3>6.4 Como chegamos em cada evento</h3>
+<p>A coluna <b>Como chegamos</b> diz de onde sai o evento hoje; <b>O que falta ou buscar</b> diz o que ainda precisa de fonte. <span class="chip ok">informado</span> é o que a fonte publica; <span class="chip der">derivado</span> é regra nossa, sempre marcada; <span class="chip miss">falta</span> é o que não tem dado aberto.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Evento</th><th>Como chegamos</th><th>Estado</th><th>O que falta ou buscar</th></tr></thead>
+  <tbody>
+    <tr><td class="k">Candidatura registrada</td><td>TSE candidaturas, de 1996 a 2026, todos os cargos</td><td><span class="chip ok">Temos</span></td><td>Eleições de 1994 (#75). Vereadores estão no raw, falta o modelo.</td></tr>
+    <tr><td class="k">Situação da candidatura (deferida, indeferida, cassada)</td><td>TSE candidaturas, situação em cada turno</td><td><span class="chip ok">Temos</span></td><td>Motivo da cassação: arquivo do pacote de 2026 ainda não carregado.</td></tr>
+    <tr><td class="k">Votos apurados</td><td>TSE votação, por município e zona, 1996 a 2026</td><td><span class="chip ok">Temos</span></td><td>Segundo turno de 2026: o TSE ainda não publicou (conferido em 27/10). Votos são um fato, não um evento da pessoa.</td></tr>
+    <tr><td class="k">Resultado do turno (eleito, suplente, não eleito, segundo turno)</td><td>TSE candidaturas e votação</td><td><span class="chip part">Parcial</span></td><td>Em 2006 o TSE não informa o vencedor do segundo turno de presidente; em 2010 também falta na votação. Para cargo de uma vaga, o mais votado do turno entra como <span class="chip der">derivado</span>.</td></tr>
+    <tr><td class="k">Diplomação</td><td>não vem nos arquivos abertos</td><td><span class="chip miss">Falta</span></td><td>Pesquisar fonte oficial do TSE ou dos TREs (#59). Nunca inferir pela data.</td></tr>
+    <tr><td class="k">Posse, início do exercício</td><td>Câmara (histórico) e Senado (exercícios). Para os demais cargos, calendário legal do cargo.</td><td><span class="chip part">Parcial</span></td><td>O campo de posse do TSE não é confiável (#71). Executivo, Assembleias e Câmaras Municipais: <span class="chip der">derivado</span> da regra legal, com o artigo citado, até haver fonte.</td></tr>
+    <tr><td class="k">Assumiu por suplência</td><td>Câmara (condição suplente) e Senado (exercícios de suplente)</td><td><span class="chip part">Parcial</span></td><td>Demais órgãos: o TSE dá a ordem de suplência, mas não quem assumiu.</td></tr>
+    <tr><td class="k">Licença, afastamento, retorno</td><td>Câmara (situação em cada registro do histórico) e Senado (causa do afastamento)</td><td><span class="chip part">Parcial</span></td><td>O TSE não registra afastamentos. Executivo, Assembleias e Câmaras Municipais dependem de fonte por órgão, a pesquisar.</td></tr>
+    <tr><td class="k">Fim do mandato: término, renúncia, cassação, falecimento</td><td>Câmara (registro de fim de mandato com a causa) e Senado (causa do afastamento)</td><td><span class="chip part">Parcial</span></td><td>Demais cargos: sem fonte nacional. Cerca de um quinto dos mandatos da Câmara de 2003 a 2022 não tem registro de fim.</td></tr>
+    <tr><td class="k">Filiação e troca de partido</td><td>Câmara (alteração de partido no histórico, já carregado e ainda não usado) e partido na candidatura (TSE)</td><td><span class="chip part">Parcial</span></td><td>O arquivo de filiados do TSE é grande e traz dado pessoal: exige a decisão de LGPD (#38).</td></tr>
+    <tr><td class="k">Nomeação e exoneração (ministros, secretários, tribunais)</td><td>Diário Oficial, hoje só no landing</td><td><span class="chip miss">Falta</span></td><td>Planalto e portais dos tribunais (#19, #69). A licença do DOU (CC BY-ND) pede cuidado antes de extrair dados estruturados.</td></tr>
+    <tr><td class="k">Comissões, mesa, frentes</td><td>Câmara (órgãos, membros, frentes)</td><td><span class="chip part">Parcial</span></td><td>Senado e demais casas.</td></tr>
+    <tr><td class="k">Nascimento e falecimento</td><td>Câmara, Senado e TSE (nascimento)</td><td><span class="chip ok">Temos</span></td><td>Falecimento só onde a Câmara informa.</td></tr>
+    <tr><td class="k">Estado civil, instrução, ocupação, bens</td><td>TSE, declarados em cada candidatura</td><td><span class="chip ok">Temos</span></td><td>São declarações na data da candidatura, não eventos de vida (sem tipo no catálogo). Casamento e separação não existem em dado aberto e não serão inferidos.</td></tr>
+  </tbody>
+</table></div>
+
+<h3>6.5 Exemplo com os dados de hoje</h3>
+<div class="scroll"><table>
+  <thead><tr><th>Quando</th><th><code>cd_tipo_evento</code></th><th>O que aconteceu com Lula</th><th>Base</th><th>Fonte</th></tr></thead>
+  <tbody>
+    <tr><td>2002</td><td><code>candidatura_registrada</code>, <code>eleito</code></td><td>Candidato a presidente, eleito no segundo turno</td><td><span class="chip ok">informado</span></td><td>TSE candidaturas e votação</td></tr>
+    <tr><td>2006</td><td><code>candidatura_registrada</code>, <code>eleito</code></td><td>Candidato a presidente; o segundo turno tem votos, mas o TSE não diz quem venceu</td><td><span class="chip der">derivado</span> o mais votado</td><td>TSE votação</td></tr>
+    <tr><td>2022</td><td><code>candidatura_registrada</code>, <code>eleito</code></td><td>Eleito presidente</td><td><span class="chip ok">informado</span></td><td>TSE candidaturas e votação</td></tr>
+    <tr><td>2023</td><td><code>posse</code></td><td>Posse como presidente</td><td><span class="chip der">derivado</span> do calendário legal</td><td>Regra do cargo, sem fonte de exercício do Executivo</td></tr>
+    <tr><td>2026</td><td><code>candidatura_registrada</code>, <code>segundo_turno_disputado</code></td><td>Candidato no segundo turno; resultado ainda não publicado, então não há evento <code>eleito</code> nem <code>nao_eleito</code></td><td><span class="chip miss">falta</span> o vencedor</td><td>TSE (aguardando publicação)</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="mandatos">7 Mandatos e composição</h2>
+<h3>Mandato é o vínculo entre a pessoa e o cargo, com vigência</h3>
+<p><code>mandatos</code> tem uma linha por pessoa, cargo e período, com a forma de investidura (eleito titular, suplente que assumiu, nomeado) e a origem (a eleição ou o ato que o criou). Dentro dele, <code>exercicios</code> registra os períodos em que a pessoa de fato exerceu: a licença cria um intervalo sem exercício, e o suplente que assume tem o seu próprio exercício na mesma vaga.</p>
+<h3>Faz sentido uma SCD? Sim, em duas camadas</h3>
+<p>Uma dimensão de variação lenta (SCD) tipo 2 guarda cada versão de um atributo com a sua vigência. Aqui ela aparece em dois lugares: o vínculo pessoa-cargo (<code>mandatos</code>) e o vínculo pessoa-partido (<code>filiacoes</code>). Com vigência nos dois, qualquer estado em qualquer data se responde por um corte no tempo, sem recalcular a história.</p>
+<p>Para comparar eleições e anos, a consulta pelo corte é lenta e fácil de errar. Por isso a análise guarda cortes prontos, um <i>snapshot</i> periódico: a tabela <code>composicoes</code>, com uma linha por data de corte, órgão e ocupante, já com o partido, o território e a condição naquela data. Os cortes são a posse de cada legislatura ou mandato, e 1º de janeiro e 1º de julho de cada ano.</p>
+<figure>
+  <div class="fig">
+  <svg viewBox="0 0 980 330" role="img" aria-label="Quatro vagas de uma casa ao longo do tempo, com suplente assumindo, licença e três cortes de composição">
+    <defs>
+      <pattern id="lic" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="currentColor" stroke-width="1.4"/></pattern>
+    </defs>
+    <line class="dash" x1="160" y1="34" x2="160" y2="252"/><line class="dash" x1="360" y1="34" x2="360" y2="252"/><line class="dash" x1="560" y1="34" x2="560" y2="252"/>
+    <text class="s" x="160" y="24" text-anchor="middle">corte A · 01/01/2020</text><text class="s" x="360" y="24" text-anchor="middle">corte B · 01/01/2022</text><text class="s" x="560" y="24" text-anchor="middle">corte C · 01/01/2024</text>
+    <text class="s" x="8" y="76">vaga 1</text><text class="s" x="8" y="126">vaga 2</text><text class="s" x="8" y="176">vaga 3</text><text class="s" x="8" y="226">vaga 4</text>
+    <rect class="bar" x="60" y="56" width="400" height="30" rx="2"/><text class="s" x="68" y="75" style="fill:currentColor">Ana (PT)</text>
+    <rect class="bar" x="460" y="56" width="400" height="30" rx="2"/><text class="s" x="468" y="75" style="fill:currentColor">Ana (PT), reeleita</text>
+    <rect class="bar" x="60" y="106" width="150" height="30" rx="2"/><text class="s" x="68" y="125" style="fill:currentColor">Bruno (PSD)</text>
+    <rect class="sup" x="210" y="106" width="250" height="30" rx="2"/><text class="s" x="218" y="125" style="fill:currentColor">Carla (MDB), assume por suplência</text>
+    <rect class="bar" x="460" y="106" width="400" height="30" rx="2"/><text class="s" x="468" y="125" style="fill:currentColor">Carla (MDB), eleita</text>
+    <rect class="bar" x="60" y="156" width="400" height="30" rx="2"/><text class="s" x="68" y="175" style="fill:currentColor">Diego (PSD)</text>
+    <rect x="200" y="156" width="40" height="30" fill="url(#lic)" opacity=".55"/><text class="s" x="220" y="150" text-anchor="middle">licença</text>
+    <rect class="bar" x="460" y="156" width="400" height="30" rx="2"/><text class="s" x="468" y="175" style="fill:currentColor">Gil (PSD), eleito</text>
+    <rect class="bar" x="60" y="206" width="400" height="30" rx="2"/><text class="s" x="68" y="225" style="fill:currentColor">Eva (PL)</text>
+    <rect class="bar" x="460" y="206" width="400" height="30" rx="2"/><text class="s" x="468" y="225" style="fill:currentColor">Fábio (PSD), eleito</text>
+    <line class="ln" x1="60" y1="256" x2="860" y2="256"/>
+    <text class="s" x="60" y="272" text-anchor="middle">2019</text><text class="s" x="260" y="272" text-anchor="middle">2021</text><text class="s" x="460" y="272" text-anchor="middle">2023</text><text class="s" x="660" y="272" text-anchor="middle">2025</text><text class="s" x="860" y="272" text-anchor="middle">2027</text>
+    <text class="s" x="160" y="296" text-anchor="middle">A: PT 1 · PSD 2 · PL 1</text><text class="s" x="360" y="296" text-anchor="middle">B: PT 1 · MDB 1 · PSD 1 · PL 1</text><text class="s" x="580" y="296" text-anchor="middle">C: PT 1 · MDB 1 · PSD 2</text>
+    <text class="s" x="8" y="318">As barras são o vínculo pessoa-cargo com vigência. O corte vertical devolve quem estava em exercício e por qual partido.</text>
+  </svg>
+  </div>
+  <figcaption>Figura 4. Quatro vagas ao longo de dois mandatos. A suplente assume no meio do primeiro mandato, o titular tem uma licença curta, e a composição muda de um corte para outro sem que nenhuma eleição aconteça. É a diferença entre composição eleita e composição em exercício.</figcaption>
+</figure>
+<div class="callout">
+  <p><b>Duas composições, nunca misturadas.</b> A <i>composição eleita</i> é o resultado da eleição: quem ganhou, por qual partido na eleição. A <i>composição em exercício</i> é quem ocupa o cargo em uma data: inclui suplentes, trocas de partido e vagas abertas. Comparar eleições usa a primeira; saber como estava a Câmara em um ano usa a segunda.</p>
+</div>
+<p>A composição por órgão cobre Câmara, Senado, Assembleias, Câmaras Municipais e também os cargos individuais do Executivo (um ocupante por cargo e território). Para a Câmara dos Deputados, por exemplo, a soma de ocupantes em um corte deve bater com as 513 vagas, e uma diferença vira lacuna medida, não ajuste.</p>
+
+<h2 id="atuacao">8 Quem governa, por que, como</h2>
+<p>As três perguntas dependem dos mesmos eixos (pessoa, órgão, território, data). O quadro mostra onde cada família de dados se encaixa e o que já temos.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Pergunta</th><th>Fato</th><th>Chaves</th><th>Hoje</th></tr></thead>
+  <tbody>
+    <tr><td class="k" rowspan="3">Quem governa</td><td>candidaturas e resultados</td><td>pessoa, disputa, partido, turno</td><td><span class="chip ok">Temos</span> modelo a unificar</td></tr>
+    <tr><td>mandatos e exercícios</td><td>pessoa, cargo, período</td><td><span class="chip part">Parcial</span> só Câmara e Senado</td></tr>
+    <tr><td>composições</td><td>corte, órgão, ocupante, partido</td><td><span class="chip miss">Falta</span></td></tr>
+    <tr><td class="k" rowspan="4">Por que governa</td><td>votos por município e zona</td><td>candidatura, território, turno</td><td><span class="chip ok">Temos</span> 1996 a 2026</td></tr>
+    <tr><td>campanhas: receitas, despesas, bens</td><td>candidatura</td><td><span class="chip part">Parcial</span> 2026 e 2022 (em carga); bens desde 2006</td></tr>
+    <tr><td>coligações e federações</td><td>candidatura, partido</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td>indicações e nomeações</td><td>pessoa, cargo, ato</td><td><span class="chip miss">Falta</span></td></tr>
+    <tr><td class="k" rowspan="6">Como governa</td><td>votos em plenário e vetos</td><td>pessoa, votação</td><td><span class="chip ok">Temos</span></td></tr>
+    <tr><td>autorias e comissões</td><td>pessoa, proposição, órgão</td><td><span class="chip part">Parcial</span> Câmara completa; Senado em parte (#14)</td></tr>
+    <tr><td>emendas e destino</td><td>emenda, autor, município IBGE</td><td><span class="chip part">Parcial</span> destino ligado; autor a pessoa aguarda o ADR 0028</td></tr>
+    <tr><td>gastos do mandato (cota parlamentar)</td><td>pessoa, despesa</td><td><span class="chip miss">Falta</span> (#93)</td></tr>
+    <tr><td>remuneração</td><td>pessoa, cargo, mês</td><td><span class="chip miss">Falta</span> (#92)</td></tr>
+    <tr><td>gastos do governo federal</td><td>órgão, favorecido, despesa</td><td><span class="chip miss">Falta</span> (#91)</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="exemplos">9 Exemplos: o que os aplicativos consomem</h2>
+<p>Cada aplicativo lê só do esquema <code>servico</code>, em views sem regra de negócio: elas juntam, filtram e dão nome. Qualquer regra nova nasce no núcleo, nos fatos ou na análise, com teste. Os exemplos abaixo mostram views para os dois aplicativos de hoje, <b>No Cargo</b> (quem está no cargo e o histórico dos candidatos) e <b>Quem Decidiu</b> (quem propôs, quem votou e quem aprovou), e para duas perguntas de comparação.</p>
+<div class="callout warn">
+  <p><b>Como ler.</b> As consultas são de desenho: mostram quais tabelas e quais chaves cada view usa, e os nomes de colunas ainda não são o contrato final (ele sai na fase de cada tabela). Os números vêm do warehouse de hoje, das tabelas atuais, consultados em 27/10/2026. Eles mostram o que o aplicativo já recebe e onde o novo modelo muda o resultado.</p>
+</div>
+
+<h3>9.1 No Cargo</h3>
+<p><b>View <code>servico.no_cargo_ocupantes</code>: quem ocupa cada cargo em uma data.</b> Responde "quem é o governador de cada estado hoje" e, trocando o parâmetro, em qualquer data passada.</p>
+<pre><code>select t.nome as territorio, c.nome as cargo, p.nome, pa.sigla as partido,
+       m.dt_inicio, m.cd_base as base_do_inicio
+from fatos.mandatos m
+join core.pessoas    p  using (id_pessoa)
+join core.cargos     c  using (id_cargo)
+join core.territorios t using (id_territorio)
+left join core.partidos pa on pa.id_partido = m.id_partido
+where :data between m.dt_inicio and coalesce(m.dt_fim, date '9999-12-31')
+  and m.fl_em_exercicio</code></pre>
+<p><b>View <code>servico.no_cargo_pessoa</code>: a ficha com a linha do tempo.</b> É o que corrige o caso de Lula: o histórico sai de <code>eventos</code>, não de uma tabela só de eleitos.</p>
+<pre><code>select e.dt_evento, e.cd_precisao_data, tp.nome as evento, c.nome as cargo,
+       t.nome as territorio, e.cd_base, cp.url_original
+from fatos.eventos e
+join core.evento_tipos tp using (cd_tipo_evento)
+left join core.cargos c on c.id_cargo = e.id_cargo
+left join core.territorios t on t.id_territorio = e.id_territorio
+join metadata.captures cp on cp.id_captura = e.id_captura
+where e.id_pessoa = :id_pessoa
+order by e.dt_evento</code></pre>
+<p><b>View <code>servico.no_cargo_campanhas</code>: todas as candidaturas da pessoa, com foto e campanha, tenha ela vencido ou não.</b></p>
+<pre><code>select d.ano_eleicao, c.nome as cargo, ca.numero, pa.sigla as partido, r.cd_resultado,
+       ca.foto_caminho, cm.valor_receitas, cm.valor_despesas, cm.valor_bens
+from fatos.candidaturas ca
+join core.disputas d using (id_disputa)
+join core.cargos   c using (id_cargo)
+left join fatos.resultados r  on r.id_candidatura = ca.id_candidatura and r.nr_turno = d.nr_ultimo_turno
+left join fatos.campanhas  cm on cm.id_candidatura = ca.id_candidatura
+left join core.partidos    pa on pa.id_partido = ca.id_partido
+where ca.id_pessoa = :id_pessoa</code></pre>
+<p><b>O que o aplicativo recebe hoje e o que muda.</b> Flávio Bolsonaro sai de <code>eleitos</code> com cinco eleições, todas vitórias: deputado estadual em 2002, 2006, 2010 e 2014, e senador em 2018. Uma candidatura que não terminou em vitória, ou ainda sem resultado, como as de 2026, não entra em <code>eleitos</code> e por isso aparece sem campanha. Em <code>fatos.candidaturas</code> entram todas, com campanha, foto e resultado vazio quando o TSE ainda não informa.</p>
+
+<h3>9.2 Quem Decidiu</h3>
+<p><b>View <code>servico.decisao</code>: uma linha por votação, com a proposição, o resultado e o documento original.</b> <b>View <code>servico.decisao_partidos</code>: o voto por partido.</b></p>
+<pre><code>select v.dt_votacao, pr.sigla || ' ' || pr.numero || '/' || pr.ano as proposicao,
+       v.cd_resultado, v.qtd_sim, v.qtd_nao,
+       pa.sigla as partido, vv.cd_voto, count(*) as qtd
+from fatos.votacoes v
+join fatos.votacoes_proposicoes vp on vp.id_votacao = v.id_votacao and vp.cd_papel = 'objeto'
+join fatos.proposicoes pr          on pr.id_proposicao = vp.id_proposicao
+join fatos.votos vv                on vv.id_votacao = v.id_votacao
+join core.partidos pa              on pa.id_partido = vv.id_partido
+where v.id_votacao = :id_votacao
+group by all</code></pre>
+<p><b>Exemplo real, votação 2236186-60 da Câmara, em 14/10/2026.</b> A descrição da fonte começa com "Rejeitada a Subemenda Substitutiva ao Projeto de Lei Complementar nº 281, de 2019": 252 votos sim e 176 não. Votos dos seis maiores partidos presentes:</p>
+<div class="scroll"><table>
+  <thead><tr><th>Partido no voto</th><th class="num">Sim</th><th class="num">Não</th><th class="num">Votos</th></tr></thead>
+  <tbody>
+    <tr><td>PL</td><td class="num">77</td><td class="num">3</td><td class="num">80</td></tr>
+    <tr><td>PT</td><td class="num">0</td><td class="num">61</td><td class="num">61</td></tr>
+    <tr><td>PSD</td><td class="num">31</td><td class="num">9</td><td class="num">40</td></tr>
+    <tr><td>UNIÃO</td><td class="num">9</td><td class="num">30</td><td class="num">39</td></tr>
+    <tr><td>REPUBLICANOS</td><td class="num">33</td><td class="num">3</td><td class="num">37</td></tr>
+    <tr><td>PP</td><td class="num">30</td><td class="num">4</td><td class="num">34</td></tr>
+  </tbody>
+</table></div>
+<p><b>O que o novo modelo muda.</b> Hoje a coluna <code>votacoes.proposicoes</code> guarda uma lista em texto, com mais de 60 itens nesta votação (emendas, requerimentos, destaques e o PLP 281/2019 no meio), e não dá para saber qual é o objeto. A relação <code>votacoes_proposicoes</code> separa cada item e, quando a fonte informar, o papel dele. A coluna <code>partido</code> do voto (o partido na data da votação) é dado informado e continua como está, agora com <code>id_partido</code>.</p>
+<p><b>Indicações aprovadas pelo Congresso.</b> A votação 2645346-18, de 02/09/2026, aprovou o PDL 995/2026, que trata da indicação de um ministro de tribunal (404 sim, 61 não; a descrição da fonte aparece truncada na consulta). Hoje isso é só texto. Com o tipo <code>nomeacao</code> no catálogo, o voto de aprovação e o ato de nomeação passam a ser ligados pela mesma pessoa, assim que houver a fonte do ato (seção 11).</p>
+
+<h3>9.3 Comparar eleições: composição da Câmara</h3>
+<p><b>View <code>servico.composicao_comparada</code>: bancadas de dois cortes lado a lado.</b></p>
+<pre><code>select pa.sigla as partido, c.dt_corte, count(*) as cadeiras
+from analise.composicoes c
+join core.partidos pa using (id_partido)
+where c.id_orgao = :camara
+  and c.cd_tipo_composicao = 'eleita'          -- ou 'em_exercicio'
+  and c.dt_corte in (:corte_a, :corte_b)
+group by all</code></pre>
+<p><b>Exemplo com a composição eleita de hoje, deputados federais.</b> Os dois cortes somam 513 cadeiras.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Eleição</th><th>Seis maiores bancadas (sigla na eleição)</th><th class="num">Total</th></tr></thead>
+  <tbody>
+    <tr><td>2018</td><td>PT 56 · PSL 52 · PP 37 · PSD 35 · MDB 34 · PR 33</td><td class="num">513</td></tr>
+    <tr><td>2022</td><td>PL 98 · PT 69 · UNIÃO 57 · PP 47 · PSD 42 · MDB 41</td><td class="num">513</td></tr>
+  </tbody>
+</table></div>
+<p><b>Por que a chave do partido importa.</b> Comparar por sigla engana. O PR de 2018 virou PL em 2019 (mudança de nome), e o PSL virou UNIÃO em 2022 (fusão com o DEM). A sigla PL também já designou, antes de 2006, outro partido, que se fundiu ao PRONA e formou o PR. Com <code>id_partido</code> e a linhagem que o projeto já curou, a comparação mostra a continuidade; a sigla do ano continua visível ao lado.</p>
+
+<h3>9.4 Quem governa um município</h3>
+<p><b>View <code>servico.municipio_governo</code>: prefeito e vereadores de um município, por eleição.</b> É aqui que os vereadores entram no mesmo desenho dos demais cargos.</p>
+<pre><code>select ca.ano_eleicao, c.nome as cargo, p.nome, pa.sigla as partido, r.qtd_votos_validos
+from fatos.candidaturas ca
+join core.disputas  d  using (id_disputa)
+join core.cargos    c  using (id_cargo)
+left join core.pessoas p on p.id_pessoa = ca.id_pessoa
+left join core.partidos pa on pa.id_partido = ca.id_partido
+join fatos.resultados r on r.id_candidatura = ca.id_candidatura and r.fl_eleito
+where d.id_territorio = :id_municipio and ca.ano_eleicao = :ano</code></pre>
+<p><b>Exemplo real, município de São Paulo em 2024:</b> 1 prefeito e 55 vereadores eleitos. Entre os vereadores, PT 8, UNIÃO 7, MDB 7, PL 7 e PSOL 6 (cinco maiores bancadas). A tabela atual cobre os 58.162 vereadores eleitos de 2024, mas só uma pequena parte tem pessoa ligada, o que a seção 1.1 mostra.</p>
+
+<h3>9.5 Quais tabelas cada exemplo usa</h3>
+<div class="scroll"><table>
+  <thead><tr><th>View</th><th>Tabelas do desenho</th><th>Fase</th><th>Dado que falta</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>no_cargo_ocupantes</code></td><td>mandatos, cargos, territorios, partidos, pessoas</td><td>F4</td><td>Início e fim de Executivo e Legislativos locais saem do calendário legal (derivado).</td></tr>
+    <tr><td class="k"><code>no_cargo_pessoa</code></td><td>eventos, evento_tipos, captures</td><td>F5</td><td>Diplomação e afastamentos fora do Congresso.</td></tr>
+    <tr><td class="k"><code>no_cargo_campanhas</code></td><td>candidaturas, resultados, campanhas, disputas</td><td>F2</td><td>Prestação de contas de 2018 e anos anteriores.</td></tr>
+    <tr><td class="k"><code>decisao</code> e <code>decisao_partidos</code></td><td>votacoes, votacoes_proposicoes, votos, proposicoes, partidos</td><td>F2 e F4</td><td>Papel de cada proposição na votação (a verificar na fonte).</td></tr>
+    <tr><td class="k"><code>composicao_comparada</code></td><td>composicoes, partidos</td><td>F5</td><td>Mandatos de vereador e deputado estadual com início e fim.</td></tr>
+    <tr><td class="k"><code>municipio_governo</code></td><td>candidaturas, resultados, disputas, pessoas</td><td>F2</td><td>Nenhum para a eleição; a ligação com pessoas segue a decisão 1.</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="destino">10 Do que existe ao destino</h2>
+<p>Nada se descarta de uma vez. Cada tabela atual é mantida, absorvida ou substituída quando o destino cobrir o que ela entrega, com a mesma conferência de reconciliação. O aplicativo migra para o esquema de serviço no fim.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Hoje</th><th>Destino</th><th>Ação</th></tr></thead>
+  <tbody>
+    <tr><td><code>pessoas</code>, <code>pessoas_fusoes</code>, <code>pessoas_ocupacoes</code></td><td>core: <code>pessoas</code>, <code>pessoas_atributos</code></td><td>Ampliar o escopo e guardar a proveniência de cada atributo</td></tr>
+    <tr><td>schema <code>identity</code> (identificadores, fusões)</td><td>core: <code>pessoas_identificadores</code></td><td>Manter a regra, acrescentar o nível de confiança</td></tr>
+    <tr><td><code>partidos</code>, <code>partidos_linhagem</code></td><td>core: <code>partidos</code></td><td>Manter</td></tr>
+    <tr><td><code>orgaos</code>, <code>orgaos_membros</code>, <code>frentes</code>, <code>frentes_membros</code></td><td>core: <code>orgaos</code>; fatos: <code>vinculos_orgao</code></td><td>Absorver</td></tr>
+    <tr><td><code>municipios</code>, <code>municipios_codigos_tse</code></td><td>core: <code>territorios</code></td><td>Absorver, acrescentar UF e país</td></tr>
+    <tr><td><code>eleitos_cargos</code></td><td>core: <code>disputas</code></td><td>Substituir</td></tr>
+    <tr><td><code>eleitos</code>, <code>candidaturas</code>, <code>eleitos_historico</code>, <code>eleitos_chapas</code>, <code>eleitos_campanhas</code></td><td>fatos: <code>candidaturas</code>, <code>resultados</code>, <code>mandatos</code>, <code>campanhas</code></td><td>Substituir, para todos os cargos, inclusive vereador</td></tr>
+    <tr><td><code>mandatos</code>, <code>mandatos_exercicios</code></td><td>fatos: <code>mandatos</code>, <code>exercicios</code></td><td>Unificar com os mandatos eleitos do TSE</td></tr>
+    <tr><td><code>votacoes*</code>, <code>proposicoes*</code>, <code>emendas*</code>, <code>normas*</code>, <code>vetos*</code>, <code>constituicao*</code></td><td>fatos de atuação</td><td>Manter; ganham as chaves conformadas de pessoa, órgão e território</td></tr>
+    <tr><td>colunas <code>qtd_propostas</code>, <code>qtd_votos</code>, <code>ultimo_partido</code> e afins de <code>pessoas</code></td><td>analise: <code>pessoas_atividade</code></td><td>Mover: o cadastro fica só com o que descreve a pessoa</td></tr>
+    <tr><td><code>votacoes.proposicoes</code> (lista em texto)</td><td>fatos: <code>votacoes_proposicoes</code></td><td>Substituir pela relação, uma linha por item</td></tr>
+    <tr><td><code>partidos_eventos</code>, <code>vinculos_aprovados</code> (em <code>intermediate</code>)</td><td>core: referência curada</td><td>Mover, com a fonte declarada em cada linha</td></tr>
+    <tr><td><code>eleicoes_candidaturas</code>, <code>eleicoes_resultados</code> (rascunho, não publicado)</td><td>fatos: <code>candidaturas</code>, <code>resultados</code></td><td>Absorver: o trabalho já feito entra no desenho, com outro nome e escopo</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="buscar">11 Dados a buscar</h2>
+<p>O que falta, em ordem de valor para as três perguntas. Onde a licença ou a base legal ainda não foi lida, está escrito como a confirmar.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Prioridade</th><th>Dado</th><th>Para quê</th><th>Fonte provável</th><th>Licença e LGPD</th></tr></thead>
+  <tbody>
+    <tr><td class="k">1</td><td>Prestação de contas de 2018 e anteriores</td><td>Campanha na história de cada pessoa</td><td>TSE, pacote por eleição (layouts diferentes por ano)</td><td>CC BY, como os demais conjuntos do TSE</td></tr>
+    <tr><td class="k">1</td><td>Resultado do segundo turno de 2026</td><td>Fechar a eleição presidencial</td><td>TSE, quando publicar nos arquivos abertos</td><td>CC BY</td></tr>
+    <tr><td class="k">1</td><td>Motivo da cassação e demais colunas do pacote de 2026</td><td>Eventos de cassação e inelegibilidade</td><td>TSE, arquivo já no pacote</td><td>CC BY; dado pessoal a avaliar</td></tr>
+    <tr><td class="k">1</td><td>Vereadores nos fatos</td><td>Pedido de cobertura total</td><td>TSE, já no raw</td><td>Sem carga nova</td></tr>
+    <tr><td class="k">1</td><td>Calendário legal de posse por cargo</td><td>Início e fim dos mandatos onde não há fonte de exercício</td><td>Constituição e leis, com o artigo</td><td>Público; sempre marcado como derivado</td></tr>
+    <tr><td class="k">2</td><td>Diplomação</td><td>Fechar o ciclo eleição, diplomação, posse</td><td>TSE e TREs, a pesquisar</td><td>A confirmar</td></tr>
+    <tr><td class="k">2</td><td>Ministros e demais nomeados</td><td>Quem governa fora das urnas</td><td>Planalto e portais, a pesquisar (#19)</td><td>A confirmar; DOU é CC BY-ND</td></tr>
+    <tr><td class="k">2</td><td>Tribunais superiores e demais</td><td>Terceiro poder</td><td>STF, STJ, TST, TSE, STM, CNJ (#69)</td><td>A confirmar</td></tr>
+    <tr><td class="k">2</td><td>Cota parlamentar e remuneração</td><td>Como o mandato gasta</td><td>Câmara, Senado e Portal da Transparência (#92, #93)</td><td>A confirmar; Transparência permite uso livre</td></tr>
+    <tr><td class="k">2</td><td>Afastamentos em Assembleias e Câmaras Municipais</td><td>Exercício real fora do Congresso</td><td>Um portal por órgão; viabilidade a pesquisar</td><td>A confirmar</td></tr>
+    <tr><td class="k">3</td><td>Filiação partidária</td><td>Troca de partido além da Câmara</td><td>TSE, arquivo de filiados</td><td>Dado pessoal: precisa de base legal antes (#38)</td></tr>
+    <tr><td class="k">3</td><td>Doadores de campanha (pessoa jurídica)</td><td>Por que a campanha foi financiada</td><td>TSE, prestação de contas</td><td>Pessoa jurídica pode; pessoa física exige decisão</td></tr>
+    <tr><td class="k">3</td><td>Presença em sessões e comissões do Senado</td><td>Atuação</td><td>Câmara e Senado (#18)</td><td>A confirmar</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="fases">12 Plano em fases</h2>
+<p>Cada fase termina em PR pequeno, com teste de reconciliação e documentação. Nenhuma tabela nasce fora do desenho.</p>
+<div class="phase"><div class="n">F0</div><div><h3>Validar este desenho</h3><p>Você decide a seção 13. Depois disso o desenho vira o ADR 0030, e as decisões abertas viram issues.</p></div></div>
+<div class="phase"><div class="n">F1</div><div><h3>Referências</h3><p><code>territorios</code>, <code>orgaos</code>, <code>cargos</code>, <code>eleicoes</code>, <code>disputas</code> e <code>evento_tipos</code>, mais as chaves de partido, cargo, órgão e território.</p><p><b>Aceite:</b> as vagas de cada disputa batem com o arquivo de vagas do TSE; todo cargo tem regra de mandato com o artigo que a sustenta.</p></div></div>
+<div class="phase"><div class="n">F2</div><div><h3>Candidaturas e resultados, todos os cargos</h3><p>Inclui vereador e as fotos oficiais do TSE. Absorve o rascunho atual.</p><p><b>Aceite:</b> a contagem por eleição reconcilia com o raw; eleitos e vagas batem, ou a diferença aparece medida.</p></div></div>
+<div class="phase"><div class="n">F3</div><div><h3>Pessoas ampliadas</h3><p>Quem já teve cargo ganha <code>id_pessoa</code>; os demais ficam com o identificador do TSE e o motivo da falta de ligação. Proveniência de cada atributo; agregados saem para <code>analise.pessoas_atividade</code>.</p><p><b>Aceite:</b> nenhum eleito sem pessoa nem motivo; nenhuma ligação por nome só.</p></div></div>
+<div class="phase"><div class="n">F4</div><div><h3>Mandatos e exercícios</h3><p>Unifica o mandato eleito (TSE), o exercício (Câmara e Senado) e o calendário legal, este sempre marcado como derivado. Inclui <code>votacoes_proposicoes</code>.</p><p><b>Aceite:</b> todo mandato aponta para a eleição ou o ato de origem; sem sobreposição impossível na mesma vaga.</p></div></div>
+<div class="phase"><div class="n">F5</div><div><h3>Eventos e composições</h3><p>A linha do tempo da pessoa, só com tipos do catálogo, e os cortes de composição.</p><p><b>Aceite:</b> a composição da Câmara em cada corte soma as vagas da casa, e a diferença aparece medida.</p></div></div>
+<div class="phase"><div class="n">F6</div><div><h3>Atos ligados e novas fontes</h3><p>Emendas com autor ligado (ADR 0028), gastos, remuneração, nomeações, na ordem da seção 11.</p></div></div>
+
+<h2 id="decisoes">13 Decisões para validar</h2>
+<p>Cada decisão traz a recomendação. Se você concordar com todas, o ADR sai direto.</p>
+<div class="decision"><h3>1. Quem entra em <code>pessoas</code> <span class="chip ok">Validada</span></h3><p>Quem já teve pelo menos um cargo (eleito titular, suplente que assumiu, nomeado), inclusive vereadores. Quem só se candidatou fica em <code>candidaturas</code> com o identificador do TSE, foto e campanha, sem linha em <code>pessoas</code>.</p><p class="rec">Decidida: a pessoa entra no momento de ser eleita, antes da posse (seção 5).</p></div>
+<div class="decision"><h3>2. Vereadores</h3><p>Entram em tudo, como você pediu: candidaturas, resultados, mandatos, composição. São da ordem de 58 mil eleitos por eleição municipal.</p><p class="rec">Recomendo incluir. O custo é volume, não complexidade.</p></div>
+<div class="decision"><h3>3. Eventos <span class="chip part">Ajustada</span></h3><p>Fatos tipados continuam a verdade. <code>eventos</code> é uma tabela única derivada, sem texto livre: o tipo vem do catálogo <code>evento_tipos</code> (25 tipos na seção 6.2), com contexto por chaves e teste que recusa tipo fora do catálogo. Tipo novo exige linha no catálogo, regra e teste.</p><p class="rec">Recomendo. Confirme o catálogo inicial: tipos que faltam ou que sobram.</p></div>
+<div class="decision"><h3>4. Datas derivadas do calendário legal</h3><p>Onde não há fonte de exercício (Executivo, Assembleias, Câmaras Municipais), o início e o fim do mandato saem da regra legal, com o artigo, e a coluna <code>base</code> diz que é derivado.</p><p class="rec">Recomendo aceitar, com marcação obrigatória e sem nunca sobrescrever dado de fonte.</p></div>
+<div class="decision"><h3>5. Composição</h3><p>Vigência (SCD tipo 2) em mandatos e filiações, mais cortes prontos em <code>composicoes</code> na posse de cada mandato e em 1º de janeiro e 1º de julho.</p><p class="rec">Recomendo as duas camadas.</p></div>
+<div class="decision"><h3>6. Filiação partidária do TSE</h3><p>Filiação é dado sensível pela LGPD, embora a candidatura por partido seja pública.</p><p class="rec">Recomendo adiar até a decisão de LGPD (#38) e usar antes a troca de partido do histórico da Câmara.</p></div>
+<div class="decision"><h3>7. Estado civil</h3><p>Entra como declaração na data da candidatura. Casamento e separação não existem em dado aberto e não serão inferidos.</p><p class="rec">Recomendo confirmar essa leitura.</p></div>
+<div class="decision"><h3>8. Esquemas e nomes</h3><p><code>core</code>, <code>fatos</code>, <code>analise</code> e <code>servico</code>, com a convenção atual de nomes. O <code>marts</code> é esvaziado aos poucos.</p><p class="rec">Recomendo adotar. Mudar nome de tabela em produção exige PR coordenado com o aplicativo.</p></div>
+<div class="decision"><h3>9. Aposentar <code>eleitos*</code> e <code>candidaturas</code></h3><p>Quando o novo modelo cobrir o que elas entregam, e depois que o aplicativo migrar para o serviço.</p><p class="rec">Recomendo, sem views de compatibilidade (menos código).</p></div>
+<div class="decision"><h3>10. Fotos</h3><p>As fotos oficiais do TSE ficam guardadas e extraídas para uma pasta. O aplicativo precisa de um endereço público para exibi-las, o que depende da hospedagem (VPS).</p><p class="rec">Recomendo guardar agora e decidir a hospedagem junto com o VPS (#30).</p></div>
+
+<div class="decision"><h3>11. Chaves conformadas e proveniência por captura</h3><p>Todo fato troca o texto repetido (partido, cargo, órgão, UF) por chave de catálogo, guardando o texto original ao lado, e carrega <code>id_captura</code> em vez de repetir fonte, URL e data (seção 1.1).</p><p class="rec">Recomendo. É o ajuste de maior efeito na consistência e o que mais reduz colunas repetidas.</p></div>
+<div class="decision"><h3>12. Views de serviço por aplicativo</h3><p>Cada aplicativo lê só views de <code>servico</code>, sem regra de negócio, com contrato de colunas documentado (seção 9). Regra nova nasce no núcleo, nos fatos ou na análise.</p><p class="rec">Recomendo. Confirme se as seis views da seção 9 são o ponto de partida certo para os dois aplicativos.</p></div>
+
+<h2 id="referencias">14 Referências</h2>
+<p>Técnicas de mercado em que o desenho se apoia. As referências vêm do conhecimento de quem escreveu, sem leitura delas nesta sessão, e devem ser conferidas nas fontes antes do ADR.</p>
+<ul>
+  <li><b>Popolo e Open Civic Data.</b> Padrões abertos para dados legislativos, com pessoa, organização, vínculo (<i>membership</i>), cargo (<i>post</i>), área, moção e evento de votação. Inspiram o núcleo de pessoas, órgãos, cargos e territórios. <a href="https://www.popoloproject.com/" rel="noopener">popoloproject.com</a></li>
+  <li><b>Wikidata, propriedade "cargo ocupado" (P39).</b> Registra cada cargo com data de início, fim, substituído por e fonte, o mesmo desenho do vínculo com vigência. <a href="https://www.wikidata.org/wiki/Property:P39" rel="noopener">wikidata.org</a></li>
+  <li><b>Modelagem dimensional de Kimball.</b> Dimensões conformadas (pessoa, órgão, território compartilhados), SCD tipo 2 para vigência e <i>snapshot</i> periódico para cortes no tempo.</li>
+  <li><b>Data Vault 2.0.</b> Separar chaves de negócio, vínculos e atributos por fonte, o que sustenta a proveniência por atributo e a auditoria.</li>
+  <li><b>Tabela de fatos sem medida (<i>factless fact table</i>), de Kimball.</b> Registra a ocorrência de um evento só com suas chaves, base da linha do tempo de eventos.</li>
+  <li><b>EAV como antipadrão.</b> O desenho evita a tabela de entidade-atributo-valor (tipo e valor soltos), descrita por Bill Karwin em <i>SQL Antipatterns</i>, e usa tipo de catálogo com chave estrangeira.</li>
+  <li><b>Modelagem bitemporal.</b> Tempo de validade no mundo e tempo de conhecimento do sistema, base do "como era sabido em tal data".</li>
+</ul>
+<footer>
+  Documento de proposta. Fica em <code>docs/01-entender/</code> como registro e dá origem ao ADR 0030 depois da validação. Pendências e decisões abertas continuam sendo issues do repositório.
+</footer>
+</main>
+</div>
+
+</body>
+</html>
