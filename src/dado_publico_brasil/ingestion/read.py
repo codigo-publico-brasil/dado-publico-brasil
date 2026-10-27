@@ -65,7 +65,17 @@ def _batch(file: Path, contract: SourceContract, dataset: Dataset) -> Iterator[d
                 yield {**flatten(item), ITEM: found["item"]}
 
 
-READERS = {"csv": _csv, "json": _json}
+def _members(file: Path, contract: SourceContract, dataset: Dataset) -> Iterator[dict[str, Any]]:
+    """Lista o conteúdo de um pacote `.zip` (nome e tamanho dos membros que batem com `member`), sem extrair.
+
+    Para pacotes que não são tabelas, como os de fotos: o raw diz o que há no arquivo do landing."""
+    with zipfile.ZipFile(file) as package:
+        for info in package.infolist():
+            if fnmatch.fnmatch(info.filename, dataset.member):
+                yield {"member": info.filename, "size": info.file_size}
+
+
+READERS = {"csv": _csv, "json": _json, "members": _members}
 
 
 def records(file: Path, contract: SourceContract, dataset: Dataset) -> Iterator[dict[str, Any]]:

@@ -29,3 +29,59 @@ sources:
         description: Receitas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por receita, só com as colunas do total (sem nome nem documento de quem doou), como o TSE publica.
       - name: despesas_candidatos
         description: Despesas contratadas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por despesa, só com as colunas do total (sem nome nem documento do fornecedor), como o TSE publica.
+      - name: fotos_br
+        description: Arquivos de foto do pacote do TSE para BR (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_ac
+        description: Arquivos de foto do pacote do TSE para AC (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_al
+        description: Arquivos de foto do pacote do TSE para AL (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_am
+        description: Arquivos de foto do pacote do TSE para AM (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_ap
+        description: Arquivos de foto do pacote do TSE para AP (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_ba
+        description: Arquivos de foto do pacote do TSE para BA (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_ce
+        description: Arquivos de foto do pacote do TSE para CE (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_df
+        description: Arquivos de foto do pacote do TSE para DF (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_es
+        description: Arquivos de foto do pacote do TSE para ES (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_go
+        description: Arquivos de foto do pacote do TSE para GO (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_ma
+        description: Arquivos de foto do pacote do TSE para MA (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_mg
+        description: Arquivos de foto do pacote do TSE para MG (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_ms
+        description: Arquivos de foto do pacote do TSE para MS (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_mt
+        description: Arquivos de foto do pacote do TSE para MT (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_pa
+        description: Arquivos de foto do pacote do TSE para PA (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_pb
+        description: Arquivos de foto do pacote do TSE para PB (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_pe
+        description: Arquivos de foto do pacote do TSE para PE (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_pi
+        description: Arquivos de foto do pacote do TSE para PI (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_pr
+        description: Arquivos de foto do pacote do TSE para PR (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_rj
+        description: Arquivos de foto do pacote do TSE para RJ (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_rn
+        description: Arquivos de foto do pacote do TSE para RN (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_ro
+        description: Arquivos de foto do pacote do TSE para RO (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_rr
+        description: Arquivos de foto do pacote do TSE para RR (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_rs
+        description: Arquivos de foto do pacote do TSE para RS (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_sc
+        description: Arquivos de foto do pacote do TSE para SC (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_se
+        description: Arquivos de foto do pacote do TSE para SE (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_sp
+        description: Arquivos de foto do pacote do TSE para SP (nome e tamanho de cada imagem; o pacote original está no landing).
+      - name: fotos_to
+        description: Arquivos de foto do pacote do TSE para TO (nome e tamanho de cada imagem; o pacote original está no landing).

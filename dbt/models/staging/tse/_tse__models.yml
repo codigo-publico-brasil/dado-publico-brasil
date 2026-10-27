@@ -129,3 +129,12 @@ models:
       - {name: dt_despesa, description: "Data da despesa."}
       - {name: valor, description: "Valor da despesa contratada em reais, como declarado."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+  - name: stg_tse__fotos
+    description: Arquivos de foto oficial das candidaturas das eleições gerais, um por imagem dentro de cada pacote por UF do TSE.
+    columns:
+      - {name: ano_eleicao, description: "Ano da eleição do pacote de fotos."}
+      - {name: pacote_uf, description: "UF do pacote (BR traz presidente e vice)."}
+      - {name: sq_candidato, description: "Número sequencial do candidato na eleição, tirado do nome do arquivo; liga à candidatura.", tests: ["not_null"]}
+      - {name: arquivo, description: "Nome do arquivo de imagem dentro do pacote (F, UF, sequencial e _div, com a extensão original)."}
+      - {name: tamanho_bytes, description: "Tamanho da imagem em bytes, como o pacote informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}

@@ -14,7 +14,12 @@ import yaml
 
 from dado_publico_brasil.core.settings import SOURCES_DIR
 
-FORMATS = {"csv", "json", "html"}  # html não tem leitor padrão: exige `records` no módulo próprio da fonte
+FORMATS = {
+    "csv",
+    "json",
+    "html",
+    "members",
+}  # html não tem leitor padrão: exige `records` no módulo próprio da fonte
 POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
