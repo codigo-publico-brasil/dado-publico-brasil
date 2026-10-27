@@ -20,6 +20,7 @@ Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas
 | **raw** (`raw_<esfera>_<fonte>`) | "O que a fonte diz, tabela a tabela?" | **dlt**, guiado por `sources/<poder>/<esfera>/<fonte>.yml` | sim, a partir do landing |
 | **staging** | "Como isso fica com nomes, tipos e caixa padronizados?" | **dbt** (views, um modelo por tabela do raw) | sim |
 | **intermediate** | "Como juntar e re-granular para chegar às entidades?" | **dbt** (tabelas, uma finalidade por modelo) | sim |
+| **core** | "Quais são os catálogos que dão chave a tudo (territórios, cargos, eleições, disputas, tipos de evento)?" | **dbt** (tabelas e seeds curados, com contrato de colunas) | sim |
 | **marts** | "Como entregar cada entidade pronta para consumo?" | **dbt** (tabelas, com contrato de colunas) | sim |
 | **identity** | "Quem é cada pessoa, em todas as fontes?" | código próprio (pacote `transformation`, `identity.py`) | não: a chave não se reaproveita |
 | **metadata** | "O que rodou, quando, com que resultado?" | código próprio e dbt | não |
@@ -38,6 +39,7 @@ Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e 
 | `dlt_tmp_raw_federal_camara` | área temporária do dlt para fazer `merge` e `replace`; não é camada, ninguém lê | dlt | dlt cria `<dataset>_staging`; renomeamos (`staging_dataset_name_layout`) para não parecer a camada `staging` do dbt |
 | `staging` | views, uma por tabela do raw, com nomes, tipos e caixa padronizados | dbt | guia da dbt Labs |
 | `intermediate` | tabelas de passagem (re-granularidade e junções) | dbt | guia da dbt Labs |
+| `core` | catálogos de referência do modelo de dados ([ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md)); em construção, junto com `fatos`, `analise` e `servico` | dbt | modelo-alvo em [`08-modelo-de-dados.html`](08-modelo-de-dados.html) |
 | `marts` | entidades prontas, com contrato; **o que a aplicação lê** | dbt | guia da dbt Labs |
 | `identity` | chave própria de pessoa e tabela de ligação | código próprio | específico do projeto (não se reconstrói) |
 | `metadata` | execuções, capturas, resultado dos testes, migrações | código próprio e dbt | específico do projeto |

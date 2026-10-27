@@ -161,6 +161,14 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `int_votacoes_proposicoes_unidas` | Proposições de cada votação, com o papel (afetada ou objeto). | publico-agente-publico |  |
 | `int_votacoes_votos_ligados` | Votos com a pessoa do projeto (chave própria). | publico-agente-publico |  |
 
+## core
+
+| Tabela | O que é | Sensibilidade | Grain |
+| --- | --- | --- | --- |
+| `disputas` | Cada cargo em cada unidade eleitoral de uma eleição, com o número de vagas que o TSE informa. Uma linha por eleição, cargo e unidade. É a base das candidaturas e dos resultados, e permite medir se alguma vaga ficou sem eleito. | publico | eleição |
+| `eleicoes` | Eleições do arquivo de vagas do TSE, uma por ano e código do TSE, ordinárias e suplementares. Se a eleição é ordinária é regra do projeto (cobertura de unidades por ano e cargo), e não informação do TSE. | publico | eleição |
+| `territorios` | Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato que fala de lugar (ADR 0030). | publico | território |
+
 ## marts
 
 | Tabela | O que é | Sensibilidade | Grain |
@@ -314,6 +322,33 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `atualizada_ate_emenda` | integer | Número da emenda constitucional até a qual o arquivo está atualizado. |  |
 | `fonte_url` | varchar | Página oficial da Câmara com o texto atualizado. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.disputas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_disputa` | varchar | Chave da disputa: ano, código da eleição, código do cargo no TSE e unidade eleitoral. |  |
+| `id_eleicao` | varchar | Eleição da disputa. |  |
+| `id_cargo` | varchar | Cargo disputado. |  |
+| `id_territorio` | varchar | Território da unidade eleitoral (país, UF ou município do IBGE); vazio quando o código de município do TSE não liga a um só município. O teste de aviso mede quantas disputas ficam assim. |  |
+| `ue` | varchar | Unidade eleitoral como o TSE publica: sigla da UF, BR ou o código do município. Guardada para auditoria. |  |
+| `ue_nome` | varchar | Nome da unidade eleitoral, com caixa padronizada. |  |
+| `qtd_vagas` | integer | Número de vagas da disputa, como o TSE informa. |  |
+| `dt_posse` | date | Data de posse como o arquivo de vagas do TSE informa; o campo não é confiável em todos os anos (issue 71) e não substitui a regra legal do cargo. |  |
+| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
+
+### marts.eleicoes
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_eleicao` | varchar | Chave da eleição: ano e código do TSE (por exemplo, 2022-544). |  |
+| `ano_eleicao` | integer | Ano da eleição. |  |
+| `cd_eleicao` | integer | Código da eleição no TSE. |  |
+| `nome` | varchar | Descrição da eleição, como o TSE informa. |  |
+| `fl_ordinaria` | boolean | DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE. |  |
+| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
 
 ### marts.eleitos
 
@@ -816,6 +851,20 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `situacao` | varchar | Situação da proposição após o andamento. |  |
 | `despacho` | varchar | Texto do despacho, como a fonte informa. |  |
 | `dt_captura` | date | Data da captura do lote de origem. |  |
+
+### marts.territorios
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (ibge). |  |
+| `id_territorio` | varchar | Chave do território: BR para o país, o código do IBGE de 2 dígitos para a UF e o de 7 dígitos para o município. |  |
+| `tipo` | varchar | Nível do território: pais, uf ou municipio. |  |
+| `nome` | varchar | Nome do território, como o IBGE informa. |  |
+| `sigla` | varchar | Sigla da UF (e BR para o país); vazia nos municípios. |  |
+| `id_territorio_pai` | varchar | Território que contém este: a UF para o município e o país para a UF; vazio no país. |  |
+| `regiao_sigla` | varchar | Sigla da grande região (N, NE, SE, S, CO); vazia no país. |  |
+| `cd_municipio_tse` | varchar | Código do município no TSE (unidade eleitoral das eleições municipais); vazio quando nome e UF não ligam a um só município e fora dos municípios. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
 
 ### marts.vetos
 
