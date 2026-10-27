@@ -1,7 +1,7 @@
 # Projeto dbt da camada de dados (ADR 0006). Segue o guia de estrutura da dbt Labs:
 #   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
-#   core          referências do modelo (ADR 0030): territórios, cargos, partidos, eleições, disputas, tipos de evento.
+#   core          referências do modelo (ADR 0030): pessoas, territórios, cargos, partidos, eleições, disputas, tipos de evento.
 #   fatos         o que aconteceu, datado e com a fonte: candidaturas, resultados, campanhas, mandatos, exercícios (ADR 0030).
 #   marts         entidades prontas para consumo, uma por grain, com contrato de colunas.
 name: dado_publico_brasil
@@ -22,6 +22,7 @@ vars:
   id_type_senado: senador
   source_tse: tse
   id_type_tse: candidato
+  id_type_tse_eleito: candidatura_de_eleito
   url_proposicao_camara: "https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao="
   url_materia_senado: "https://www25.senado.leg.br/web/atividade/materias/-/materia/"
 
@@ -82,7 +83,8 @@ seeds:
       relation: true
       columns: true
     vinculos_aprovados:
-      +column_types: {id_origem: varchar, id_destino: varchar, dt_aprovacao: date}
+      +full_refresh: true  # sem isso, o seed criado vazio fica com tipos inferidos errados quando entra a primeira linha
+      +column_types: {origem_fonte: varchar, origem_tipo: varchar, id_origem: varchar, destino_fonte: varchar, destino_tipo: varchar, id_destino: varchar, aprovado_por: varchar, dt_aprovacao: date, evidencia: varchar}
     partidos_eventos:
       +column_types: {dt_aprovacao: date, ano: integer}
     core:

@@ -50,6 +50,15 @@ Quando a regra mostra que um deputado e um senador são a mesma pessoa, a chave 
 
 Hoje só existe a fonte Câmara, então toda ligação é a automática "identificador oficial da própria fonte". O código está em [`identity.py`](../../src/dado_publico_brasil/transformation/identity.py) e as tabelas são criadas por [migração](../../ddl/0002_identity.sql). Os dados da pessoa (nome, foto, nascimento) e o mandato são modelos SQL do dbt ([`int_pessoas_unidas_cadastro`](../../dbt/models/intermediate/int_pessoas_unidas_cadastro.sql) e [`mandatos`](../../dbt/models/marts/legislativo/mandatos.sql)).
 
+## Pessoa de todo eleito ([ADR 0031](../05-decisoes/0031-pessoas-de-todo-eleito.md))
+
+Além do parlamentar da Câmara e do Senado, **todo candidato eleito pelo menos uma vez** ganha pessoa, a partir da primeira execução depois da eleição (inclui vereador). As outras candidaturas dele (as que perdeu, antes ou depois) entram na mesma pessoa; quem nunca foi eleito não tem pessoa.
+
+- **A âncora é a candidatura** (`id_candidatura`, estável), na ponte com o tipo `candidatura_de_eleito`. O `id_pessoa_tse` agrupa as candidaturas, mas o rótulo dele muda quando entra uma candidatura com outro nome; por isso ele nunca é o identificador.
+- **Se um grupo toca duas pessoas, elas se fundem.** A pessoa da Câmara ou do Senado sobrevive sempre (a chave dela já foi publicada). **Duas pessoas oficiais nunca se fundem por aqui**: o caso aparece no teste `pessoas_de_grupo_do_tse_com_mais_de_uma_pessoa` e entra em `vinculos_aprovados` se uma pessoa confirmar.
+- Os atributos (nome, nascimento, gênero) ficam em `core.pessoas`, cada um com a fonte de onde veio.
+- Os riscos e o teste de cada um estão na [issue 130](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/130).
+
 ## Mandato: o que é oficial e o que é observado
 
 O arquivo de deputados da Câmara informa a primeira e a última legislatura, mas não que o deputado serviu em todas as legislaturas do intervalo (houve suplentes, licenças e interrupções). Por isso o projeto não deduz mandato dessas duas datas.

@@ -1,4 +1,6 @@
--- Erro se um vínculo aprovado à mão aponta para um registro que não existe (digitação errada).
+{{ config(severity='warn') }}
+-- Aviso se um vínculo aprovado à mão aponta para um registro que não existe (digitação errada): o vínculo simplesmente não liga ninguém.
+-- É aviso, e não erro, porque os vínculos são de dado real e a base sintética dos testes não tem esses registros.
 -- A origem do TSE é a candidatura (staging); a da Câmara e a do Senado é o registro visto nos dados.
 select v.origem_fonte, v.id_origem, v.destino_fonte, v.id_destino
 from {{ ref('vinculos_aprovados') }} as v

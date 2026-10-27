@@ -193,7 +193,31 @@ models:
       - {name: id_destino, description: "Identificador do registro de destino do vínculo, na fonte de destino.", tests: ["not_null"]}
       - {name: metodo, description: "Regra que ligou as duas chaves."}
   - name: int_tse_pessoas
+    config:
+      tags: [pre_identity]
     description: Identificador da mesma pessoa entre as eleições do TSE, por nome civil ou nome de urna com a mesma data de nascimento (cada chave única em cada eleição e sem datas de 1º de janeiro); a ligação se propaga entre candidaturas que partilham uma chave. Uma linha por candidatura ligável.
     columns:
       - {name: id_candidatura, description: "Identificador da candidatura (ano, unidade eleitoral e sequencial do candidato).", tests: ["unique", "not_null"]}
       - {name: id_pessoa_tse, description: "Identificador da pessoa entre as eleições do TSE, derivado do nome civil e da data de nascimento; não é uma pessoa do projeto.", tests: ["not_null"]}
+  - name: int_tse_eleitos_grupos
+    description: >
+      As candidaturas do TSE de quem foi eleito pelo menos uma vez, agrupadas por pessoa entre as eleições. Entrada da
+      identidade (ADR 0031): é daqui que nascem as pessoas de todo eleito. O grupo não é estável; a identidade usa a
+      candidatura, que é.
+    config:
+      tags: [pre_identity]
+    columns:
+      - {name: id_candidatura, description: "Identificador da candidatura (ano, unidade eleitoral e sequencial do candidato).", tests: ["unique", "not_null"]}
+      - {name: grupo, description: "Pessoa entre as eleições (id_pessoa_tse) ou, sem ele, a própria candidatura.", tests: ["not_null"]}
+      - {name: fl_eleita, description: "Verdadeiro se esta candidatura foi eleita em algum turno."}
+  - name: int_tse_eleitos
+    description: >
+      Quem foi eleito, com a base: informado (o TSE diz Eleito) ou derivado (disputa de uma vaga de eleição passada em que
+      o TSE não informa o vencedor; vale o mais votado do último turno, art. 77, 28 e 29 da Constituição). Entrada da
+      identidade e dos mandatos.
+    config:
+      tags: [pre_identity]
+    columns:
+      - {name: id_candidatura, description: "Identificador da candidatura eleita.", tests: ["unique", "not_null"]}
+      - {name: base_eleicao, description: "Como se sabe que foi eleito: informado pelo TSE ou derivado dos votos pela regra da Constituição.", tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}]}
+

@@ -185,6 +185,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `int_proposicoes_autorias_ligadas` | Autorias com a pessoa do projeto; autor que não é deputado fica sem pessoa. | publico-agente-publico |  |
 | `int_senado_materias_unicas` | Uma linha por matéria votada no Senado, com os dados da votação mais recente. | publico-agente-publico |  |
 | `int_senadores_unidos` | Todo senador informado pelo Senado (cadastro mais votos). | publico-agente-publico |  |
+| `int_tse_eleitos` | Quem foi eleito, com a base: informado (o TSE diz Eleito) ou derivado (disputa de uma vaga de eleição passada em que o TSE não informa o vencedor; vale o mais votado do último turno, art. 77, 28 e 29 da Constituição). Entrada da identidade e dos mandatos. | publico-agente-publico |  |
+| `int_tse_eleitos_grupos` | As candidaturas do TSE de quem foi eleito pelo menos uma vez, agrupadas por pessoa entre as eleições. Entrada da identidade (ADR 0031): é daqui que nascem as pessoas de todo eleito. O grupo não é estável; a identidade usa a candidatura, que é. | publico-agente-publico |  |
 | `int_tse_pessoas` | Identificador da mesma pessoa entre as eleições do TSE, por nome civil ou nome de urna com a mesma data de nascimento (cada chave única em cada eleição e sem datas de 1º de janeiro); a ligação se propaga entre candidaturas que partilham uma chave. Uma linha por candidatura ligável. | publico-agente-publico |  |
 | `int_vinculos_propostos` | Vínculos propostos entre fontes pela regra de nome civil e nascimento iguais e únicos: Câmara com Senado (mesma pessoa) e candidatura do TSE com a pessoa. Entrada da identidade. | publico-agente-publico |  |
 | `int_votacoes_proposicoes_unidas` | Proposições de cada votação, com o papel (afetada ou objeto). | publico-agente-publico |  |
@@ -196,6 +198,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `disputas` | Cada cargo em cada unidade eleitoral de uma eleição, com o número de vagas que o TSE informa. Uma linha por eleição, cargo e unidade. É a base das candidaturas e dos resultados, e permite medir se alguma vaga ficou sem eleito. | publico | eleição |
 | `eleicoes` | Eleições do arquivo de vagas do TSE, uma por ano e código do TSE, ordinárias e suplementares. Se a eleição é ordinária é regra do projeto (cobertura de unidades por ano e cargo), e não informação do TSE. | publico | eleição |
+| `pessoas` | Quem já teve pelo menos um cargo (ADR 0030 e 0031): parlamentar da Câmara ou do Senado e todo eleito do TSE, a partir do momento da eleição. Quem só se candidatou e nunca foi eleito não está aqui. Uma linha por pessoa do projeto, com a chave de identidade que nunca muda nem é reaproveitada. Cada atributo diz de qual fonte veio (a Câmara e o Senado valem mais que o TSE; o TSE vale a candidatura mais recente que o traz). Só o que a fonte publica; nada é inferido. O nome do modelo leva o prefixo core_ só porque marts.pessoas ainda existe; a tabela é core.pessoas. | publico-agente-publico | pessoa |
 | `territorios` | Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato que fala de lugar (ADR 0030). | publico | território |
 
 ## fatos
@@ -297,6 +300,21 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fl_ordinaria` | boolean | DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE. |  |
 | `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
 
+### core.pessoas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_pessoa` | bigint | Chave própria e estável da pessoa (schema identity). |  |
+| `nome_civil` | varchar | Nome civil, como a fonte publica, com caixa padronizada. |  |
+| `fonte_nome_civil` | varchar | Fonte do nome civil (camara, senado ou tse). |  |
+| `nome_publico` | varchar | Nome pelo qual a pessoa é conhecida: nome parlamentar ou, sem ele, nome de urna da candidatura mais recente. |  |
+| `fonte_nome_publico` | varchar | Fonte do nome público. |  |
+| `dt_nascimento` | date | Data de nascimento como a fonte publica; vazia quando nenhuma fonte informa. O TSE usa 1º de janeiro quando só conhece o ano. |  |
+| `fonte_dt_nascimento` | varchar | Fonte da data de nascimento. |  |
+| `genero` | varchar | Masculino ou feminino, só quando a fonte diz; vazio nos demais casos (inclusive dado protegido). |  |
+| `fonte_genero` | varchar | Fonte do gênero. |  |
+| `dt_entrada` | date | Dia em que a pessoa entrou na identidade do projeto (para o eleito do TSE, a primeira execução depois da eleição). |  |
+
 ### core.territorios
 
 | Coluna | Tipo | Descrição | Dado pessoal |
@@ -356,6 +374,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fl_eleito` | boolean | Verdadeiro quando o TSE marca a candidatura como eleita em algum turno. Falso não quer dizer derrota quando o resultado está vazio. |  |
 | `fl_mais_votado_no_ultimo_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no último turno com votos. Vazio sem votos carregados ou em cargo de várias vagas. |  |
 | `id_pessoa_tse` | varchar | Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato. |  |
+| `id_pessoa` | bigint | Pessoa do projeto (core.pessoas) quando a candidatura é de alguém eleito alguma vez; vazio para quem nunca foi eleito, por regra (ADR 0031). |  |
 | `foto_arquivo` | varchar | Nome do arquivo da foto oficial no pacote do TSE; vazio quando o pacote não traz foto do candidato. |  |
 | `foto_caminho` | varchar | Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto. |  |
 | `foto_pacote_url` | varchar | Endereço oficial do pacote de fotos do TSE que contém a foto. |  |
@@ -388,7 +407,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_cargo` | varchar | Cargo do mandato (core.cargos). |  |
 | `id_territorio` | varchar | Território do mandato (core.territorios); vazio onde o TSE não liga a um território. |  |
 | `id_partido` | integer | Partido pelo qual foi eleito (core.partidos). |  |
+| `base_eleicao` | varchar | Como se sabe que foi eleito: informado pelo TSE ou DERIVADO dos votos pela Constituição (disputa de uma vaga de eleição passada em que o TSE não informa o vencedor, como o 2º turno de presidente de 2006). |  |
 | `id_pessoa_tse` | varchar | Identificador da pessoa entre as eleições do TSE; vazio sem ligação. |  |
+| `id_pessoa` | bigint | Pessoa do projeto (core.pessoas); todo eleito tem. O teste de aviso mede os que ficaram sem. |  |
 | `dt_posse_tse` | date | Data de posse exatamente como o TSE informa na disputa, mesmo quando impossível (por exemplo, antes da eleição); guardada para auditoria. |  |
 | `dt_inicio` | date | Início do mandato: a data do TSE quando cai no ano seguinte ao da eleição, ou derivada do art. 29, III (prefeito e vice-prefeito). Vazio quando não há fonte válida nem regra na Constituição. |  |
 | `base_dt_inicio` | varchar | Como dt_inicio foi obtida: informado (TSE) ou derivado (regra da Constituição). Vazio quando dt_inicio é vazio. |  |
