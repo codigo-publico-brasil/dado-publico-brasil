@@ -61,10 +61,11 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0013](0013-tse-ligacao-por-nome-civil-e-nascimento.md) | TSE e ligação por nome civil e nascimento | em parte (itens 2 e 6: [0029](0029-campos-de-pessoas-nos-marts.md)) |
 | [0015](0015-normas-vetos-e-constituicao.md) | Normas, vetos e Constituição | vigente |
 | [0016](0016-bens-votos-e-emendas.md) | Bens, votos por candidato e emendas | vigente |
-| [0023](0023-eleitos-escopo-regras-e-fontes.md) | Eleitos: escopo, regras e fontes | vigente |
+| [0023](0023-eleitos-escopo-regras-e-fontes.md) | Eleitos: escopo, regras e fontes | vigente (será substituído em fases: [0030](0030-modelo-de-dados-pessoa-no-centro.md)) |
 | [0025](0025-historico-do-eleito-ligacao-entre-eleicoes-do-tse.md) | Histórico do eleito entre eleições | proposto (aprovado pelo fundador) |
 | [0026](0026-segunda-chave-nome-de-urna-e-nascimento.md) | Segunda chave: nome de urna e nascimento | proposto (aprovado pelo fundador) |
 | [0028](0028-ligar-vetos-e-emendas-a-pessoas.md) | Ligar votos de vetos e emendas a pessoas | proposto |
 | [0029](0029-campos-de-pessoas-nos-marts.md) | Campos de pessoas no raw e nos marts | proposto (aprovado pelo fundador) |
+| [0030](0030-modelo-de-dados-pessoa-no-centro.md) | Modelo de dados com a pessoa no centro, eventos tipados e composições | proposto (aprovado pelo fundador); altera 0023 em fases |
 
 Ao criar um ADR, acrescente uma linha aqui e, se ele substituir outro, atualize a situação do antigo.
