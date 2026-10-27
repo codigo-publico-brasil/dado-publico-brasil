@@ -46,6 +46,8 @@ select
     sg_uf as uf,
     sentence_case(ds_cargo) as cargo,
     nr_candidato as numero,
+    try_cast(cd_cargo as integer) as cd_cargo,
+    nr_partido as numero_partido,
     proper_name(nm_candidato) as nome,
     proper_name(nm_urna_candidato) as nome_urna,
     sentence_case(ds_situacao_candidatura) as situacao_candidatura,

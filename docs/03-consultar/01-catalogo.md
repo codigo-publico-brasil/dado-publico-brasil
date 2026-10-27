@@ -266,9 +266,50 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dbt_results` | Resultado de cada modelo e teste do dbt na última execução de cada comando. | controle |  |
 | `runs` | Cada execução de etapa do pipeline, com início, fim, versão do código e resultado. | controle |  |
 
-## Dicionário de colunas dos marts
+## Dicionário de colunas do núcleo, dos fatos e dos marts
 
-### marts.campanhas
+### core.disputas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_disputa` | varchar | Chave da disputa: ano, código da eleição, código do cargo no TSE e unidade eleitoral. |  |
+| `id_eleicao` | varchar | Eleição da disputa. |  |
+| `id_cargo` | varchar | Cargo disputado. |  |
+| `id_territorio` | varchar | Território da unidade eleitoral (país, UF ou município do IBGE); vazio quando o código de município do TSE não liga a um só município. O teste de aviso mede quantas disputas ficam assim. |  |
+| `ue` | varchar | Unidade eleitoral como o TSE publica: sigla da UF, BR ou o código do município. Guardada para auditoria. |  |
+| `ue_nome` | varchar | Nome da unidade eleitoral, com caixa padronizada. |  |
+| `qtd_vagas` | integer | Número de vagas da disputa, como o TSE informa. |  |
+| `dt_posse` | date | Data de posse como o arquivo de vagas do TSE informa; o campo não é confiável em todos os anos (issue 71) e não substitui a regra legal do cargo. |  |
+| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
+
+### core.eleicoes
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_eleicao` | varchar | Chave da eleição: ano e código do TSE (por exemplo, 2022-544). |  |
+| `ano_eleicao` | integer | Ano da eleição. |  |
+| `cd_eleicao` | integer | Código da eleição no TSE. |  |
+| `nome` | varchar | Descrição da eleição, como o TSE informa. |  |
+| `fl_ordinaria` | boolean | DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE. |  |
+| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
+
+### core.territorios
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (ibge). |  |
+| `id_territorio` | varchar | Chave do território: BR para o país, o código do IBGE de 2 dígitos para a UF e o de 7 dígitos para o município. |  |
+| `tipo` | varchar | Nível do território: pais, uf ou municipio. |  |
+| `nome` | varchar | Nome do território, como o IBGE informa. |  |
+| `sigla` | varchar | Sigla da UF (e BR para o país); vazia nos municípios. |  |
+| `id_territorio_pai` | varchar | Território que contém este: a UF para o município e o país para a UF; vazio no país. |  |
+| `regiao_sigla` | varchar | Sigla da grande região (N, NE, SE, S, CO); vazia no país. |  |
+| `cd_municipio_tse` | varchar | Código do município no TSE (unidade eleitoral das eleições municipais); vazio quando nome e UF não ligam a um só município e fora dos municípios. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
+
+### fatos.campanhas
 
 | Coluna | Tipo | Descrição | Dado pessoal |
 | --- | --- | --- | --- |
@@ -285,7 +326,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_captura_receitas` | bigint | Captura do arquivo de receitas de origem; vazia sem receitas. |  |
 | `id_captura_despesas` | bigint | Captura do arquivo de despesas de origem; vazia sem despesas. |  |
 
-### marts.candidaturas
+### fatos.candidaturas
 
 | Coluna | Tipo | Descrição | Dado pessoal |
 | --- | --- | --- | --- |
@@ -294,6 +335,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_disputa` | varchar | Disputa da candidatura (core.disputas); vazio quando o arquivo de vagas do TSE não traz a unidade do candidato. O teste de aviso mede quantas ficam assim. |  |
 | `sq_candidato` | bigint | Número sequencial do candidato na eleição, como o TSE informa; liga ao nome do arquivo de foto. |  |
 | `numero` | varchar | Número do candidato na urna. |  |
+| `numero_partido` | varchar | Número do partido na urna, como o TSE informa. Não identifica o partido ao longo do tempo: o mesmo número já foi usado por partidos diferentes (por exemplo, o 18 foi do PST e depois da REDE). |  |
 | `nome` | varchar | Nome civil do candidato, com caixa padronizada. |  |
 | `nome_urna` | varchar | Nome de urna, com caixa padronizada. |  |
 | `nome_social` | varchar | Nome social declarado pelo candidato; o TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido). | sim |
@@ -315,6 +357,27 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `foto_caminho` | varchar | Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto. |  |
 | `foto_pacote_url` | varchar | Endereço oficial do pacote de fotos do TSE que contém a foto. |  |
 | `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
+
+### fatos.resultados
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_candidatura` | varchar | Candidatura (fatos.candidaturas). |  |
+| `turno` | integer | Turno da votação. |  |
+| `situacao_candidatura` | varchar | Situação da candidatura no turno, como o arquivo de candidaturas informa. |  |
+| `resultado` | varchar | Resultado do turno como o arquivo de candidaturas do TSE informa; vazio quando não informa. |  |
+| `resultado_votacao` | varchar | Resultado do turno como o arquivo de votação do TSE informa; vazio quando não informa. |  |
+| `qtd_votos_validos` | bigint | Votos válidos do candidato no turno, somados de todos os municípios e zonas; vazio se a votação não foi carregada. |  |
+| `qtd_votos_nominais` | bigint | Votos nominais do candidato no turno, somados de todos os municípios e zonas. |  |
+| `percentual_votos_validos` | decimal(5,2) | Percentual dos votos válidos do candidato sobre os votos válidos de todos os candidatos da mesma disputa e turno, sem votos de legenda; vazio sem votos carregados. |  |
+| `fl_mais_votado_no_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no turno; vazio sem votos carregados ou em cargo de várias vagas. |  |
+| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
+
+### marts.candidaturas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
 | `fonte` | varchar | Fonte oficial do registro (tse). |  |
 | `id_pessoa` | bigint | Chave da pessoa (marts.pessoas), ligada por nome civil e data de nascimento iguais e únicos. |  |
 | `id_candidatura` | varchar | Identificador da candidatura na fonte: ano da eleição e sequencial do candidato. |  |
@@ -402,33 +465,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `atualizada_ate_emenda` | integer | Número da emenda constitucional até a qual o arquivo está atualizado. |  |
 | `fonte_url` | varchar | Página oficial da Câmara com o texto atualizado. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
-
-### marts.disputas
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro (tse). |  |
-| `id_disputa` | varchar | Chave da disputa: ano, código da eleição, código do cargo no TSE e unidade eleitoral. |  |
-| `id_eleicao` | varchar | Eleição da disputa. |  |
-| `id_cargo` | varchar | Cargo disputado. |  |
-| `id_territorio` | varchar | Território da unidade eleitoral (país, UF ou município do IBGE); vazio quando o código de município do TSE não liga a um só município. O teste de aviso mede quantas disputas ficam assim. |  |
-| `ue` | varchar | Unidade eleitoral como o TSE publica: sigla da UF, BR ou o código do município. Guardada para auditoria. |  |
-| `ue_nome` | varchar | Nome da unidade eleitoral, com caixa padronizada. |  |
-| `qtd_vagas` | integer | Número de vagas da disputa, como o TSE informa. |  |
-| `dt_posse` | date | Data de posse como o arquivo de vagas do TSE informa; o campo não é confiável em todos os anos (issue 71) e não substitui a regra legal do cargo. |  |
-| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
-
-### marts.eleicoes
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro (tse). |  |
-| `id_eleicao` | varchar | Chave da eleição: ano e código do TSE (por exemplo, 2022-544). |  |
-| `ano_eleicao` | integer | Ano da eleição. |  |
-| `cd_eleicao` | integer | Código da eleição no TSE. |  |
-| `nome` | varchar | Descrição da eleição, como o TSE informa. |  |
-| `fl_ordinaria` | boolean | DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE. |  |
-| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
 
 ### marts.eleitos
 
@@ -931,36 +967,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `situacao` | varchar | Situação da proposição após o andamento. |  |
 | `despacho` | varchar | Texto do despacho, como a fonte informa. |  |
 | `dt_captura` | date | Data da captura do lote de origem. |  |
-
-### marts.resultados
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro (tse). |  |
-| `id_candidatura` | varchar | Candidatura (fatos.candidaturas). |  |
-| `turno` | integer | Turno da votação. |  |
-| `situacao_candidatura` | varchar | Situação da candidatura no turno, como o arquivo de candidaturas informa. |  |
-| `resultado` | varchar | Resultado do turno como o arquivo de candidaturas do TSE informa; vazio quando não informa. |  |
-| `resultado_votacao` | varchar | Resultado do turno como o arquivo de votação do TSE informa; vazio quando não informa. |  |
-| `qtd_votos_validos` | bigint | Votos válidos do candidato no turno, somados de todos os municípios e zonas; vazio se a votação não foi carregada. |  |
-| `qtd_votos_nominais` | bigint | Votos nominais do candidato no turno, somados de todos os municípios e zonas. |  |
-| `percentual_votos_validos` | decimal(5,2) | Percentual dos votos válidos do candidato sobre os votos válidos de todos os candidatos da mesma disputa e turno, sem votos de legenda; vazio sem votos carregados. |  |
-| `fl_mais_votado_no_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no turno; vazio sem votos carregados ou em cargo de várias vagas. |  |
-| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
-
-### marts.territorios
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro (ibge). |  |
-| `id_territorio` | varchar | Chave do território: BR para o país, o código do IBGE de 2 dígitos para a UF e o de 7 dígitos para o município. |  |
-| `tipo` | varchar | Nível do território: pais, uf ou municipio. |  |
-| `nome` | varchar | Nome do território, como o IBGE informa. |  |
-| `sigla` | varchar | Sigla da UF (e BR para o país); vazia nos municípios. |  |
-| `id_territorio_pai` | varchar | Território que contém este: a UF para o município e o país para a UF; vazio no país. |  |
-| `regiao_sigla` | varchar | Sigla da grande região (N, NE, SE, S, CO); vazia no país. |  |
-| `cd_municipio_tse` | varchar | Código do município no TSE (unidade eleitoral das eleições municipais); vazio quando nome e UF não ligam a um só município e fora dos municípios. |  |
-| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
 
 ### marts.vetos
 
