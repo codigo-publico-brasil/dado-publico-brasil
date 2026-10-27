@@ -8,6 +8,7 @@ do repositório. Uma fonte que precise de outro jeito (SOAP, robô, pacote compa
 pipeline não muda, porque a saída é sempre um arquivo com hash.
 """
 
+import gzip
 import hashlib
 import os
 import re
@@ -19,6 +20,7 @@ from functools import partial
 from http.client import HTTPException
 from pathlib import Path
 from string import Template
+from typing import IO, Any
 
 from dado_publico_brasil.ingestion.contract import SourceContract
 
@@ -33,6 +35,16 @@ TRIES = 3
 def _request(url: str, headers: dict[str, str], method: str = "GET") -> urllib.request.Request:
     expanded = {k: Template(v).substitute(os.environ) for k, v in headers.items()}
     return urllib.request.Request(url, method=method, headers={"User-Agent": AGENT, **expanded})
+
+
+def _body(response: Any) -> IO[bytes]:
+    """O corpo da resposta como o documento é.
+
+    Se a fonte comprime no transporte (`Content-Encoding: gzip`, como a API do IBGE faz mesmo quando se pede
+    `identity`), descomprime: a compressão de transporte não faz parte do documento."""
+    if (response.headers.get("Content-Encoding") or "").lower() == "gzip":
+        return gzip.GzipFile(fileobj=response)  # type: ignore[return-value]
+    return response  # type: ignore[no-any-return]
 
 
 def _retrying[T](call: Callable[[], T]) -> T:
@@ -69,7 +81,8 @@ def download(
             urllib.request.urlopen(_request(url, headers or {}), timeout=120) as r,
             temporary.open("wb") as f,
         ):
-            while chunk := r.read(CHUNK):
+            body = _body(r)
+            while chunk := body.read(CHUNK):
                 f.write(chunk)
                 sha.update(chunk)
                 size += len(chunk)
@@ -96,7 +109,7 @@ def get(url: str, headers: dict[str, str] | None = None) -> tuple[int, bytes]:
     def attempt() -> tuple[int, bytes]:
         try:
             with urllib.request.urlopen(_request(url, headers or {}), timeout=120) as response:
-                return int(response.status), response.read()
+                return int(response.status), _body(response).read()
         except urllib.error.HTTPError as error:
             if error.code >= 500:
                 raise

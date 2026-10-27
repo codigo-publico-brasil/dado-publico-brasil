@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: stg_ibge__municipios
+    description: Municípios do IBGE, uma linha por município.
+    columns:
+      - {name: id_municipio, description: "Código do município no IBGE (7 dígitos).", tests: ["unique", "not_null"]}
+      - {name: nome, description: "Nome do município, como o IBGE informa.", tests: ["not_null"]}
+      - {name: regiao_imediata, description: "Nome da região geográfica imediata do município."}
+      - {name: regiao_intermediaria, description: "Nome da região geográfica intermediária do município."}
+      - {name: uf, description: "Sigla da UF do município.", tests: ["not_null"]}
+      - {name: uf_nome, description: "Nome da UF."}
+      - {name: regiao_sigla, description: "Sigla da grande região (N, NE, SE, S, CO)."}
+      - {name: regiao_nome, description: "Nome da grande região."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}

@@ -33,6 +33,12 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `adct` | Ato das Disposições Constitucionais Transitórias, uma linha por parágrafo do arquivo. | publico |  |
 | `constituicao` | Texto da Constituição (parte permanente), uma linha por parágrafo do arquivo. | publico |  |
 
+## raw_federal_ibge
+
+| Tabela | O que é | Sensibilidade | Grain |
+| --- | --- | --- | --- |
+| `municipios` | Municípios do Brasil, uma linha por município, com a hierarquia regional imediata e intermediária. | publico |  |
+
 ## raw_federal_senado
 
 | Tabela | O que é | Sensibilidade | Grain |
@@ -104,6 +110,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_camara__votacoes_proposicoes` | Proposições afetadas por votação. | publico-agente-publico |  |
 | `stg_camara__votos` | Voto de cada deputado em cada votação nominal. Voto vazio fica como texto vazio. | publico-agente-publico |  |
 | `stg_constituicao__linhas` | Uma linha por parágrafo de texto do arquivo da Constituição e do ADCT, como publicado. | publico-agente-publico |  |
+| `stg_ibge__municipios` | Municípios do IBGE, uma linha por município. | publico-agente-publico |  |
 | `stg_identity__pessoa_fusoes` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa, uma linha por chave absorvida. | publico-agente-publico |  |
 | `stg_identity__pessoa_identificadores` | Identificadores de cada pessoa em cada fonte. | publico-agente-publico |  |
 | `stg_identity__pessoas` | Pessoas do projeto (chave própria). | publico-agente-publico |  |
@@ -166,6 +173,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `eleitos` | Eleitos para presidente, governador, senador, deputado federal, estadual e distrital (eleições gerais) e para prefeito e vereador (eleições municipais), de todos os partidos e inclusive de quem ainda não é pessoa do projeto (os novatos), como o TSE informa na data da captura (provisório até a diplomação). Uma linha por eleito. | publico-agente-publico | eleito |
 | `eleitos_campanhas` | O que cada eleito declarou na campanha, com totais dos bens, das receitas e das despesas contratadas, só fatos e totais. O total fica vazio, e não zero, quando o arquivo ainda não foi carregado. Uma linha por eleito. | publico-agente-publico | eleito |
 | `eleitos_cargos` | Situação de cada cargo em cada unidade eleitoral nas eleições gerais e municipais, com vagas, eleitos e pendentes. Mostra o estado real, sem palpite. Uma linha por eleição, cargo e unidade eleitoral. | publico | cargo por unidade eleitoral e eleição |
+| `eleitos_chapas` | Vice e suplentes da chapa eleita de quem foi eleito presidente, governador ou senador (o candidato substituído antes da eleição não entra), ligados ao titular pelo número, a unidade eleitoral, a eleição e o turno. Vice e suplente não são o eleito (assumem só em vacância); o resultado é o que o TSE informa, provisório até a diplomação. Uma linha por integrante da chapa. | publico-agente-publico | integrante da chapa |
 | `eleitos_historico` | As candidaturas anteriores de cada eleito, de qualquer cargo, quando a mesma pessoa é achada nas eleições do TSE (nome civil e data de nascimento iguais e únicos). Uma linha por eleito, eleição e cargo, pelo último turno. O TSE não registra afastamentos. | publico-agente-publico | eleito |
 | `emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
 | `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
@@ -175,6 +183,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `legislaturas` | Legislaturas da Câmara, com datas oficiais de início e fim. Uma linha por legislatura. | publico | legislatura |
 | `mandatos` | Mandatos por legislatura, a partir de votos observados. Início e fim do exercício vêm do Senado e do histórico dos deputados, quando a fonte informa. Uma linha por pessoa e legislatura. | publico-agente-publico | pessoa e legislatura |
 | `mandatos_exercicios` | Exercício oficial no cargo como o Senado informa (titular e suplentes), com início, fim e causa de afastamento. Só o Senado; a Câmara não publica. Uma linha por pessoa, mandato e exercício. | publico-agente-publico | pessoa |
+| `municipios` | Municípios do Brasil segundo o IBGE, com UF e região. Uma linha por município. | publico | município |
+| `municipios_codigos_tse` | De-para entre o código de município do TSE e o do IBGE, por nome e UF únicos dos dois lados. Uma linha por município do TSE; sem correspondência fica com o código do IBGE vazio. | publico | município do TSE |
 | `normas` | Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...) desde 1808, só metadados; o texto integral não vem desta fonte. Uma linha por norma. | publico | norma |
 | `normas_geradas` | Norma jurídica que resultou de uma matéria, com número, datas e veículo de publicação. Só o Senado informa por enquanto. Uma linha por matéria. | publico | matéria |
 | `normas_publicacoes` | Onde cada norma foi publicada no Diário Oficial (a original e, por exemplo, a do veto), com página e coluna. Só das normas detalhadas. Uma linha por norma e publicação. | publico | norma e publicação |
@@ -381,6 +391,28 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_captura` | date | Data da captura do arquivo de candidaturas de onde vêm os resultados. |  |
 | `fonte_url` | varchar | Página oficial do TSE com os arquivos de candidatos da eleição. |  |
 
+### marts.eleitos_chapas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (tse). |  |
+| `id_candidatura_titular` | varchar | Candidatura do titular da chapa eleito (marts.eleitos). |  |
+| `id_candidatura` | varchar | Identificador da candidatura do vice ou suplente (ano, unidade eleitoral e sequencial, como o TSE informa). |  |
+| `ano_eleicao` | integer | Ano da eleição. |  |
+| `turno` | integer | Turno da chapa, o mesmo do titular eleito. |  |
+| `uf` | varchar | UF da unidade eleitoral (BR para presidente). |  |
+| `ue` | varchar | Unidade eleitoral, como o TSE informa. |  |
+| `cargo_titular` | varchar | Cargo do titular da chapa (Presidente, Governador ou Senador). |  |
+| `papel` | varchar | Lugar na chapa: Vice-presidente, Vice-governador, 1º suplente ou 2º suplente. |  |
+| `numero` | varchar | Número da chapa na urna, igual ao do titular. |  |
+| `nome` | varchar | Nome do candidato, com caixa padronizada. |  |
+| `nome_urna` | varchar | Nome de urna, com caixa padronizada. |  |
+| `partido` | varchar | Sigla do partido na eleição. |  |
+| `situacao_candidatura` | varchar | Situação da candidatura segundo o TSE (por exemplo, apto). |  |
+| `resultado` | varchar | Resultado como o TSE informa para o integrante da chapa; vazio se não informado. |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `fonte_url` | varchar | Página oficial do conjunto de dados de origem. |  |
+
 ### marts.eleitos_historico
 
 | Coluna | Tipo | Descrição | Dado pessoal |
@@ -537,6 +569,33 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_fim` | date | Fim deste período; vazio enquanto está em exercício. |  |
 | `causa_afastamento_sigla` | varchar | Sigla da causa do fim do período (licença, renúncia, fim do mandato); vazia se não informada. |  |
 | `causa_afastamento` | varchar | Descrição da causa do fim do período. |  |
+
+### marts.municipios
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (ibge). |  |
+| `id_municipio` | integer | Código do município no IBGE (7 dígitos). |  |
+| `nome` | varchar | Nome do município, como o IBGE informa. |  |
+| `uf` | varchar | Sigla da UF do município. |  |
+| `uf_nome` | varchar | Nome da UF. |  |
+| `regiao_sigla` | varchar | Sigla da grande região (N, NE, SE, S, CO). |  |
+| `regiao_nome` | varchar | Nome da grande região. |  |
+| `regiao_imediata` | varchar | Nome da região geográfica imediata do município. |  |
+| `regiao_intermediaria` | varchar | Nome da região geográfica intermediária do município. |  |
+| `nome_busca` | varchar | Nome sem acento e em minúsculas, para buscar. |  |
+| `dt_captura` | date | Data da captura da lista de municípios. |  |
+
+### marts.municipios_codigos_tse
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte do código de município (tse). |  |
+| `cd_municipio_tse` | varchar | Código do município no TSE (unidade eleitoral das eleições municipais). |  |
+| `nome_tse` | varchar | Nome do município no TSE, da eleição mais recente em que aparece. |  |
+| `uf` | varchar | Sigla da UF do município no TSE. |  |
+| `id_municipio` | integer | Código do município no IBGE; vazio quando nome e UF não ligam a um só município. |  |
+| `metodo` | varchar | Regra que ligou os dois códigos (nome e UF iguais e únicos); vazio sem ligação. |  |
 
 ### marts.normas
 

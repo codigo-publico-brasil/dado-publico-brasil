@@ -64,6 +64,14 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 - **Conteúdo do portal:** despesas, contratos, convênios, licitações, benefícios (incluindo Bolsa Família), sanções, servidores, viagens. Despesas (empenhos) e o resto: tamanho **não medido**.
 - **Licença:** livre utilização, conforme o Decreto 8.777/2016. As páginas de dicionário de dados, termos de uso e origem dos dados pedem verificação anti-robô e **não foram lidas** (não foram contornadas).
 
+### IBGE, localidades (verificado em 27/10/2026)
+
+- **O quê:** a lista oficial dos 5.571 municípios (código do IBGE de 7 dígitos, nome, UF, região e hierarquia regional), a dimensão territorial da plataforma. Fonte declarada em `sources/executivo/federal/ibge.yml`; vira `marts.municipios`.
+- **Onde:** API `https://servicodados.ibge.gov.br/api/v1/localidades/municipios` (documentação: `https://servicodados.ibge.gov.br/api/docs/localidades`), JSON sem autenticação.
+- **Licença:** política de dados abertos do Poder Executivo federal (Decreto 8.777/2016). A página da API não traz termos de uso próprios.
+- **Cuidado:** o servidor responde sempre comprimido (`Content-Encoding: gzip`), mesmo quando se pede sem compressão; o downloader descomprime e o landing guarda o JSON.
+- **De-para com o TSE:** o TSE usa códigos próprios de município e não publica o do IBGE. `marts.municipios_codigos_tse` liga os dois por nome e UF, só quando o par é único dos dois lados: 5.556 dos 5.569 municípios do TSE ligam, e os 13 restantes (grafias diferentes, como "Barão de Monte Alto") ficam sem código do IBGE, medidos pelo teste `municipios_do_tse_sem_correspondencia_no_ibge`.
+
 ### TCU (verificado em 23/10/2026)
 
 - **Acesso:** `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/`, sem requisitos, com um manifesto legível por máquina (`arquivos/jurisprudencia-arquivos.csv`, atualizado em 02/10/2026) que lista cada arquivo CSV com ano e tamanho. Acórdãos de 1992 a 2026 (**7,65 GB**, de 15 MB a 500 MB por ano), jurisprudência selecionada (112 MB), respostas a consultas, súmulas, boletins e informativos (cerca de 20 MB). Há também "visões gerais" de acórdãos geradas com IA, que precisariam de rótulo próprio. Contas irregulares e certidões: não apareceram.

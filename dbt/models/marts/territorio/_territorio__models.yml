@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: municipios
+    description: Municípios do Brasil segundo o IBGE, com UF e região. Uma linha por município.
+    meta: {sensitivity: publico, grain: município, owner: fundador do projeto, freshness: a cada mudança do IBGE}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (ibge)."}
+      - {name: id_municipio, data_type: integer, tests: [unique, not_null], description: "Código do município no IBGE (7 dígitos)."}
+      - {name: nome, data_type: varchar, tests: [not_null], description: "Nome do município, como o IBGE informa."}
+      - {name: uf, data_type: varchar, tests: [not_null], description: "Sigla da UF do município."}
+      - {name: uf_nome, data_type: varchar, description: "Nome da UF."}
+      - {name: regiao_sigla, data_type: varchar, description: "Sigla da grande região (N, NE, SE, S, CO)."}
+      - {name: regiao_nome, data_type: varchar, description: "Nome da grande região."}
+      - {name: regiao_imediata, data_type: varchar, description: "Nome da região geográfica imediata do município."}
+      - {name: regiao_intermediaria, data_type: varchar, description: "Nome da região geográfica intermediária do município."}
+      - {name: nome_busca, data_type: varchar, description: "Nome sem acento e em minúsculas, para buscar."}
+      - {name: dt_captura, data_type: date, description: "Data da captura da lista de municípios."}
+
+  - name: municipios_codigos_tse
+    description: De-para entre o código de município do TSE e o do IBGE, por nome e UF únicos dos dois lados. Uma linha por município do TSE; sem correspondência fica com o código do IBGE vazio.
+    meta: {sensitivity: publico, grain: município do TSE, owner: fundador do projeto, freshness: a cada eleição municipal}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte do código de município (tse)."}
+      - {name: cd_municipio_tse, data_type: varchar, tests: [unique, not_null], description: "Código do município no TSE (unidade eleitoral das eleições municipais)."}
+      - {name: nome_tse, data_type: varchar, description: "Nome do município no TSE, da eleição mais recente em que aparece."}
+      - {name: uf, data_type: varchar, description: "Sigla da UF do município no TSE."}
+      - name: id_municipio
+        data_type: integer
+        description: "Código do município no IBGE; vazio quando nome e UF não ligam a um só município."
+        tests:
+          - unique
+          - relationships: {to: ref('municipios'), field: id_municipio}
+      - {name: metodo, data_type: varchar, description: "Regra que ligou os dois códigos (nome e UF iguais e únicos); vazio sem ligação."}

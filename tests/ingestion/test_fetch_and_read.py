@@ -1,5 +1,7 @@
 """Pontos de extensão da ingestão: buscar (HTTP, credenciais, nova tentativa), ler (CSV, JSON) e `custom.py`."""
 
+import gzip
+import hashlib
 import http.server
 import json
 import sys
@@ -185,3 +187,30 @@ def test_user_agent_carries_the_repository_url_as_contact() -> None:
     assert "https://github.com/codigo-publico-brasil/dado-publico-brasil" in (
         request.get_header("User-agent") or ""
     )
+
+
+class Gzipped(http.server.BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        body = gzip.compress(json.dumps(PAYLOAD).encode())
+        self.send_response(200)
+        self.send_header("Content-Encoding", "gzip")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args: object) -> None:
+        pass
+
+
+def test_a_response_compressed_in_transport_is_kept_as_the_document_it_carries(tmp_path: Path) -> None:
+    httpd = http.server.HTTPServer(("127.0.0.1", 0), Gzipped)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{httpd.server_port}/municipios"
+    try:
+        file, digest, size = fetch.download(url, tmp_path, suffix="json")
+        status, body = fetch.get(url)
+    finally:
+        httpd.shutdown()
+    assert json.loads(file.read_text(encoding="utf-8")) == PAYLOAD and size == file.stat().st_size
+    assert digest == hashlib.sha256(file.read_bytes()).hexdigest()  # o hash é do documento, não do transporte
+    assert status == 200 and json.loads(body) == PAYLOAD

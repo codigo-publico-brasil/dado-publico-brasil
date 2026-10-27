@@ -1,0 +1,29 @@
+# Declaração da fonte: IBGE, API de localidades. A lista oficial dos municípios (código do IBGE, nome, UF e região)
+# é a dimensão territorial da plataforma: o TSE usa códigos próprios de município, e o de-para com o IBGE é feito em
+# `marts.municipios_codigos_tse` (por nome e UF, medido). Licença: política de dados abertos do Poder Executivo federal
+# (Decreto 8.777/2016); a página da API não traz termos de uso próprios (consultada em 27/10/2026).
+
+source: ibge
+power: executivo
+level: federal
+description: IBGE, API de localidades (municípios)
+
+schedule: "0 5 1 * *"            # mensal (cron, fuso America/Sao_Paulo): a lista muda pouco e o arquivo só é baixado se mudou
+
+access:
+  base_url: https://servicodados.ibge.gov.br/api/v1
+  format: json
+  headers: {Accept: application/json}
+
+datasets:
+  municipios:
+    # Todos os municípios, com a hierarquia regional imediata e intermediária. A microrregião não é lida: falta em um
+    # município (Boa Esperança do Norte, MT) e a hierarquia imediata existe em todos.
+    url: "{base_url}/localidades/municipios"
+    load: full
+    write: merge
+    primary_key: [id]
+    columns:
+      [id, nome, regiao-imediata__nome, regiao-imediata__regiao-intermediaria__nome,
+       regiao-imediata__regiao-intermediaria__UF__sigla, regiao-imediata__regiao-intermediaria__UF__nome,
+       regiao-imediata__regiao-intermediaria__UF__regiao__sigla, regiao-imediata__regiao-intermediaria__UF__regiao__nome]
