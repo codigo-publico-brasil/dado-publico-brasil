@@ -185,6 +185,21 @@ models:
       - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
       - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+  - name: stg_camara__deputados_historico
+    description: Histórico de situação dos deputados (só dos já buscados), uma linha por registro de status.
+    columns:
+      - {name: id_deputado, description: "Identificador do deputado na fonte.", tests: ["not_null"]}
+      - {name: id_legislatura, description: "Número da legislatura do registro."}
+      - {name: dt_registro, description: "Data e hora do registro de status."}
+      - {name: situacao, description: "Situação na data: Exercício, Licença, FIM_MANDATO ou vazia no registro de início da legislatura."}
+      - {name: condicao_eleitoral, description: "Titular ou suplente, como a fonte informa."}
+      - {name: descricao, description: "Descrição do status (posse, afastamento, alteração de partido), como a fonte informa."}
+      - {name: nome, description: "Nome parlamentar no registro, com caixa padronizada."}
+      - {name: nome_eleitoral, description: "Nome eleitoral no registro, com caixa padronizada."}
+      - {name: partido_sigla, description: "Sigla do partido na data do registro."}
+      - {name: uf_sigla, description: "UF de representação na data do registro."}
+      - {name: id_captura, description: "Captura de origem da linha."}
+
   - name: stg_camara__tramitacoes
     description: Tramitação das proposições que podem virar norma (só as já buscadas), uma linha por andamento.
     columns:

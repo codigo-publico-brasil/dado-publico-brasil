@@ -1,5 +1,7 @@
 """Marts (entidades prontas para consumo) e o que as camadas anteriores entregam a eles."""
 
+import datetime
+
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, columns, scalar, tables
 
@@ -95,7 +97,7 @@ def test_votes_carry_the_party_and_state_of_the_day(full: tuple[Connection, Sett
     ).fetchall() == [("Não", "BBB", "SP"), ("Sim", "AAA", "SP")]
 
 
-def test_mandate_comes_from_observed_votes_and_official_dates_stay_empty(
+def test_deputy_mandate_gets_its_start_from_the_official_history_and_has_no_end_while_in_progress(
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
@@ -109,10 +111,19 @@ def test_mandate_comes_from_observed_votes_and_official_dates_stay_empty(
         "Câmara dos Deputados",
         57,
         "SP",
-        None,
-        None,
-        "votos observados",
+        datetime.date(2023, 2, 1),  # primeiro registro em exercício do histórico
+        None,  # a licença não encerra o mandato; só o registro de fim de mandato
+        "exercício oficial",
     )
+    bia = person_id(con, "Bia")
+    assert con.execute(
+        "SELECT dt_inicio, base FROM marts.mandatos WHERE id_pessoa = ?", (bia,)
+    ).fetchone() == (
+        None,
+        "votos observados",  # a fonte não tem histórico dela (404): fica vazio, nada é inferido
+    )
+    columns_in_raw = {r[0] for r in con.execute("DESCRIBE raw_federal_camara.deputados_historico").fetchall()}
+    assert not {"email", "url_foto"} & columns_in_raw
 
 
 def test_staging_does_not_join_and_keeps_one_row_per_raw_row(
