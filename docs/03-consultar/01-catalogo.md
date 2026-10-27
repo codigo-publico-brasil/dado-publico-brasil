@@ -436,14 +436,14 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | Coluna | Tipo | Descrição | Dado pessoal |
 | --- | --- | --- | --- |
 | `fonte` | varchar | Fonte oficial do registro. |  |
-| `cd_emenda` | varchar | Código da emenda; vazio em registros antigos sem código. |  |
+| `cd_emenda` | varchar | Identificador da emenda, de 12 dígitos: 4 do ano da emenda, 4 do código do autor e 4 do número da emenda do autor (dicionário de dados do portal); vazio em registros antigos sem código. |  |
 | `ano` | integer | Ano da emenda. |  |
 | `tipo` | varchar | Tipo da emenda (individual, de bancada, de comissão, de relator). |  |
-| `cd_autor` | varchar | Código orçamentário do autor; vazio quando a fonte não informa. |  |
-| `autor_nome` | varchar | Nome do autor (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada. |  |
+| `cd_autor` | varchar | Código do autor da emenda como registrado no SIAFI (não é o código do parlamentar); vazio quando a fonte não informa. |  |
+| `autor_nome` | varchar | Nome do autor da emenda como registrado no SIAFI (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada. |  |
 | `numero` | varchar | Número da emenda. |  |
-| `localidade` | varchar | Localidade de aplicação do recurso, como a fonte informa. |  |
-| `municipio_ibge` | integer | Código IBGE do município. |  |
+| `localidade` | varchar | Atributo do Plano de Trabalho que indica a região onde a despesa ocorre, como a fonte informa. |  |
+| `municipio_ibge` | integer | Código IBGE do município de destinação do recurso; pode estar em branco, conforme a localidade de aplicação. |  |
 | `municipio` | varchar | Município de aplicação. |  |
 | `uf` | varchar | UF de aplicação, como a fonte informa. |  |
 | `regiao` | varchar | Região. |  |
@@ -473,10 +473,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `localidade` | varchar | Localidade do gasto, como a fonte informa. |  |
 | `tipo` | varchar | Tipo da emenda. |  |
 | `dt_publicacao` | date | Data de publicação do convênio. |  |
-| `convenente` | varchar | Quem firmou o convênio. |  |
-| `objeto` | varchar | Objeto do convênio. |  |
+| `convenente` | varchar | Quem recebe os recursos do Governo Federal: órgão ou entidade pública de qualquer esfera de governo, ou organização particular com a qual a administração federal pactua o convênio. |  |
+| `objeto` | varchar | O que foi pactuado entre o concedente federal e o convenente. |  |
 | `convenio_numero` | varchar | Número do convênio. |  |
-| `valor` | decimal(18,2) | Valor do convênio em reais. |  |
+| `valor` | decimal(18,2) | Valor do convênio em reais: a participação do concedente, somada à parcela de rendimento de aplicação financeira (código 999), quando houver. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.emendas_favorecidos
@@ -485,8 +485,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `fonte` | varchar | Fonte oficial do registro. |  |
 | `cd_emenda` | varchar | Código da emenda (marts.emendas). |  |
-| `cd_autor` | varchar | Código orçamentário do autor da emenda. |  |
-| `autor_nome` | varchar | Nome do autor da emenda, com caixa padronizada. |  |
+| `cd_autor` | varchar | Código do autor da emenda como registrado no SIAFI (não é o código do parlamentar); vazio quando a fonte não informa. |  |
+| `autor_nome` | varchar | Nome do autor da emenda como registrado no SIAFI (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada. |  |
 | `numero` | varchar | Número da emenda. |  |
 | `tipo` | varchar | Tipo da emenda. |  |
 | `ano` | integer | Ano do pagamento. |  |
@@ -494,10 +494,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `cd_favorecido` | varchar | CNPJ, código da unidade gestora ou CPF mascarado do favorecido, como a fonte informa. | sim |
 | `favorecido` | varchar | Nome do favorecido (pessoa física inclusive). | sim |
 | `natureza_juridica` | varchar | Natureza jurídica do favorecido. |  |
-| `tipo_favorecido` | varchar | Pessoa jurídica ou unidade gestora. |  |
+| `tipo_favorecido` | varchar | Tipo do favorecido como a fonte informa: Pessoa Jurídica, Pessoa Fisica, Unidade Gestora, Inscrição Genérica, Sem informação ou Inválido (o dicionário do portal cita só pessoa física e jurídica; em parte das linhas a fonte grafa Inscrição Genéric, truncado). |  |
 | `uf` | varchar | UF do favorecido. |  |
 | `municipio` | varchar | Município do favorecido. |  |
-| `valor` | decimal(18,2) | Valor recebido em reais. |  |
+| `valor` | decimal(18,2) | Valor recebido pelo favorecido em reais. |  |
 | `fl_contem_dado_pessoal` | boolean | Verdadeiro quando a linha identifica uma pessoa física (CPF mascarado, tipo pessoa física ou inscrição genérica). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
