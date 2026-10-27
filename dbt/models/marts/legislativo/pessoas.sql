@@ -2,14 +2,16 @@ with cadastro as (
 
     select
         id_pessoa, fonte, nome, nome_civil, sexo, dt_nascimento, dt_falecimento, municipio_nascimento,
-        uf_nascimento, foto_url, rede_social_url, site_url
+        uf_nascimento, foto_url, rede_social_url, site_url, escolaridade, situacao_atual, condicao_eleitoral,
+        email_institucional, telefone_institucional, gabinete_endereco, pagina_url
     from {{ ref('int_pessoas_unidas_cadastro') }}
 
     union all
 
     select
         id_pessoa, fonte, nome, nome_civil, sexo, dt_nascimento, dt_falecimento, municipio_nascimento,
-        uf_nascimento, foto_url, rede_social_url, site_url
+        uf_nascimento, foto_url, rede_social_url, site_url, escolaridade, situacao_atual, condicao_eleitoral,
+        email_institucional, telefone_institucional, gabinete_endereco, pagina_url
     from {{ ref('int_pessoas_senado_unidas') }}
 
 ),
@@ -55,6 +57,13 @@ select
     p.foto_url,
     p.rede_social_url,
     p.site_url,
+    p.escolaridade,
+    p.situacao_atual,
+    p.condicao_eleitoral,
+    p.email_institucional,
+    p.telefone_institucional,
+    p.gabinete_endereco,
+    p.pagina_url,
     a.primeira_legislatura_com_voto,
     a.ultima_legislatura_com_voto,
     pr.profissoes,

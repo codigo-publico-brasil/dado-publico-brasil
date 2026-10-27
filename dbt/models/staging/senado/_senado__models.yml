@@ -170,4 +170,9 @@ models:
       - {name: municipio_nascimento, description: "Município de nascimento informado pela fonte."}
       - {name: uf_nascimento, description: "UF de nascimento informada pela fonte."}
       - {name: foto_url, description: "Endereço da foto oficial."}
+      - {name: pagina_url, description: "Página oficial do senador no Senado."}
+      - {name: pagina_particular_url, description: "Página particular informada pelo senador (rede social ou site)."}
+      - {name: gabinete_email, description: "E-mail institucional do gabinete."}
+      - {name: gabinete_endereco, description: "Endereço do gabinete, como a fonte informa."}
+      - {name: gabinete_telefone, description: "Telefones do gabinete, na ordem de publicação, separados por ponto e vírgula."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}

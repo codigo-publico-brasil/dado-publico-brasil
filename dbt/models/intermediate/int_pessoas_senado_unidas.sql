@@ -12,7 +12,14 @@ select
     d.uf_nascimento,
     d.foto_url,
     cast(null as varchar) as rede_social_url,
-    cast(null as varchar) as site_url
+    cast(null as varchar) as site_url,
+    cast(null as varchar) as escolaridade,
+    cast(null as varchar) as situacao_atual,
+    cast(null as varchar) as condicao_eleitoral,
+    d.gabinete_email as email_institucional,
+    d.gabinete_telefone as telefone_institucional,
+    d.gabinete_endereco,
+    d.pagina_url
 
 from {{ ref('stg_identity__pessoa_identificadores') }} as i
 

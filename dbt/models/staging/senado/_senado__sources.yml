@@ -39,7 +39,9 @@ sources:
       - name: senadores_detalhe
         description: >
           Detalhe de cada senador, buscado por item na API (`_item` é o código do senador): nascimento, naturalidade
-          e foto, só dos já buscados.
+          e foto, páginas oficiais e contato institucional do gabinete, só dos já buscados.
+      - name: senadores_detalhe__telefones_telefone
+        description: Telefones do gabinete de cada senador (lista `Telefones` do detalhe), uma linha por telefone.
       - name: normas
         description: Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...), por ano de assinatura, só os metadados.
         columns:

@@ -23,6 +23,15 @@ models:
       - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
       - {name: genero, description: "Gênero, como a fonte informa."}
       - {name: resultado, description: "Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado."}
+      - {name: nome_social, meta: {pii: true}, description: "Nome social declarado pelo candidato, com caixa padronizada; vazio se não declarou. O TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido); fica como a fonte informa."}
+      - {name: grau_instrucao, meta: {pii: true}, description: "Grau de instrução declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: estado_civil, meta: {pii: true}, description: "Estado civil declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: ocupacao, description: "Ocupação declarada pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: uf_nascimento, description: "UF de nascimento do candidato, como o TSE informa."}
+      - {name: coligacao_nome, description: "Nome da coligação da candidatura, como o TSE informa; vazio sem coligação."}
+      - {name: coligacao_composicao, description: "Partidos da coligação, como o TSE informa."}
+      - {name: federacao_sigla, description: "Sigla da federação partidária (desde 2022); vazia nos anos anteriores."}
+      - {name: federacao_composicao, description: "Partidos da federação (desde 2022); vazia nos anos anteriores."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: stg_tse__bens
     description: Bens declarados pelos candidatos de todos os cargos, uma linha por bem.

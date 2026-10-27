@@ -111,7 +111,9 @@ def test_deputy_mandate_gets_its_start_from_the_official_history_and_has_no_end_
         "Câmara dos Deputados",
         57,
         "SP",
-        datetime.date(2023, 2, 1),  # primeiro registro em exercício do histórico
+        datetime.date(
+            2023, 2, 3
+        ),  # primeiro registro em exercício do histórico (não o início da legislatura)
         None,  # a licença não encerra o mandato; só o registro de fim de mandato
         "exercício oficial",
     )
@@ -124,6 +126,14 @@ def test_deputy_mandate_gets_its_start_from_the_official_history_and_has_no_end_
     )
     columns_in_raw = {r[0] for r in con.execute("DESCRIBE raw_federal_camara.deputados_historico").fetchall()}
     assert not {"email", "url_foto"} & columns_in_raw
+    detail = {r[0] for r in con.execute("DESCRIBE raw_federal_camara.deputados_detalhe").fetchall()}
+    assert (
+        not {"cpf", "ultimo_status__email", "ultimo_status__url_foto"} & detail
+    )  # só o gabinete institucional
+    assert con.execute(
+        "SELECT escolaridade, email_institucional, telefone_institucional, gabinete_endereco FROM marts.pessoas WHERE id_pessoa = ?",
+        (ana,),
+    ).fetchone() == ("Superior", "dep.ana@camara.leg.br", "3215-5979", "prédio 3, sala 979")
 
 
 def test_staging_does_not_join_and_keeps_one_row_per_raw_row(
@@ -226,8 +236,11 @@ def test_official_legislature_dates_do_not_become_the_mandate_dates(
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
+    bia = person_id(con, "Bia")  # sem histórico na fonte: a data da legislatura não vira a do mandato
     row = con.execute(
-        "SELECT dt_inicio, dt_fim, dt_legislatura_inicio, dt_legislatura_fim FROM marts.mandatos WHERE id_legislatura = 57 LIMIT 1"
+        "SELECT dt_inicio, dt_fim, dt_legislatura_inicio, dt_legislatura_fim FROM marts.mandatos "
+        "WHERE id_legislatura = 57 AND id_pessoa = ?",
+        (bia,),
     ).fetchone()
     assert row is not None
     assert row[0] is None and row[1] is None

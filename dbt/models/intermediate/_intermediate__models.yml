@@ -37,6 +37,13 @@ models:
       - {name: foto_url, description: "Endereço da foto oficial."}
       - {name: rede_social_url, description: "Primeira rede social informada no cadastro."}
       - {name: site_url, description: "Site informado no cadastro."}
+      - {name: escolaridade, description: "Escolaridade informada no cadastro da Câmara; vazia onde a fonte não informa."}
+      - {name: situacao_atual, description: "Situação no último status da Câmara; vazia onde a fonte não informa."}
+      - {name: condicao_eleitoral, description: "Titular ou suplente no último status da Câmara; vazia onde a fonte não informa."}
+      - {name: email_institucional, description: "E-mail institucional do gabinete, como a fonte publica."}
+      - {name: telefone_institucional, description: "Telefone institucional do gabinete, como a fonte publica."}
+      - {name: gabinete_endereco, description: "Endereço do gabinete, como a fonte publica."}
+      - {name: pagina_url, description: "Página oficial da pessoa no Senado; vazia onde a fonte não informa."}
   - name: int_votacoes_votos_ligados
     description: Votos com a pessoa do projeto (chave própria).
     columns:
@@ -145,6 +152,13 @@ models:
       - {name: foto_url, description: "Endereço da foto oficial."}
       - {name: rede_social_url, description: "Primeira rede social informada no cadastro."}
       - {name: site_url, description: "Site informado no cadastro."}
+      - {name: escolaridade, description: "Escolaridade informada no cadastro da Câmara; vazia onde a fonte não informa."}
+      - {name: situacao_atual, description: "Situação no último status da Câmara; vazia onde a fonte não informa."}
+      - {name: condicao_eleitoral, description: "Titular ou suplente no último status da Câmara; vazia onde a fonte não informa."}
+      - {name: email_institucional, description: "E-mail institucional do gabinete, como a fonte publica."}
+      - {name: telefone_institucional, description: "Telefone institucional do gabinete, como a fonte publica."}
+      - {name: gabinete_endereco, description: "Endereço do gabinete, como a fonte publica."}
+      - {name: pagina_url, description: "Página oficial da pessoa no Senado; vazia onde a fonte não informa."}
   - name: int_senado_materias_unicas
     description: Uma linha por matéria votada no Senado, com os dados da votação mais recente.
     columns:

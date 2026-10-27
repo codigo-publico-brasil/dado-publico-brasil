@@ -26,6 +26,13 @@ models:
       - {name: foto_url, data_type: varchar, description: "Endereço da foto oficial."}
       - {name: rede_social_url, data_type: varchar, description: "Primeira rede social informada no cadastro."}
       - {name: site_url, data_type: varchar, description: "Site informado no cadastro."}
+      - {name: escolaridade, data_type: varchar, description: "Escolaridade informada no cadastro da Câmara; vazia onde a fonte não informa (Senado)."}
+      - {name: situacao_atual, data_type: varchar, description: "Situação no último status da Câmara (por exemplo, Exercício ou Licença); vazia onde a fonte não informa."}
+      - {name: condicao_eleitoral, data_type: varchar, description: "Titular ou suplente no último status da Câmara; vazia onde a fonte não informa."}
+      - {name: email_institucional, data_type: varchar, description: "E-mail institucional do gabinete, como a Câmara ou o Senado publica."}
+      - {name: telefone_institucional, data_type: varchar, description: "Telefone institucional do gabinete; no Senado, vários separados por ponto e vírgula."}
+      - {name: gabinete_endereco, data_type: varchar, description: "Endereço do gabinete (prédio, sala e andar na Câmara; endereço no Senado)."}
+      - {name: pagina_url, data_type: varchar, description: "Página oficial da pessoa no Senado; vazia onde a fonte não informa."}
       - {name: primeira_legislatura_com_voto, data_type: integer, description: "Primeira legislatura em que há voto registrado."}
       - {name: ultima_legislatura_com_voto, data_type: integer, description: "Última legislatura em que há voto registrado."}
       - {name: profissoes, data_type: varchar, description: "Profissões declaradas, separadas por ponto e vírgula."}
@@ -361,6 +368,15 @@ models:
       - {name: partido_nome, data_type: varchar, description: "Nome do partido na eleição."}
       - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura segundo a fonte (por exemplo, deferido)."}
       - {name: resultado, data_type: varchar, description: "Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado."}
+      - {name: nome_social, data_type: varchar, meta: {pii: true}, description: "Nome social declarado pelo candidato, com caixa padronizada; vazio se não declarou. O TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido); fica como a fonte informa."}
+      - {name: grau_instrucao, data_type: varchar, meta: {pii: true}, description: "Grau de instrução declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: estado_civil, data_type: varchar, meta: {pii: true}, description: "Estado civil declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: ocupacao, data_type: varchar, description: "Ocupação declarada pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: uf_nascimento, data_type: varchar, description: "UF de nascimento do candidato, como o TSE informa."}
+      - {name: coligacao_nome, data_type: varchar, description: "Nome da coligação da candidatura, como o TSE informa; vazio sem coligação."}
+      - {name: coligacao_composicao, data_type: varchar, description: "Partidos da coligação, como o TSE informa."}
+      - {name: federacao_sigla, data_type: varchar, description: "Sigla da federação partidária (desde 2022); vazia nos anos anteriores."}
+      - {name: federacao_composicao, data_type: varchar, description: "Partidos da federação (desde 2022); vazia nos anos anteriores."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: pessoas_fusoes
@@ -665,6 +681,15 @@ models:
       - {name: partido, data_type: varchar, description: "Sigla do partido pelo qual concorreu."}
       - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no TSE (por exemplo, deferido), como o TSE informa."}
       - {name: resultado, data_type: varchar, description: "Resultado como o TSE informa (por exemplo, eleito, eleito por QP ou eleito por média)."}
+      - {name: nome_social, data_type: varchar, meta: {pii: true}, description: "Nome social declarado pelo candidato, com caixa padronizada; vazio se não declarou. O TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido); fica como a fonte informa."}
+      - {name: grau_instrucao, data_type: varchar, meta: {pii: true}, description: "Grau de instrução declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: estado_civil, data_type: varchar, meta: {pii: true}, description: "Estado civil declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: ocupacao, data_type: varchar, description: "Ocupação declarada pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: uf_nascimento, data_type: varchar, description: "UF de nascimento do candidato, como o TSE informa."}
+      - {name: coligacao_nome, data_type: varchar, description: "Nome da coligação da candidatura, como o TSE informa; vazio sem coligação."}
+      - {name: coligacao_composicao, data_type: varchar, description: "Partidos da coligação, como o TSE informa."}
+      - {name: federacao_sigla, data_type: varchar, description: "Sigla da federação partidária (desde 2022); vazia nos anos anteriores."}
+      - {name: federacao_composicao, data_type: varchar, description: "Partidos da federação (desde 2022); vazia nos anos anteriores."}
       - {name: qtd_votos, data_type: bigint, description: "Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada. Em 2002 a 2014 o TSE não separa os válidos: valem os nominais."}
       - {name: percentual_votos_nominais, data_type: "decimal(5,2)", description: "Percentual dos votos nominais válidos do cargo na unidade eleitoral e no turno, sem os votos de legenda; vazio se a votação ainda não foi carregada."}
       - {name: id_pessoa, data_type: bigint, description: "Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos casos sem ligação."}

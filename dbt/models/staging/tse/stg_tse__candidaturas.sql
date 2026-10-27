@@ -25,6 +25,15 @@ select
     sentence_case(ds_genero) as genero,
     -- os arquivos de 1998 a 2010 chamam de `Média` o eleito por média, que depois vira `Eleito por média`
     case when lower(trim(ds_sit_tot_turno)) = 'média' then 'Eleito por média' else sentence_case(nullif(nullif(ds_sit_tot_turno, '#NULO#'), '#NULO')) end as resultado,
+    proper_name(tse_value(nm_social_candidato)) as nome_social,
+    sentence_case(tse_value(ds_grau_instrucao)) as grau_instrucao,
+    sentence_case(tse_value(ds_estado_civil)) as estado_civil,
+    sentence_case(tse_value(ds_ocupacao)) as ocupacao,
+    tse_value(sg_uf_nascimento) as uf_nascimento,
+    tse_value(nm_coligacao) as coligacao_nome,
+    tse_value(ds_composicao_coligacao) as coligacao_composicao,
+    tse_value(sg_federacao) as federacao_sigla,
+    tse_value(ds_composicao_federacao) as federacao_composicao,
     _source_file_id as id_captura
 
 from source

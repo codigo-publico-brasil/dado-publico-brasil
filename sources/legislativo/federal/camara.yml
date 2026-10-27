@@ -184,6 +184,28 @@ datasets:
       [_item, idLegislatura, dataHora, situacao, condicaoEleitoral, descricaoStatus, nome, nomeEleitoral,
        siglaPartido, siglaUf]
 
+  deputados_detalhe:
+    # Por item: o cadastro de cada deputado (escolaridade, último status e gabinete institucional). O item é o
+    # endereço do deputado em `deputados` (`uri`). CPF, e-mail pessoal e foto não estão em `columns` e nunca entram
+    # no raw (ADR 0029). Roda só com `--foreach N` ou `--foreach all`.
+    url: "{item}"
+    load: foreach
+    format: json
+    headers: {Accept: application/json}
+    records: dados
+    write: merge
+    foreach:
+      from: deputados
+      item: uri
+      refresh_after_days: 30
+      batch_size: 500
+    primary_key: [_item]
+    columns:
+      [_item, escolaridade, ultimoStatus__nomeEleitoral, ultimoStatus__siglaPartido, ultimoStatus__siglaUf,
+       ultimoStatus__idLegislatura, ultimoStatus__situacao, ultimoStatus__condicaoEleitoral, ultimoStatus__data,
+       ultimoStatus__gabinete__nome, ultimoStatus__gabinete__predio, ultimoStatus__gabinete__sala,
+       ultimoStatus__gabinete__andar, ultimoStatus__gabinete__telefone, ultimoStatus__gabinete__email]
+
   proposicoes_tramitacoes:
     # Por item: uma chamada à API para cada proposição que pode virar norma (não existe arquivo em lote).
     # Só entram PL, PLP, PEC, MPV, PDL, PLV, PLN e PRC; requerimentos, pareceres e emendas ficam de fora.

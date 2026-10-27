@@ -35,7 +35,11 @@ datasets:
     columns:
       [ANO_ELEICAO, NR_TURNO, CD_ELEICAO, DS_ELEICAO, SG_UF, SG_UE, NM_UE, DS_CARGO, SQ_CANDIDATO, NR_CANDIDATO,
        NM_CANDIDATO, NM_URNA_CANDIDATO, DS_SITUACAO_CANDIDATURA, SG_PARTIDO, NM_PARTIDO, DT_NASCIMENTO, DS_GENERO,
-       DS_SIT_TOT_TURNO]
+       DS_SIT_TOT_TURNO,
+       # ADR 0029: o que o candidato declara e o TSE publica. Nunca entram CPF, título, e-mail nem cor ou raça
+       NM_SOCIAL_CANDIDATO, DS_GRAU_INSTRUCAO, DS_ESTADO_CIVIL, DS_OCUPACAO, SG_UF_NASCIMENTO, NM_COLIGACAO,
+       DS_COMPOSICAO_COLIGACAO, SG_FEDERACAO, DS_COMPOSICAO_FEDERACAO]
+    optional: [SG_FEDERACAO, DS_COMPOSICAO_FEDERACAO]   # federações só existem desde 2022 (os arquivos antigos não têm a coluna)
 
   bens:
     # Bens declarados por cada candidato (todos os cargos): descrição, tipo e valor. Liga-se à candidatura por

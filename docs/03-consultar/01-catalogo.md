@@ -7,6 +7,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
 | `deputados` | Cadastro de deputados (sem documentos pessoais). | publico-agente-publico |  |
+| `deputados_detalhe` | Cadastro de cada deputado (escolaridade, último status e gabinete institucional), buscado por item na API (`_item` é o endereço do deputado), só dos que já foram buscados. | publico-agente-publico |  |
 | `deputados_historico` | Histórico de situação de cada deputado (posse, licença, fim de mandato), buscado por item na API (`_item` é o endereço do deputado), só dos que já foram buscados. | publico-agente-publico |  |
 | `deputados_ocupacoes` | Ocupações anteriores declaradas pelos deputados (arquivo completo). | publico-agente-publico |  |
 | `deputados_profissoes` | Profissões declaradas pelos deputados (arquivo completo, substituído a cada carga). | publico-agente-publico |  |
@@ -50,7 +51,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `senadores` | Senadores por legislatura (o mesmo senador aparece em várias), com os mandatos em tabelas filhas. | publico-agente-publico |  |
 | `senadores__mandatos_mandato` | Mandatos de cada senador na legislatura (titular ou suplente), lista `Mandatos.Mandato`. | publico-agente-publico |  |
 | `senadores__mandatos_mandato__exercicios__exercicio` | Períodos de exercício de cada mandato, com a causa de afastamento (lista `Exercicios.Exercicio`). | publico-agente-publico |  |
-| `senadores_detalhe` | Detalhe de cada senador, buscado por item na API (`_item` é o código do senador): nascimento, naturalidade e foto, só dos já buscados. | publico-agente-publico |  |
+| `senadores_detalhe` | Detalhe de cada senador, buscado por item na API (`_item` é o código do senador): nascimento, naturalidade e foto, páginas oficiais e contato institucional do gabinete, só dos já buscados. | publico-agente-publico |  |
+| `senadores_detalhe__telefones_telefone` | Telefones do gabinete de cada senador (lista `Telefones` do detalhe), uma linha por telefone. | publico-agente-publico |  |
 | `vetos` | Vetos presidenciais apreciados pelo Congresso, por ano, de 1994 em diante. | publico-agente-publico |  |
 | `vetos_dispositivos` | Dispositivos vetados de cada veto, buscados por item (`_item` é o código da matéria do veto), com razão do veto e situação. | publico-agente-publico |  |
 | `vetos_votos` | Voto nominal em cada dispositivo votado em painel, buscado por item (`_item` é o código do dispositivo). | publico-agente-publico |  |
@@ -83,6 +85,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
 | `stg_camara__deputados` | Deputados, uma linha por deputado, com nomes padronizados e tipos corretos. | publico-agente-publico |  |
+| `stg_camara__deputados_detalhe` | Cadastro dos deputados (só dos já buscados), uma linha por deputado. | publico-agente-publico |  |
 | `stg_camara__deputados_historico` | Histórico de situação dos deputados (só dos já buscados), uma linha por registro de status. | publico-agente-publico |  |
 | `stg_camara__deputados_ocupacoes` | Ocupações anteriores declaradas por deputado. | publico-agente-publico |  |
 | `stg_camara__deputados_profissoes` | Profissões declaradas por deputado (linhas sem título descartadas pela padronização). | publico-agente-publico |  |
@@ -227,6 +230,15 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `partido_nome` | varchar | Nome do partido na eleição. |  |
 | `situacao_candidatura` | varchar | Situação da candidatura segundo a fonte (por exemplo, deferido). |  |
 | `resultado` | varchar | Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado. |  |
+| `nome_social` | varchar | Nome social declarado pelo candidato, com caixa padronizada; vazio se não declarou. O TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido); fica como a fonte informa. | sim |
+| `grau_instrucao` | varchar | Grau de instrução declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado. | sim |
+| `estado_civil` | varchar | Estado civil declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado. | sim |
+| `ocupacao` | varchar | Ocupação declarada pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado. |  |
+| `uf_nascimento` | varchar | UF de nascimento do candidato, como o TSE informa. |  |
+| `coligacao_nome` | varchar | Nome da coligação da candidatura, como o TSE informa; vazio sem coligação. |  |
+| `coligacao_composicao` | varchar | Partidos da coligação, como o TSE informa. |  |
+| `federacao_sigla` | varchar | Sigla da federação partidária (desde 2022); vazia nos anos anteriores. |  |
+| `federacao_composicao` | varchar | Partidos da federação (desde 2022); vazia nos anos anteriores. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.candidaturas_bens
@@ -310,6 +322,15 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `partido` | varchar | Sigla do partido pelo qual concorreu. |  |
 | `situacao_candidatura` | varchar | Situação da candidatura no TSE (por exemplo, deferido), como o TSE informa. |  |
 | `resultado` | varchar | Resultado como o TSE informa (por exemplo, eleito, eleito por QP ou eleito por média). |  |
+| `nome_social` | varchar | Nome social declarado pelo candidato, com caixa padronizada; vazio se não declarou. O TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido); fica como a fonte informa. | sim |
+| `grau_instrucao` | varchar | Grau de instrução declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado. | sim |
+| `estado_civil` | varchar | Estado civil declarado pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado. | sim |
+| `ocupacao` | varchar | Ocupação declarada pelo candidato, como o TSE informa; Não divulgável quando o TSE protege o dado. |  |
+| `uf_nascimento` | varchar | UF de nascimento do candidato, como o TSE informa. |  |
+| `coligacao_nome` | varchar | Nome da coligação da candidatura, como o TSE informa; vazio sem coligação. |  |
+| `coligacao_composicao` | varchar | Partidos da coligação, como o TSE informa. |  |
+| `federacao_sigla` | varchar | Sigla da federação partidária (desde 2022); vazia nos anos anteriores. |  |
+| `federacao_composicao` | varchar | Partidos da federação (desde 2022); vazia nos anos anteriores. |  |
 | `qtd_votos` | bigint | Votos nominais válidos do eleito no turno; vazio se a votação por município e zona desse ano ainda não foi carregada. Em 2002 a 2014 o TSE não separa os válidos: valem os nominais. |  |
 | `percentual_votos_nominais` | decimal(5,2) | Percentual dos votos nominais válidos do cargo na unidade eleitoral e no turno, sem os votos de legenda; vazio se a votação ainda não foi carregada. |  |
 | `id_pessoa` | bigint | Chave da pessoa (marts.pessoas) quando o eleito já é deputado ou senador ligado pela regra do projeto; vazia nos casos sem ligação. |  |
@@ -653,6 +674,13 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `foto_url` | varchar | Endereço da foto oficial. |  |
 | `rede_social_url` | varchar | Primeira rede social informada no cadastro. |  |
 | `site_url` | varchar | Site informado no cadastro. |  |
+| `escolaridade` | varchar | Escolaridade informada no cadastro da Câmara; vazia onde a fonte não informa (Senado). |  |
+| `situacao_atual` | varchar | Situação no último status da Câmara (por exemplo, Exercício ou Licença); vazia onde a fonte não informa. |  |
+| `condicao_eleitoral` | varchar | Titular ou suplente no último status da Câmara; vazia onde a fonte não informa. |  |
+| `email_institucional` | varchar | E-mail institucional do gabinete, como a Câmara ou o Senado publica. |  |
+| `telefone_institucional` | varchar | Telefone institucional do gabinete; no Senado, vários separados por ponto e vírgula. |  |
+| `gabinete_endereco` | varchar | Endereço do gabinete (prédio, sala e andar na Câmara; endereço no Senado). |  |
+| `pagina_url` | varchar | Página oficial da pessoa no Senado; vazia onde a fonte não informa. |  |
 | `primeira_legislatura_com_voto` | integer | Primeira legislatura em que há voto registrado. |  |
 | `ultima_legislatura_com_voto` | integer | Última legislatura em que há voto registrado. |  |
 | `profissoes` | varchar | Profissões declaradas, separadas por ponto e vírgula. |  |
