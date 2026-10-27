@@ -109,8 +109,8 @@ models:
     description: >
       Um mandato por candidatura eleita, de todos os cargos (inclusive vereador e o vice e os suplentes eleitos junto):
       o mandato nasce da eleição, não do exercício. Quem assumiu depois como suplente não tem linha aqui (será
-      fatos.exercicios). O início é a data de posse do TSE quando cai no ano seguinte ao da eleição; para prefeito e
-      vice-prefeito, sem data válida, é derivado do art. 29, III da Constituição e marcado. O fim é sempre derivado da
+      fatos.exercicios). O início vem da regra da Constituição com a vigência (core.cargos_posse); onde a Constituição não fixa a data,
+      da data de posse do TSE quando plausível. O fim é sempre derivado da
       duração do cargo. Só TSE; a ligação com a pessoa do projeto virá com as pessoas de todos os eleitos. O nome do
       modelo leva o prefixo fatos_ só porque marts.mandatos ainda existe; a tabela é fatos.mandatos.
     meta: {sensitivity: publico-agente-publico, grain: mandato (candidatura eleita), owner: fundador do projeto, freshness: a cada eleição}
@@ -132,8 +132,8 @@ models:
       - {name: id_pessoa_tse, data_type: varchar, description: "Identificador da pessoa entre as eleições do TSE; vazio sem ligação."}
       - {name: id_pessoa, data_type: bigint, tests: [{not_null: {config: {severity: warn}}}, {relationships: {to: ref('core_pessoas'), field: id_pessoa}}], description: "Pessoa do projeto (core.pessoas); todo eleito tem. O teste de aviso mede os que ficaram sem."}
       - {name: dt_posse_tse, data_type: date, description: "Data de posse exatamente como o TSE informa na disputa, mesmo quando impossível (por exemplo, antes da eleição); guardada para auditoria."}
-      - {name: dt_inicio, data_type: date, tests: [{not_null: {config: {severity: warn}}}], description: "Início do mandato: a data do TSE quando cai no ano seguinte ao da eleição, ou derivada do art. 29, III (prefeito e vice-prefeito). Vazio quando não há fonte válida nem regra na Constituição."}
-      - {name: base_dt_inicio, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como dt_inicio foi obtida: informado (TSE) ou derivado (regra da Constituição). Vazio quando dt_inicio é vazio."}
+      - {name: dt_inicio, data_type: date, tests: [{not_null: {config: {severity: warn}}}], description: "Início do mandato. Derivado da Constituição com a vigência por ano de eleição (core.cargos_posse) onde ela fixa a data; sem regra (vereador, deputado estadual), a data de posse do TSE quando cai no ano seguinte ao da eleição e a eleição não é a do ano corrente. Vazio nos demais casos."}
+      - {name: base_dt_inicio, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como dt_inicio foi obtida: derivado (regra da Constituição, com artigo e vigência em core.cargos_posse) ou informado (data do TSE, só onde a Constituição não fixa a data). Vazio quando dt_inicio é vazio."}
       - {name: dt_fim_prevista, data_type: date, description: "DERIVADO: dt_inicio mais a duração do cargo na Constituição, menos um dia. É o fim previsto, não o fim real (cassação, renúncia e morte não entram)."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures)."}
 
