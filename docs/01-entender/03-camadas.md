@@ -20,7 +20,7 @@ Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas
 | **raw** (`raw_<esfera>_<fonte>`) | "O que a fonte diz, tabela a tabela?" | **dlt**, guiado por `sources/<poder>/<esfera>/<fonte>.yml` | sim, a partir do landing |
 | **staging** | "Como isso fica com nomes, tipos e caixa padronizados?" | **dbt** (views, um modelo por tabela do raw) | sim |
 | **intermediate** | "Como juntar e re-granular para chegar às entidades?" | **dbt** (tabelas, uma finalidade por modelo) | sim |
-| **core** | "Quais são os catálogos que dão chave a tudo (territórios, cargos, eleições, disputas, tipos de evento)?" | **dbt** (tabelas e seeds curados, com contrato de colunas) | sim |
+| **core** | "Quais são os catálogos que dão chave a tudo (territórios, cargos, partidos, eleições, disputas, tipos de evento)?" | **dbt** (tabelas e seeds curados, com contrato de colunas) | sim |
 | **marts** | "Como entregar cada entidade pronta para consumo?" | **dbt** (tabelas, com contrato de colunas) | sim |
 | **identity** | "Quem é cada pessoa, em todas as fontes?" | código próprio (pacote `transformation`, `identity.py`) | não: a chave não se reaproveita |
 | **metadata** | "O que rodou, quando, com que resultado?" | código próprio e dbt | não |

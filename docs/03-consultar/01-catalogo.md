@@ -343,6 +343,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `grau_instrucao` | varchar | Grau de instrução declarado; Não divulgável quando o TSE protege o dado. | sim |
 | `estado_civil` | varchar | Estado civil declarado na candidatura; Não divulgável quando o TSE protege o dado. | sim |
 | `ocupacao` | varchar | Ocupação declarada, como o TSE informa; Não divulgável quando o TSE protege o dado. |  |
+| `id_partido` | integer | Partido da candidatura (core.partidos), achado pela sigla, pelo número e pelo ano da eleição em core.partidos_siglas, nunca só pelo número. Vazio quando a combinação não foi curada; o teste de aviso mede quantas. |  |
 | `partido` | varchar | Sigla do partido na eleição, como o TSE informa. |  |
 | `partido_nome` | varchar | Nome do partido na eleição. |  |
 | `federacao` | varchar | Sigla da federação partidária (desde 2022); vazia nos anos anteriores. |  |

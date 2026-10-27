@@ -1,7 +1,7 @@
 # Projeto dbt da camada de dados (ADR 0006). Segue o guia de estrutura da dbt Labs:
 #   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
-#   core          referências do modelo (ADR 0030): territórios, cargos, eleições, disputas, tipos de evento.
+#   core          referências do modelo (ADR 0030): territórios, cargos, partidos, eleições, disputas, tipos de evento.
 #   fatos         o que aconteceu, datado e com a fonte: candidaturas, resultados, campanhas (ADR 0030).
 #   marts         entidades prontas para consumo, uma por grain, com contrato de colunas.
 name: dado_publico_brasil
@@ -87,7 +87,7 @@ seeds:
       +column_types: {dt_aprovacao: date, ano: integer}
     core:
       +schema: core
-      +column_types: {cd_cargo_tse: integer, duracao_anos: integer}
+      +column_types: {cd_cargo_tse: integer, duracao_anos: integer, id_partido: integer, id_partido_sucessor: integer, ano_fim: integer, nr_partido: integer, ano_inicio: integer}
 
 data_tests:
   dado_publico_brasil:
