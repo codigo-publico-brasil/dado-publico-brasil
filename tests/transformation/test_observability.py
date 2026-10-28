@@ -196,3 +196,34 @@ def test_a_failed_run_sends_one_email_with_the_steps_and_the_link_and_a_broken_s
 
     monkeypatch.setattr(alert, "send", broken)
     assert alert.notify_failure("daily_pipeline", "abc123", [], "x") is False
+
+
+def capture(con: Connection, dataset: str, checked_at: str) -> None:
+    con.execute(
+        "INSERT INTO metadata.captures (source, dataset, year, url, sha256, size_bytes, path, captured_at, "
+        "last_checked_at) VALUES ('camara', ?, 2024, 'https://x/' || ?, 'abc', 1, 'p', ?, ?)",
+        (dataset, dataset, checked_at, checked_at),
+    )
+
+
+def test_a_dataset_not_verified_for_longer_than_its_limit_is_a_problem(con: Connection) -> None:
+    capture(con, "votacoes", "2020-01-01T00:00:00")
+    lines, failed = observability.report(con, {("camara", "votacoes"): 3})
+    assert failed
+    assert any("camara.votacoes: última verificação há" in line and "limite de 3" in line for line in lines)
+
+
+def test_a_recently_verified_dataset_is_not_a_problem(con: Connection) -> None:
+    capture(con, "votacoes", runs.now())
+    lines, failed = observability.report(con, {("camara", "votacoes"): 3})
+    assert not failed and "Capturas velhas: 0" in lines
+
+
+def test_a_dataset_with_a_limit_and_no_capture_is_a_problem(con: Connection) -> None:
+    lines, failed = observability.report(con, {("camara", "proposicoes"): 3})
+    assert failed and any("camara.proposicoes: nunca capturado" in line for line in lines)
+
+
+def test_without_limits_the_stale_check_does_not_run(con: Connection) -> None:
+    capture(con, "votacoes", "2020-01-01T00:00:00")
+    assert not observability.report(con)[1]

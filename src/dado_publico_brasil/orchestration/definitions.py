@@ -200,7 +200,7 @@ def _record_dbt(stage: str, target: Path) -> None:
             run.rows_in = len(results)
             if stage == "transform_post":
                 describe.raw(con, target)
-                observability.notify(con)
+                observability.notify(con, pipeline.freshness_limits())
     finally:
         con.close()
 

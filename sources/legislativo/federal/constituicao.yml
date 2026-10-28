@@ -14,6 +14,7 @@ datasets:
     # O link do arquivo muda a cada emenda: o módulo próprio da fonte lê a página, acha o link atual e guarda o
     # arquivo original com hash. Cada versão nova substitui a anterior no raw; as antigas ficam no landing.
     url: "{base_url}?parte=constituicao"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: full
     write: replace
     columns: [ordem, linha, emenda_do_arquivo]
@@ -21,6 +22,7 @@ datasets:
   adct:
     # Ato das Disposições Constitucionais Transitórias, do mesmo site, atualizado em separado.
     url: "{base_url}?parte=adct"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: full
     write: replace
     columns: [ordem, linha, emenda_do_arquivo]

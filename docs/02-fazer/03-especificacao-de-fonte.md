@@ -55,6 +55,7 @@ O [TSE](../../sources/judiciario/federal/tse.yml) é o exemplo:
     load: yearly
     first_year: 1998
     step: 4                     # só os anos a cada 4 a partir de first_year (eleições gerais)
+    max_age_days: 3             # idade máxima da última verificação da fonte; mais velha que isso, `observe` e o e-mail acusam (captura velha)
     archive: zip                # o landing guarda o pacote original; o leitor lê o membro dentro dele, sem extrair
     member: "*_BRASIL.csv"      # padrão (glob) do nome do membro
     only: {DS_CARGO: ["DEPUTADO FEDERAL", "SENADOR"]}   # minimização: só linhas com estes valores entram no raw

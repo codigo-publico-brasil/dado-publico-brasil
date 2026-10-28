@@ -34,6 +34,7 @@ access:
 datasets:
   deputados:
     url: "{base_url}/deputados/csv/deputados.csv"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: full
     write: merge
     primary_key: [uri]
@@ -56,6 +57,7 @@ datasets:
 
   proposicoes:
     url: "{base_url}/proposicoes/csv/proposicoes-{year}.csv"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: yearly
     extra_years: true
     write: merge
@@ -77,6 +79,7 @@ datasets:
 
   votacoes:
     url: "{base_url}/votacoes/csv/votacoes-{year}.csv"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: yearly
     write: merge
     primary_key: [id]
@@ -86,6 +89,7 @@ datasets:
 
   votacoesVotos:
     url: "{base_url}/votacoesVotos/csv/votacoesVotos-{year}.csv"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: yearly
     first_year: 2001
     write: merge
@@ -118,6 +122,7 @@ datasets:
 
   legislaturas:
     url: "{base_url}/legislaturas/csv/legislaturas.csv"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: full
     write: merge
     primary_key: [idLegislatura]
@@ -125,6 +130,7 @@ datasets:
 
   partidos:
     url: "{base_url}/partidos/csv/partidos.csv"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: full
     write: merge
     primary_key: [id]

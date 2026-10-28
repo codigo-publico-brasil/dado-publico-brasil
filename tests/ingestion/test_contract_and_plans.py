@@ -55,6 +55,20 @@ def test_contract_with_bad_key_load_or_write_is_refused(tmp_path: Path) -> None:
         contract_from(tmp_path, text=TEMPLATE.format(extra="").replace("    primary_key: [codigo]\n", ""))
 
 
+@pytest.mark.parametrize("value", ["0", "-3", "tres", "true", "2.5"])
+def test_contract_with_a_bad_max_age_days_is_refused(tmp_path: Path, value: str) -> None:
+    text = TEMPLATE.format(extra="") + f"    max_age_days: {value}" + chr(10)
+    with pytest.raises(InvalidContract, match="max_age_days"):
+        contract_from(tmp_path, text=text)
+
+
+def test_contract_reads_max_age_days_and_every_real_source_still_loads(tmp_path: Path) -> None:
+    text = TEMPLATE.format(extra="") + "    max_age_days: 3" + chr(10)
+    assert contract_from(tmp_path, text=text).datasets["pessoas"].max_age_days == 3
+    limits = [d.max_age_days for c in contracts.find_all() for d in c.datasets.values() if d.max_age_days]
+    assert limits and all(days >= 1 for days in limits)
+
+
 def test_explicit_plan_has_full_datasets_and_the_requested_years(contract: SourceContract) -> None:
     items = landing.plan(contract, [2025, 2024], [2019])
     assert ("deputados", None) in items

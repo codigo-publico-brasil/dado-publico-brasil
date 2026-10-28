@@ -21,6 +21,7 @@ datasets:
     # Um arquivo por legislatura, com os mandatos que a tocam. O mesmo senador aparece em várias; a
     # linha é identificada pelo conteúdo, e o staging fica com uma linha por senador.
     url: "{base_url}/senador/lista/legislatura/{legislature}"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: yearly
     partition: legislature
     first_year: 1999
@@ -37,6 +38,7 @@ datasets:
     # Votações em plenário de um ano, cada uma com a lista de votos nominais (`votos`). Votação secreta
     # traz a sigla "Votou" no lugar da escolha.
     url: "{base_url}/votacao?dataInicio={year}-01-01&dataFim={year}-12-31"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: yearly
     first_year: 1999
     write: merge

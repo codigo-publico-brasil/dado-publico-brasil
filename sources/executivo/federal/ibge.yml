@@ -20,6 +20,7 @@ datasets:
     # Todos os municípios, com a hierarquia regional imediata e intermediária. A microrregião não é lida: falta em um
     # município (Boa Esperança do Norte, MT) e a hierarquia imediata existe em todos.
     url: "{base_url}/localidades/municipios"
+    max_age_days: 45   # avisa se a última verificação passar de 45 dias
     load: full
     write: merge
     primary_key: [id]

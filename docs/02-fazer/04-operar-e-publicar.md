@@ -29,6 +29,7 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 ## Limites conhecidos
 
 - Nas marts sem data de evento, a anomalia de volume só começa a valer depois de cerca de 7 execuções de histórico. Nas cinco com data, o histórico vem do próprio dado.
+- **Captura velha:** o dataset que declara `max_age_days` no contrato e não foi verificado nesse prazo aparece em `observe` e no e-mail como problema (a pipeline parou ou a fonte deixou de responder); um dataset com limite e nenhuma captura também.
 - Recesso do Congresso (julho e dezembro a janeiro) pode gerar aviso de volume e de frescor: é esperado, e o aviso é só informação.
 - `load --rebuild` descarta a tabela raw do dataset (e as tabelas filhas) e o estado do dlt antes de recarregar do landing; por isso mudar a chave primária de um contrato não exige apagar nada à mão.
 - O `merge` do dlt não apaga: uma linha que a fonte removeu continua no raw. O aviso `linhas_removidas` conta as que vieram de capturas anteriores do mesmo arquivo e a atual não traz; decidir o que fazer com elas é manual.

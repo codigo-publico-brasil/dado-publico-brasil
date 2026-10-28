@@ -25,6 +25,7 @@ access:
 datasets:
   candidaturas:
     url: "{base_url}/consulta_cand/consulta_cand_{year}.zip"
+    max_age_days: 14   # avisa se a última verificação passar de 14 dias
     load: yearly
     first_year: 1996                # a eleição mais antiga com o mesmo layout (a de 1994 tem outro nome de arquivo)
     step: 2                         # as eleições gerais (1998, 2002, ... 2026) e as municipais (1996, 2000, ... 2024)
@@ -45,6 +46,7 @@ datasets:
     # Bens declarados por cada candidato (todos os cargos): descrição, tipo e valor. Liga-se à candidatura por
     # SQ_CANDIDATO. Só existe de 2006 em diante. Não há documento pessoal nestas colunas.
     url: "{base_url}/bem_candidato/bem_candidato_{year}.zip"
+    max_age_days: 14   # avisa se a última verificação passar de 14 dias
     load: yearly
     first_year: 2006
     step: 2                         # 2006, 2008 (primeira municipal com bens), ... 2026
@@ -63,6 +65,7 @@ datasets:
     # Votos de cada candidato (todos os cargos) por município e zona: cerca de 9,4 milhões de linhas e 4,3 GB só
     # em 2022. Pesado: peça por ano (`--years 2022`). O nome social não entra (minimização).
     url: "{base_url}/votacao_candidato_munzona/votacao_candidato_munzona_{year}.zip"
+    max_age_days: 14   # avisa se a última verificação passar de 14 dias
     load: yearly
     first_year: 1996
     step: 2
@@ -82,6 +85,7 @@ datasets:
     # 2026, ou as 11 de vereador de um município). É o que permite saber se alguma vaga ficou sem eleito. A coluna
     # `QT_VAGAS` do arquivo de 2000 (e de outros anos) é a `QT_VAGA` dos demais.
     url: "{base_url}/consulta_vagas/consulta_vagas_{year}.zip"
+    max_age_days: 14   # avisa se a última verificação passar de 14 dias
     load: yearly
     first_year: 1996
     step: 2
