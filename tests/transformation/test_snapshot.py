@@ -18,6 +18,7 @@ def test_snapshot_has_every_identity_table_and_matches_the_warehouse_right_after
 ) -> None:
     add_person(con)
     folder = snapshot.take(con, settings)
+    assert folder is not None
     assert {f.name for f in folder.glob("*.parquet")} == {
         "pessoa.parquet",
         "pessoa_fusao.parquet",
@@ -31,10 +32,11 @@ def test_each_snapshot_is_a_new_folder_and_the_older_ones_stay_as_they_were(
 ) -> None:
     add_person(con)
     first = snapshot.take(con, settings)
+    assert first is not None
     before = (first / "pessoa.parquet").read_bytes()
     add_person(con)
     second = snapshot.take(con, settings)
-    assert first != second
+    assert second is not None and first != second
     assert (first / "pessoa.parquet").read_bytes() == before
     assert scalar(con, f"SELECT count(*) FROM read_parquet('{(first / 'pessoa.parquet').as_posix()}')") == 1
 
@@ -47,3 +49,33 @@ def test_a_change_in_the_warehouse_after_the_snapshot_is_reported(
     add_person(con)
     found = snapshot.problems(con, settings)
     assert len(found) == 1 and "pessoa difere do warehouse em 1 linhas" in found[0]
+
+
+def test_an_unchanged_identity_writes_no_new_snapshot(con: Connection, settings: Settings) -> None:
+    add_person(con)
+    first = snapshot.take(con, settings)
+    assert first is not None
+    assert snapshot.take(con, settings) is None
+    assert snapshot.take(con, settings) is None
+    assert len(list((first.parent).glob("*"))) == 1
+
+
+def test_a_change_after_an_unchanged_run_writes_a_new_snapshot(con: Connection, settings: Settings) -> None:
+    add_person(con)
+    first = snapshot.take(con, settings)
+    assert snapshot.take(con, settings) is None
+    add_person(con)
+    second = snapshot.take(con, settings)
+    assert first is not None and second is not None and first != second
+    assert snapshot.problems(con, settings) == []
+
+
+def test_the_snapshot_is_compressed(con: Connection, settings: Settings) -> None:
+    add_person(con)
+    folder = snapshot.take(con, settings)
+    assert folder is not None
+    file = (folder / "pessoa.parquet").as_posix()
+    codecs = {
+        r[0] for r in con.execute(f"SELECT DISTINCT compression FROM parquet_metadata('{file}')").fetchall()
+    }
+    assert codecs == {"ZSTD"}
