@@ -195,3 +195,23 @@ models:
       - {name: id_candidatura, data_type: varchar, description: "Só no TSE: candidatura pela qual a pessoa concorreu por este partido."}
       - {name: fl_mais_recente, data_type: boolean, description: "Verdadeiro na linha mais recente da pessoa (maior ano de referência; na Câmara, o último registro). É o partido mais recente que as fontes mostram, não necessariamente o de hoje."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+
+  - name: fatos_votacoes_proposicoes
+    config: {alias: votacoes_proposicoes}
+    description: >
+      Que proposição (ou matéria) cada votação decidiu, uma linha por votação e proposição, com o papel. Troca a lista em
+      texto de marts.votacoes por linhas que ligam a marts.proposicoes. Câmara: afetada (a votação mudou a situação da
+      proposição) ou objeto (foi o assunto votado). Senado: a matéria da votação. Votação sem proposição na fonte não tem
+      linha. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fatos.votacoes_proposicoes.
+    meta: {sensitivity: publico, grain: votação e proposição, owner: fundador do projeto, freshness: diário}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [fonte, id_votacao, id_proposicao, papel]}}
+    columns:
+      - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte oficial do registro (camara ou senado)."}
+      - {name: id_votacao, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}
+      - name: id_proposicao
+        data_type: varchar
+        tests: [not_null]
+        description: "Identificador da proposição (Câmara) ou da matéria (Senado) na fonte; liga a marts.proposicoes (fonte e id_proposicao). O teste de aviso mede as que não estão carregadas lá."
+      - {name: papel, data_type: varchar, tests: [{accepted_values: {arguments: {values: [afetada, objeto, materia]}}}], description: "Papel da proposição na votação: afetada, objeto (Câmara) ou materia (Senado)."}
+
