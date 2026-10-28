@@ -3,7 +3,7 @@
 -- eventos_de_partidos e que não concorrem mais: mudança de nome, fusão ou incorporação ainda por conferir no TSE, ou extinção.
 with ativos as (
 
-    -- siglas que ainda concorrem na última eleição carregada: o partido continua, só deixou de ter parlamentar votando (PRTB)
+    -- siglas que ainda concorrem na última eleição carregada: o partido continua, só deixou de ter parlamentar votando
     select distinct upper(partido_sigla) as sigla
     from {{ ref('stg_tse__candidaturas') }}
     where ano_eleicao = (select max(ano_eleicao) from {{ ref('stg_tse__candidaturas') }})
