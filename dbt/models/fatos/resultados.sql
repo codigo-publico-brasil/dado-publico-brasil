@@ -10,12 +10,39 @@ with votos as (
         id_candidatura,
         turno,
         sum(votos_validos) as qtd_votos_validos,
-        sum(votos_nominais) as qtd_votos_nominais,
+        if(sum(votos_nominais) = 0 and sum(votos_validos) > 0, null, sum(votos_nominais)) as qtd_votos_nominais,
         arg_max(resultado, length(coalesce(resultado, ''))) as resultado_votacao
 
     from {{ ref('stg_tse__votacao') }}
 
     group by id_candidatura, turno
+
+),
+
+turnos as (
+
+    -- o que a candidatura informa, mais os turnos que só a votação traz (em 2006 o arquivo de candidaturas não tem o 2º turno
+    -- de presidente, mas a votação tem); a candidatura precisa existir
+    select id_candidatura, turno, situacao_candidatura, resultado, ano_eleicao, ue, cargo, id_captura
+
+    from {{ ref('stg_tse__candidaturas') }}
+
+    union all
+
+    select
+        v.id_candidatura, v.turno, cast(null as varchar), cast(null as varchar), c.ano_eleicao, c.ue, c.cargo, c.id_captura
+
+    from (select distinct id_candidatura, turno from votos) as v
+
+    inner join (
+        select distinct on (id_candidatura) id_candidatura, ano_eleicao, ue, cargo, id_captura
+        from {{ ref('stg_tse__candidaturas') }}
+        order by id_candidatura, turno
+    ) as c on c.id_candidatura = v.id_candidatura
+
+    where not exists (
+        select 1 from {{ ref('stg_tse__candidaturas') }} as x where x.id_candidatura = v.id_candidatura and x.turno = v.turno
+    )
 
 ),
 
@@ -31,7 +58,7 @@ votos_da_disputa as (
             partition by c.ano_eleicao, c.turno, c.ue, c.cargo order by v.qtd_votos_validos desc nulls last
         ) as posicao
 
-    from {{ ref('stg_tse__candidaturas') }} as c
+    from turnos as c
 
     inner join votos as v on v.id_candidatura = c.id_candidatura and v.turno = c.turno
 
@@ -54,7 +81,7 @@ select
     ) as fl_mais_votado_no_turno,
     c.id_captura
 
-from {{ ref('stg_tse__candidaturas') }} as c
+from turnos as c
 
 left join votos as v on v.id_candidatura = c.id_candidatura and v.turno = c.turno
 
