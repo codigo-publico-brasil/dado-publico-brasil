@@ -25,6 +25,7 @@ datasets:
   emendas:
     # Uma linha por emenda, localidade, função, programa e ação, com os valores empenhado, liquidado e pago.
     url: "{base_url}#emendas"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: full
     archive: zip
     member: "EmendasParlamentares.csv"
@@ -41,6 +42,7 @@ datasets:
   emendas_convenios:
     # Convênios firmados com recursos de emenda: convenente, objeto e valor.
     url: "{base_url}#convenios"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: full
     archive: zip
     member: "EmendasParlamentares_Convenios.csv"
@@ -54,6 +56,7 @@ datasets:
   emendas_favorecidos:
     # Quem recebeu o dinheiro de cada emenda, como a fonte publica (inclui pessoa física, com CPF mascarado).
     url: "{base_url}#favorecidos"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: full
     archive: zip
     member: "EmendasParlamentares_PorFavorecido.csv"

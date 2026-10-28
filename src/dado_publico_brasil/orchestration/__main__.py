@@ -194,7 +194,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1 if problems else 0
         case "observe":
             con = warehouse.connect(settings, read_only=True)
-            lines, failed = observability.report(con)
+            lines, failed = observability.report(con, pipeline.freshness_limits())
             con.close()
             print(chr(10).join(lines))
             html = observability.html_report(settings) if args.html else None

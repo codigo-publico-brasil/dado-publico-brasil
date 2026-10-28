@@ -80,6 +80,16 @@ REFRESH_TAG = (
 )
 
 
+def freshness_limits() -> dict[tuple[str, str], int]:
+    """A idade máxima da última verificação de cada (fonte, dataset) com `max_age_days` no contrato."""
+    return {
+        (spec.source, name): dataset.max_age_days
+        for spec in contract.find_all()
+        for name, dataset in spec.datasets.items()
+        if dataset.max_age_days is not None
+    }
+
+
 def registers_update(captures: int, refresh: bool, never_registered: bool) -> bool:
     """O raw registra atualização (libera o que vem depois) com captura nova, ao refazer ou na 1ª vez."""
     return bool(captures) or refresh or never_registered

@@ -25,10 +25,12 @@ ANOMALIES = (
 )
 
 
-def report(con: Connection) -> tuple[list[str], bool]:
-    """O resumo da última verificação: fontes e carga, testes do dbt e anomalias dos marts.
+def report(con: Connection, limits: dict[tuple[str, str], int] | None = None) -> tuple[list[str], bool]:
+    """O resumo da última verificação: fontes e carga, capturas velhas, testes do dbt e anomalias dos marts.
 
-    Devolve (linhas do relatório, há problema?).
+    `limits` diz a idade máxima, em dias, da última verificação de cada (fonte, dataset); quem conhece os
+    contratos (a orquestração) o monta. Sem ele, a checagem de captura velha não roda.
+    Devolve (linhas, há problema?).
     """
     lines: list[str] = []
     sources = con.execute(
@@ -53,6 +55,9 @@ def report(con: Connection) -> tuple[list[str], bool]:
             if n > 1
             else f"  [{status}] {name} ({check}): {detail}{years}"
         )
+    stale = stale_captures(con, limits or {})
+    lines += ["", f"Capturas velhas: {len(stale)}"]
+    lines += [f"  [erro] {line}" for line in stale]
     failing = con.execute(
         "SELECT status, unique_id, failures FROM metadata.dbt_results "
         "WHERE run_id IN (SELECT max(id) FROM metadata.runs WHERE source = 'dbt' AND stage LIKE 'transform%' "
@@ -64,7 +69,28 @@ def report(con: Connection) -> tuple[list[str], bool]:
     anomalies = con.execute(ANOMALIES).fetchall()
     lines += ["", f"Anomalias nos marts (Elementary): {len(anomalies)}"]
     lines += [f"  [{s}] {uid}: {(message or '')[:200]}" for s, uid, _, message in anomalies]
-    return lines, bool(source_errors or failing or anomalies)
+    return lines, bool(source_errors or stale or failing or anomalies)
+
+
+def stale_captures(con: Connection, limits: dict[tuple[str, str], int]) -> list[str]:
+    """Datasets cuja última verificação é mais velha que o limite (ou que nunca foram capturados).
+
+    Usa `last_checked_at`, que a pipeline atualiza a cada verificação da fonte mesmo quando o arquivo não
+    mudou: se ele para de andar, a pipeline parou ou a fonte deixou de responder.
+    """
+    problems: list[str] = []
+    for (source, dataset), limit in sorted(limits.items()):
+        row = con.execute(
+            "SELECT date_diff('day', CAST(max(last_checked_at) AS TIMESTAMP), current_timestamp) "
+            "FROM metadata.captures WHERE source = ? AND dataset = ?",
+            (source, dataset),
+        ).fetchone()
+        age = None if row is None else row[0]
+        if age is None:
+            problems.append(f"{source}.{dataset}: nunca capturado (limite de {limit} dias)")
+        elif age > limit:
+            problems.append(f"{source}.{dataset}: última verificação há {age} dias (limite de {limit})")
+    return problems
 
 
 def html_report(settings: Settings) -> Path:
@@ -87,9 +113,9 @@ def html_report(settings: Settings) -> Path:
     return file
 
 
-def notify(con: Connection) -> bool:
+def notify(con: Connection, limits: dict[tuple[str, str], int] | None = None) -> bool:
     """Manda o relatório por e-mail se houver problema e o SMTP estiver configurado. Nunca falha."""
-    lines, failed = report(con)
+    lines, failed = report(con, limits)
     if not failed:
         return False
     try:

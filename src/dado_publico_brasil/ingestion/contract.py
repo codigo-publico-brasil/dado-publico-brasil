@@ -77,6 +77,9 @@ class Dataset:
     aliases: dict[str, str] = field(
         default_factory=dict
     )  # layout antigo: nome antigo da coluna -> nome em `columns`
+    max_age_days: int | None = (
+        None  # idade máxima da última verificação da fonte; mais velha que isso é problema
+    )
 
     @property
     def yearly(self) -> bool:
@@ -189,7 +192,16 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         aliases=dict(data.get("aliases", {})),
         optional=tuple(data.get("optional", ())),
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
+        max_age_days=_max_age(where, data.get("max_age_days")),
     )
+
+
+def _max_age(where: str, value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise InvalidContract(f"{where}: max_age_days deve ser um número inteiro de dias, maior que zero")
+    return value
 
 
 def _foreach(where: str, data: dict[str, Any]) -> ForEach:
