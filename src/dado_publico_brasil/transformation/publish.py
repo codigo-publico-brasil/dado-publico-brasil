@@ -6,13 +6,40 @@ comando atômico: quem lê vê ou os marts antigos ou os novos, nunca metade. O 
 baixa a extensão.
 """
 
+import re
+from urllib.parse import parse_qs, urlparse
+
 import duckdb
 
 from dado_publico_brasil.core.settings import Settings
 
 READER = "leitor"
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "postgres"}  # "postgres": o serviço do compose.yaml
+SECURE_MODES = {"require", "verify-ca", "verify-full"}
 LIVE = "marts"
 STAGING = "marts_novo"
+
+
+def require_tls(dsn: str) -> None:
+    """Recusa o DSN de um servidor não local que não exija TLS (`sslmode` require, verify-ca ou verify-full).
+
+    Em produção a senha e os dados do serviço não podem trafegar sem criptografia (issue 37). Aceita os
+    dois formatos do libpq: a URL (`postgresql://...?sslmode=require`) e `chave=valor`.
+    """
+    if "://" in dsn:
+        url = urlparse(dsn)
+        host = url.hostname or ""
+        mode = (parse_qs(url.query).get("sslmode") or [""])[0]
+    else:
+        pairs = dict(re.findall(r"(\w+)\s*=\s*'?([^'\s]+)'?", dsn))
+        host = pairs.get("host", "localhost")
+        mode = pairs.get("sslmode", "")
+    if host in LOCAL_HOSTS or mode in SECURE_MODES:
+        return
+    raise ValueError(
+        f"o DSN do servidor '{host}' não exige TLS: acrescente sslmode=require (ou verify-full) em "
+        "DADO_PUBLICO_POSTGRES_DSN; só o banco local dispensa"
+    )
 
 
 def _quote(text: str) -> str:
@@ -53,6 +80,7 @@ def publish(settings: Settings) -> dict[str, int]:
     """Copia cada tabela de `marts` e devolve as linhas publicadas por tabela."""
     if not settings.service_dsn:
         raise ValueError("defina DADO_PUBLICO_POSTGRES_DSN (veja .env.example)")
+    require_tls(settings.service_dsn)
     con = duckdb.connect()
     try:
         con.execute("INSTALL postgres")
