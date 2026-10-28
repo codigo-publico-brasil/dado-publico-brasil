@@ -100,10 +100,10 @@ datasets:
   receitas_candidatos:
     # Prestação de contas dos candidatos: uma linha por receita. Só as colunas do total arrecadado; o nome e o
     # documento de quem doou não entram (minimização). Os dois datasets de prestação leem o mesmo pacote (distintos
-    # pelo fragmento da URL, que não vai ao servidor); o pacote de 2022 tem centenas de MB: peça por ano.
+    # pelo fragmento da URL, que não vai ao servidor); o pacote de 2018 e o de 2022 têm centenas de MB: peça por ano.
     url: "{base_url}/prestacao_contas/prestacao_de_contas_eleitorais_candidatos_{year}.zip#receitas"
     load: yearly
-    first_year: 2022
+    first_year: 2018   # 2018 tem os mesmos arquivos e colunas de 2022; 2014 e anteriores não estão neste endereço
     step: 4
     archive: zip
     member: "receitas_candidatos_[0-9]*_BRASIL.csv"   # não pega receitas_candidatos_doador_originario_*
@@ -118,7 +118,7 @@ datasets:
     # sem o nome nem o documento do fornecedor.
     url: "{base_url}/prestacao_contas/prestacao_de_contas_eleitorais_candidatos_{year}.zip#despesas"
     load: yearly
-    first_year: 2022
+    first_year: 2018   # 2018 tem os mesmos arquivos e colunas de 2022; 2014 e anteriores não estão neste endereço
     step: 4
     archive: zip
     member: "despesas_contratadas_candidatos_*_BRASIL.csv"
