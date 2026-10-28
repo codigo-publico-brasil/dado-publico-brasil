@@ -273,7 +273,7 @@ def _votacao() -> bytes:
         VOTACAO_COLUNAS,
         [
             {"NR_TURNO": "1", "SQ_CANDIDATO": sq, "DS_CARGO": cargo, "SG_UF": uf, "SG_UE": uf, "CD_MUNICIPIO": municipio,
-             "NM_MUNICIPIO": f"MUNICIPIO {municipio}", "NR_ZONA": zona, "NM_CANDIDATO": nomes[sq][0],
+             "NM_UE": "#NE", "NM_MUNICIPIO": f"MUNICIPIO {municipio}", "NR_ZONA": zona, "NM_CANDIDATO": nomes[sq][0],
              "NM_URNA_CANDIDATO": nomes[sq][1], "NM_SOCIAL_CANDIDATO": "NOME SOCIAL SIGILOSO",
              "QT_VOTOS_NOMINAIS": nominais, "QT_VOTOS_NOMINAIS_VALIDOS": validos, "NM_TIPO_DESTINACAO_VOTOS": destino,
              "ST_VOTO_EM_TRANSITO": "N", "DS_SIT_TOT_TURNO": "ELEITO POR QP"}

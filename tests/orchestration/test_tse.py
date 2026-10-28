@@ -139,6 +139,31 @@ def test_senator_detail_gives_birth_naturality_photo_and_the_institutional_conta
     )
 
 
+def test_the_tse_markers_for_no_value_never_reach_the_staging_tables(full: Env) -> None:
+    con, _ = full
+    assert (
+        scalar(con, "SELECT COUNT(*) FROM raw_federal_tse.votacao WHERE nm_ue = '#NE'") > 0
+    )  # o marcador chega ao raw
+    tables = [
+        name
+        for (name,) in con.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'staging' AND table_name LIKE 'stg_tse__%'"
+        ).fetchall()
+    ]
+    assert tables
+    leaks = []
+    for table in tables:
+        for column in columns(con, "staging", table):
+            count = scalar(
+                con,
+                f'SELECT COUNT(*) FROM staging."{table}" '
+                f"WHERE upper(TRY_CAST(\"{column}\" AS VARCHAR)) IN ('#NE', '#NE#', '#NULO', '#NULO#')",
+            )
+            if count:
+                leaks.append(f"{table}.{column}")
+    assert leaks == []  # o raw espelha a fonte; da camada staging em diante o vazio é vazio
+
+
 def test_candidate_declarations_reach_the_marts_and_documents_never_do(full: Env) -> None:
     con, _ = full
     row = con.execute(

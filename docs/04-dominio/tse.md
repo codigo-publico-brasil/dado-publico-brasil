@@ -18,6 +18,10 @@ Em cada eleição, quem quer disputar um cargo registra uma **candidatura**, com
 | `situacao_candidatura` | situação do registro (por exemplo, deferido) |
 | `resultado` | eleito por quociente partidário (QP), eleito por média, suplente, não eleito; vazio quando a fonte marca `#NULO#` |
 
+## Marcadores de "sem valor"
+
+Os arquivos do TSE escrevem `#NULO#` (campo sem informação) e `#NE` (não existe) onde não há valor. O raw guarda como veio, e do staging em diante todo texto dos arquivos do TSE passa por `tse_source`, que troca esses marcadores por vazio. Um teste (`test_the_tse_markers_for_no_value_never_reach_the_staging_tables`) confere que nenhuma tabela de staging do TSE os mantém.
+
 ## O que fica de fora, de propósito
 
 CPF, título de eleitor, e-mail e nome social do candidato **nunca** entram (a declaração da fonte não os lista). Bens declarados, redes sociais, fotos e certidões ainda não foram carregados.
