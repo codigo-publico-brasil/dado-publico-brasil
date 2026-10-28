@@ -160,11 +160,11 @@ a { color: var(--accent); }
 </header>
 
 <div class="callout">
-  <p><b>O que mudou nesta revisão.</b> (1) Eventos agora têm tipo de catálogo fechado e a tabela única ficou derivada: seção 6. (2) <code>pessoas</code> passa a ter quem já teve pelo menos um cargo: seção 5 e decisão 1. (3) A análise da estrutura inteira gerou oito ajustes: seção 1.1. (4) Nova seção com exemplos de views para o No Cargo e o Quem Decidiu, com dados reais de hoje: seção 9.</p>
+  <p><b>O que mudou nesta revisão.</b> (1) Eventos agora têm tipo de catálogo fechado e a tabela única ficou derivada: seção 6. (2) <code>pessoas</code> passa a ter quem já teve pelo menos um cargo: seção 5 e decisão 1. (3) A análise da estrutura inteira gerou oito ajustes: seção 1.1. (4) Nova seção com exemplos de views para quem ocupa o poder e para como se decide, com dados reais de hoje: seção 9.</p>
 </div>
 
 <h2 id="problema">1 O que está errado hoje</h2>
-<p>Os dados estão certos na fonte, mas espalhados. A mesma pessoa aparece em quatro tabelas com chaves diferentes, e cada pergunta nova virou uma tabela nova. Os casos de Lula e de Flávio Bolsonaro no No Cargo mostram o padrão.</p>
+<p>Os dados estão certos na fonte, mas espalhados. A mesma pessoa aparece em quatro tabelas com chaves diferentes, e cada pergunta nova virou uma tabela nova. Os casos de Lula e de Flávio Bolsonaro mostram o padrão.</p>
 <ul>
   <li><b>Fontes misturadas na mesma linha.</b> <code>eleitos</code> junta TSE com Câmara e Senado (pessoa, mandato, tipo de mandato). O resultado muda conforme qual fonte conseguiu ligar a pessoa.</li>
   <li><b>Campanha, foto e histórico só existem para eleito.</b> Quem ainda não foi eleito, como os dois candidatos do segundo turno de 2026, fica sem nada, embora os dados de campanha já estejam carregados.</li>
@@ -531,13 +531,13 @@ a { color: var(--accent); }
 </table></div>
 
 <h2 id="exemplos">9 Exemplos: o que os aplicativos consomem</h2>
-<p>Cada aplicativo lê só do esquema <code>servico</code>, em views sem regra de negócio: elas juntam, filtram e dão nome. Qualquer regra nova nasce no núcleo, nos fatos ou na análise, com teste. Os exemplos abaixo mostram views para os dois aplicativos de hoje, <b>No Cargo</b> (quem está no cargo e o histórico dos candidatos) e <b>Quem Decidiu</b> (quem propôs, quem votou e quem aprovou), e para duas perguntas de comparação.</p>
+<p>Cada aplicativo lê só do esquema <code>servico</code>, em views sem regra de negócio: elas juntam, filtram e dão nome. Qualquer regra nova nasce no núcleo, nos fatos ou na análise, com teste. Os exemplos abaixo mostram views para dois tipos de consumo, <b>quem ocupa o poder</b> (quem está no cargo e o histórico dos candidatos) e <b>como se decide</b> (quem propôs, quem votou e quem aprovou), e para duas perguntas de comparação.</p>
 <div class="callout warn">
   <p><b>Como ler.</b> As consultas são de desenho: mostram quais tabelas e quais chaves cada view usa, e os nomes de colunas ainda não são o contrato final (ele sai na fase de cada tabela). Os números vêm do warehouse de hoje, das tabelas atuais, consultados em 27/10/2026. Eles mostram o que o aplicativo já recebe e onde o novo modelo muda o resultado.</p>
 </div>
 
-<h3>9.1 No Cargo</h3>
-<p><b>View <code>servico.no_cargo_ocupantes</code>: quem ocupa cada cargo em uma data.</b> Responde "quem é o governador de cada estado hoje" e, trocando o parâmetro, em qualquer data passada.</p>
+<h3>9.1 Quem ocupa o poder</h3>
+<p><b>View <code>servico.cargo_ocupantes</code>: quem ocupa cada cargo em uma data.</b> Responde "quem é o governador de cada estado hoje" e, trocando o parâmetro, em qualquer data passada.</p>
 <pre><code>select t.nome as territorio, c.nome as cargo, p.nome, pa.sigla as partido,
        m.dt_inicio, m.cd_base as base_do_inicio
 from fatos.mandatos m
@@ -547,7 +547,7 @@ join core.territorios t using (id_territorio)
 left join core.partidos pa on pa.id_partido = m.id_partido
 where :data between m.dt_inicio and coalesce(m.dt_fim, date '9999-12-31')
   and m.fl_em_exercicio</code></pre>
-<p><b>View <code>servico.no_cargo_pessoa</code>: a ficha com a linha do tempo.</b> É o que corrige o caso de Lula: o histórico sai de <code>eventos</code>, não de uma tabela só de eleitos.</p>
+<p><b>View <code>servico.pessoa_eventos</code>: a ficha com a linha do tempo.</b> É o que corrige o caso de Lula: o histórico sai de <code>eventos</code>, não de uma tabela só de eleitos.</p>
 <pre><code>select e.dt_evento, e.cd_precisao_data, tp.nome as evento, c.nome as cargo,
        t.nome as territorio, e.cd_base, cp.url_original
 from fatos.eventos e
@@ -557,7 +557,7 @@ left join core.territorios t on t.id_territorio = e.id_territorio
 join metadata.captures cp on cp.id_captura = e.id_captura
 where e.id_pessoa = :id_pessoa
 order by e.dt_evento</code></pre>
-<p><b>View <code>servico.no_cargo_campanhas</code>: todas as candidaturas da pessoa, com foto e campanha, tenha ela vencido ou não.</b></p>
+<p><b>View <code>servico.pessoa_campanhas</code>: todas as candidaturas da pessoa, com foto e campanha, tenha ela vencido ou não.</b></p>
 <pre><code>select d.ano_eleicao, c.nome as cargo, ca.numero, pa.sigla as partido, r.cd_resultado,
        ca.foto_caminho, cm.valor_receitas, cm.valor_despesas, cm.valor_bens
 from fatos.candidaturas ca
@@ -569,7 +569,7 @@ left join core.partidos    pa on pa.id_partido = ca.id_partido
 where ca.id_pessoa = :id_pessoa</code></pre>
 <p><b>O que o aplicativo recebe hoje e o que muda.</b> Flávio Bolsonaro sai de <code>eleitos</code> com cinco eleições, todas vitórias: deputado estadual em 2002, 2006, 2010 e 2014, e senador em 2018. Uma candidatura que não terminou em vitória, ou ainda sem resultado, como as de 2026, não entra em <code>eleitos</code> e por isso aparece sem campanha. Em <code>fatos.candidaturas</code> entram todas, com campanha, foto e resultado vazio quando o TSE ainda não informa.</p>
 
-<h3>9.2 Quem Decidiu</h3>
+<h3>9.2 Como se decide</h3>
 <p><b>View <code>servico.decisao</code>: uma linha por votação, com a proposição, o resultado e o documento original.</b> <b>View <code>servico.decisao_partidos</code>: o voto por partido.</b></p>
 <pre><code>select v.dt_votacao, pr.sigla || ' ' || pr.numero || '/' || pr.ano as proposicao,
        v.cd_resultado, v.qtd_sim, v.qtd_nao,
@@ -631,9 +631,9 @@ where d.id_territorio = :id_municipio and ca.ano_eleicao = :ano</code></pre>
 <div class="scroll"><table>
   <thead><tr><th>View</th><th>Tabelas do desenho</th><th>Fase</th><th>Dado que falta</th></tr></thead>
   <tbody>
-    <tr><td class="k"><code>no_cargo_ocupantes</code></td><td>mandatos, cargos, territorios, partidos, pessoas</td><td>F4</td><td>Início e fim de Executivo e Legislativos locais saem do calendário legal (derivado).</td></tr>
-    <tr><td class="k"><code>no_cargo_pessoa</code></td><td>eventos, evento_tipos, captures</td><td>F5</td><td>Diplomação e afastamentos fora do Congresso.</td></tr>
-    <tr><td class="k"><code>no_cargo_campanhas</code></td><td>candidaturas, resultados, campanhas, disputas</td><td>F2</td><td>Prestação de contas de 2018 e anos anteriores.</td></tr>
+    <tr><td class="k"><code>cargo_ocupantes</code></td><td>mandatos, cargos, territorios, partidos, pessoas</td><td>F4</td><td>Início e fim de Executivo e Legislativos locais saem do calendário legal (derivado).</td></tr>
+    <tr><td class="k"><code>pessoa_eventos</code></td><td>eventos, evento_tipos, captures</td><td>F5</td><td>Diplomação e afastamentos fora do Congresso.</td></tr>
+    <tr><td class="k"><code>pessoa_campanhas</code></td><td>candidaturas, resultados, campanhas, disputas</td><td>F2</td><td>Prestação de contas de 2018 e anos anteriores.</td></tr>
     <tr><td class="k"><code>decisao</code> e <code>decisao_partidos</code></td><td>votacoes, votacoes_proposicoes, votos, proposicoes, partidos</td><td>F2 e F4</td><td>Papel de cada proposição na votação (a verificar na fonte).</td></tr>
     <tr><td class="k"><code>composicao_comparada</code></td><td>composicoes, partidos</td><td>F5</td><td>Mandatos de vereador e deputado estadual com início e fim.</td></tr>
     <tr><td class="k"><code>municipio_governo</code></td><td>candidaturas, resultados, disputas, pessoas</td><td>F2</td><td>Nenhum para a eleição; a ligação com pessoas segue a decisão 1.</td></tr>

@@ -2,7 +2,7 @@
 
 Os dados abertos do poder público brasileiro, capturados da fonte oficial, organizados em tabelas prontas para consulta e **auditáveis**: cada dado carrega a fonte, a URL e a data de captura.
 
-Este repositório é a camada de dados do projeto [Código Público Brasil](https://github.com/codigo-publico-brasil). Ele alimenta aplicações, como o [quem-decidiu](https://github.com/codigo-publico-brasil/quem-decidiu) (quem propôs, quem votou e quem aprovou cada decisão), e serve também de material de estudo de engenharia de dados: a documentação explica cada decisão e as alternativas.
+Este repositório é a camada de dados do projeto [Código Público Brasil](https://github.com/codigo-publico-brasil). É genérica: qualquer aplicação pode consumir os dados, e ela não depende de nenhuma. Serve também de material de estudo de engenharia de dados: a documentação explica cada decisão e as alternativas.
 
 ## Por que existe
 

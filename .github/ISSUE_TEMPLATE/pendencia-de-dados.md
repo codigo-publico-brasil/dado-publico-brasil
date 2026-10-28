@@ -11,7 +11,7 @@ Uma frase: qual dado, de qual fonte.
 O que já está carregado (com números) e onde ver (`dado-publico coverage`, `docs/03-consultar/04-cobertura-e-lacunas.md`).
 
 ## Por que importa
-Que pergunta de quem decidiu o dado responde.
+Que pergunta o dado responde.
 
 ## O que destrava
 Decisão, autorização, fonte a pesquisar ou volume a carregar.
