@@ -48,7 +48,7 @@ O projeto e os dados gerados precisam ser fáceis de auditar pelo público: cada
 ## Como renomear
 
 1. Renomeie o modelo ou a coluna no SQL e no YAML do dbt, com a descrição.
-2. Atualize testes, `docs/03-consultar/01-catalogo.md` (`uv run dado-publico catalog`) e quem lê o mart (a aplicação quem-decidiu).
+2. Atualize testes, `docs/03-consultar/01-catalogo.md` (`uv run dado-publico catalog`) e quem lê o mart (as aplicações).
 3. Registre o nome antigo e o novo em [`renomeacao-dos-marts.md`](../99-historico/renomeacao-dos-marts.md), para quem consome os dados.
 
 ## Como é garantido

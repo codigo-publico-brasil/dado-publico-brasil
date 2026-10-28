@@ -227,7 +227,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `cargo_ocupantes` | Quem ocupa cada cargo, uma linha por mandato; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. É a composição eleita, não o exercício (cassação, renúncia e morte não entram no fim). Só mandatos com início. | publico-agente-publico | mandato |
 | `composicao_comparada` | A composição por corte, tipo, cargo, território e partido, com nomes legíveis; o aplicativo escolhe dois cortes e compara. A eleita e a em exercício aparecem separadas. | publico | corte |
-| `decisao` | Uma linha por votação e proposição, com o resultado e os totais, para a página Quem Decidiu. | publico | votação e proposição |
+| `decisao` | Uma linha por votação e proposição, com o resultado e os totais, para consumo pelas aplicações. | publico | votação e proposição |
 | `decisao_partidos` | O voto por partido em cada votação, com a sigla do partido como estava no voto. O id_partido entra quando houver fatos.votos. | publico | votação |
 | `municipio_governo` | Prefeito, vice e vereadores eleitos de cada município por eleição, com partido. | publico-agente-publico | mandato municipal |
 | `pessoa_campanhas` | Todas as candidaturas da pessoa, com foto, resultado e campanha, tenha ela vencido ou não. Só candidaturas de quem tem pessoa no projeto (quem já foi eleito). | publico-agente-publico | candidatura |

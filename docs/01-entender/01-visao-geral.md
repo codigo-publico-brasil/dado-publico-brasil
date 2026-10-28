@@ -4,7 +4,7 @@ Para quem chega ao projeto. Responde: o que é, para quê, até onde vai e o que
 
 ## O que é
 
-A **camada de dados** do [Código Público Brasil](https://github.com/codigo-publico-brasil): captura dados abertos do poder público, organiza em camadas e os entrega prontos, com fonte oficial, URL e data de captura, para qualquer aplicação consumir. A camada é genérica, sem acoplamento a nenhuma aplicação (a fronteira é o esquema `marts`/`servico`); aplicações como o [No Cargo](https://github.com/codigo-publico-brasil/nocargo) e o [quem-decidiu](https://github.com/codigo-publico-brasil/quem-decidiu) são consumidoras.
+A **camada de dados** do [Código Público Brasil](https://github.com/codigo-publico-brasil): captura dados abertos do poder público, organiza em camadas e os entrega prontos, com fonte oficial, URL e data de captura, para qualquer aplicação consumir. A camada é genérica: não é de uma aplicação específica, e qualquer uma pode consumir o contrato publicado.
 
 ## Escopo
 

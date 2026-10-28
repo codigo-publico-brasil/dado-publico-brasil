@@ -40,7 +40,7 @@ O campo `sigla_tipo` (e `descricao_tipo`) diz o que a proposição é. Os princi
 | **PRL** | Parecer de relator em comissão | Documento da tramitação, não um projeto |
 | **RDF** | Redação final | Versão final do texto aprovado, antes de seguir |
 
-Consequência para o dado: **a maior parte das "propostas" de um deputado é requerimento ou emenda**, não projeto de lei. Contar "quantos projetos o deputado propôs" exige filtrar por tipo, e o projeto precisa dizer qual filtro usou. A metodologia ([metodologia-v0](../../../quem-decidiu/docs/produto/metodologia-v0.md)) define "propôs".
+Consequência para o dado: **a maior parte das "propostas" de um deputado é requerimento ou emenda**, não projeto de lei. Contar "quantos projetos o deputado propôs" exige filtrar por tipo, e o projeto precisa dizer qual filtro usou.
 
 ## Autoria, assinatura e "proponente"
 

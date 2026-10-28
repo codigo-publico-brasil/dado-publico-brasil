@@ -52,7 +52,7 @@ models:
       - {name: valor_bens, description: "Soma dos bens declarados, em reais."}
 
   - name: decisao
-    description: Uma linha por votação e proposição, com o resultado e os totais, para a página Quem Decidiu.
+    description: Uma linha por votação e proposição, com o resultado e os totais, para consumo pelas aplicações.
     meta: {sensitivity: publico, grain: votação e proposição, owner: fundador do projeto, freshness: diário}
     columns:
       - {name: fonte, description: "Fonte da votação (camara ou senado)."}

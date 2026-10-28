@@ -26,4 +26,3 @@ Para quem chega ao projeto: onde cada coisa mora em `docs/` e em que ordem ler. 
 4. **Itens e pendências ficam em issues** do repositório, não em arquivos `.md`.
 5. **O catálogo ([`03-consultar/01-catalogo.md`](03-consultar/01-catalogo.md)) é gerado** (`uv run dado-publico catalog`); um teste falha se estiver desatualizado.
 6. **Quem muda comportamento atualiza o documento no mesmo PR.**
-7. Documentos de produto de cada aplicação ficam no repositório dela ([No Cargo](https://github.com/codigo-publico-brasil/nocargo), [quem-decidiu](https://github.com/codigo-publico-brasil/quem-decidiu)), não aqui.
