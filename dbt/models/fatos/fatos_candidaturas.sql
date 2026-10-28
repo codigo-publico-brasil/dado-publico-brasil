@@ -21,6 +21,13 @@ with turnos as (
 
 ),
 
+turnos_votados as (
+
+    -- o turno também pode vir só da votação (em 2006 o arquivo de candidaturas não tem o 2º turno de presidente)
+    select id_candidatura, max(turno) as ultimo_turno_votado from {{ ref('resultados') }} group by id_candidatura
+
+),
+
 ultimo_turno as (
 
     -- o mais votado do último turno com votos, para a disputa de uma vaga (derivado dos votos, ver `resultados`)
@@ -78,7 +85,7 @@ select
     c.federacao_sigla as federacao,
     c.coligacao_nome as coligacao,
     t.situacao_candidatura,
-    t.qtd_turnos,
+    greatest(t.qtd_turnos, coalesce(tv.ultimo_turno_votado, 0)) as qtd_turnos,
     t.resultado,
     t.fl_eleito,
     u.fl_mais_votado_no_turno as fl_mais_votado_no_ultimo_turno,
@@ -111,6 +118,8 @@ left join {{ ref('partidos_siglas') }} as ps
     on ps.sigla_na_fonte = c.partido_sigla
     and ps.nr_partido = try_cast(c.numero_partido as integer)
     and try_cast(c.ano_eleicao as integer) between ps.ano_inicio and ps.ano_fim
+
+left join turnos_votados as tv on tv.id_candidatura = c.id_candidatura
 
 left join ultimo_turno as u on u.id_candidatura = c.id_candidatura
 
