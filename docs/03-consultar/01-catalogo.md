@@ -198,6 +198,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `disputas` | Cada cargo em cada unidade eleitoral de uma eleição, com o número de vagas que o TSE informa. Uma linha por eleição, cargo e unidade. É a base das candidaturas e dos resultados, e permite medir se alguma vaga ficou sem eleito. | publico | eleição |
 | `eleicoes` | Eleições do arquivo de vagas do TSE, uma por ano e código do TSE, ordinárias e suplementares. Se a eleição é ordinária é regra do projeto (cobertura de unidades por ano e cargo), e não informação do TSE. | publico | eleição |
+| `orgaos` | Os órgãos onde o mandato é exercido: comissões, plenário, mesa diretora e conselhos da Câmara. A chave id_orgao é do projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Senado, assembleias e câmaras municipais ainda não têm fonte carregada. O nome do modelo leva o prefixo core_ só porque marts.orgaos ainda existe; a tabela é core.orgaos. | publico | órgão |
 | `pessoas` | Quem já teve pelo menos um cargo (ADR 0030 e 0031): parlamentar da Câmara ou do Senado e todo eleito do TSE, a partir do momento da eleição. Quem só se candidatou e nunca foi eleito não está aqui. Uma linha por pessoa do projeto, com a chave de identidade que nunca muda nem é reaproveitada. Cada atributo diz de qual fonte veio (a Câmara e o Senado valem mais que o TSE; o TSE vale a candidatura mais recente que o traz). Só o que a fonte publica; nada é inferido. O nome do modelo leva o prefixo core_ só porque marts.pessoas ainda existe; a tabela é core.pessoas. | publico-agente-publico | pessoa |
 | `territorios` | Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato que fala de lugar (ADR 0030). | publico | território |
 
@@ -211,6 +212,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `mandatos` | Um mandato por candidatura eleita, de todos os cargos (inclusive vereador e o vice e os suplentes eleitos junto): o mandato nasce da eleição, não do exercício. Quem assumiu depois como suplente não tem linha aqui (será fatos.exercicios). O início vem da regra da Constituição com a vigência (core.cargos_posse); onde a Constituição não fixa a data, da data de posse do TSE quando plausível. O fim é sempre derivado da duração do cargo. Só TSE; a ligação com a pessoa do projeto virá com as pessoas de todos os eleitos. O nome do modelo leva o prefixo fatos_ só porque marts.mandatos ainda existe; a tabela é fatos.mandatos. | publico-agente-publico | mandato (candidatura eleita) |
 | `pessoas_partidos` | O partido de cada pessoa em cada momento, de fontes oficiais (ADR 0032): o histórico de deputados da Câmara (períodos em que o deputado aparece em um partido), os votos de deputados e senadores (o partido em cada voto, só para quem não tem histórico) e a candidatura do TSE (o partido pelo qual a pessoa concorreu em cada eleição, para toda pessoa que já foi eleita, inclusive vereador, prefeito e governador que nunca estiveram na Câmara). Troca de partido são dois momentos seguidos da mesma pessoa com partidos diferentes. O partido da candidatura não é a data de filiação, e a filiação partidária por data (arquivo de filiados do TSE) não é carregada: ver a base legal em docs/03-consultar/05-lgpd-dados-pessoais.md. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fatos.pessoas_partidos. | publico-agente-publico | partido de uma pessoa em um momento por fonte |
 | `resultados` | O que aconteceu em cada turno da eleição, candidatura a candidatura, só com arquivos do TSE. Uma linha por candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente). fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE. | publico-agente-publico | candidatura e turno |
+| `votacoes_proposicoes` | Que proposição (ou matéria) cada votação decidiu, uma linha por votação e proposição, com o papel. Troca a lista em texto de marts.votacoes por linhas que ligam a marts.proposicoes. Câmara: afetada (a votação mudou a situação da proposição) ou objeto (foi o assunto votado). Senado: a matéria da votação. Votação sem proposição na fonte não tem linha. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fatos.votacoes_proposicoes. | publico | votação e proposição |
 
 ## marts
 
@@ -300,6 +302,25 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `nome` | varchar | Descrição da eleição, como o TSE informa. |  |
 | `fl_ordinaria` | boolean | DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE. |  |
 | `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
+
+### core.orgaos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (camara). |  |
+| `id_orgao` | varchar | Chave do órgão no projeto: fonte e identificador da fonte. |  |
+| `id_orgao_na_fonte` | bigint | Identificador do órgão na fonte. |  |
+| `sigla` | varchar | Sigla do órgão. |  |
+| `nome_curto` | varchar | Nome curto do órgão, como a fonte informa. |  |
+| `nome` | varchar | Nome oficial do órgão. |  |
+| `tipo` | varchar | Tipo do órgão segundo a fonte. |  |
+| `casa` | varchar | Casa legislativa informada pela fonte; vazia quando não informa. |  |
+| `situacao` | varchar | Situação do órgão segundo a fonte. |  |
+| `dt_inicio` | date | Início do órgão, quando a fonte informa. |  |
+| `dt_instalacao` | date | Data de instalação, quando a fonte informa. |  |
+| `dt_fim` | date | Fim do órgão, quando a fonte informa. |  |
+| `fonte_url` | varchar | Endereço do órgão na fonte oficial. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
 
 ### core.pessoas
 
@@ -449,6 +470,15 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `percentual_votos_validos` | decimal(5,2) | Percentual dos votos válidos do candidato sobre os votos válidos de todos os candidatos da mesma disputa e turno, sem votos de legenda; vazio sem votos carregados. |  |
 | `fl_mais_votado_no_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no turno; vazio sem votos carregados ou em cargo de várias vagas. |  |
 | `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
+
+### fatos.votacoes_proposicoes
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (camara ou senado). |  |
+| `id_votacao` | varchar | Identificador da votação na fonte. |  |
+| `id_proposicao` | varchar | Identificador da proposição (Câmara) ou da matéria (Senado) na fonte; liga a marts.proposicoes (fonte e id_proposicao). O teste de aviso mede as que não estão carregadas lá. |  |
+| `papel` | varchar | Papel da proposição na votação: afetada, objeto (Câmara) ou materia (Senado). |  |
 
 ### marts.candidaturas
 

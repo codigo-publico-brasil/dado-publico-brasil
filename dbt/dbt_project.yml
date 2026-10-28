@@ -1,7 +1,7 @@
 # Projeto dbt da camada de dados (ADR 0006). Segue o guia de estrutura da dbt Labs:
 #   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
-#   core          referências do modelo (ADR 0030): pessoas, territórios, cargos, partidos, eleições, disputas, tipos de evento.
+#   core          referências do modelo (ADR 0030): pessoas, órgãos, territórios, cargos, partidos, eleições, disputas, tipos de evento.
 #   fatos         o que aconteceu, datado e com a fonte: candidaturas, resultados, campanhas, mandatos, exercícios, filiações (ADR 0030).
 #   marts         entidades prontas para consumo, uma por grain, com contrato de colunas.
 name: dado_publico_brasil
@@ -82,14 +82,14 @@ seeds:
     +persist_docs:
       relation: true
       columns: true
-    vinculos_aprovados:
-      +full_refresh: true  # sem isso, o seed criado vazio fica com tipos inferidos errados quando entra a primeira linha
-      +column_types: {origem_fonte: varchar, origem_tipo: varchar, id_origem: varchar, destino_fonte: varchar, destino_tipo: varchar, id_destino: varchar, aprovado_por: varchar, dt_aprovacao: date, evidencia: varchar}
-    partidos_eventos:
-      +column_types: {dt_aprovacao: date, ano: integer}
     core:
       +schema: core
       +column_types: {cd_cargo_tse: integer, duracao_anos: integer, id_partido: integer, id_partido_sucessor: integer, ano_fim: integer, nr_partido: integer, ano_inicio: integer, ano_eleicao_de: integer, ano_eleicao_ate: integer, mes_posse: integer, dia_posse: integer}
+      vinculos_aprovados:
+        +full_refresh: true  # sem isso, o seed criado vazio fica com tipos inferidos errados quando entra a primeira linha
+        +column_types: {origem_fonte: varchar, origem_tipo: varchar, id_origem: varchar, destino_fonte: varchar, destino_tipo: varchar, id_destino: varchar, aprovado_por: varchar, dt_aprovacao: date, evidencia: varchar}
+      partidos_eventos:
+        +column_types: {dt_aprovacao: date, ano: integer}
 
 data_tests:
   dado_publico_brasil:
