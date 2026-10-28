@@ -79,3 +79,27 @@ models:
       - {name: fonte_genero, data_type: varchar, description: "Fonte do gênero."}
       - {name: dt_entrada, data_type: date, description: "Dia em que a pessoa entrou na identidade do projeto (para o eleito do TSE, a primeira execução depois da eleição)."}
 
+  - name: core_orgaos
+    config: {alias: orgaos}
+    description: >
+      Os órgãos onde o mandato é exercido: comissões, plenário, mesa diretora e conselhos da Câmara. A chave id_orgao é do
+      projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Senado, assembleias e
+      câmaras municipais ainda não têm fonte carregada. O nome do modelo leva o prefixo core_ só porque marts.orgaos ainda
+      existe; a tabela é core.orgaos.
+    meta: {sensitivity: publico, grain: órgão, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara)."}
+      - {name: id_orgao, data_type: varchar, tests: [unique, not_null], description: "Chave do órgão no projeto: fonte e identificador da fonte."}
+      - {name: id_orgao_na_fonte, data_type: bigint, description: "Identificador do órgão na fonte."}
+      - {name: sigla, data_type: varchar, description: "Sigla do órgão."}
+      - {name: nome_curto, data_type: varchar, description: "Nome curto do órgão, como a fonte informa."}
+      - {name: nome, data_type: varchar, description: "Nome oficial do órgão."}
+      - {name: tipo, data_type: varchar, description: "Tipo do órgão segundo a fonte."}
+      - {name: casa, data_type: varchar, description: "Casa legislativa informada pela fonte; vazia quando não informa."}
+      - {name: situacao, data_type: varchar, description: "Situação do órgão segundo a fonte."}
+      - {name: dt_inicio, data_type: date, description: "Início do órgão, quando a fonte informa."}
+      - {name: dt_instalacao, data_type: date, description: "Data de instalação, quando a fonte informa."}
+      - {name: dt_fim, data_type: date, description: "Fim do órgão, quando a fonte informa."}
+      - {name: fonte_url, data_type: varchar, description: "Endereço do órgão na fonte oficial."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+
