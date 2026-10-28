@@ -39,7 +39,8 @@ def test_an_elementary_anomaly_is_a_problem_but_a_warning_of_our_own_gap_test_is
     lines, failed = observability.report(con)
     assert failed
     assert any("elementary_volume_anomalies_votos_" in line for line in lines)
-    assert not any("autorias_de_proposicao" in line for line in lines)
+    anomalies = lines[: next(i for i, line in enumerate(lines) if line.startswith("Saúde por dimensão"))]
+    assert not any("autorias_de_proposicao" in line for line in anomalies)
 
 
 def test_a_failing_dbt_test_is_a_problem(con: Connection) -> None:
