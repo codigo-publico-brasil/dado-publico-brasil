@@ -5,7 +5,7 @@ import re
 from dado_publico_brasil.core.warehouse import Connection, rows
 
 CONVENTION = "docs/03-consultar/02-convencao-de-nomes.md"
-OWN_LAYERS = ("staging", "intermediate", "core", "fatos", "analise", "marts")
+OWN_LAYERS = ("staging", "intermediate", "core", "fatos", "analise", "servico", "marts")
 CONNECTIVES = {
     "a",
     "ao",
@@ -81,7 +81,7 @@ def test_table_names_have_the_theme_first_and_no_connectives(full: tuple[Connect
     names = rows(
         full[0],
         "SELECT DISTINCT schema_name, table_name FROM duckdb_columns() WHERE schema_name IN ('staging', "
-        "'intermediate', 'core', 'fatos', 'analise', 'marts')",
+        "'intermediate', 'core', 'fatos', 'analise', 'servico', 'marts')",
     )
     wrong = []
     for r in names:

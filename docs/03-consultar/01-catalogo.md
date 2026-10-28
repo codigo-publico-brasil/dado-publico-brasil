@@ -221,6 +221,18 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `composicoes` | Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje), por território e partido. A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é analise.composicoes. | publico | corte |
 
+## servico
+
+| Tabela | O que é | Sensibilidade | Grain |
+| --- | --- | --- | --- |
+| `cargo_ocupantes` | Quem ocupa cada cargo, uma linha por mandato; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. É a composição eleita, não o exercício (cassação, renúncia e morte não entram no fim). Só mandatos com início. | publico-agente-publico | mandato |
+| `composicao_comparada` | A composição por corte, tipo, cargo, território e partido, com nomes legíveis; o aplicativo escolhe dois cortes e compara. A eleita e a em exercício aparecem separadas. | publico | corte |
+| `decisao` | Uma linha por votação e proposição, com o resultado e os totais, para a página Quem Decidiu. | publico | votação e proposição |
+| `decisao_partidos` | O voto por partido em cada votação, com a sigla do partido como estava no voto. O id_partido entra quando houver fatos.votos. | publico | votação |
+| `municipio_governo` | Prefeito, vice e vereadores eleitos de cada município por eleição, com partido. | publico-agente-publico | mandato municipal |
+| `pessoa_campanhas` | Todas as candidaturas da pessoa, com foto, resultado e campanha, tenha ela vencido ou não. Só candidaturas de quem tem pessoa no projeto (quem já foi eleito). | publico-agente-publico | candidatura |
+| `pessoa_eventos` | A ficha da pessoa com a linha do tempo, um evento por linha, com o nome do tipo, do cargo e do território e o endereço do arquivo original da fonte. | publico-agente-publico | evento da pessoa |
+
 ## marts
 
 | Tabela | O que é | Sensibilidade | Grain |
@@ -515,6 +527,104 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_territorio` | varchar | Território da composição (core.territorios): município, UF ou país; vazio onde a fonte não liga a um território. |  |
 | `id_partido` | integer | Partido (core.partidos): o da eleição na composição eleita, o mais recente conhecido até o corte na composição em exercício; vazio quando não se conhece. |  |
 | `qtd_membros` | bigint | Quantas pessoas ocupam o cargo naquele corte, território e partido. |  |
+
+### servico.cargo_ocupantes
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_candidatura` |  | Candidatura eleita que originou o mandato. |  |
+| `id_pessoa` |  | Pessoa do projeto. |  |
+| `nome` |  | Nome público da pessoa. |  |
+| `cargo` |  | Nome do cargo. |  |
+| `territorio` |  | Nome do território do mandato. |  |
+| `partido` |  | Sigla do partido pelo qual foi eleito. |  |
+| `dt_inicio` |  | Início do mandato. |  |
+| `base_do_inicio` |  | Como o início foi obtido: derivado da Constituição ou informado pelo TSE. |  |
+| `dt_fim_prevista` |  | Fim previsto do mandato (derivado da duração do cargo). |  |
+| `base_eleicao` |  | Como se sabe que foi eleito: informado pelo TSE ou derivado dos votos. |  |
+
+### servico.composicao_comparada
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `dt_corte` |  | Data do corte: 1º de janeiro ou 1º de julho. |  |
+| `tipo_composicao` |  | eleita ou exercicio. |  |
+| `cargo` |  | Nome do cargo. |  |
+| `territorio` |  | Nome do território; vazio onde a fonte não liga a um território. |  |
+| `partido` |  | Sigla do partido; vazia quando não se conhece. |  |
+| `cadeiras` |  | Quantas pessoas ocupam o cargo naquele corte, território e partido. |  |
+
+### servico.decisao
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` |  | Fonte da votação (camara ou senado). |  |
+| `id_votacao` |  | Identificador da votação na fonte. |  |
+| `dt_votacao` |  | Data da votação. |  |
+| `papel` |  | Papel da proposição na votação: afetada, objeto ou materia. |  |
+| `proposicao` |  | Sigla da proposição; vazia quando ela não está carregada. |  |
+| `ementa` |  | Ementa da proposição; vazia quando ela não está carregada. |  |
+| `url_proposicao` |  | Endereço da proposição na fonte. |  |
+| `descricao` |  | Descrição da votação como a fonte informa. |  |
+| `aprovada` |  | Resultado da votação segundo a fonte. |  |
+| `votos_sim` |  | Votos sim. |  |
+| `votos_nao` |  | Votos não. |  |
+| `votos_outros` |  | Demais votos (abstenção, obstrução). |  |
+
+### servico.decisao_partidos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` |  | Fonte da votação. |  |
+| `id_votacao` |  | Identificador da votação. |  |
+| `partido_no_voto` |  | Sigla do partido na data do voto, como a fonte informa. |  |
+| `voto` |  | Voto registrado. |  |
+| `qtd_votos` |  | Quantos votos. |  |
+
+### servico.municipio_governo
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_territorio` |  | Município (core.territorios). |  |
+| `municipio` |  | Nome do município. |  |
+| `ano_eleicao` |  | Ano da eleição. |  |
+| `cargo` |  | Nome do cargo. |  |
+| `nome` |  | Nome público da pessoa; vazio quando o eleito não tem pessoa. |  |
+| `partido` |  | Sigla do partido pelo qual foi eleito. |  |
+| `id_pessoa` |  | Pessoa do projeto. |  |
+
+### servico.pessoa_campanhas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_candidatura` |  | Identificador da candidatura. |  |
+| `id_pessoa` |  | Pessoa do projeto. |  |
+| `ano_eleicao` |  | Ano da eleição. |  |
+| `cargo` |  | Nome do cargo disputado; vazio quando a candidatura não tem disputa. |  |
+| `numero` |  | Número do candidato na urna. |  |
+| `partido` |  | Sigla do partido da candidatura. |  |
+| `resultado` |  | Resultado do último turno como o TSE informa; vazio quando não informa. |  |
+| `fl_eleito` |  | Verdadeiro quando o TSE marca a candidatura como eleita. |  |
+| `foto_caminho` |  | Caminho da foto oficial; vazio sem foto. |  |
+| `valor_receitas` |  | Soma das receitas declaradas, em reais; vazia sem prestação de contas carregada. |  |
+| `valor_despesas` |  | Soma das despesas contratadas declaradas, em reais. |  |
+| `valor_bens` |  | Soma dos bens declarados, em reais. |  |
+
+### servico.pessoa_eventos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_evento` |  | Identificador do evento. |  |
+| `id_pessoa` |  | Pessoa do evento. |  |
+| `ano_evento` |  | Ano do evento. |  |
+| `dt_evento` |  | Dia do evento, só quando a fonte dá o dia. |  |
+| `id_tipo_evento` |  | Tipo do evento, do catálogo. |  |
+| `evento` |  | Descrição do tipo do evento. |  |
+| `cargo` |  | Nome do cargo do evento, quando há. |  |
+| `territorio` |  | Nome do território do evento, quando há. |  |
+| `partido` |  | Sigla do partido do evento, quando há. |  |
+| `base` |  | Como o evento é obtido: informado pela fonte ou derivado de regra do projeto. |  |
+| `url_original` |  | Endereço do arquivo oficial de onde o evento veio; vazio quando o evento nasce de outra tabela do projeto. |  |
 
 ### marts.candidaturas
 
