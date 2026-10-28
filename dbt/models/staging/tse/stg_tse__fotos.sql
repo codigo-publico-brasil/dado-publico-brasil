@@ -1,6 +1,6 @@
 -- As fotos oficiais que o TSE publica das candidaturas das eleições gerais: uma linha por arquivo de imagem dentro de cada
 -- pacote por UF. Só lista (o raw guarda o nome e o tamanho; o pacote original está no landing). O nome do arquivo é
--- `F<UF><SQ_CANDIDATO>_div.jpg` (ou `.jpeg`; de 2006 a 2014, sem o F). Pacote não carregado vale por vazio (as fotos são carga opcional).
+-- `F<UF><SQ_CANDIDATO>_div.jpg` (ou `.jpeg`; em 2010 e 2014 sem o F; em 2006, `.png`). Pacote não carregado vale por vazio (as fotos são carga opcional).
 with pacotes as (
 
 {% set ufs = ['br', 'ac', 'al', 'am', 'ap', 'ba', 'ce', 'df', 'es', 'go', 'ma', 'mg', 'ms', 'mt', 'pa', 'pb', 'pe', 'pi', 'pr', 'rj', 'rn', 'ro', 'rr', 'rs', 'sc', 'se', 'sp', 'to'] %}
