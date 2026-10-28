@@ -139,7 +139,7 @@ datasets:
     step: 4
     format: members
     archive: zip
-    member: "F*_div.jp*g"
+    member: "*_div.jp*g"   # 2018 em diante: F<UF><SQ>_div.jpg; 2006 a 2014: <UF><SQ>_div.jpg
     write: merge
     primary_key: [member]
     columns: [member, size]
