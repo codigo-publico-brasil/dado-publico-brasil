@@ -13,7 +13,7 @@ from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection
 from dado_publico_brasil.ingestion import landing
 
-MEMBER = re.compile(r"^F[A-Z]{2}(\d+)_div\.(jpe?g)$")
+MEMBER = re.compile(r"^F?[A-Z]{2}(\d+)_div\.(jpe?g|png)$")  # o F falta em 2010 e 2014; 2006 usa png
 
 
 def extract_all(con: Connection, settings: Settings) -> int:

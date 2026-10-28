@@ -94,7 +94,7 @@ select
     f.arquivo as foto_arquivo,
     if(
         f.arquivo is not null,
-        c.ano_eleicao || '/' || f.pacote_uf || '/' || c.sq_candidato || '.' || regexp_extract(f.arquivo, '[.](jpe?g)$', 1),
+        c.ano_eleicao || '/' || f.pacote_uf || '/' || c.sq_candidato || '.' || regexp_extract(f.arquivo, '[.](jpe?g|png)$', 1),
         null
     ) as foto_caminho,
     if(
