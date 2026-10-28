@@ -132,7 +132,7 @@ Um único arquivo DuckDB, com um esquema por camada (`raw_<esfera>_<fonte>`, `st
 A fonte traz nomes e ementas ora em maiúsculas, ora em minúsculas. A regra única, em `macros/text_functions.sql`:
 
 - Só se altera texto **100% maiúsculo ou 100% minúsculo**; com as duas caixas, fica como está.
-- **Nomes:** `REGINALDO LÁZARO DE OLIVEIRA LOPES` vira `Reginaldo Lázaro de Oliveira Lopes`. Partículas (`da`, `de`, `dos`) em minúsculas; algarismos romanos e siglas sem vogal (`JHC`) em maiúsculas.
+- **Nomes:** `MARIA APARECIDA DA SILVA SOUZA` vira `Maria Aparecida da Silva Souza`. Partículas (`da`, `de`, `dos`) em minúsculas; algarismos romanos e siglas sem vogal (`XYZ`) em maiúsculas.
 - **Rótulos** (tipo de autor, situação): caixa de frase.
 - **Ementas:** o texto oficial vai em `ementa_oficial` e a versão padronizada em `ementa`. As siglas que a fonte escreve em maiúsculas dentro de outras ementas (`BNDES`) são mantidas (modelo `int_ementas_siglas_extraidas`).
 - O que a regra não resolve fica visível no teste `pessoas_com_nome_em_maiusculas`.

@@ -8,7 +8,7 @@ O desenho completo, com figuras, matrizes de eventos e dados a buscar, está em 
 
 ## Contexto
 
-Os marts cresceram por pergunta: `eleitos`, `candidaturas`, `eleitos_campanhas` e outros respondem coisas parecidas com grãos diferentes e misturam fontes. Casos reais no aplicativo No Cargo mostraram o efeito (Lula e Flávio Bolsonaro sem campanha, porque o mart só cobre quem venceu). A análise do warehouse em 27/10/2026 achou também texto no lugar de chave (partido, cargo, UF), 16 de 39 marts sem `dt_captura`, `pessoas` misturando cadastro com contagens, e `votacoes.proposicoes` como lista em texto. O objetivo do projeto é responder quem governa, por que governa e como governa, com dado aberto, curado e auditável.
+Os marts cresceram por pergunta: `eleitos`, `candidaturas`, `eleitos_campanhas` e outros respondem coisas parecidas com grãos diferentes e misturam fontes. Casos reais numa aplicação consumidora mostraram o efeito (duas pessoas com carreira longa sem campanha, porque o mart só cobre quem venceu). A análise do warehouse em 27/10/2026 achou também texto no lugar de chave (partido, cargo, UF), 16 de 39 marts sem `dt_captura`, `pessoas` misturando cadastro com contagens, e `votacoes.proposicoes` como lista em texto. O objetivo do projeto é responder quem governa, por que governa e como governa, com dado aberto, curado e auditável.
 
 ## Decisão
 

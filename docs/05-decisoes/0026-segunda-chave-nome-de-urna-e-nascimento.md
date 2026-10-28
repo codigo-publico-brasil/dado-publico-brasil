@@ -6,7 +6,7 @@
 
 ## Contexto
 
-A regra do ADR 0013 compara o nome civil. O TSE mantém o nome civil de cada eleição, e ele muda: Erika Santos Silva (2020 e 2022) virou Erika Hilton em 2026, e em 2016 o registro dela dizia Felipe Santos Silva. A ficha da deputada Erika Hilton saiu sem foto, mandatos e histórico, embora ela esteja na Câmara com o mesmo nascimento e o mesmo nome parlamentar. Na comparação com o Nexo, 4 dos 6 deputados que saíam sem selo tinham a mesma causa (Erika Hilton, Duda Salabert, Moses Rodrigues e Murilo Galdino).
+A regra do ADR 0013 compara o nome civil. O TSE mantém o nome civil de cada eleição, e ele muda: o registro de uma mesma pessoa pode trazer um nome civil em 2016, outro em 2020 e 2022 e outro em 2026. A ficha de uma deputada saiu sem foto, mandatos e histórico, embora ela esteja na Câmara com o mesmo nascimento e o mesmo nome parlamentar. Na comparação com o Nexo, 4 dos 6 deputados que saíam sem selo tinham a mesma causa.
 
 ## Decisão
 

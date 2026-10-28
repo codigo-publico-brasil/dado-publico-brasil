@@ -212,7 +212,7 @@ HTML = """<html><body>
 <p>§ 1º Um parágrafo (Incluído pelas Emendas Constitucionais nºs 20 e 41, de 1998 e 2003)</p>
 <p>Art. 8º Dispositivo antigo. (Revogado pela Emenda Constitucional nº 98, de 2023)</p>
 <p>Brasília, 5 de outubro de 1988</p>
-<p>Ulysses Guimarães</p>
+<p>Nome Exemplo</p>
 </body></html>"""
 
 HTML_ADCT = """<html><body>

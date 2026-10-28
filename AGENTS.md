@@ -61,6 +61,7 @@ Mapa em [`docs/README.md`](docs/README.md): `01-entender` (explica), `02-fazer` 
 - O catálogo (`03-consultar/01-catalogo.md`) é gerado; nunca edite à mão.
 - Decisão aceita não se edita: novo ADR, e a situação do antigo muda no índice de `05-decisoes/README.md`.
 - Pendência e decisão aberta são issues, nunca `.md`.
+- **Sem nomes de candidatos, partidos ou informações do tipo, em lugar nenhum:** exemplos, textos, **comentários de código, docstrings**, testes, mensagens de commit e descrições de PR e issue. Use rótulos genéricos ("Pessoa Exemplo", "Partido A"). A exceção são as tabelas de referência de `dbt/seeds/`, que são dado com fonte oficial. Três travas: o teste `tests/test_no_names.py` (roda no CI e guarda a lista só como hash), o gancho `.claude/hooks/no_names.py` (bloqueia o agente antes de gravar ou de commitar) e esta regra. Outros agentes que não usem o gancho continuam obrigados a cumprir a regra e a rodar o teste. Não cite também outras aplicações do projeto: este repositório é independente.
 
 ## Lições de experiência
 

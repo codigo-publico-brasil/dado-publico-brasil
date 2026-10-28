@@ -108,7 +108,7 @@ select
     'historico_de_deputados' as base,
     '{{ var("source_camara") }}-' || p.id_deputado || '-' || strftime(p.dt_inicio, '%Y%m%d%H%M') as id_pessoa_partido,
     i.id_pessoa,
-    -- a sigla pode ser de dois partidos (PL, PSD): vale o de período mais próximo do ano do registro
+    -- a sigla pode ser de dois partidos (siglas iguais de partidos diferentes): vale o de período mais próximo do ano do registro
     (
         select s.id_partido
         from siglas as s

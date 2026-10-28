@@ -8,8 +8,8 @@
 
     clean_text(x)                  espaços repetidos viram um e as pontas são aparadas
     sentence_case(x)               caixa de frase: "COMISSÃO PERMANENTE" -> "Comissão permanente"
-    proper_name(x)                 "REGINALDO LÁZARO DE OLIVEIRA LOPES" -> "Reginaldo Lázaro de Oliveira Lopes"
-                                   (partículas em minúsculas; algarismos romanos e siglas sem vogal, como JHC,
+    proper_name(x)                 "MARIA APARECIDA DA SILVA SOUZA" -> "Maria Aparecida da Silva Souza"
+                                   (partículas em minúsculas; algarismos romanos e siglas sem vogal, como XYZ,
                                    em maiúsculas)
     standardize_summary(x, siglas) caixa de frase para ementas, mantendo em maiúsculas as palavras de `siglas`
     name_key(x)                    chave para comparar nomes entre fontes: sem acento, minúsculas e espaços únicos

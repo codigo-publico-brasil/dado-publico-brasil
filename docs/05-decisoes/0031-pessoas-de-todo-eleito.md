@@ -28,7 +28,7 @@ O ADR 0030 decidiu que `pessoas` é quem já teve pelo menos um cargo, inclusive
 
 ## Consequências
 
-- Medido em dado real (cópia do warehouse): 314.201 pessoas novas; 928.4 mil candidaturas ligadas; 19 mandatos derivados dos votos (Lula em 2006 e prefeitos de 2008, 2016 e 2020), 234 disputas de uma vaga ainda sem eleito (prefeitos sem votos fechados e a eleição de 2026 em curso); 3 mandatos ficam sem pessoa por um caso de grupo que toca um deputado e um senador (Goiás, a conferir).
+- Medido em dado real (cópia do warehouse): 314.201 pessoas novas; 928.4 mil candidaturas ligadas; 19 mandatos derivados dos votos (um presidente em 2006 e prefeitos de 2008, 2016 e 2020), 234 disputas de uma vaga ainda sem eleito (prefeitos sem votos fechados e a eleição de 2026 em curso); 3 mandatos ficam sem pessoa por um caso de grupo que toca um deputado e um senador (Goiás, a conferir).
 - Cerca de 21 mil pessoas ficam sem data de nascimento porque o TSE não a informa; nelas a ligação entre eleições não existe e cada eleição pode ter virado outra pessoa. Medido, não corrigido.
 - Suplente que assumiu vaga de vereador, deputado estadual ou prefeito/vice não tem pessoa nem exercício: não há fonte oficial carregada.
 - Os identificadores já entregues não mudam; a identidade é idempotente (rodar de novo não cria nem funde nada).

@@ -396,7 +396,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_disputa` | varchar | Disputa da candidatura (core.disputas); vazio quando o arquivo de vagas do TSE não traz a unidade do candidato. O teste de aviso mede quantas ficam assim. |  |
 | `sq_candidato` | bigint | Número sequencial do candidato na eleição, como o TSE informa; liga ao nome do arquivo de foto. |  |
 | `numero` | varchar | Número do candidato na urna. |  |
-| `numero_partido` | varchar | Número do partido na urna, como o TSE informa. Não identifica o partido ao longo do tempo: o mesmo número já foi usado por partidos diferentes (por exemplo, o 18 foi do PST e depois da REDE). |  |
+| `numero_partido` | varchar | Número do partido na urna, como o TSE informa. Não identifica o partido ao longo do tempo: o mesmo número já foi usado por partidos diferentes (por exemplo, um número foi de um partido e depois de outro). |  |
 | `nome` | varchar | Nome civil do candidato, com caixa padronizada. |  |
 | `nome_urna` | varchar | Nome de urna, com caixa padronizada. |  |
 | `nome_social` | varchar | Nome social declarado pelo candidato; o TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido). | sim |
@@ -1102,7 +1102,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fonte` | varchar | Fonte oficial do registro. |  |
 | `id_partido` | bigint | Identificador do partido na fonte. |  |
 | `sigla` | varchar | Sigla do partido sem os asteriscos que a Câmara põe depois dela; mais de um registro pode ter a mesma sigla (veja sigla_original). |  |
-| `sigla_original` | varchar | Sigla exatamente como a Câmara publica, com os asteriscos (por exemplo, PP, PP** e PP***, registros diferentes com a mesma sigla). O significado dos asteriscos não consta nas fontes que consultamos. |  |
+| `sigla_original` | varchar | Sigla exatamente como a Câmara publica, com os asteriscos (por exemplo, a mesma sigla com um, dois ou três asteriscos, registros diferentes). O significado dos asteriscos não consta nas fontes que consultamos. |  |
 | `nome` | varchar | Nome do partido, com caixa padronizada. |  |
 
 ### marts.partidos_linhagem

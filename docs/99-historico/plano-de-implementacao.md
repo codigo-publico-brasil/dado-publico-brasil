@@ -60,7 +60,7 @@ A primeira versão responde a uma pergunta simples: quem propôs, quem votou e q
 
 **Casos de teste.** Alguns casos conhecidos servem de gabarito para o pipeline e para a página.
 
-- Fim da escala 6x1: segundo uma reportagem do jornal O Povo, o texto reuniu a PEC 221/2019 (Reginaldo Lopes, PT-MG) e a PEC 8/2025 (Érika Hilton, PSOL-SP), veio da Câmara em maio de 2026, e a CCJ do Senado o aprovou em 2 de setembro de 2026 por votação simbólica, com quatro senadores contrários. O plenário do Senado ficou para depois do primeiro turno das eleições. É uma única fonte, a situação pode ter mudado, e o placar da Câmara não foi confirmado; o gabarito deve vir dos dados oficiais.
+- Fim da escala 6x1: segundo uma reportagem do jornal O Povo, o texto reuniu a PEC 221/2019 e a PEC 8/2025, veio da Câmara em maio de 2026, e a CCJ do Senado o aprovou em 2 de setembro de 2026 por votação simbólica, com quatro senadores contrários. O plenário do Senado ficou para depois do primeiro turno das eleições. É uma única fonte, a situação pode ter mudado, e o placar da Câmara não foi confirmado; o gabarito deve vir dos dados oficiais.
 - Bolsa Família: quem criou, quem relatou e quem votou precisam ser levantados nas fontes oficiais antes de entrar. Nada disso foi pesquisado aqui.
 
 **Regras de apresentação.** "Propôs" significa autoria formal registrada. "Aprovou" significa voto registrado. Votação simbólica aparece como "sem voto individual". A ordem é sempre cronológica ou alfabética, o modelo de página é o mesmo para todos os partidos e não há adjetivos.

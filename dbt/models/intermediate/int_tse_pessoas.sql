@@ -1,6 +1,6 @@
 -- A mesma pessoa em eleições diferentes do TSE (ADRs 0025 e 0026). Duas chaves, cada uma com a data de nascimento:
 --  - o nome civil: a regra de base;
---  - o nome de urna, na mesma UF: pega quem mudou de nome civil entre as eleições (Erika Santos Silva virou Erika Hilton).
+--  - o nome de urna, na mesma UF: pega quem mudou de nome civil entre as eleições (uma pessoa que trocou de nome civil entre as eleições).
 -- Cada chave só vale quando é única em cada eleição (duas candidaturas da mesma eleição com a chave: homônimo, nenhuma liga)
 -- e sem datas de 1º de janeiro (o TSE usa o dia 1º de janeiro quando só conhece o ano, e isso juntaria pessoas diferentes).
 -- Candidaturas que partilham uma das chaves são da mesma pessoa, e a ligação se propaga: A liga com B por uma chave e B
