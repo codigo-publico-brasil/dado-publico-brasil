@@ -21,7 +21,7 @@ models:
         description: "Disputa da candidatura (core.disputas); vazio quando o arquivo de vagas do TSE não traz a unidade do candidato. O teste de aviso mede quantas ficam assim."
       - {name: sq_candidato, data_type: bigint, description: "Número sequencial do candidato na eleição, como o TSE informa; liga ao nome do arquivo de foto."}
       - {name: numero, data_type: varchar, description: "Número do candidato na urna."}
-      - {name: numero_partido, data_type: varchar, description: "Número do partido na urna, como o TSE informa. Não identifica o partido ao longo do tempo: o mesmo número já foi usado por partidos diferentes (por exemplo, o 18 foi do PST e depois da REDE)."}
+      - {name: numero_partido, data_type: varchar, description: "Número do partido na urna, como o TSE informa. Não identifica o partido ao longo do tempo: o mesmo número já foi usado por partidos diferentes (por exemplo, um número foi de um partido e depois de outro)."}
       - {name: nome, data_type: varchar, description: "Nome civil do candidato, com caixa padronizada."}
       - {name: nome_urna, data_type: varchar, description: "Nome de urna, com caixa padronizada."}
       - {name: nome_social, data_type: varchar, meta: {pii: true}, description: "Nome social declarado pelo candidato; o TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido)."}

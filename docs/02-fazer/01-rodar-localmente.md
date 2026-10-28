@@ -82,7 +82,7 @@ Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por ve
 O warehouse é `data_store/warehouse.duckdb`. Um arquivo DuckDB aceita um escritor por vez; com o pipeline parado, qualquer um dos três serve:
 
 ```bash
-uv run dado-publico query --sql "SELECT * FROM marts.pessoas WHERE nome_busca LIKE '%reginaldo%'"
+uv run dado-publico query --sql "SELECT * FROM marts.pessoas WHERE nome_busca LIKE '%maria%'"
 uv run python -c "import duckdb; print(duckdb.connect('data_store/warehouse.duckdb', read_only=True).sql('SELECT COUNT(*) FROM marts.votacoes_votos'))"
 ```
 

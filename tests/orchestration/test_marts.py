@@ -261,11 +261,12 @@ def test_party_lineage_comes_from_the_curated_table_and_every_event_cites_the_of
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
-    found = con.execute(
+    changes = con.execute(
         "SELECT sigla_anterior, sigla_posterior, tipo, ano FROM marts.partidos_linhagem "
-        "WHERE sigla_anterior = 'PMDB'"
+        "WHERE tipo = 'mudança de nome'"
     ).fetchall()
-    assert found == [("PMDB", "MDB", "mudança de nome", 2018)]
+    assert changes  # a tabela curada traz mudanças de nome...
+    assert all(before != after and year for before, after, _, year in changes)  # ...cada uma com o ano
     assert (
         scalar(
             con,

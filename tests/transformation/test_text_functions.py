@@ -25,12 +25,12 @@ def one(db: duckdb.DuckDBPyConnection, sql: str, *args: object) -> object:
 @pytest.mark.parametrize(
     ("original", "expected"),
     [
-        ("REGINALDO LÁZARO DE OLIVEIRA LOPES", "Reginaldo Lázaro de Oliveira Lopes"),
-        ("CARNEIRO DA CUNHA", "Carneiro da Cunha"),
+        ("MARIA APARECIDA DA SILVA SOUZA", "Maria Aparecida da Silva Souza"),
+        ("PEREIRA DA COSTA", "Pereira da Costa"),
         ("maria dos santos", "Maria dos Santos"),
-        ("Reginaldo Lopes", "Reginaldo Lopes"),
+        ("Maria Souza", "Maria Souza"),
         ("João da Silva Neto", "João da Silva Neto"),
-        ("JHC", "JHC"),
+        ("XYZ", "XYZ"),
         ("PEDRO II", "Pedro II"),
         ("D'ÁVILA E SILVA", "D'Ávila e Silva"),
         ("ANA-MARIA LIMA", "Ana-Maria Lima"),

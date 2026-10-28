@@ -1,6 +1,6 @@
 -- Vínculos entre fontes, pela regra conservadora de ADR 0013: nome civil e data de nascimento iguais e únicos.
 -- Segunda chave (ADR 0026), só para a candidatura que a primeira não ligou: nome de urna igual ao nome parlamentar e
--- mesma data de nascimento, também únicos (pega quem mudou de nome civil, como Erika Santos Silva, hoje Erika Hilton).
+-- mesma data de nascimento, também únicos (pega quem mudou de nome civil).
 --  - "Único" quer dizer: dentro de cada fonte, só um registro tem aquele nome e nascimento (homônimo com a
 --    mesma data não liga) e, numa eleição, só uma candidatura tem aquele nome e nascimento.
 --  - Câmara e Senado ligados entre si dão a mesma pessoa (a identidade funde as duas chaves).

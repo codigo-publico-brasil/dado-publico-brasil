@@ -164,7 +164,7 @@ a { color: var(--accent); }
 </div>
 
 <h2 id="problema">1 O que está errado hoje</h2>
-<p>Os dados estão certos na fonte, mas espalhados. A mesma pessoa aparece em quatro tabelas com chaves diferentes, e cada pergunta nova virou uma tabela nova. Os casos de Lula e de Flávio Bolsonaro mostram o padrão.</p>
+<p>Os dados estão certos na fonte, mas espalhados. A mesma pessoa aparece em quatro tabelas com chaves diferentes, e cada pergunta nova virou uma tabela nova. Os casos de duas pessoas com carreira longa, que ficam sem campanha ou sem histórico, mostram o padrão.</p>
 <ul>
   <li><b>Fontes misturadas na mesma linha.</b> <code>eleitos</code> junta TSE com Câmara e Senado (pessoa, mandato, tipo de mandato). O resultado muda conforme qual fonte conseguiu ligar a pessoa.</li>
   <li><b>Campanha, foto e histórico só existem para eleito.</b> Quem ainda não foi eleito, como os dois candidatos do segundo turno de 2026, fica sem nada, embora os dados de campanha já estejam carregados.</li>
@@ -179,7 +179,7 @@ a { color: var(--accent); }
 <div class="scroll"><table>
   <thead><tr><th>Achado</th><th>Evidência hoje</th><th>Ajuste</th><th>Fase</th></tr></thead>
   <tbody>
-    <tr><td class="k">Texto no lugar de chave</td><td><code>partido</code> aparece em 7 tabelas, <code>cargo</code> em 8 e <code>uf</code> em 16, todos como texto, sem ligação com um catálogo. A sigla PL já designou dois partidos diferentes ao longo do tempo (<code>partidos_linhagem</code>).</td><td>Todo fato ganha <code>id_partido</code>, <code>id_cargo</code>, <code>id_orgao</code> e <code>id_territorio</code>. O texto da fonte fica ao lado, em coluna <code>*_na_fonte</code>, para auditoria.</td><td>F1, F2</td></tr>
+    <tr><td class="k">Texto no lugar de chave</td><td><code>partido</code> aparece em 7 tabelas, <code>cargo</code> em 8 e <code>uf</code> em 16, todos como texto, sem ligação com um catálogo. Uma mesma sigla já designou dois partidos diferentes ao longo do tempo (<code>partidos_linhagem</code>).</td><td>Todo fato ganha <code>id_partido</code>, <code>id_cargo</code>, <code>id_orgao</code> e <code>id_territorio</code>. O texto da fonte fica ao lado, em coluna <code>*_na_fonte</code>, para auditoria.</td><td>F1, F2</td></tr>
     <tr><td class="k">Rastreio desigual até a fonte</td><td>16 das 39 tabelas não têm <code>dt_captura</code> e 5 não têm <code>fonte</code>. <code>fonte_url</code> e <code>dt_captura</code> se repetem em tabelas diferentes, com sentidos diferentes.</td><td>Toda tabela de fato carrega <code>id_captura</code>, que liga a <code>metadata.captures</code> (URL, data, hash). Um teste exige a coluna. Some a repetição.</td><td>todas</td></tr>
     <tr><td class="k"><code>pessoas</code> mistura cadastro e atividade</td><td>Junto do cadastro há <code>qtd_propostas</code>, <code>qtd_votos</code>, <code>ultimo_partido</code>, <code>ultima_uf</code> e legislaturas com voto, valores que mudam a cada carga.</td><td><code>pessoas</code> fica só com cadastro. Os agregados vão para <code>analise.pessoas_atividade</code>.</td><td>F3</td></tr>
     <tr><td class="k"><code>eleitos</code> faz três trabalhos</td><td>31 colunas misturam o que o TSE informa, a ligação com a pessoa (<code>id_pessoa</code>, <code>vinculo_metodo</code>) e uma regra nossa (<code>tipo_mandato</code>).</td><td>Candidatura e resultado só TSE; vínculo no mandato; <code>tipo_mandato</code> derivado na análise, marcado como tal.</td><td>F2, F4</td></tr>
@@ -461,7 +461,7 @@ a { color: var(--accent); }
 
 <h3>6.5 Exemplo com os dados de hoje</h3>
 <div class="scroll"><table>
-  <thead><tr><th>Quando</th><th><code>cd_tipo_evento</code></th><th>O que aconteceu com Lula</th><th>Base</th><th>Fonte</th></tr></thead>
+  <thead><tr><th>Quando</th><th><code>cd_tipo_evento</code></th><th>O que aconteceu com a pessoa do exemplo</th><th>Base</th><th>Fonte</th></tr></thead>
   <tbody>
     <tr><td>2002</td><td><code>candidatura_registrada</code>, <code>eleito</code></td><td>Candidato a presidente, eleito no segundo turno</td><td><span class="chip ok">informado</span></td><td>TSE candidaturas e votação</td></tr>
     <tr><td>2006</td><td><code>candidatura_registrada</code>, <code>eleito</code></td><td>Candidato a presidente; o segundo turno tem votos, mas o TSE não diz quem venceu</td><td><span class="chip der">derivado</span> o mais votado</td><td>TSE votação</td></tr>
@@ -486,19 +486,19 @@ a { color: var(--accent); }
     <line class="dash" x1="160" y1="34" x2="160" y2="252"/><line class="dash" x1="360" y1="34" x2="360" y2="252"/><line class="dash" x1="560" y1="34" x2="560" y2="252"/>
     <text class="s" x="160" y="24" text-anchor="middle">corte A · 01/01/2020</text><text class="s" x="360" y="24" text-anchor="middle">corte B · 01/01/2022</text><text class="s" x="560" y="24" text-anchor="middle">corte C · 01/01/2024</text>
     <text class="s" x="8" y="76">vaga 1</text><text class="s" x="8" y="126">vaga 2</text><text class="s" x="8" y="176">vaga 3</text><text class="s" x="8" y="226">vaga 4</text>
-    <rect class="bar" x="60" y="56" width="400" height="30" rx="2"/><text class="s" x="68" y="75" style="fill:currentColor">Ana (PT)</text>
-    <rect class="bar" x="460" y="56" width="400" height="30" rx="2"/><text class="s" x="468" y="75" style="fill:currentColor">Ana (PT), reeleita</text>
-    <rect class="bar" x="60" y="106" width="150" height="30" rx="2"/><text class="s" x="68" y="125" style="fill:currentColor">Bruno (PSD)</text>
-    <rect class="sup" x="210" y="106" width="250" height="30" rx="2"/><text class="s" x="218" y="125" style="fill:currentColor">Carla (MDB), assume por suplência</text>
-    <rect class="bar" x="460" y="106" width="400" height="30" rx="2"/><text class="s" x="468" y="125" style="fill:currentColor">Carla (MDB), eleita</text>
-    <rect class="bar" x="60" y="156" width="400" height="30" rx="2"/><text class="s" x="68" y="175" style="fill:currentColor">Diego (PSD)</text>
+    <rect class="bar" x="60" y="56" width="400" height="30" rx="2"/><text class="s" x="68" y="75" style="fill:currentColor">Ana (Partido A)</text>
+    <rect class="bar" x="460" y="56" width="400" height="30" rx="2"/><text class="s" x="468" y="75" style="fill:currentColor">Ana (Partido A), reeleita</text>
+    <rect class="bar" x="60" y="106" width="150" height="30" rx="2"/><text class="s" x="68" y="125" style="fill:currentColor">Bruno (Partido B)</text>
+    <rect class="sup" x="210" y="106" width="250" height="30" rx="2"/><text class="s" x="218" y="125" style="fill:currentColor">Carla (Partido C), assume por suplência</text>
+    <rect class="bar" x="460" y="106" width="400" height="30" rx="2"/><text class="s" x="468" y="125" style="fill:currentColor">Carla (Partido C), eleita</text>
+    <rect class="bar" x="60" y="156" width="400" height="30" rx="2"/><text class="s" x="68" y="175" style="fill:currentColor">Diego (Partido B)</text>
     <rect x="200" y="156" width="40" height="30" fill="url(#lic)" opacity=".55"/><text class="s" x="220" y="150" text-anchor="middle">licença</text>
-    <rect class="bar" x="460" y="156" width="400" height="30" rx="2"/><text class="s" x="468" y="175" style="fill:currentColor">Gil (PSD), eleito</text>
-    <rect class="bar" x="60" y="206" width="400" height="30" rx="2"/><text class="s" x="68" y="225" style="fill:currentColor">Eva (PL)</text>
-    <rect class="bar" x="460" y="206" width="400" height="30" rx="2"/><text class="s" x="468" y="225" style="fill:currentColor">Fábio (PSD), eleito</text>
+    <rect class="bar" x="460" y="156" width="400" height="30" rx="2"/><text class="s" x="468" y="175" style="fill:currentColor">Gil (Partido B), eleito</text>
+    <rect class="bar" x="60" y="206" width="400" height="30" rx="2"/><text class="s" x="68" y="225" style="fill:currentColor">Eva (Partido D)</text>
+    <rect class="bar" x="460" y="206" width="400" height="30" rx="2"/><text class="s" x="468" y="225" style="fill:currentColor">Fábio (Partido B), eleito</text>
     <line class="ln" x1="60" y1="256" x2="860" y2="256"/>
     <text class="s" x="60" y="272" text-anchor="middle">2019</text><text class="s" x="260" y="272" text-anchor="middle">2021</text><text class="s" x="460" y="272" text-anchor="middle">2023</text><text class="s" x="660" y="272" text-anchor="middle">2025</text><text class="s" x="860" y="272" text-anchor="middle">2027</text>
-    <text class="s" x="160" y="296" text-anchor="middle">A: PT 1 · PSD 2 · PL 1</text><text class="s" x="360" y="296" text-anchor="middle">B: PT 1 · MDB 1 · PSD 1 · PL 1</text><text class="s" x="580" y="296" text-anchor="middle">C: PT 1 · MDB 1 · PSD 2</text>
+    <text class="s" x="160" y="296" text-anchor="middle">A: Partido A 1 · Partido B 2 · Partido D 1</text><text class="s" x="360" y="296" text-anchor="middle">B: Partido A 1 · Partido C 1 · Partido B 1 · Partido D 1</text><text class="s" x="580" y="296" text-anchor="middle">C: Partido A 1 · Partido C 1 · Partido B 2</text>
     <text class="s" x="8" y="318">As barras são o vínculo pessoa-cargo com vigência. O corte vertical devolve quem estava em exercício e por qual partido.</text>
   </svg>
   </div>
@@ -547,7 +547,7 @@ join core.territorios t using (id_territorio)
 left join core.partidos pa on pa.id_partido = m.id_partido
 where :data between m.dt_inicio and coalesce(m.dt_fim, date '9999-12-31')
   and m.fl_em_exercicio</code></pre>
-<p><b>View <code>servico.pessoa_eventos</code>: a ficha com a linha do tempo.</b> É o que corrige o caso de Lula: o histórico sai de <code>eventos</code>, não de uma tabela só de eleitos.</p>
+<p><b>View <code>servico.pessoa_eventos</code>: a ficha com a linha do tempo.</b> É o que corrige o caso de uma pessoa com mandatos antigos: o histórico sai de <code>eventos</code>, não de uma tabela só de eleitos.</p>
 <pre><code>select e.dt_evento, e.cd_precisao_data, tp.nome as evento, c.nome as cargo,
        t.nome as territorio, e.cd_base, cp.url_original
 from fatos.eventos e
@@ -567,7 +567,7 @@ left join fatos.resultados r  on r.id_candidatura = ca.id_candidatura and r.nr_t
 left join fatos.campanhas  cm on cm.id_candidatura = ca.id_candidatura
 left join core.partidos    pa on pa.id_partido = ca.id_partido
 where ca.id_pessoa = :id_pessoa</code></pre>
-<p><b>O que o aplicativo recebe hoje e o que muda.</b> Flávio Bolsonaro sai de <code>eleitos</code> com cinco eleições, todas vitórias: deputado estadual em 2002, 2006, 2010 e 2014, e senador em 2018. Uma candidatura que não terminou em vitória, ou ainda sem resultado, como as de 2026, não entra em <code>eleitos</code> e por isso aparece sem campanha. Em <code>fatos.candidaturas</code> entram todas, com campanha, foto e resultado vazio quando o TSE ainda não informa.</p>
+<p><b>O que o aplicativo recebe hoje e o que muda.</b> Uma pessoa do exemplo sai de <code>eleitos</code> com cinco eleições, todas vitórias: deputado estadual em quatro eleições seguidas e senador na quinta. Uma candidatura que não terminou em vitória, ou ainda sem resultado, como as de 2026, não entra em <code>eleitos</code> e por isso aparece sem campanha. Em <code>fatos.candidaturas</code> entram todas, com campanha, foto e resultado vazio quando o TSE ainda não informa.</p>
 
 <h3>9.2 Como se decide</h3>
 <p><b>View <code>servico.decisao</code>: uma linha por votação, com a proposição, o resultado e o documento original.</b> <b>View <code>servico.decisao_partidos</code>: o voto por partido.</b></p>
@@ -585,12 +585,12 @@ group by all</code></pre>
 <div class="scroll"><table>
   <thead><tr><th>Partido no voto</th><th class="num">Sim</th><th class="num">Não</th><th class="num">Votos</th></tr></thead>
   <tbody>
-    <tr><td>PL</td><td class="num">77</td><td class="num">3</td><td class="num">80</td></tr>
-    <tr><td>PT</td><td class="num">0</td><td class="num">61</td><td class="num">61</td></tr>
-    <tr><td>PSD</td><td class="num">31</td><td class="num">9</td><td class="num">40</td></tr>
-    <tr><td>UNIÃO</td><td class="num">9</td><td class="num">30</td><td class="num">39</td></tr>
-    <tr><td>REPUBLICANOS</td><td class="num">33</td><td class="num">3</td><td class="num">37</td></tr>
-    <tr><td>PP</td><td class="num">30</td><td class="num">4</td><td class="num">34</td></tr>
+    <tr><td>Partido A</td><td class="num">77</td><td class="num">3</td><td class="num">80</td></tr>
+    <tr><td>Partido B</td><td class="num">0</td><td class="num">61</td><td class="num">61</td></tr>
+    <tr><td>Partido C</td><td class="num">31</td><td class="num">9</td><td class="num">40</td></tr>
+    <tr><td>Partido D</td><td class="num">9</td><td class="num">30</td><td class="num">39</td></tr>
+    <tr><td>Partido E</td><td class="num">33</td><td class="num">3</td><td class="num">37</td></tr>
+    <tr><td>Partido F</td><td class="num">30</td><td class="num">4</td><td class="num">34</td></tr>
   </tbody>
 </table></div>
 <p><b>O que o novo modelo muda.</b> Hoje a coluna <code>votacoes.proposicoes</code> guarda uma lista em texto, com mais de 60 itens nesta votação (emendas, requerimentos, destaques e o PLP 281/2019 no meio), e não dá para saber qual é o objeto. A relação <code>votacoes_proposicoes</code> separa cada item e, quando a fonte informar, o papel dele. A coluna <code>partido</code> do voto (o partido na data da votação) é dado informado e continua como está, agora com <code>id_partido</code>.</p>
@@ -607,13 +607,13 @@ where c.id_orgao = :camara
 group by all</code></pre>
 <p><b>Exemplo com a composição eleita de hoje, deputados federais.</b> Os dois cortes somam 513 cadeiras.</p>
 <div class="scroll"><table>
-  <thead><tr><th>Eleição</th><th>Seis maiores bancadas (sigla na eleição)</th><th class="num">Total</th></tr></thead>
+  <thead><tr><th>Eleição</th><th>Seis maiores bancadas (partido na eleição)</th><th class="num">Total</th></tr></thead>
   <tbody>
-    <tr><td>2018</td><td>PT 56 · PSL 52 · PP 37 · PSD 35 · MDB 34 · PR 33</td><td class="num">513</td></tr>
-    <tr><td>2022</td><td>PL 98 · PT 69 · UNIÃO 57 · PP 47 · PSD 42 · MDB 41</td><td class="num">513</td></tr>
+    <tr><td>2018</td><td>Partido A 56 · Partido B 52 · Partido C 37 · Partido D 35 · Partido E 34 · Partido F 33</td><td class="num">513</td></tr>
+    <tr><td>2022</td><td>Partido G 98 · Partido A 69 · Partido H 57 · Partido C 47 · Partido D 42 · Partido E 41</td><td class="num">513</td></tr>
   </tbody>
 </table></div>
-<p><b>Por que a chave do partido importa.</b> Comparar por sigla engana. O PR de 2018 virou PL em 2019 (mudança de nome), e o PSL virou UNIÃO em 2022 (fusão com o DEM). A sigla PL também já designou, antes de 2006, outro partido, que se fundiu ao PRONA e formou o PR. Com <code>id_partido</code> e a linhagem que o projeto já curou, a comparação mostra a continuidade; a sigla do ano continua visível ao lado.</p>
+<p><b>Por que a chave do partido importa.</b> Comparar por sigla engana. O Partido F de 2018 virou o Partido G em 2019 (mudança de nome), e o Partido B virou o Partido H em 2022 (fusão com outro partido). A sigla do Partido G também já designou, antes de 2006, outro partido, que se fundiu a um terceiro e formou o Partido F. Com <code>id_partido</code> e a linhagem que o projeto já curou, a comparação mostra a continuidade; a sigla do ano continua visível ao lado.</p>
 
 <h3>9.4 Quem governa um município</h3>
 <p><b>View <code>servico.municipio_governo</code>: prefeito e vereadores de um município, por eleição.</b> É aqui que os vereadores entram no mesmo desenho dos demais cargos.</p>
@@ -625,7 +625,7 @@ left join core.pessoas p on p.id_pessoa = ca.id_pessoa
 left join core.partidos pa on pa.id_partido = ca.id_partido
 join fatos.resultados r on r.id_candidatura = ca.id_candidatura and r.fl_eleito
 where d.id_territorio = :id_municipio and ca.ano_eleicao = :ano</code></pre>
-<p><b>Exemplo real, município de São Paulo em 2024:</b> 1 prefeito e 55 vereadores eleitos. Entre os vereadores, PT 8, UNIÃO 7, MDB 7, PL 7 e PSOL 6 (cinco maiores bancadas). A tabela atual cobre os 58.162 vereadores eleitos de 2024, mas só uma pequena parte tem pessoa ligada, o que a seção 1.1 mostra.</p>
+<p><b>Exemplo real, município de São Paulo em 2024:</b> 1 prefeito e 55 vereadores eleitos. Entre os vereadores, Partido A 8, Partido B 7, Partido C 7, Partido D 7 e Partido E 6 (cinco maiores bancadas). A tabela atual cobre os 58.162 vereadores eleitos de 2024, mas só uma pequena parte tem pessoa ligada, o que a seção 1.1 mostra.</p>
 
 <h3>9.5 Quais tabelas cada exemplo usa</h3>
 <div class="scroll"><table>

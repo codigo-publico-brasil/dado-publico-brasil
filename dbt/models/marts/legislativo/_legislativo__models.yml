@@ -214,7 +214,7 @@ models:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: id_partido, data_type: bigint, tests: [unique, not_null], description: "Identificador do partido na fonte."}
       - {name: sigla, data_type: varchar, description: "Sigla do partido sem os asteriscos que a Câmara põe depois dela; mais de um registro pode ter a mesma sigla (veja sigla_original)."}
-      - {name: sigla_original, data_type: varchar, description: "Sigla exatamente como a Câmara publica, com os asteriscos (por exemplo, PP, PP** e PP***, registros diferentes com a mesma sigla). O significado dos asteriscos não consta nas fontes que consultamos."}
+      - {name: sigla_original, data_type: varchar, description: "Sigla exatamente como a Câmara publica, com os asteriscos (por exemplo, a mesma sigla com um, dois ou três asteriscos, registros diferentes). O significado dos asteriscos não consta nas fontes que consultamos."}
       - {name: nome, data_type: varchar, description: "Nome do partido, com caixa padronizada."}
 
   - name: partidos_linhagem
