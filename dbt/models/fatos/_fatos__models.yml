@@ -215,3 +215,28 @@ models:
         description: "Identificador da proposição (Câmara) ou da matéria (Senado) na fonte; liga a marts.proposicoes (fonte e id_proposicao). O teste de aviso mede as que não estão carregadas lá."
       - {name: papel, data_type: varchar, tests: [{accepted_values: {arguments: {values: [afetada, objeto, materia]}}}], description: "Papel da proposição na votação: afetada, objeto (Câmara) ou materia (Senado)."}
 
+  - name: fatos_eventos
+    config: {alias: eventos}
+    description: >
+      A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto
+      livre). O tipo vem do catálogo fechado core.evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento
+      sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado
+      (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data, retorno de
+      afastamento) ainda não têm linha: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só
+      pela colisão de nomes; a tabela é fatos.eventos.
+    meta: {sensitivity: publico-agente-publico, grain: evento da pessoa, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: id_evento, data_type: varchar, tests: [unique, not_null], description: "Tipo, fato de origem e identificador do registro de origem."}
+      - {name: id_pessoa, data_type: bigint, tests: [not_null, {relationships: {to: ref('core_pessoas'), field: id_pessoa}}], description: "Pessoa do evento (core.pessoas)."}
+      - {name: id_tipo_evento, data_type: varchar, tests: [not_null, {relationships: {to: ref('evento_tipos'), field: id_tipo_evento}}], description: "Tipo do evento, do catálogo fechado core.evento_tipos."}
+      - {name: fato_origem, data_type: varchar, tests: [not_null], description: "Fato do qual o evento nasceu; precisa ser o fato_origem do tipo no catálogo."}
+      - {name: id_fato_origem, data_type: varchar, tests: [not_null], description: "Identificador do registro no fato de origem."}
+      - {name: ano_evento, data_type: bigint, tests: [not_null], description: "Ano do evento."}
+      - {name: dt_evento, data_type: date, description: "Dia do evento, só quando a fonte dá o dia; vazio quando só se conhece o ano (eleição, candidatura, nascimento só com o ano)."}
+      - {name: id_disputa, data_type: varchar, description: "Disputa do evento (core.disputas), quando o tipo exige."}
+      - {name: id_cargo, data_type: varchar, description: "Cargo do evento (core.cargos), quando o tipo exige."}
+      - {name: id_territorio, data_type: varchar, description: "Território do evento (core.territorios), quando o tipo exige."}
+      - {name: id_partido, data_type: integer, description: "Partido do evento (core.partidos), quando o tipo exige."}
+      - {name: base, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como o evento é obtido: informado pela fonte ou derivado de regra do projeto."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures); vazia quando o evento vem de outra tabela do projeto."}
+
