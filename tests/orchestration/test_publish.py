@@ -4,6 +4,7 @@ que o teste sobrescreve). Sem a variável, os testes são pulados; o CI sobe o s
 
 import os
 from dataclasses import replace
+from pathlib import Path
 
 import duckdb
 import pytest
@@ -96,4 +97,43 @@ def test_publishing_again_replaces_the_marts_without_duplicating_rows(
 
 def test_publish_without_a_connection_string_explains_what_is_missing(settings: Settings) -> None:
     with pytest.raises(ValueError, match="DADO_PUBLICO_POSTGRES_DSN"):
+        publish.publish(settings)
+
+
+@pytest.mark.parametrize(
+    "dsn",
+    [
+        "postgresql://u:p@localhost:5432/dados",
+        "postgresql://u:p@127.0.0.1/dados",
+        "host=localhost dbname=dados user=u password=p",
+        "host=postgres dbname=dados user=u password=p",
+        "dbname=dados user=u",  # sem host: o libpq usa o socket local
+        "postgresql://u:p@db.exemplo.org/dados?sslmode=require",
+        "postgresql://u:p@db.exemplo.org/dados?sslmode=verify-full",
+        "host=db.exemplo.org dbname=dados user=u password=p sslmode=verify-ca",
+        "host='db.exemplo.org' sslmode='require'",
+    ],
+)
+def test_a_local_database_or_one_that_requires_tls_is_accepted(dsn: str) -> None:
+    publish.require_tls(dsn)
+
+
+@pytest.mark.parametrize(
+    "dsn",
+    [
+        "postgresql://u:p@db.exemplo.org/dados",
+        "postgresql://u:p@db.exemplo.org/dados?sslmode=disable",
+        "postgresql://u:p@db.exemplo.org/dados?sslmode=prefer",
+        "host=db.exemplo.org dbname=dados user=u password=p",
+        "host=db.exemplo.org sslmode=allow",
+    ],
+)
+def test_a_remote_database_without_tls_is_refused(dsn: str) -> None:
+    with pytest.raises(ValueError, match="não exige TLS"):
+        publish.require_tls(dsn)
+
+
+def test_publish_refuses_a_remote_dsn_without_tls_before_connecting() -> None:
+    settings = Settings(storage_root=Path("."), service_dsn="postgresql://u:p@db.exemplo.org/dados")
+    with pytest.raises(ValueError, match="não exige TLS"):
         publish.publish(settings)
