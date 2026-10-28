@@ -15,6 +15,7 @@ from pathlib import Path
 from dado_publico_brasil.core import alert
 from dado_publico_brasil.core.settings import DBT_DIR, Settings
 from dado_publico_brasil.core.warehouse import Connection
+from dado_publico_brasil.transformation import health
 
 ELEMENTARY = "0.26.1"  # a mesma versão do pacote dbt em dbt/packages.yml
 
@@ -69,6 +70,7 @@ def report(con: Connection, limits: dict[tuple[str, str], int] | None = None) ->
     anomalies = con.execute(ANOMALIES).fetchall()
     lines += ["", f"Anomalias nos marts (Elementary): {len(anomalies)}"]
     lines += [f"  [{s}] {uid}: {(message or '')[:200]}" for s, uid, _, message in anomalies]
+    lines += ["", *health.lines(con)]
     return lines, bool(source_errors or stale or failing or anomalies)
 
 
