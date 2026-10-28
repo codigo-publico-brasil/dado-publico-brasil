@@ -108,7 +108,7 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
         " defs.resolve_job_def('atualizar_tudo').tags.get('dado_publico/refazer') == 'true'"
         " and 'dado_publico/refazer' not in defs.resolve_job_def('captura_camara').tags,"
         " {a.specs_by_key[k].group_name for a in [d for d in defs.assets if hasattr(d, 'specs_by_key')] for k in a.keys if k.path[0] in ('staging', 'intermediate', 'marts')}"
-        " <= {'staging', 'intermediate', 'core', 'fatos', 'marts', 'seeds'},"
+        " <= {'staging', 'intermediate', 'core', 'fatos', 'analise', 'servico', 'marts', 'seeds'},"
         " len([c for c in graph.asset_check_keys if c.asset_key.path[0] == 'landing' and c.name != 'saude_da_fonte']) == len(scheduled))"
     )
     env = {**os.environ, "DADO_PUBLICO_STORAGE_ROOT": str(settings.storage_root)}

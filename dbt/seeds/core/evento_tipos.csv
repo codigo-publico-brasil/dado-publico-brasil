@@ -1,25 +1,25 @@
 id_tipo_evento,categoria,descricao,fato_origem,contexto_exigido,base
-nascimento,vida,Nascimento da pessoa.,pessoas_atributos,,informado
-falecimento,vida,Falecimento da pessoa.,pessoas_atributos,,informado
+nascimento,vida,Nascimento da pessoa.,pessoas,,informado
+falecimento,vida,Falecimento da pessoa.,pessoas,,informado
 candidatura_registrada,eleicao,A pessoa teve candidatura registrada em uma disputa.,candidaturas,disputa e partido,informado
 candidatura_deferida,eleicao,O registro da candidatura foi deferido.,candidaturas,disputa,informado
 candidatura_indeferida,eleicao,O registro da candidatura foi indeferido.,candidaturas,disputa,informado
 candidatura_cassada,eleicao,O registro da candidatura foi cassado.,candidaturas,disputa,informado
-eleito,eleicao,A pessoa foi eleita titular; nas disputas de uma vaga sem resultado do TSE o mais votado é derivado dos votos.,resultados,disputa e partido,informado ou derivado
-nao_eleito,eleicao,A pessoa disputou e não foi eleita.,resultados,disputa,informado
-suplente_eleito,eleicao,A pessoa ficou como suplente na ordem do resultado.,resultados,disputa e partido,informado
-segundo_turno_disputado,eleicao,A pessoa disputou o segundo turno.,resultados,disputa,informado
+eleito,eleicao,A pessoa foi eleita titular; nas disputas de uma vaga sem resultado do TSE o mais votado é derivado dos votos.,mandatos,disputa e partido,informado ou derivado
+nao_eleito,eleicao,A pessoa disputou e não foi eleita.,candidaturas,disputa,informado
+suplente_eleito,eleicao,A pessoa ficou como suplente na ordem do resultado.,candidaturas,disputa e partido,informado
+segundo_turno_disputado,eleicao,A pessoa disputou o segundo turno.,candidaturas,disputa,informado
 diplomacao,eleicao,Diplomação do eleito (sem fonte aberta hoje).,,disputa,informado
 posse,mandato,A pessoa tomou posse no cargo.,mandatos,órgão cargo e território,informado ou derivado
 assuncao_por_suplencia,mandato,O suplente assumiu a vaga do titular.,exercicios,órgão e cargo,informado
 afastamento,mandato,Licença ou afastamento do exercício do cargo.,exercicios,órgão e cargo,informado
 retorno,mandato,Retorno ao exercício depois de afastamento.,exercicios,órgão e cargo,informado
-termino_de_mandato,mandato,Fim do mandato pelo termo.,mandatos,órgão e cargo,informado ou derivado
-renuncia,mandato,Fim do mandato por renúncia.,mandatos,órgão e cargo,informado
-cassacao_de_mandato,mandato,Fim do mandato por cassação.,mandatos,órgão e cargo,informado
-filiacao,partido,A pessoa se filiou a um partido.,filiacoes,partido,informado
-troca_de_partido,partido,A pessoa mudou de partido.,filiacoes,partido novo,informado
-desfiliacao,partido,A pessoa deixou o partido.,filiacoes,partido,informado
+termino_de_mandato,mandato,Fim do mandato pelo termo.,exercicios,órgão e cargo,informado ou derivado
+renuncia,mandato,Fim do mandato por renúncia.,exercicios,órgão e cargo,informado
+cassacao_de_mandato,mandato,Fim do mandato por cassação.,exercicios,órgão e cargo,informado
+filiacao,partido,A pessoa se filiou a um partido.,pessoas_partidos,partido,informado
+troca_de_partido,partido,A pessoa mudou de partido.,pessoas_partidos,partido novo,informado
+desfiliacao,partido,A pessoa deixou o partido.,pessoas_partidos,partido,informado
 nomeacao,nomeacao,A pessoa foi nomeada para um cargo (sem fonte aberta hoje).,nomeacoes,órgão e cargo,informado
 exoneracao,nomeacao,A pessoa foi exonerada de um cargo (sem fonte aberta hoje).,nomeacoes,órgão e cargo,informado
 entrada_em_orgao,vinculo,A pessoa passou a integrar um órgão (comissão mesa ou frente).,vinculos_orgao,órgão,informado

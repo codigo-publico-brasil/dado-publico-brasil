@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: analise_composicoes
+    config: {alias: composicoes}
+    description: >
+      Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje), por território e partido.
+      A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a
+      composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente
+      conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na
+      eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é analise.composicoes.
+    meta: {sensitivity: publico, grain: corte, tipo de composição, cargo, território e partido, owner: fundador do projeto, freshness: diário}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [dt_corte, tipo_composicao, id_cargo, id_territorio, id_partido]}}
+    columns:
+      - {name: dt_corte, data_type: date, tests: [not_null], description: "Data do corte: 1º de janeiro ou 1º de julho."}
+      - {name: tipo_composicao, data_type: varchar, tests: [{accepted_values: {arguments: {values: [eleita, exercicio]}}}], description: "eleita (quem foi eleito para o mandato que cobre o corte) ou exercicio (quem de fato exercia o cargo)."}
+      - {name: id_cargo, data_type: varchar, tests: [not_null, {relationships: {to: ref('cargos'), field: id_cargo}}], description: "Cargo (core.cargos)."}
+      - {name: id_territorio, data_type: varchar, description: "Território da composição (core.territorios): município, UF ou país; vazio onde a fonte não liga a um território."}
+      - {name: id_partido, data_type: integer, description: "Partido (core.partidos): o da eleição na composição eleita, o mais recente conhecido até o corte na composição em exercício; vazio quando não se conhece."}
+      - {name: qtd_membros, data_type: bigint, tests: [not_null], description: "Quantas pessoas ocupam o cargo naquele corte, território e partido."}
