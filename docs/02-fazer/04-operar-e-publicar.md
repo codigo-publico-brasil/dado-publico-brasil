@@ -59,7 +59,7 @@ A máquina não prova que o dado está certo. A cada fonte nova: comparar a cont
 
 | Resultado | Onde está hoje | Como acessar |
 | --- | --- | --- |
-| Marts | PostgreSQL de serviço | `dado-publico publish` ([`01-rodar-localmente.md`](01-rodar-localmente.md)) |
+| Marts e esquema `servico` (as views viram tabelas) | PostgreSQL de serviço | `dado-publico publish` ([`01-rodar-localmente.md`](01-rodar-localmente.md)) |
 | Catálogo e dicionário de colunas | Arquivo no repositório | [`03-consultar/01-catalogo.md`](../03-consultar/01-catalogo.md), gerado por `dado-publico catalog` |
 | Site do dbt (linhagem, descrições, links das fontes) | **Só local** | `dado-publico docs`, em http://127.0.0.1:8080, com o pipeline parado |
 | Relatório de observabilidade | Local ou e-mail | `dado-publico observe [--html] [--email]` |

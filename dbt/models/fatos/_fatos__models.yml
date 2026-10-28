@@ -240,3 +240,30 @@ models:
       - {name: base, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como o evento é obtido: informado pela fonte ou derivado de regra do projeto."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures); vazia quando o evento vem de outra tabela do projeto."}
 
+  - name: votos
+    description: >
+      O voto nominal de cada parlamentar em cada votação (Câmara e Senado), com o partido que a pessoa tinha na data do voto
+      como chave (id_partido) e a sigla da fonte ao lado. A sigla pode ser de dois partidos (duas legendas diferentes em épocas
+      diferentes): vale o partido cujo período de uso da sigla está mais perto do ano do voto. Sem partido ("S.Part.", "Sem
+      registro") ou com sigla ainda não curada, o id_partido fica vazio; o teste de aviso mede as não curadas. Só votos de
+      quem tem pessoa no projeto.
+    meta: {sensitivity: publico-agente-publico, grain: voto de um parlamentar em uma votação, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte oficial do voto (camara ou senado)."}
+      - {name: id_votacao, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}
+      - name: id_pessoa
+        data_type: bigint
+        tests: [not_null, {relationships: {to: ref('core_pessoas'), field: id_pessoa}}]
+        description: "Pessoa do projeto (core.pessoas)."
+      - {name: voto, data_type: varchar, description: "Voto registrado, como a fonte informa (sim, não, abstenção, obstrução...)."}
+      - {name: dt_voto, data_type: timestamp, description: "Data e hora do voto, como a fonte informa."}
+      - name: id_partido
+        data_type: integer
+        tests:
+          - relationships: {to: ref('core_partidos'), field: id_partido}
+          - not_null: {config: {severity: warn, where: "partido_na_fonte is not null and lower(partido_na_fonte) not like 's.part%' and lower(partido_na_fonte) not in ('sem registro', 's/partido')"}}
+        description: "Partido na data do voto (core.partidos). Vazio para voto sem partido e para sigla não curada."
+      - {name: partido_na_fonte, data_type: varchar, description: "Sigla do partido como a fonte informa no voto."}
+      - {name: uf, data_type: varchar, description: "UF do parlamentar no voto, como a fonte informa."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+

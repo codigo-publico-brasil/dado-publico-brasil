@@ -1,12 +1,16 @@
--- O voto por partido em cada votação, com a sigla do partido como estava no voto (marts.votacoes_votos ainda não traz o
--- id_partido; ele entra quando houver fatos.votos).
+-- O voto por partido em cada votação, com o partido como chave (`id_partido`) e a sigla do voto ao lado. Só leitura de
+-- fatos.votos e do núcleo.
 select
-    fonte,
-    id_votacao,
-    partido as partido_no_voto,
-    voto,
+    v.fonte,
+    v.id_votacao,
+    v.id_partido,
+    coalesce(pa.sigla, v.partido_na_fonte) as partido,
+    v.partido_na_fonte as partido_no_voto,
+    v.voto,
     count(*) as qtd_votos
 
-from {{ ref('votacoes_votos') }}
+from {{ ref('votos') }} as v
 
-group by fonte, id_votacao, partido, voto
+left join {{ ref('core_partidos') }} as pa on pa.id_partido = v.id_partido
+
+group by v.fonte, v.id_votacao, v.id_partido, pa.sigla, v.partido_na_fonte, v.voto

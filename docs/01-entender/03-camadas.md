@@ -21,7 +21,7 @@ Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas
 | **staging** | "Como isso fica com nomes, tipos e caixa padronizados?" | **dbt** (views, um modelo por tabela do raw) | sim |
 | **intermediate** | "Como juntar e re-granular para chegar às entidades?" | **dbt** (tabelas, uma finalidade por modelo) | sim |
 | **core** | "Quais são os catálogos que dão chave a tudo (pessoas, órgãos, territórios, cargos, partidos, eleições, disputas, tipos de evento)?" | **dbt** (tabelas e seeds curados, com contrato de colunas) | sim |
-| **fatos** | "O que aconteceu, datado e com a fonte (candidaturas, resultados, campanhas, mandatos, exercícios, partidos da pessoa, votações e proposições, eventos)?" | **dbt** (tabelas, com contrato de colunas) | sim |
+| **fatos** | "O que aconteceu, datado e com a fonte (candidaturas, resultados, campanhas, mandatos, exercícios, partidos da pessoa, votos, votações e proposições, eventos)?" | **dbt** (tabelas, com contrato de colunas) | sim |
 | **analise** | "Quem ocupa cada cargo em cada período (composições)?" | **dbt** (tabelas derivadas dos fatos, com contrato) | sim |
 | **servico** | "O que o aplicativo lê, já filtrável por data, pessoa, votação ou município?" | **dbt** (views só de leitura sobre fatos e núcleo, sem regra de negócio) | sim |
 | **marts** | "Como entregar cada entidade pronta para consumo?" | **dbt** (tabelas, com contrato de colunas) | sim |
