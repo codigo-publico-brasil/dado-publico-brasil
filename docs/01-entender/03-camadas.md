@@ -21,6 +21,8 @@ Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas
 | **staging** | "Como isso fica com nomes, tipos e caixa padronizados?" | **dbt** (views, um modelo por tabela do raw) | sim |
 | **intermediate** | "Como juntar e re-granular para chegar às entidades?" | **dbt** (tabelas, uma finalidade por modelo) | sim |
 | **core** | "Quais são os catálogos que dão chave a tudo (pessoas, órgãos, territórios, cargos, partidos, eleições, disputas, tipos de evento)?" | **dbt** (tabelas e seeds curados, com contrato de colunas) | sim |
+| **fatos** | "O que aconteceu, datado e com a fonte (candidaturas, resultados, campanhas, mandatos, exercícios, partidos da pessoa, votações e proposições, eventos)?" | **dbt** (tabelas, com contrato de colunas) | sim |
+| **analise** | "Quem ocupa cada cargo em cada período (composições)?" | **dbt** (tabelas derivadas dos fatos, com contrato) | sim |
 | **marts** | "Como entregar cada entidade pronta para consumo?" | **dbt** (tabelas, com contrato de colunas) | sim |
 | **identity** | "Quem é cada pessoa, em todas as fontes?" | código próprio (pacote `transformation`, `identity.py`) | não: a chave não se reaproveita |
 | **metadata** | "O que rodou, quando, com que resultado?" | código próprio e dbt | não |
@@ -39,7 +41,9 @@ Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e 
 | `dlt_tmp_raw_federal_camara` | área temporária do dlt para fazer `merge` e `replace`; não é camada, ninguém lê | dlt | dlt cria `<dataset>_staging`; renomeamos (`staging_dataset_name_layout`) para não parecer a camada `staging` do dbt |
 | `staging` | views, uma por tabela do raw, com nomes, tipos e caixa padronizados | dbt | guia da dbt Labs |
 | `intermediate` | tabelas de passagem (re-granularidade e junções) | dbt | guia da dbt Labs |
-| `core` | catálogos de referência do modelo de dados ([ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md)); em construção, junto com `fatos`, `analise` e `servico` | dbt | modelo-alvo em [`08-modelo-de-dados.html`](08-modelo-de-dados.html) |
+| `core` | catálogos de referência do modelo de dados ([ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md)); em construção; `servico` (as consultas dos aplicativos) vem na F6 | dbt | modelo-alvo em [`08-modelo-de-dados.html`](08-modelo-de-dados.html) |
+| `fatos` | o que aconteceu, datado e com a fonte; toda tabela tem `id_captura` ou a fonte | dbt | [ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) |
+| `analise` | composições por período (eleita e em exercício, separadas), derivadas dos fatos | dbt | [ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) |
 | `marts` | entidades prontas, com contrato; **o que a aplicação lê** | dbt | guia da dbt Labs |
 | `identity` | chave própria de pessoa e tabela de ligação | código próprio | específico do projeto (não se reconstrói) |
 | `metadata` | execuções, capturas, resultado dos testes, migrações | código próprio e dbt | específico do projeto |
