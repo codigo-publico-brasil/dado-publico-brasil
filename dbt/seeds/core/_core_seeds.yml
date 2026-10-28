@@ -58,14 +58,15 @@ seeds:
       Sigla e número que cada partido usou nos arquivos do TSE, por período de eleições. Liga o texto da fonte ao
       id_partido sem inferir pelo número: o mesmo número serve a partidos diferentes em anos diferentes. Uma linha por
       partido, sigla e número; os períodos de uma mesma sigla e número não se sobrepõem. Os anos são os das eleições em que
-      a sigla e o número aparecem nas candidaturas carregadas.
+      a sigla e o número aparecem nas candidaturas carregadas; nas siglas que só a Câmara usa (PEN, PATRI, PMR e SDD),
+      os dos registros do histórico de deputados.
     meta: {sensitivity: publico, grain: partido, sigla e número, owner: fundador do projeto, freshness: a cada eleição}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [sigla_na_fonte, nr_partido, ano_inicio]}}
     columns:
       - {name: id_partido, description: "Partido (core.partidos).", data_tests: [not_null, {relationships: {to: ref('core_partidos'), field: id_partido}}]}
       - {name: sigla_na_fonte, description: "Sigla como o TSE grava na candidatura.", data_tests: [not_null]}
-      - {name: nr_partido, description: "Número do partido na urna.", data_tests: [not_null]}
+      - {name: nr_partido, description: "Número do partido na urna; vazio nas siglas que só a Câmara usa (PEN, PATRI, PMR e SDD), que não aparecem nas candidaturas."}
       - {name: ano_inicio, description: "Primeira eleição em que a sigla e o número aparecem.", data_tests: [not_null]}
       - {name: ano_fim, description: "Última eleição em que a sigla e o número aparecem (inclusive).", data_tests: [not_null]}
 
