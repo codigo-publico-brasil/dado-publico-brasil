@@ -162,3 +162,29 @@ models:
       - {name: causa_fim, data_type: varchar, description: "Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
 
+  - name: fatos_filiacoes
+    config: {alias: filiacoes}
+    description: >
+      Os períodos em que cada deputado federal aparece em um partido, como o histórico da Câmara registra (a Câmara só
+      publica o partido enquanto há registro de mandato). Um período é uma sequência de registros datados do mesmo partido;
+      o fim não é afirmado: o último registro com o partido é só o último que a fonte tem. Troca de partido são dois
+      períodos seguidos da mesma pessoa. Só a Câmara; o Senado não publica o partido por período e a filiação do TSE fica
+      fora até a decisão de LGPD (#38). O prefixo fatos_ do modelo é só porque pode haver colisão futura com marts; a tabela
+      é fatos.filiacoes.
+    meta: {sensitivity: publico-agente-publico, grain: período de partido, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara)."}
+      - {name: id_filiacao, data_type: varchar, tests: [unique, not_null], description: "Identificador do período: fonte, deputado e momento do primeiro registro."}
+      - {name: id_pessoa, data_type: bigint, tests: [{not_null: {config: {severity: warn}}}, {relationships: {to: ref('core_pessoas'), field: id_pessoa}}], description: "Pessoa do projeto (core.pessoas)."}
+      - name: id_partido
+        data_type: integer
+        tests:
+          - relationships: {to: ref('core_partidos'), field: id_partido}
+          - not_null: {config: {severity: warn, where: "partido_na_fonte not in ('S.Part.', 'S.PART.')"}}
+        description: "Partido do período (core.partidos), achado pela sigla e pelo ano do primeiro registro. Vazio para registro sem partido (S.Part.) e para sigla não curada; o teste de aviso mede as não curadas."
+      - {name: partido_na_fonte, data_type: varchar, description: "Sigla do partido como a Câmara informa no primeiro registro do período."}
+      - {name: dt_inicio, data_type: date, tests: [not_null], description: "Data do primeiro registro da Câmara com este partido."}
+      - {name: dt_ultimo_registro, data_type: date, description: "Data do último registro da Câmara com este partido; não é o fim da filiação."}
+      - {name: fl_ultimo_partido_registrado, data_type: boolean, description: "Verdadeiro no partido do registro mais recente da pessoa na Câmara; não é o partido de hoje (quem deixou a Câmara não tem registro novo)."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+
