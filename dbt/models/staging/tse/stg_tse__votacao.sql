@@ -12,7 +12,7 @@ with source as (
             else sg_uf
         end as ue_do_cargo
 
-    from {{ source('tse', 'votacao') }}
+    from {{ tse_source('votacao') }}
 
 )
 
@@ -37,14 +37,14 @@ select
     sentence_case(ds_detalhe_situacao_cand) as detalhe_situacao,
     try_cast(nr_partido as integer) as partido_numero,
     sg_partido as partido_sigla,
-    nullif(sg_federacao, '#NULO') as federacao_sigla,
+    sg_federacao as federacao_sigla,
     st_voto_em_transito = 'S' as fl_voto_em_transito,
     try_cast(qt_votos_nominais as bigint) as votos_nominais,
     nm_tipo_destinacao_votos as destinacao,
     -- os arquivos de 2002 a 2014 não separam os votos válidos: valem os nominais, que para quem teve a candidatura deferida são os mesmos
     coalesce(try_cast(qt_votos_nominais_validos as bigint), try_cast(qt_votos_nominais as bigint)) as votos_validos,
     -- os arquivos de 1998 a 2010 chamam de `Média` o eleito por média, que depois vira `Eleito por média`
-    case when lower(trim(ds_sit_tot_turno)) = 'média' then 'Eleito por média' else sentence_case(nullif(nullif(ds_sit_tot_turno, '#NULO#'), '#NULO')) end as resultado,
+    case when lower(trim(ds_sit_tot_turno)) = 'média' then 'Eleito por média' else sentence_case(ds_sit_tot_turno) end as resultado,
     _source_file_id as id_captura
 
 from source

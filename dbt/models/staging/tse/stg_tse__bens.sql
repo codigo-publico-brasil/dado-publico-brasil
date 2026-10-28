@@ -13,7 +13,7 @@ select
     try_strptime(dt_ult_atual_bem_candidato, '%d/%m/%Y')::date as dt_atualizacao,
     _source_file_id as id_captura
 
-from {{ source('tse', 'bens') }}
+from {{ tse_source('bens') }}
 
 where coalesce(ds_eleicao, '') not ilike '%suplementar%'  -- as suplementares repetem o sequencial das ordinárias e ficam só no raw
 

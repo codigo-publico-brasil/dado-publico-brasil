@@ -14,4 +14,4 @@ select
     try_strptime(dt_posse, '%d/%m/%Y')::date as dt_posse,
     _source_file_id as id_captura
 
-from {{ source('tse', 'vagas') }}
+from {{ tse_source('vagas') }}

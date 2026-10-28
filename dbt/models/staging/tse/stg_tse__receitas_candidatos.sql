@@ -1,5 +1,5 @@
 -- Receitas declaradas pelos candidatos (todos os cargos): uma linha por receita. O valor é o declarado.
--- A carga é pesada e opcional: enquanto ela não vier, esta tabela fica vazia (ver o macro raw_or_empty).
+-- A carga é pesada e opcional: enquanto ela não vier, esta tabela fica vazia (ver os macros tse_source e raw_or_empty).
 select
     try_cast(aa_eleicao as integer) as ano_eleicao,
     try_cast(st_turno as integer) as turno,
@@ -16,4 +16,4 @@ select
     try_cast(replace(vr_receita, ',', '.') as decimal(18, 2)) as valor,
     _source_file_id as id_captura
 
-from {{ raw_or_empty('tse', 'receitas_candidatos', ['aa_eleicao', 'st_turno', 'tp_prestacao_contas', 'dt_prestacao_contas', 'sq_prestador_contas', 'sg_uf', 'sg_ue', 'ds_cargo', 'sq_candidato', 'sq_receita', 'dt_receita', 'vr_receita']) }}
+from {{ tse_source('receitas_candidatos', ['aa_eleicao', 'st_turno', 'tp_prestacao_contas', 'dt_prestacao_contas', 'sq_prestador_contas', 'sg_uf', 'sg_ue', 'ds_cargo', 'sq_candidato', 'sq_receita', 'dt_receita', 'vr_receita']) }}
