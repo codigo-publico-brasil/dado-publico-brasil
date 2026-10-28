@@ -344,6 +344,16 @@ def tse_files(pasta: Path) -> dict[str, Path]:
     )
     arquivos[contrato.url("receitas_candidatos", 2022)] = contas
     arquivos[contrato.url("despesas_candidatos", 2022)] = contas
+    # 2018 (a prestação de contas é pedida desde 2018): o mesmo pacote, sem linhas
+    contas_2018 = _pacote(
+        pasta / "prestacao_de_contas_eleitorais_candidatos_2018.zip",
+        {
+            "receitas_candidatos_2018_BRASIL.csv": _tabela(RECEITAS_COLUNAS, []),
+            "despesas_contratadas_candidatos_2018_BRASIL.csv": _tabela(DESPESAS_COLUNAS, []),
+        },
+    )
+    arquivos[contrato.url("receitas_candidatos", 2018)] = contas_2018
+    arquivos[contrato.url("despesas_candidatos", 2018)] = contas_2018
     return arquivos
 
 
