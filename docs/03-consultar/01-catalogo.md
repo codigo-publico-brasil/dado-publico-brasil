@@ -208,8 +208,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `campanhas` | A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o arquivo daquele dado não foi carregado ou não traz o candidato. | publico-agente-publico | candidatura |
 | `candidaturas` | Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era, por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer novato. O nome do modelo leva o prefixo fatos_ só porque marts.candidaturas ainda existe; a tabela é fatos.candidaturas. | publico-agente-publico | candidatura |
 | `exercicios` | Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Nada é derivado de regra. Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fatos.mandatos). O nome do modelo leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fatos.exercicios. | publico-agente-publico | período de exercício |
-| `filiacoes` | Os períodos em que cada deputado federal aparece em um partido, como o histórico da Câmara registra (a Câmara só publica o partido enquanto há registro de mandato). Um período é uma sequência de registros datados do mesmo partido; o fim não é afirmado: o último registro com o partido é só o último que a fonte tem. Troca de partido são dois períodos seguidos da mesma pessoa. Só a Câmara; o Senado não publica o partido por período e a filiação do TSE fica fora até a decisão de LGPD (#38). O prefixo fatos_ do modelo é só porque pode haver colisão futura com marts; a tabela é fatos.filiacoes. | publico-agente-publico | período de partido |
 | `mandatos` | Um mandato por candidatura eleita, de todos os cargos (inclusive vereador e o vice e os suplentes eleitos junto): o mandato nasce da eleição, não do exercício. Quem assumiu depois como suplente não tem linha aqui (será fatos.exercicios). O início vem da regra da Constituição com a vigência (core.cargos_posse); onde a Constituição não fixa a data, da data de posse do TSE quando plausível. O fim é sempre derivado da duração do cargo. Só TSE; a ligação com a pessoa do projeto virá com as pessoas de todos os eleitos. O nome do modelo leva o prefixo fatos_ só porque marts.mandatos ainda existe; a tabela é fatos.mandatos. | publico-agente-publico | mandato (candidatura eleita) |
+| `pessoas_partidos` | O partido de cada pessoa em cada momento, de fontes oficiais (ADR 0032): o histórico de deputados da Câmara (períodos em que o deputado aparece em um partido), os votos de deputados e senadores (o partido em cada voto, só para quem não tem histórico) e a candidatura do TSE (o partido pelo qual a pessoa concorreu em cada eleição, para toda pessoa que já foi eleita, inclusive vereador, prefeito e governador que nunca estiveram na Câmara). Troca de partido são dois momentos seguidos da mesma pessoa com partidos diferentes. O partido da candidatura não é a data de filiação, e a filiação partidária por data (arquivo de filiados do TSE) não é carregada: ver a base legal em docs/03-consultar/05-lgpd-dados-pessoais.md. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fatos.pessoas_partidos. | publico-agente-publico | partido de uma pessoa em um momento por fonte |
 | `resultados` | O que aconteceu em cada turno da eleição, candidatura a candidatura, só com arquivos do TSE. Uma linha por candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente). fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE. | publico-agente-publico | candidatura e turno |
 
 ## marts
@@ -397,20 +397,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `causa_fim` | varchar | Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
 
-### fatos.filiacoes
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro (camara). |  |
-| `id_filiacao` | varchar | Identificador do período: fonte, deputado e momento do primeiro registro. |  |
-| `id_pessoa` | bigint | Pessoa do projeto (core.pessoas). |  |
-| `id_partido` | integer | Partido do período (core.partidos), achado pela sigla e pelo ano do primeiro registro. Vazio para registro sem partido (S.Part.) e para sigla não curada; o teste de aviso mede as não curadas. |  |
-| `partido_na_fonte` | varchar | Sigla do partido como a Câmara informa no primeiro registro do período. |  |
-| `dt_inicio` | date | Data do primeiro registro da Câmara com este partido. |  |
-| `dt_ultimo_registro` | date | Data do último registro da Câmara com este partido; não é o fim da filiação. |  |
-| `fl_ultimo_partido_registrado` | boolean | Verdadeiro no partido do registro mais recente da pessoa na Câmara; não é o partido de hoje (quem deixou a Câmara não tem registro novo). |  |
-| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
-
 ### fatos.mandatos
 
 | Coluna | Tipo | Descrição | Dado pessoal |
@@ -430,6 +416,23 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `base_dt_inicio` | varchar | Como dt_inicio foi obtida: derivado (regra da Constituição, com artigo e vigência em core.cargos_posse) ou informado (data do TSE, só onde a Constituição não fixa a data). Vazio quando dt_inicio é vazio. |  |
 | `dt_fim_prevista` | date | DERIVADO: dt_inicio mais a duração do cargo na Constituição, menos um dia. É o fim previsto, não o fim real (cassação, renúncia e morte não entram). |  |
 | `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
+
+### fatos.pessoas_partidos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (camara, senado ou tse). |  |
+| `base` | varchar | De onde sai o partido: historico_de_deputados (períodos do histórico da Câmara), inicio_da_legislatura (partido no início de cada legislatura, para deputados sem períodos no histórico), votos (partido do parlamentar em cada voto, só para quem não tem histórico) ou candidatura (partido pelo qual concorreu no TSE). |  |
+| `id_pessoa_partido` | varchar | Identificador da linha: fonte e o registro de origem (Câmara: deputado e momento do primeiro registro; TSE: candidatura). |  |
+| `id_pessoa` | bigint | Pessoa do projeto (core.pessoas). |  |
+| `id_partido` | integer | Partido (core.partidos), achado pela sigla e pelo ano. Vazio para registro sem partido (S.Part.) e para sigla não curada; o teste de aviso mede as não curadas. |  |
+| `partido_na_fonte` | varchar | Sigla do partido como a fonte informa. |  |
+| `ano_referencia` | bigint | Ano do momento: o do primeiro registro da Câmara ou o da eleição da candidatura. |  |
+| `dt_inicio` | date | Só na Câmara: data do primeiro registro com este partido. |  |
+| `dt_ultimo_registro` | date | Só na Câmara: data do último registro com este partido; não é o fim da filiação. |  |
+| `id_candidatura` | varchar | Só no TSE: candidatura pela qual a pessoa concorreu por este partido. |  |
+| `fl_mais_recente` | boolean | Verdadeiro na linha mais recente da pessoa (maior ano de referência; na Câmara, o último registro). É o partido mais recente que as fontes mostram, não necessariamente o de hoje. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
 
 ### fatos.resultados
 

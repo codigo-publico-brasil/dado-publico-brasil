@@ -162,29 +162,36 @@ models:
       - {name: causa_fim, data_type: varchar, description: "Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
 
-  - name: fatos_filiacoes
-    config: {alias: filiacoes}
+  - name: fatos_pessoas_partidos
+    config: {alias: pessoas_partidos}
     description: >
-      Os períodos em que cada deputado federal aparece em um partido, como o histórico da Câmara registra (a Câmara só
-      publica o partido enquanto há registro de mandato). Um período é uma sequência de registros datados do mesmo partido;
-      o fim não é afirmado: o último registro com o partido é só o último que a fonte tem. Troca de partido são dois
-      períodos seguidos da mesma pessoa. Só a Câmara; o Senado não publica o partido por período e a filiação do TSE fica
-      fora até a decisão de LGPD (#38). O prefixo fatos_ do modelo é só porque pode haver colisão futura com marts; a tabela
-      é fatos.filiacoes.
-    meta: {sensitivity: publico-agente-publico, grain: período de partido, owner: fundador do projeto, freshness: diário}
+      O partido de cada pessoa em cada momento, de fontes oficiais (ADR 0032): o histórico de deputados da Câmara
+      (períodos em que o deputado aparece em um partido), os votos de deputados e senadores (o partido em cada voto, só
+      para quem não tem histórico) e a candidatura do TSE (o partido pelo qual a pessoa concorreu em
+      cada eleição, para toda pessoa que já foi eleita, inclusive vereador, prefeito e governador que nunca estiveram na
+      Câmara). Troca de partido são dois momentos seguidos da mesma pessoa com partidos diferentes. O partido da candidatura
+      não é a data de filiação, e a filiação partidária por data (arquivo de filiados do TSE) não é carregada: ver a base
+      legal em docs/03-consultar/05-lgpd-dados-pessoais.md. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela
+      é fatos.pessoas_partidos.
+    meta: {sensitivity: publico-agente-publico, grain: partido de uma pessoa em um momento por fonte, owner: fundador do projeto, freshness: diário}
     columns:
-      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara)."}
-      - {name: id_filiacao, data_type: varchar, tests: [unique, not_null], description: "Identificador do período: fonte, deputado e momento do primeiro registro."}
-      - {name: id_pessoa, data_type: bigint, tests: [{not_null: {config: {severity: warn}}}, {relationships: {to: ref('core_pessoas'), field: id_pessoa}}], description: "Pessoa do projeto (core.pessoas)."}
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara, senado ou tse)."}
+      - {name: base, data_type: varchar, tests: [{accepted_values: {arguments: {values: [historico_de_deputados, inicio_da_legislatura, votos, candidatura]}}}], description: "De onde sai o partido: historico_de_deputados (períodos do histórico da Câmara), inicio_da_legislatura (partido no início de cada legislatura, para deputados sem períodos no histórico), votos (partido do parlamentar em cada voto, só para quem não tem histórico) ou candidatura (partido pelo qual concorreu no TSE)."}
+      - {name: id_pessoa_partido, data_type: varchar, tests: [unique, not_null], description: "Identificador da linha: fonte e o registro de origem (Câmara: deputado e momento do primeiro registro; TSE: candidatura)."}
+      - name: id_pessoa
+        data_type: bigint
+        tests: [{not_null: {config: {severity: warn}}}, {relationships: {to: ref('core_pessoas'), field: id_pessoa}}]
+        description: "Pessoa do projeto (core.pessoas)."
       - name: id_partido
         data_type: integer
         tests:
           - relationships: {to: ref('core_partidos'), field: id_partido}
-          - not_null: {config: {severity: warn, where: "partido_na_fonte not in ('S.Part.', 'S.PART.')"}}
-        description: "Partido do período (core.partidos), achado pela sigla e pelo ano do primeiro registro. Vazio para registro sem partido (S.Part.) e para sigla não curada; o teste de aviso mede as não curadas."
-      - {name: partido_na_fonte, data_type: varchar, description: "Sigla do partido como a Câmara informa no primeiro registro do período."}
-      - {name: dt_inicio, data_type: date, tests: [not_null], description: "Data do primeiro registro da Câmara com este partido."}
-      - {name: dt_ultimo_registro, data_type: date, description: "Data do último registro da Câmara com este partido; não é o fim da filiação."}
-      - {name: fl_ultimo_partido_registrado, data_type: boolean, description: "Verdadeiro no partido do registro mais recente da pessoa na Câmara; não é o partido de hoje (quem deixou a Câmara não tem registro novo)."}
+          - not_null: {config: {severity: warn, where: "ano_referencia >= 1996 and lower(partido_na_fonte) not like 's.part%' and lower(partido_na_fonte) not in ('sem registro', 's/partido')"}}
+        description: "Partido (core.partidos), achado pela sigla e pelo ano. Vazio para registro sem partido (S.Part.) e para sigla não curada; o teste de aviso mede as não curadas."
+      - {name: partido_na_fonte, data_type: varchar, description: "Sigla do partido como a fonte informa."}
+      - {name: ano_referencia, data_type: bigint, tests: [not_null], description: "Ano do momento: o do primeiro registro da Câmara ou o da eleição da candidatura."}
+      - {name: dt_inicio, data_type: date, description: "Só na Câmara: data do primeiro registro com este partido."}
+      - {name: dt_ultimo_registro, data_type: date, description: "Só na Câmara: data do último registro com este partido; não é o fim da filiação."}
+      - {name: id_candidatura, data_type: varchar, description: "Só no TSE: candidatura pela qual a pessoa concorreu por este partido."}
+      - {name: fl_mais_recente, data_type: boolean, description: "Verdadeiro na linha mais recente da pessoa (maior ano de referência; na Câmara, o último registro). É o partido mais recente que as fontes mostram, não necessariamente o de hoje."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
-
