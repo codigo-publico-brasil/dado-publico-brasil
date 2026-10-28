@@ -68,5 +68,6 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0029](0029-campos-de-pessoas-nos-marts.md) | Campos de pessoas no raw e nos marts | proposto (aprovado pelo fundador) |
 | [0030](0030-modelo-de-dados-pessoa-no-centro.md) | Modelo de dados com a pessoa no centro, eventos tipados e composições | proposto (aprovado pelo fundador); altera 0023 em fases |
 | [0031](0031-pessoas-de-todo-eleito.md) | Pessoas de todo eleito, ancoradas na candidatura (F3 do 0030) | proposto (aprovado pelo fundador); altera 0004 e 0013 |
+| [0032](0032-partido-da-pessoa-por-fonte-e-filiacao.md) | O partido da pessoa vem de fontes oficiais (candidatura, histórico da Câmara, votos); a filiação por data fica de fora | proposto (decisão do fundador); altera o item 10 do 0030 |
 
 Ao criar um ADR, acrescente uma linha aqui e, se ele substituir outro, atualize a situação do antigo.
