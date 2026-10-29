@@ -233,6 +233,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `municipio_governo` | Prefeito, vice e vereadores eleitos de cada município por eleição, com partido. | publico-agente-publico | mandato municipal |
 | `pessoa_campanhas` | Todas as candidaturas da pessoa, com foto, resultado e campanha, tenha ela vencido ou não. Só candidaturas de quem tem pessoa no projeto (quem já foi eleito). | publico-agente-publico | candidatura |
 | `pessoa_eventos` | A ficha da pessoa com a linha do tempo, um evento por linha, com o nome do tipo, do cargo e do território e o endereço do arquivo original da fonte. | publico-agente-publico | evento da pessoa |
+| `pessoa_partidos` | Os partidos da pessoa ao longo do tempo, de fontes oficiais (histórico da Câmara, votos, início da legislatura e candidaturas do TSE), com a base de cada período. Uma linha por pessoa e período. Não afirma a data de filiação; o partido da candidatura é o da eleição. | publico-agente-publico | pessoa e período |
+| `pessoa_votos` | O voto de cada pessoa em cada votação nominal da Câmara e do Senado, com a data, a descrição e o resultado da votação como a fonte publica. Uma linha por pessoa e votação; as proposições votadas estão em servico.decisao. | publico-agente-publico | pessoa e votação |
+| `pessoas` | A ficha cadastral de cada pessoa do projeto (quem já foi eleito), com a foto. O cadastro de contato, escolaridade e profissões só existe para quem passou pela Câmara ou pelo Senado e fica vazio para os demais. O nome do modelo leva o prefixo servico_ só porque marts.pessoas existe; a tabela é servico.pessoas. | publico-agente-publico | pessoa |
 
 ## marts
 
@@ -642,6 +645,62 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `partido` |  | Sigla do partido do evento, quando há. |  |
 | `base` |  | Como o evento é obtido: informado pela fonte ou derivado de regra do projeto. |  |
 | `url_original` |  | Endereço do arquivo oficial de onde o evento veio; vazio quando o evento nasce de outra tabela do projeto. |  |
+
+### servico.pessoa_partidos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_pessoa_partido` |  | Identificador da linha: fonte e registro de origem. |  |
+| `id_pessoa` |  | Pessoa do projeto. |  |
+| `partido` |  | Sigla do partido, do cadastro de partidos; vazia quando a sigla da fonte não casa. |  |
+| `partido_na_fonte` |  | Sigla do partido como a fonte informa. |  |
+| `ano_referencia` |  | Ano do momento: o do primeiro registro da Câmara ou o da eleição da candidatura. |  |
+| `dt_inicio` |  | Data do primeiro registro com este partido, quando a fonte dá o dia. |  |
+| `dt_ultimo_registro` |  | Só na Câmara: data do último registro com este partido; não é o fim da filiação. |  |
+| `base` |  | De onde sai o partido: historico_de_deputados, inicio_da_legislatura, votos ou candidatura. |  |
+| `fl_mais_recente` |  | Verdadeiro na linha mais recente da pessoa; não é necessariamente o partido de hoje. |  |
+
+### servico.pessoa_votos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` |  | Fonte da votação (camara ou senado). |  |
+| `id_votacao` |  | Identificador da votação na fonte. |  |
+| `id_pessoa` |  | Pessoa que votou. |  |
+| `voto` |  | Voto registrado, como a fonte informa (sim, não, abstenção, obstrução...). |  |
+| `dt_voto` |  | Data e hora do voto, como a fonte informa. |  |
+| `partido` |  | Sigla do partido do parlamentar no voto, do cadastro de partidos; vazia quando a sigla da fonte não casa. |  |
+| `partido_na_fonte` |  | Sigla do partido como a fonte informa no voto. |  |
+| `uf` |  | UF do parlamentar no voto, como a fonte informa. |  |
+| `dt_votacao` |  | Data da votação. |  |
+| `descricao` |  | Descrição da votação como a fonte informa. |  |
+| `aprovada` |  | Resultado da votação segundo a fonte. |  |
+
+### servico.pessoas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_pessoa` |  | Pessoa do projeto. |  |
+| `nome` |  | Nome pelo qual a pessoa é conhecida. |  |
+| `nome_civil` |  | Nome civil, como a fonte informa. |  |
+| `genero` |  | Masculino ou feminino, só quando a fonte diz. |  |
+| `dt_nascimento` |  | Data de nascimento informada pela fonte. |  |
+| `dt_falecimento` |  | Data de falecimento informada pela fonte. |  |
+| `municipio_nascimento` |  | Município de nascimento informado pela fonte. |  |
+| `uf_nascimento` |  | UF de nascimento informada pela fonte. |  |
+| `escolaridade` |  | Escolaridade informada no cadastro da Câmara; vazia onde a fonte não informa. |  |
+| `profissoes` |  | Profissões declaradas, separadas por ponto e vírgula. |  |
+| `situacao_atual` |  | Situação no último status da Câmara (por exemplo, Exercício ou Licença); vazia onde a fonte não informa. |  |
+| `email_institucional` |  | E-mail institucional do gabinete, como a Câmara ou o Senado publica. |  |
+| `telefone_institucional` |  | Telefone institucional do gabinete. |  |
+| `gabinete_endereco` |  | Endereço do gabinete. |  |
+| `pagina_url` |  | Página oficial da pessoa no Senado; vazia onde a fonte não informa. |  |
+| `site_url` |  | Site informado no cadastro. |  |
+| `rede_social_url` |  | Primeira rede social informada no cadastro. |  |
+| `foto_caminho` |  | Foto oficial do TSE da candidatura mais recente (caminho do arquivo local); vazia sem foto. |  |
+| `foto_url` |  | Endereço da foto oficial da Câmara ou do Senado; vazio onde a fonte não informa. |  |
+| `fontes` |  | Fontes em que a pessoa aparece no cadastro (por exemplo, camara, senado); vazio para quem só tem o TSE. |  |
+| `dt_captura` |  | Data da captura do cadastro. |  |
 
 ### marts.candidaturas
 

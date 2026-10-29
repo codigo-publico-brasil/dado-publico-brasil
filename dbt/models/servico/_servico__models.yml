@@ -102,3 +102,60 @@ models:
       - {name: nome, description: "Nome público da pessoa; vazio quando o eleito não tem pessoa."}
       - {name: partido, description: "Sigla do partido pelo qual foi eleito."}
       - {name: id_pessoa, description: "Pessoa do projeto."}
+
+  - name: servico_pessoas
+    config: {alias: pessoas}
+    description: A ficha cadastral de cada pessoa do projeto (quem já foi eleito), com a foto. O cadastro de contato, escolaridade e profissões só existe para quem passou pela Câmara ou pelo Senado e fica vazio para os demais. O nome do modelo leva o prefixo servico_ só porque marts.pessoas existe; a tabela é servico.pessoas.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: id_pessoa, description: "Pessoa do projeto.", tests: [unique, not_null]}
+      - {name: nome, description: "Nome pelo qual a pessoa é conhecida."}
+      - {name: nome_civil, description: "Nome civil, como a fonte informa."}
+      - {name: genero, description: "Masculino ou feminino, só quando a fonte diz."}
+      - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
+      - {name: dt_falecimento, description: "Data de falecimento informada pela fonte."}
+      - {name: municipio_nascimento, description: "Município de nascimento informado pela fonte."}
+      - {name: uf_nascimento, description: "UF de nascimento informada pela fonte."}
+      - {name: escolaridade, description: "Escolaridade informada no cadastro da Câmara; vazia onde a fonte não informa."}
+      - {name: profissoes, description: "Profissões declaradas, separadas por ponto e vírgula."}
+      - {name: situacao_atual, description: "Situação no último status da Câmara (por exemplo, Exercício ou Licença); vazia onde a fonte não informa."}
+      - {name: email_institucional, description: "E-mail institucional do gabinete, como a Câmara ou o Senado publica."}
+      - {name: telefone_institucional, description: "Telefone institucional do gabinete."}
+      - {name: gabinete_endereco, description: "Endereço do gabinete."}
+      - {name: pagina_url, description: "Página oficial da pessoa no Senado; vazia onde a fonte não informa."}
+      - {name: site_url, description: "Site informado no cadastro."}
+      - {name: rede_social_url, description: "Primeira rede social informada no cadastro."}
+      - {name: foto_caminho, description: "Foto oficial do TSE da candidatura mais recente (caminho do arquivo local); vazia sem foto."}
+      - {name: foto_url, description: "Endereço da foto oficial da Câmara ou do Senado; vazio onde a fonte não informa."}
+      - {name: fontes, description: "Fontes em que a pessoa aparece no cadastro (por exemplo, camara, senado); vazio para quem só tem o TSE."}
+      - {name: dt_captura, description: "Data da captura do cadastro."}
+
+  - name: pessoa_votos
+    description: O voto de cada pessoa em cada votação nominal da Câmara e do Senado, com a data, a descrição e o resultado da votação como a fonte publica. Uma linha por pessoa e votação; as proposições votadas estão em servico.decisao.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa e votação, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, description: "Fonte da votação (camara ou senado)."}
+      - {name: id_votacao, description: "Identificador da votação na fonte."}
+      - {name: id_pessoa, description: "Pessoa que votou."}
+      - {name: voto, description: "Voto registrado, como a fonte informa (sim, não, abstenção, obstrução...)."}
+      - {name: dt_voto, description: "Data e hora do voto, como a fonte informa."}
+      - {name: partido, description: "Sigla do partido do parlamentar no voto, do cadastro de partidos; vazia quando a sigla da fonte não casa."}
+      - {name: partido_na_fonte, description: "Sigla do partido como a fonte informa no voto."}
+      - {name: uf, description: "UF do parlamentar no voto, como a fonte informa."}
+      - {name: dt_votacao, description: "Data da votação."}
+      - {name: descricao, description: "Descrição da votação como a fonte informa."}
+      - {name: aprovada, description: "Resultado da votação segundo a fonte."}
+
+  - name: pessoa_partidos
+    description: Os partidos da pessoa ao longo do tempo, de fontes oficiais (histórico da Câmara, votos, início da legislatura e candidaturas do TSE), com a base de cada período. Uma linha por pessoa e período. Não afirma a data de filiação; o partido da candidatura é o da eleição.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa e período, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: id_pessoa_partido, description: "Identificador da linha: fonte e registro de origem."}
+      - {name: id_pessoa, description: "Pessoa do projeto."}
+      - {name: partido, description: "Sigla do partido, do cadastro de partidos; vazia quando a sigla da fonte não casa."}
+      - {name: partido_na_fonte, description: "Sigla do partido como a fonte informa."}
+      - {name: ano_referencia, description: "Ano do momento: o do primeiro registro da Câmara ou o da eleição da candidatura."}
+      - {name: dt_inicio, description: "Data do primeiro registro com este partido, quando a fonte dá o dia."}
+      - {name: dt_ultimo_registro, description: "Só na Câmara: data do último registro com este partido; não é o fim da filiação."}
+      - {name: base, description: "De onde sai o partido: historico_de_deputados, inicio_da_legislatura, votos ou candidatura."}
+      - {name: fl_mais_recente, description: "Verdadeiro na linha mais recente da pessoa; não é necessariamente o partido de hoje."}

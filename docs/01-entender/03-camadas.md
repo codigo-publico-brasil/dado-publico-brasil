@@ -45,7 +45,7 @@ Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e 
 | `core` | catálogos de referência do modelo de dados ([ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md)); em construção; `servico` tem as consultas dos aplicativos | dbt | modelo-alvo em [`08-modelo-de-dados.html`](08-modelo-de-dados.html) |
 | `fatos` | o que aconteceu, datado e com a fonte; toda tabela tem `id_captura` ou a fonte | dbt | [ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) |
 | `analise` | composições por período (eleita e em exercício, separadas), derivadas dos fatos | dbt | [ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) |
-| `servico` | views dos aplicativos (cargo_ocupantes, pessoa_eventos, pessoa_campanhas, decisao, decisao_partidos, composicao_comparada, municipio_governo); substituem `eleitos*` e `candidaturas` quando os aplicativos migrarem | dbt | [ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) |
+| `servico` | views dos aplicativos (cargo_ocupantes, pessoas, pessoa_eventos, pessoa_campanhas, pessoa_votos, pessoa_partidos, decisao, decisao_partidos, composicao_comparada, municipio_governo); substituem `eleitos*` e `candidaturas` quando os aplicativos migrarem | dbt | [ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) |
 | `marts` | entidades prontas, com contrato; **o que a aplicação lê** | dbt | guia da dbt Labs |
 | `identity` | chave própria de pessoa e tabela de ligação | código próprio | específico do projeto (não se reconstrói) |
 | `metadata` | execuções, capturas, resultado dos testes, migrações | código próprio e dbt | específico do projeto |

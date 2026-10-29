@@ -274,3 +274,22 @@ def test_party_lineage_comes_from_the_curated_table_and_every_event_cites_the_of
         )
         == 0
     )
+
+
+def test_servico_views_for_the_person_page_keep_every_row_of_their_facts(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    assert scalar(con, "SELECT count(*) FROM servico.pessoas") == scalar(
+        con, "SELECT count(*) FROM core.pessoas"
+    )
+    assert scalar(con, "SELECT count(*) FROM servico.pessoa_votos") == scalar(
+        con, "SELECT count(*) FROM fatos.votos"
+    )
+    assert scalar(con, "SELECT count(*) FROM servico.pessoa_partidos") == scalar(
+        con, "SELECT count(*) FROM fatos.pessoas_partidos"
+    )
+    ana = con.execute(
+        "SELECT nome, profissoes, foto_url FROM servico.pessoas WHERE nome = 'Ana Árvore'"
+    ).fetchone()
+    assert ana is not None and ana[0] == "Ana Árvore" and ana[1]  # o cadastro da Câmara chega à ficha
