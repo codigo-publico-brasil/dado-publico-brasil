@@ -96,6 +96,7 @@ unit_tests:
           - {id_candidatura: s18a, id_pessoa: 1, id_eleicao: "2018-1", id_cargo: senador, id_partido: 7, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31", id_captura: 1}
           - {id_candidatura: s18b, id_pessoa: 2, id_eleicao: "2018-1", id_cargo: senador, id_partido: 7, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31", id_captura: 1}
           - {id_candidatura: s26, id_pessoa: 5, id_eleicao: "2026-1", id_cargo: senador, id_partido: 7, dt_inicio: "2027-02-01", dt_fim_prevista: "2035-01-31", id_captura: 1}
+          - {id_candidatura: s26b, id_pessoa: 1, id_eleicao: "2026-1", id_cargo: senador, id_partido: 7, dt_inicio: "2027-02-01", dt_fim_prevista: "2035-01-31", id_captura: 1}
           - {id_candidatura: g22, id_pessoa: 6, id_eleicao: "2022-1", id_cargo: governador, id_territorio: "35", dt_inicio: "2023-01-01", dt_fim_prevista: "2026-12-31", id_captura: 1}
       - input: ref('fct_exercicios')
         rows:
@@ -132,4 +133,5 @@ unit_tests:
         - {id_pessoa: 2, tipo_registro: exercicio, dt_inicio: "2019-02-01", dt_fim_prevista: "2019-12-20", base_do_fim: informado, partido: AAA}
         - {id_pessoa: 3, tipo_registro: exercicio, dt_inicio: "2020-03-01", dt_fim_prevista: "2027-01-31", base_do_fim: derivado, partido: BBB}
         - {id_pessoa: 5, tipo_registro: mandato, dt_inicio: "2027-02-01", dt_fim_prevista: "2035-01-31", base_do_fim: derivado, partido: AAA}
+        - {id_pessoa: 1, tipo_registro: mandato, dt_inicio: "2027-02-01", dt_fim_prevista: "2035-01-31", base_do_fim: derivado, partido: AAA}
         - {id_pessoa: 6, tipo_registro: mandato, dt_inicio: "2023-01-01", dt_fim_prevista: "2026-12-31", base_do_fim: derivado, partido: null}

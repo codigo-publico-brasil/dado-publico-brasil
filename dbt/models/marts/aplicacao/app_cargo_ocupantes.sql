@@ -64,7 +64,8 @@ exercicios as (
 
 ),
 
--- o mandato que cada exercício cumpre (a janela do mandato contém o início do exercício); sem mandato, é suplente
+-- o mandato que cada exercício cumpre (a janela do mandato contém o início do exercício, com 31 dias de folga para
+-- registro antes da posse); sem mandato, é suplente
 -- ou eleito em eleição suplementar
 exercicio_do_mandato as (
 
@@ -80,7 +81,7 @@ exercicio_do_mandato as (
     inner join mandatos_tipados as m
         on m.id_pessoa = e.id_pessoa
         and m.id_cargo = e.id_cargo
-        and e.dt_inicio between m.dt_inicio and m.dt_fim_prevista
+        and e.dt_inicio between m.dt_inicio - interval 31 day and m.dt_fim_prevista
 
     qualify row_number() over (partition by e.id_exercicio order by m.dt_inicio desc) = 1
 
@@ -161,8 +162,8 @@ ocupacao_por_mandato as (
             select 1 from exercicios as e
             where e.id_pessoa = m.id_pessoa
                 and e.id_cargo = m.id_cargo
-                and e.dt_inicio <= m.dt_fim_prevista
-                and coalesce(e.dt_fim, date '9999-12-31') >= m.dt_inicio
+                -- o exercício começou dentro do mandato (o em andamento de um mandato anterior não conta)
+                and e.dt_inicio between m.dt_inicio - interval 31 day and m.dt_fim_prevista
         )
     )
 
