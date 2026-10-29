@@ -12,8 +12,8 @@ from dado_publico_brasil.core.settings import Settings
 
 Connection = duckdb.DuckDBPyConnection
 
-# O padrão do DuckDB é 80% da RAM; num container isso deixa pouco para o sistema e a leitura e a escrita do arquivo
-# falham com "Cannot allocate memory" (issue 160). O que passa do teto vai para o disco.
+# O padrão do DuckDB é 80% da RAM; num container isso deixa pouco para o sistema, e ler ou escrever o arquivo
+# falha com "Cannot allocate memory" (issue 160). O que passa do teto vai para o disco.
 CONFIG: dict[str, str | bool | int | float | list[str]] = {"memory_limit": "5GB"}
 
 
