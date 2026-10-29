@@ -23,7 +23,7 @@ Os dados públicos estão espalhados em portais com formatos diferentes, mudam s
 | --- | --- | --- |
 | Câmara dos Deputados | deputados, proposições, autorias, tramitações, votações e voto de cada deputado, órgãos, frentes | `pessoas`, `proposicoes`, `votacoes`, `votacoes_votos` |
 | Senado Federal | senadores, votações e votos, normas, vetos | `normas`, `vetos`, `vetos_votos` |
-| TSE | candidaturas, eleitos, bens, votos e contas de campanha | `candidaturas`, `eleitos`, `candidaturas_bens` |
+| TSE | candidaturas, mandatos, bens, votos e contas de campanha | `candidaturas`, `mandatos`, `candidaturas_bens` |
 | Portal da Transparência | emendas parlamentares, convênios e favorecidos | `emendas`, `emendas_convenios` |
 | Constituição de 1988 | texto por dispositivo | `constituicao_dispositivos` |
 | Diário Oficial da União | arquivos originais, só guardados | (sem tabela) |

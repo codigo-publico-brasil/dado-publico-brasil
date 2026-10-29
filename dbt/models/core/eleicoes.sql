@@ -1,7 +1,7 @@
 -- Eleições do arquivo de vagas do TSE, uma por ano e código do TSE. O arquivo mistura as eleições ordinárias com as
 -- suplementares e as renovadas, e o nome delas não permite separar (há "Nova eleição", "Majoritária - Criciúma", "Sup."...).
 -- A regra é nossa e fica marcada: em cada ano e cargo, a eleição ordinária é o código do TSE que cobre mais unidades
--- eleitorais; um código é ordinário se vencer em algum cargo do ano. É a mesma regra que já valia em eleitos_cargos.
+-- eleitorais; um código é ordinário se vencer em algum cargo do ano.
 with vagas as (
 
     select * from {{ ref('stg_tse__vagas') }}

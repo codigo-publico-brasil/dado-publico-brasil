@@ -168,10 +168,10 @@ def test_candidate_declarations_reach_the_marts_and_documents_never_do(full: Env
     con, _ = full
     row = con.execute(
         "SELECT nome_social, grau_instrucao, estado_civil, ocupacao, coligacao_nome, federacao_sigla "
-        "FROM marts.eleitos WHERE id_candidatura LIKE '2022:%:1001'"
+        "FROM marts.candidaturas WHERE id_candidatura LIKE '2022:%:1001'"
     ).fetchone()
     assert row == ("Bia Social", "Superior completo", "Solteiro(a)", "Advogado", "COLIGACAO TESTE", "FED")
-    all_columns = {c for t in ("eleitos", "candidaturas", "pessoas") for c in columns(con, "marts", t)}
+    all_columns = {c for t in ("candidaturas", "pessoas") for c in columns(con, "marts", t)}
     assert not {c for c in all_columns if "cpf" in c or "titulo" in c or "cor_raca" in c}
 
 
