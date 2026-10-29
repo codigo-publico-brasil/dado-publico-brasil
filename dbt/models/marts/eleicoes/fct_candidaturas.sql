@@ -9,6 +9,7 @@ with turnos as (
     select
         id_candidatura,
         max(turno) as qtd_turnos,
+        max(dt_eleicao) as dt_eleicao,
         arg_max(situacao_candidatura, turno) as situacao_candidatura,
         arg_max(resultado, turno) as resultado,
         bool_or(resultado like 'Eleito%') as fl_eleito,
@@ -84,6 +85,7 @@ select
     c.partido_nome,
     c.federacao_sigla as federacao,
     c.coligacao_nome as coligacao,
+    t.dt_eleicao,
     t.situacao_candidatura,
     greatest(t.qtd_turnos, coalesce(tv.ultimo_turno_votado, 0)) as qtd_turnos,
     t.resultado,

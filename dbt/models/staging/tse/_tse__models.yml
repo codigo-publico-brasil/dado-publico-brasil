@@ -6,6 +6,7 @@ models:
     columns:
       - {name: ano_eleicao, description: "Ano da eleição que a formou."}
       - {name: turno, description: "Turno da votação."}
+      - {name: dt_eleicao, description: "Dia em que o turno foi votado, como o TSE informa (DT_ELEICAO)."}
       - {name: sq_candidato, description: "Número sequencial do candidato na eleição, como o TSE informa (único só dentro da unidade eleitoral)."}
       - {name: id_candidatura, description: "Identificador da candidatura na fonte: ano da eleição e sequencial do candidato.", tests: ["not_null"]}
       - {name: cd_eleicao, description: "Código da eleição, como o TSE informa; vazio nos arquivos antigos que não trazem."}

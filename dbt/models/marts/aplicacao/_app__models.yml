@@ -19,6 +19,7 @@ models:
       - {name: dt_fim_prevista, description: "Fim da ocupação: o fim real do exercício quando a fonte o registra (base_do_fim informado) ou o fim previsto pela duração do mandato (derivado). Use esta coluna com dt_inicio para saber quem ocupa o cargo em uma data."}
       - {name: base_do_fim, description: "informado (a Câmara ou o Senado registra o fim do exercício) ou derivado (fim do mandato pela duração do cargo)."}
       - {name: base_eleicao, description: "Como se sabe que foi eleito: informado pelo TSE ou derivado dos votos."}
+      - {name: dt_eleicao, description: "Dia da votação em que a pessoa foi eleita (último turno), como o TSE informa; vazio para quem assumiu como suplente sem ter sido eleito."}
       - {name: tipo_mandato, description: "novato (primeiro mandato no cargo e a base já cobria o ciclo anterior), reeleito (continuou do mandato anterior, um mandato atrás) ou retorno (já teve mandato, voltou depois de um intervalo); vazio quando não há prova. Abaixo do nível federal, compara o mesmo cargo na mesma unidade."}
       - {name: tipo_registro, description: "exercicio (período em que a Câmara ou o Senado registra a pessoa em exercício) ou mandato (período da eleição)."}
       - {name: fonte_url, description: "Arquivo oficial de onde saiu o registro (o do TSE para o mandato; o da Câmara ou do Senado para o exercício), na captura registrada."}
@@ -48,6 +49,7 @@ models:
       - {name: id_pessoa, description: "Pessoa do projeto."}
       - {name: ano_eleicao, description: "Ano da eleição."}
       - {name: cargo, description: "Nome do cargo disputado; vazio quando a candidatura não tem disputa."}
+      - {name: dt_eleicao, description: "Dia da votação do último turno que a candidatura disputou, como o TSE informa."}
       - {name: numero, description: "Número do candidato na urna."}
       - {name: partido, description: "Sigla do partido da candidatura."}
       - {name: resultado, description: "Resultado do último turno como o TSE informa; vazio quando não informa."}

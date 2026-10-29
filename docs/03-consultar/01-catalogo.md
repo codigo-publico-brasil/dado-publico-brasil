@@ -296,6 +296,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_fim_prevista` |  | Fim da ocupação: o fim real do exercício quando a fonte o registra (base_do_fim informado) ou o fim previsto pela duração do mandato (derivado). Use esta coluna com dt_inicio para saber quem ocupa o cargo em uma data. |  |
 | `base_do_fim` |  | informado (a Câmara ou o Senado registra o fim do exercício) ou derivado (fim do mandato pela duração do cargo). |  |
 | `base_eleicao` |  | Como se sabe que foi eleito: informado pelo TSE ou derivado dos votos. |  |
+| `dt_eleicao` |  | Dia da votação em que a pessoa foi eleita (último turno), como o TSE informa; vazio para quem assumiu como suplente sem ter sido eleito. |  |
 | `tipo_mandato` |  | novato (primeiro mandato no cargo e a base já cobria o ciclo anterior), reeleito (continuou do mandato anterior, um mandato atrás) ou retorno (já teve mandato, voltou depois de um intervalo); vazio quando não há prova. Abaixo do nível federal, compara o mesmo cargo na mesma unidade. |  |
 | `tipo_registro` |  | exercicio (período em que a Câmara ou o Senado registra a pessoa em exercício) ou mandato (período da eleição). |  |
 | `fonte_url` |  | Arquivo oficial de onde saiu o registro (o do TSE para o mandato; o da Câmara ou do Senado para o exercício), na captura registrada. |  |
@@ -361,6 +362,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_pessoa` |  | Pessoa do projeto. |  |
 | `ano_eleicao` |  | Ano da eleição. |  |
 | `cargo` |  | Nome do cargo disputado; vazio quando a candidatura não tem disputa. |  |
+| `dt_eleicao` |  | Dia da votação do último turno que a candidatura disputou, como o TSE informa. |  |
 | `numero` |  | Número do candidato na urna. |  |
 | `partido` |  | Sigla do partido da candidatura. |  |
 | `resultado` |  | Resultado do último turno como o TSE informa; vazio quando não informa. |  |
@@ -573,6 +575,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `cd_eleicao` | integer | Código da eleição no TSE. |  |
 | `nome` | varchar | Descrição da eleição, como o TSE informa. |  |
 | `fl_ordinaria` | boolean | DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE. |  |
+| `dt_primeiro_turno` | date | Dia do 1º turno da eleição, como o TSE informa nos arquivos de candidaturas. |  |
+| `dt_segundo_turno` | date | Dia do 2º turno, quando houve disputa em 2º turno em algum cargo da eleição; vazio nos demais casos. |  |
 | `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
 
 ### marts.dim_frentes
@@ -770,6 +774,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `partido_nome` | varchar | Nome do partido na eleição. |  |
 | `federacao` | varchar | Sigla da federação partidária (desde 2022); vazia nos anos anteriores. |  |
 | `coligacao` | varchar | Nome da coligação da candidatura; vazio sem coligação. |  |
+| `dt_eleicao` | date | Dia da votação do último turno que a candidatura disputou, como o TSE informa (DT_ELEICAO). |  |
 | `situacao_candidatura` | varchar | Situação da candidatura no último turno em que consta, como o TSE informa (por exemplo, deferido, indeferido). |  |
 | `qtd_turnos` | integer | Número do último turno em que a candidatura consta (2 quando foi ao segundo turno). |  |
 | `resultado` | varchar | Resultado do último turno como o arquivo de candidaturas do TSE informa (eleito, suplente, não eleito, 2º turno); vazio quando o TSE não informa, como o 2º turno de presidente de 2006. |  |
