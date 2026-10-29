@@ -23,7 +23,7 @@ jobs:
       DADO_PUBLICO_TEST_POSTGRES: postgresql://postgres:ci@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - run: uv sync --locked --all-extras
       - run: uv run ruff check .
       - run: uv run ruff format --check .
