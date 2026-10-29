@@ -1092,10 +1092,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | Coluna | Tipo | Descrição | Dado pessoal |
 | --- | --- | --- | --- |
 | `fonte` | varchar | Fonte oficial do registro. |  |
-| `id_dispositivo` | bigint | Código do dispositivo vetado no Senado. |  |
+| `id_dispositivo` | bigint | Código do dispositivo vetado no Senado; vazio no veto total, que a fonte não codifica. |  |
 | `id_materia_veto` | bigint | Código da matéria do veto (fct_vetos). |  |
 | `id_veto` | bigint | Veto a que o dispositivo pertence (fct_vetos). |  |
-| `identificador` | varchar | Identificador do dispositivo no veto (veto.ano.item). |  |
+| `identificador` | varchar | Identificador do dispositivo no veto (veto.ano.item); único dentro do veto. |  |
 | `descricao` | varchar | Onde o dispositivo está na norma (por exemplo, art. 7º, § 4º, inciso II). |  |
 | `texto_vetado` | varchar | Texto que foi vetado, como a fonte publica. |  |
 | `razao_veto` | varchar | Razão do veto escrita pela Presidência, como a fonte publica. |  |

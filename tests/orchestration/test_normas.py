@@ -85,6 +85,7 @@ def test_vetoed_provisions_keep_the_text_the_reason_and_the_decision_as_the_sour
     assert [(f[0], f[1], f[4], f[5], f[6], str(f[7])) for f in found] == [
         (9001, 7001, "Rejeitado", True, "Painel", "2024-09-10"),
         (9002, 7001, "Não Apreciado", False, None, "None"),
+        (None, 7001, "Mantido", False, None, "None"),  # veto total: sem código de dispositivo na fonte
     ]
     assert (
         found[0][2] == "Texto que foi vetado."
