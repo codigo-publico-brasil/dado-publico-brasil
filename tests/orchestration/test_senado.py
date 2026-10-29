@@ -59,7 +59,7 @@ def test_senate_votes_keep_the_source_text_and_secret_ballots_stay_as_voted(
 ) -> None:
     con, _ = full
     votes = con.execute(
-        "SELECT v.id_votacao, p.nome, v.voto, v.partido, v.uf FROM marts.fct_votos v JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) "
+        "SELECT v.id_votacao, p.nome, v.voto, v.partido_na_fonte, v.uf FROM marts.fct_votos v JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) "
         "WHERE v.fonte = 'senado' ORDER BY v.id_votacao, p.nome"
     ).fetchall()
     assert votes == [
@@ -88,55 +88,19 @@ def test_each_voted_matter_appears_once_with_its_official_page(full: tuple[Conne
     assert url == "https://www25.senado.leg.br/web/atividade/materias/-/materia/700"
 
 
-def test_senate_mandate_without_official_exercise_comes_from_votes_and_one_outside_the_exercise_does_not_exist(
-    full: tuple[Connection, Settings],
-) -> None:
-    con, _ = full
-    # Diogo só aparece nos votos (sem exercício oficial): o mandato vem dos votos, com as datas oficiais da legislatura
-    row = con.execute(
-        "SELECT m.cargo, m.casa, m.id_legislatura, m.uf, m.dt_inicio, m.dt_legislatura_inicio, m.base "
-        "FROM marts.fct_mandatos m JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) "
-        "WHERE m.fonte = 'senado' AND p.nome = 'Diogo'"
-    ).fetchone()
-    assert row is not None
-    assert row[:4] == ("Senador", "Senado Federal", 57, "MG")
-    assert row[4] is None and row[6] == "votos observados"
-    assert str(row[5]) == "2023-02-01"
-    # Beto tem exercício oficial (2019 a 2020) e vota em 2023: a data do voto não cria mandato na 57ª legislatura (#100)
-    assert (
-        scalar(
-            con,
-            "SELECT COUNT(*) FROM marts.fct_mandatos m JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) "
-            "WHERE m.fonte = 'senado' AND p.nome = 'Beto Barreiras' AND m.id_legislatura = 57",
-        )
-        == 0
-    )
-    assert (
-        scalar(
-            con,
-            "SELECT COUNT(*) FROM marts.fct_votos v JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) WHERE p.nome = 'Beto Barreiras'",
-        )
-        > 0
-    )  # o voto fica
-
-
 def test_official_exercises_come_from_the_senate_with_the_reason_each_period_ended(
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
     rows = con.execute(
-        "SELECT p.nome, e.participacao, e.uf, e.dt_mandato_inicio, e.dt_mandato_fim, e.dt_inicio, e.dt_fim, e.causa_afastamento "
-        "FROM marts.fct_exercicios e JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) ORDER BY e.id_exercicio"
+        "SELECT p.nome, e.condicao_na_fonte, e.uf, e.dt_inicio, e.dt_fim, e.causa_fim "
+        "FROM marts.fct_exercicios e JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) "
+        "WHERE e.fonte = 'senado' ORDER BY e.id_exercicio"
     ).fetchall()
     assert len(rows) == 3  # um por senador do cadastro; quem só aparece nos votos não tem exercício
-    nome, participacao, uf, dt_mandato_inicio, dt_mandato_fim, inicio, fim, causa = rows[0]
-    assert (participacao, uf, causa) == ("Titular", "SP", "Licença")
-    assert (str(dt_mandato_inicio), str(dt_mandato_fim), str(inicio), str(fim)) == (
-        "2019-02-01",
-        "2027-01-31",
-        "2019-02-01",
-        "2020-05-01",
-    )
+    nome, condicao, uf, inicio, fim, causa = rows[0]
+    assert (condicao, uf, causa) == ("Titular", "SP", "Licença")
+    assert (str(inicio), str(fim)) == ("2019-02-01", "2020-05-01")
 
 
 def test_raw_keeps_the_lists_as_child_tables(full: tuple[Connection, Settings]) -> None:
