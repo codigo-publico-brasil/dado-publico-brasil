@@ -14,9 +14,9 @@ Dar transparência sobre quem exerce ou disputa cargo público e sobre o uso do 
 
 | Dado pessoal | Onde está | Titular | Base legal proposta |
 | --- | --- | --- | --- |
-| Nome, nascimento, naturalidade, foto, redes e contato institucional | `pessoas`, `mandatos`, `eleitos` | agente público no exercício do cargo | dado de acesso público, tratado para transparência (art. 7º, § 3º), e publicidade da função pública |
+| Nome, nascimento, naturalidade, foto, redes e contato institucional | `pessoas`, `mandatos` | agente público no exercício do cargo | dado de acesso público, tratado para transparência (art. 7º, § 3º), e publicidade da função pública |
 | Dados declarados na candidatura (nome social, estado civil, grau de instrução, ocupação, coligação) | `candidaturas` | candidato | dado tornado público por lei eleitoral, tratado para a mesma finalidade (art. 7º, §§ 3º e 4º) |
-| Partido do candidato | `candidaturas`, `eleitos` | candidato | filiação política é dado sensível (art. 5º, II), mas a candidatura por partido é pública por lei eleitoral e é o dado central da transparência. Base proposta: o art. 11, com a candidatura como ato público do titular. **Confirmar com jurídico.** |
+| Partido do candidato | `candidaturas` | candidato | filiação política é dado sensível (art. 5º, II), mas a candidatura por partido é pública por lei eleitoral e é o dado central da transparência. Base proposta: o art. 11, com a candidatura como ato público do titular. **Confirmar com jurídico.** |
 | Patrimônio declarado | `candidaturas_bens` | candidato | dado de acesso público, finalidade de transparência |
 | Nome e CPF mascarado de pessoa física que recebeu emenda | `emendas_favorecidos`, `emendas_convenios` | **cidadão comum** | dado de acesso público (art. 7º, § 3º), com CPF mascarado como a fonte publica; maior risco, ver abaixo |
 
