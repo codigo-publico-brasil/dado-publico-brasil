@@ -139,9 +139,9 @@ models:
   - name: stg_senado__vetos_dispositivos
     description: Dispositivos vetados de cada veto buscado, com o texto vetado, a razão do veto e a situação.
     columns:
-      - {name: id_dispositivo, description: "Código do dispositivo vetado no Senado.", tests: ["unique", "not_null"]}
+      - {name: id_dispositivo, description: "Código do dispositivo vetado no Senado; vazio no veto total, que a fonte não codifica."}
       - {name: id_materia_veto, description: "Código da matéria do veto (a que tramita no Congresso)."}
-      - {name: identificador, description: "Identificador curto da norma na fonte (LEI-14116-2020-12-31)."}
+      - {name: identificador, description: "Identificador do dispositivo no veto (veto.ano.item), como a fonte publica; único dentro do veto.", tests: ["not_null"]}
       - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada."}
       - {name: texto_vetado, description: "Texto que foi vetado, como a fonte publica."}
       - {name: razao_veto, description: "Razão do veto escrita pela Presidência, como a fonte publica."}

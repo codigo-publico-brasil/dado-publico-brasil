@@ -168,7 +168,8 @@ datasets:
       recent_by: data_publicacao
       refresh_after_days: 30
       batch_size: 100
-    primary_key: [_item, Codigo]
+    # Veto total não traz `Codigo` (só `Identificador`, único dentro do veto): por isso a chave é o identificador.
+    primary_key: [_item, Identificador]
     columns:
       [_item, Codigo, Identificador, Descricao, Conteudo, RazaoVeto, Situacao, PossuiVotos, TipoVotacao,
        DataSessao]

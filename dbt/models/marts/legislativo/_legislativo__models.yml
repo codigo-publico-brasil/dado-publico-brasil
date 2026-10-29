@@ -481,10 +481,10 @@ models:
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
-      - {name: id_dispositivo, data_type: bigint, tests: [not_null], description: "Código do dispositivo vetado no Senado."}
+      - {name: id_dispositivo, data_type: bigint, description: "Código do dispositivo vetado no Senado; vazio no veto total, que a fonte não codifica."}
       - {name: id_materia_veto, data_type: bigint, description: "Código da matéria do veto (marts.vetos)."}
       - {name: id_veto, data_type: bigint, description: "Veto a que o dispositivo pertence (marts.vetos)."}
-      - {name: identificador, data_type: varchar, description: "Identificador do dispositivo no veto (veto.ano.item)."}
+      - {name: identificador, data_type: varchar, tests: [not_null], description: "Identificador do dispositivo no veto (veto.ano.item); único dentro do veto."}
       - {name: descricao, data_type: varchar, description: "Onde o dispositivo está na norma (por exemplo, art. 7º, § 4º, inciso II)."}
       - {name: texto_vetado, data_type: varchar, description: "Texto que foi vetado, como a fonte publica."}
       - {name: razao_veto, data_type: varchar, description: "Razão do veto escrita pela Presidência, como a fonte publica."}
