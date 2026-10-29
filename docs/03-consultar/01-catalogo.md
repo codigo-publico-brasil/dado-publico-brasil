@@ -214,6 +214,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `pessoas_partidos` | O partido de cada pessoa em cada momento, de fontes oficiais (ADR 0032): o histórico de deputados da Câmara (períodos em que o deputado aparece em um partido), os votos de deputados e senadores (o partido em cada voto, só para quem não tem histórico) e a candidatura do TSE (o partido pelo qual a pessoa concorreu em cada eleição, para toda pessoa que já foi eleita, inclusive vereador, prefeito e governador que nunca estiveram na Câmara). Troca de partido são dois momentos seguidos da mesma pessoa com partidos diferentes. O partido da candidatura não é a data de filiação, e a filiação partidária por data (arquivo de filiados do TSE) não é carregada: ver a base legal em docs/03-consultar/05-lgpd-dados-pessoais.md. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fatos.pessoas_partidos. | publico-agente-publico | partido de uma pessoa em um momento por fonte |
 | `resultados` | O que aconteceu em cada turno da eleição, candidatura a candidatura, só com arquivos do TSE. Uma linha por candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente). fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE. | publico-agente-publico | candidatura e turno |
 | `votacoes_proposicoes` | Que proposição (ou matéria) cada votação decidiu, uma linha por votação e proposição, com o papel. Troca a lista em texto de marts.votacoes por linhas que ligam a marts.proposicoes. Câmara: afetada (a votação mudou a situação da proposição) ou objeto (foi o assunto votado). Senado: a matéria da votação. Votação sem proposição na fonte não tem linha. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fatos.votacoes_proposicoes. | publico | votação e proposição |
+| `votos` | O voto nominal de cada parlamentar em cada votação (Câmara e Senado), com o partido que a pessoa tinha na data do voto como chave (id_partido) e a sigla da fonte ao lado. A sigla pode ser de dois partidos (duas legendas diferentes em épocas diferentes): vale o partido cujo período de uso da sigla está mais perto do ano do voto. Sem partido ("S.Part.", "Sem registro") ou com sigla ainda não curada, o id_partido fica vazio; o teste de aviso mede as não curadas. Só votos de quem tem pessoa no projeto. | publico-agente-publico | voto de um parlamentar em uma votação |
 
 ## analise
 
@@ -228,7 +229,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `cargo_ocupantes` | Quem ocupa cada cargo, uma linha por mandato; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. É a composição eleita, não o exercício (cassação, renúncia e morte não entram no fim). Só mandatos com início. | publico-agente-publico | mandato |
 | `composicao_comparada` | A composição por corte, tipo, cargo, território e partido, com nomes legíveis; o aplicativo escolhe dois cortes e compara. A eleita e a em exercício aparecem separadas. | publico | corte |
 | `decisao` | Uma linha por votação e proposição, com o resultado e os totais, para consumo pelas aplicações. | publico | votação e proposição |
-| `decisao_partidos` | O voto por partido em cada votação, com a sigla do partido como estava no voto. O id_partido entra quando houver fatos.votos. | publico | votação |
+| `decisao_partidos` | O voto por partido em cada votação, com o partido como chave (id_partido) e a sigla do voto ao lado, para a página Quem Decidiu. | publico | votação |
 | `municipio_governo` | Prefeito, vice e vereadores eleitos de cada município por eleição, com partido. | publico-agente-publico | mandato municipal |
 | `pessoa_campanhas` | Todas as candidaturas da pessoa, com foto, resultado e campanha, tenha ela vencido ou não. Só candidaturas de quem tem pessoa no projeto (quem já foi eleito). | publico-agente-publico | candidatura |
 | `pessoa_eventos` | A ficha da pessoa com a linha do tempo, um evento por linha, com o nome do tipo, do cargo e do território e o endereço do arquivo original da fonte. | publico-agente-publico | evento da pessoa |
@@ -517,6 +518,20 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_proposicao` | varchar | Identificador da proposição (Câmara) ou da matéria (Senado) na fonte; liga a marts.proposicoes (fonte e id_proposicao). O teste de aviso mede as que não estão carregadas lá. |  |
 | `papel` | varchar | Papel da proposição na votação: afetada, objeto (Câmara) ou materia (Senado). |  |
 
+### fatos.votos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do voto (camara ou senado). |  |
+| `id_votacao` | varchar | Identificador da votação na fonte. |  |
+| `id_pessoa` | bigint | Pessoa do projeto (core.pessoas). |  |
+| `voto` | varchar | Voto registrado, como a fonte informa (sim, não, abstenção, obstrução...). |  |
+| `dt_voto` | timestamp | Data e hora do voto, como a fonte informa. |  |
+| `id_partido` | integer | Partido na data do voto (core.partidos). Vazio para voto sem partido e para sigla não curada. |  |
+| `partido_na_fonte` | varchar | Sigla do partido como a fonte informa no voto. |  |
+| `uf` | varchar | UF do parlamentar no voto, como a fonte informa. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
+
 ### analise.composicoes
 
 | Coluna | Tipo | Descrição | Dado pessoal |
@@ -577,6 +592,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `fonte` |  | Fonte da votação. |  |
 | `id_votacao` |  | Identificador da votação. |  |
+| `id_partido` |  | Partido (core.partidos) na data do voto; vazio para voto sem partido ou sigla não curada. |  |
+| `partido` |  | Sigla atual do partido; sem id_partido, a sigla do voto. |  |
 | `partido_no_voto` |  | Sigla do partido na data do voto, como a fonte informa. |  |
 | `voto` |  | Voto registrado. |  |
 | `qtd_votos` |  | Quantos votos. |  |

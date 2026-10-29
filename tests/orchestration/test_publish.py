@@ -10,7 +10,7 @@ import duckdb
 import pytest
 
 from dado_publico_brasil.core.settings import Settings
-from dado_publico_brasil.core.warehouse import Connection, tables
+from dado_publico_brasil.core.warehouse import Connection, scalar, tables
 from dado_publico_brasil.transformation import publish
 
 DSN = os.environ.get("DADO_PUBLICO_TEST_POSTGRES")
@@ -27,7 +27,8 @@ def service() -> duckdb.DuckDBPyConnection:
     con.execute(
         "CALL postgres_execute('service', \"DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'leitor') "
         "THEN CREATE ROLE leitor; END IF; END $$; DROP SCHEMA IF EXISTS marts CASCADE; "
-        'DROP SCHEMA IF EXISTS marts_novo CASCADE")'
+        "DROP SCHEMA IF EXISTS marts_novo CASCADE; DROP SCHEMA IF EXISTS servico CASCADE; "
+        'DROP SCHEMA IF EXISTS servico_novo CASCADE")'
     )
     return con
 
@@ -43,14 +44,29 @@ def query(service: duckdb.DuckDBPyConnection, sql: str) -> list[tuple[object, ..
     return service.execute(f"SELECT * FROM postgres_query('service', '{escaped}')").fetchall()
 
 
+def expected_rows(con: Connection) -> dict[str, int]:
+    """O que o publish deve devolver: as tabelas dos marts e as views do servico (com o prefixo do esquema)."""
+    expected = {t: int(scalar(con, f"SELECT count(*) FROM marts.{t}")) for t in tables(con, "marts")}
+    views = con.execute(
+        "SELECT view_name FROM duckdb_views() WHERE schema_name = 'servico' AND NOT internal"
+    ).fetchall()
+    return expected | {
+        f"servico.{v}": int(scalar(con, f"SELECT count(*) FROM servico.{v}")) for (v,) in views
+    }
+
+
 @needs_postgres
-def test_every_mart_is_published_with_the_same_number_of_rows(
+def test_every_mart_and_every_service_view_is_published_with_the_same_number_of_rows(
     full: tuple[Connection, Settings], service: duckdb.DuckDBPyConnection
 ) -> None:
     con, settings = full
-    expected = {t: con.execute(f"SELECT count(*) FROM marts.{t}").fetchone()[0] for t in tables(con, "marts")}  # type: ignore[index]
+    expected = expected_rows(con)
+    assert any(name.startswith("servico.") for name in expected)
     assert run(full) == expected
     assert query(service, "SELECT count(*) FROM marts.pessoas") == [(expected["pessoas"],)]
+    assert query(service, "SELECT count(*) FROM servico.cargo_ocupantes") == [
+        (expected["servico.cargo_ocupantes"],)
+    ]
 
 
 @needs_postgres
@@ -60,8 +76,15 @@ def test_the_reader_role_can_select_and_nothing_stays_in_the_staging_schema(
     run(full)
     assert query(service, "SELECT has_table_privilege('leitor', 'marts.pessoas', 'SELECT')") == [(True,)]
     assert query(service, "SELECT has_table_privilege('leitor', 'marts.pessoas', 'INSERT')") == [(False,)]
+    assert query(service, "SELECT has_table_privilege('leitor', 'servico.cargo_ocupantes', 'SELECT')") == [
+        (True,)
+    ]
+    assert query(service, "SELECT has_table_privilege('leitor', 'servico.cargo_ocupantes', 'INSERT')") == [
+        (False,)
+    ]
     assert query(
-        service, "SELECT count(*) FROM information_schema.schemata WHERE schema_name = 'marts_novo'"
+        service,
+        "SELECT count(*) FROM information_schema.schemata WHERE schema_name IN ('marts_novo', 'servico_novo')",
     ) == [(0,)]
 
 
@@ -73,12 +96,12 @@ def test_every_published_table_and_column_carries_its_description(
     tables_without = query(
         service,
         "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-        "WHERE n.nspname = 'marts' AND c.relkind = 'r' AND obj_description(c.oid) IS NULL",
+        "WHERE n.nspname IN ('marts', 'servico') AND c.relkind = 'r' AND obj_description(c.oid) IS NULL",
     )
     columns_without = query(
         service,
         "SELECT c.relname || '.' || a.attname FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid "
-        "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'marts' AND c.relkind = 'r' "
+        "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname IN ('marts', 'servico') AND c.relkind = 'r' "
         "AND a.attnum > 0 AND NOT a.attisdropped AND col_description(a.attrelid, a.attnum) IS NULL",
     )
     assert (tables_without, columns_without) == ([], [])

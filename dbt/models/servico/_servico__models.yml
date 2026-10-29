@@ -69,11 +69,13 @@ models:
       - {name: votos_outros, description: "Demais votos (abstenção, obstrução)."}
 
   - name: decisao_partidos
-    description: O voto por partido em cada votação, com a sigla do partido como estava no voto. O id_partido entra quando houver fatos.votos.
+    description: O voto por partido em cada votação, com o partido como chave (id_partido) e a sigla do voto ao lado, para a página Quem Decidiu.
     meta: {sensitivity: publico, grain: votação, partido e voto, owner: fundador do projeto, freshness: diário}
     columns:
       - {name: fonte, description: "Fonte da votação."}
       - {name: id_votacao, description: "Identificador da votação."}
+      - {name: id_partido, description: "Partido (core.partidos) na data do voto; vazio para voto sem partido ou sigla não curada."}
+      - {name: partido, description: "Sigla atual do partido; sem id_partido, a sigla do voto."}
       - {name: partido_no_voto, description: "Sigla do partido na data do voto, como a fonte informa."}
       - {name: voto, description: "Voto registrado."}
       - {name: qtd_votos, description: "Quantos votos."}
