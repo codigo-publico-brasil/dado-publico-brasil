@@ -29,8 +29,8 @@ group by fonte, id_veto having count(*) > 1
 
 union all
 
-select 'dispositivos_vetados', fonte, cast(id_dispositivo as varchar) from {{ ref('vetos_dispositivos') }}
-group by fonte, id_dispositivo having count(*) > 1
+select 'dispositivos_vetados', fonte, id_materia_veto || '/' || identificador from {{ ref('vetos_dispositivos') }}
+group by fonte, id_materia_veto, identificador having count(*) > 1
 
 union all
 

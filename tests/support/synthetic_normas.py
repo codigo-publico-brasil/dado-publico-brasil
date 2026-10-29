@@ -150,6 +150,14 @@ DISPOSITIVOS = {
                             "Situacao": "Não Apreciado",
                             "PossuiVotos": "Não",
                         },
+                        {  # veto total: a fonte não traz `Codigo`, só o identificador
+                            "Identificador": "5.24.000",
+                            "Descricao": "Veto total",
+                            "Conteudo": "Veto total aposto ao projeto.",
+                            "RazaoVeto": "A proposição é inconstitucional.",
+                            "Situacao": "Mantido",
+                            "PossuiVotos": "Não",
+                        },
                     ]
                 },
             }

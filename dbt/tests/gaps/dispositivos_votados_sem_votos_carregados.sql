@@ -1,7 +1,7 @@
 {{ config(severity='warn') }}
 -- Dispositivos que a fonte diz ter voto nominal e cujo voto ainda não foi buscado (o voto vem por amostra dos mais
 -- recentes até a carga total ser pedida).
-select d.id_dispositivo
+select d.id_materia_veto, d.identificador
 from {{ ref('vetos_dispositivos') }} as d
 where d.fl_possui_votos
     and not exists (select 1 from {{ ref('vetos_votos') }} as v where v.id_dispositivo = d.id_dispositivo)
