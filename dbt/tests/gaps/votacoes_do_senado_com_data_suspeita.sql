@@ -9,10 +9,10 @@ with votos as (
         v.id_pessoa,
         v.dt_voto,
         exists (
-            select 1 from {{ ref('mandatos_exercicios') }} as e
-            where e.id_pessoa = v.id_pessoa and v.dt_voto between e.dt_inicio and coalesce(e.dt_fim, date '9999-12-31')
+            select 1 from {{ ref('fct_exercicios') }} as e
+            where e.fonte = '{{ var("source_senado") }}' and e.id_pessoa = v.id_pessoa and v.dt_voto between e.dt_inicio and coalesce(e.dt_fim, date '9999-12-31')
         ) as em_exercicio,
-        exists (select 1 from {{ ref('mandatos_exercicios') }} as e where e.id_pessoa = v.id_pessoa) as tem_exercicio
+        exists (select 1 from {{ ref('fct_exercicios') }} as e where e.fonte = '{{ var("source_senado") }}' and e.id_pessoa = v.id_pessoa) as tem_exercicio
 
     from {{ ref('int_votacoes_votos_ligados') }} as v
 

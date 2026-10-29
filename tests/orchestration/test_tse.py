@@ -49,7 +49,7 @@ def test_candidacy_is_linked_to_the_person_by_civil_name_and_birth_date(full: En
     con, _ = full
     found = con.execute(
         "SELECT p.nome, c.ano_eleicao, c.cargo, c.partido, c.situacao_candidatura, c.resultado, c.uf "
-        "FROM marts.candidaturas c JOIN marts.pessoas p USING (id_pessoa) ORDER BY c.id_candidatura"
+        "FROM marts.fct_candidaturas c JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) ORDER BY c.id_candidatura"
     ).fetchall()
     assert found == [
         (
@@ -70,7 +70,7 @@ def test_homonyms_in_the_same_election_and_unmatched_candidates_are_not_linked_a
     full: Env,
 ) -> None:
     con, _ = full
-    linked = {r["id_candidatura"] for r in rows(con, "SELECT id_candidatura FROM marts.candidaturas")}
+    linked = {r["id_candidatura"] for r in rows(con, "SELECT id_candidatura FROM marts.fct_candidaturas")}
     assert linked == {
         "2018:SP:2007",  # ligada pelo nome de urna (mudou de nome civil)
         "2022:RJ:1001",
@@ -93,7 +93,7 @@ def test_deputy_and_senator_with_the_same_civil_name_and_birth_date_become_one_p
         )
     }
     assert len(set(ids.values())) == 1  # a chave mais antiga ficou
-    fusao = rows(con, "SELECT * FROM marts.pessoas_fusoes")
+    fusao = rows(con, "SELECT * FROM marts.fct_pessoas_fusoes")
     assert len(fusao) == 1 and fusao[0]["id_pessoa_sobrevivente"] == ids["11"]
     assert fusao[0]["id_pessoa_absorvida"] > fusao[0]["id_pessoa_sobrevivente"]
     assert "iguais e únicos" in fusao[0]["metodo"]
@@ -107,10 +107,12 @@ def test_deputy_and_senator_with_the_same_civil_name_and_birth_date_become_one_p
 
 def test_the_merged_person_has_one_row_with_both_sources_and_the_chamber_data(full: Env) -> None:
     con, _ = full
-    found = con.execute("SELECT fonte, fontes, nome FROM marts.pessoas WHERE nome = 'Bia'").fetchall()
+    found = con.execute(
+        "SELECT fonte, fontes, nome FROM marts.dim_pessoas_cadastro WHERE nome = 'Bia'"
+    ).fetchall()
     assert found == [("camara", "camara, senado", "Bia")]
-    # marts.pessoas só tem parlamentares; as pessoas só do TSE (todo eleito, ADR 0031) estão em core.pessoas
-    assert scalar(con, "SELECT COUNT(*) FROM marts.pessoas") == scalar(
+    # marts.dim_pessoas_cadastro só tem parlamentares; as pessoas só do TSE (todo eleito, ADR 0031) estão em marts.dim_pessoas
+    assert scalar(con, "SELECT COUNT(*) FROM marts.dim_pessoas_cadastro") == scalar(
         con,
         "SELECT COUNT(DISTINCT id_pessoa) FROM identity.pessoa_identificador WHERE source IN ('camara', 'senado')",
     )
@@ -119,7 +121,7 @@ def test_the_merged_person_has_one_row_with_both_sources_and_the_chamber_data(fu
 def test_senator_detail_gives_birth_naturality_photo_and_the_institutional_contact(full: Env) -> None:
     con, _ = full
     row = con.execute(
-        "SELECT dt_nascimento, municipio_nascimento, uf_nascimento, foto_url FROM marts.pessoas "
+        "SELECT dt_nascimento, municipio_nascimento, uf_nascimento, foto_url FROM marts.dim_pessoas_cadastro "
         "WHERE fonte = 'senado' AND nome = 'Beto Barreiras'"
     ).fetchone()
     assert (
@@ -128,7 +130,7 @@ def test_senator_detail_gives_birth_naturality_photo_and_the_institutional_conta
         and row[1:] == ("Santos", "SP", "http://foto/s5000.jpg")
     )
     contact = con.execute(
-        "SELECT email_institucional, telefone_institucional, gabinete_endereco, pagina_url FROM marts.pessoas "
+        "SELECT email_institucional, telefone_institucional, gabinete_endereco, pagina_url FROM marts.dim_pessoas_cadastro "
         "WHERE fonte = 'senado' AND nome = 'Beto Barreiras'"
     ).fetchone()
     assert contact == (
@@ -168,7 +170,7 @@ def test_candidate_declarations_reach_the_marts_and_documents_never_do(full: Env
     con, _ = full
     row = con.execute(
         "SELECT nome_social, grau_instrucao, estado_civil, ocupacao, coligacao_nome, federacao_sigla "
-        "FROM marts.candidaturas WHERE id_candidatura LIKE '2022:%:1001'"
+        "FROM marts.fct_candidaturas WHERE id_candidatura LIKE '2022:%:1001'"
     ).fetchone()
     assert row == ("Bia Social", "Superior completo", "Solteiro(a)", "Advogado", "COLIGACAO TESTE", "FED")
     all_columns = {c for t in ("candidaturas", "pessoas") for c in columns(con, "marts", t)}

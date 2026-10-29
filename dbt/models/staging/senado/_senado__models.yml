@@ -47,7 +47,7 @@ models:
       - {name: dt_situacao, description: "Data da situação atual."}
       - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
       - {name: casa_iniciadora, description: "Casa em que a matéria começou a tramitar (Câmara ou Senado), como a fonte informa."}
-      - {name: id_norma, description: "Código da norma no Senado (marts.normas)."}
+      - {name: id_norma, description: "Código da norma no Senado (fct_normas)."}
       - {name: norma_sigla_tipo, description: "Sigla do tipo da norma gerada pela matéria."}
       - {name: norma_tipo, description: "Tipo da norma gerada pela matéria."}
       - {name: norma_numero, description: "Número da norma gerada pela matéria."}
@@ -75,7 +75,7 @@ models:
   - name: stg_senado__normas
     description: Catálogo das normas federais, uma linha por norma, só metadados, com a ementa padronizada e a original.
     columns:
-      - {name: id_norma, description: "Código da norma no Senado (marts.normas).", tests: ["unique", "not_null"]}
+      - {name: id_norma, description: "Código da norma no Senado (fct_normas).", tests: ["unique", "not_null"]}
       - {name: tipo_sigla, description: "Sigla do tipo da norma na fonte (LEI-n, DEC-n, MPV-cs...)."}
       - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
       - {name: numero, description: "Número da norma."}
@@ -90,7 +90,7 @@ models:
   - name: stg_senado__normas_publicacoes
     description: Publicações de cada norma detalhada (e da Constituição) no Diário Oficial, uma linha por norma e publicação.
     columns:
-      - {name: id_norma, description: "Código da norma no Senado (marts.normas).", tests: ["not_null"]}
+      - {name: id_norma, description: "Código da norma no Senado (fct_normas).", tests: ["not_null"]}
       - {name: id_publicacao, description: "Código da publicação no Senado."}
       - {name: tipo_sigla, description: "Sigla do tipo da norma na fonte (LEI-n, DEC-n, MPV-cs...)."}
       - {name: veiculo, description: "Veículo e edição, como a fonte informa."}
@@ -102,7 +102,7 @@ models:
   - name: stg_senado__normas_relacoes
     description: Relações de cada norma detalhada (e da Constituição) com atos posteriores, uma linha por norma, ato e tipo de relação.
     columns:
-      - {name: id_norma, description: "Código da norma no Senado (marts.normas).", tests: ["not_null"]}
+      - {name: id_norma, description: "Código da norma no Senado (fct_normas).", tests: ["not_null"]}
       - {name: tipo_relacao, description: "Tipo da relação como a fonte declara (por exemplo, Declaração de Alteração Permanente)."}
       - {name: id_norma_posterior, description: "Ato posterior que se relaciona com a norma."}
       - {name: norma_posterior_nome, description: "Nome do ato posterior."}
@@ -122,7 +122,7 @@ models:
       - {name: materia_vetada_numero, description: "Número da matéria vetada."}
       - {name: materia_vetada_ano, description: "Ano da matéria vetada."}
       - {name: materia_vetada_ementa, description: "Ementa da matéria vetada, com caixa padronizada."}
-      - {name: id_norma, description: "Código da norma no Senado (marts.normas)."}
+      - {name: id_norma, description: "Código da norma no Senado (fct_normas)."}
       - {name: norma_nome, description: "Nome da norma gerada."}
       - {name: mensagem_numero, description: "Número da mensagem presidencial do veto."}
       - {name: mensagem_ano, description: "Ano da mensagem presidencial."}

@@ -3,8 +3,8 @@
 -- vencedor e a regra dos votos não fechou (votos não carregados, empate, candidatura inapta ou eleição em curso).
 -- Cada linha é um mandato que falta na linha do tempo (issue 114).
 select d.id_disputa, e.ano_eleicao, d.id_cargo
-from {{ ref('disputas') }} as d
-inner join {{ ref('eleicoes') }} as e on e.id_eleicao = d.id_eleicao
+from {{ ref('dim_disputas') }} as d
+inner join {{ ref('dim_eleicoes') }} as e on e.id_eleicao = d.id_eleicao
 where e.fl_ordinaria
     and d.id_cargo in ('presidente', 'governador', 'prefeito')
-    and not exists (select 1 from {{ ref('fatos_mandatos') }} as m where m.id_disputa = d.id_disputa)
+    and not exists (select 1 from {{ ref('fct_mandatos') }} as m where m.id_disputa = d.id_disputa)

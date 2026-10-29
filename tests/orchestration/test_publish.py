@@ -27,8 +27,7 @@ def service() -> duckdb.DuckDBPyConnection:
     con.execute(
         "CALL postgres_execute('service', \"DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'leitor') "
         "THEN CREATE ROLE leitor; END IF; END $$; DROP SCHEMA IF EXISTS marts CASCADE; "
-        "DROP SCHEMA IF EXISTS marts_novo CASCADE; DROP SCHEMA IF EXISTS servico CASCADE; "
-        'DROP SCHEMA IF EXISTS servico_novo CASCADE")'
+        'DROP SCHEMA IF EXISTS marts_novo CASCADE")'
     )
     return con
 
@@ -45,27 +44,23 @@ def query(service: duckdb.DuckDBPyConnection, sql: str) -> list[tuple[object, ..
 
 
 def expected_rows(con: Connection) -> dict[str, int]:
-    """O que o publish deve devolver: as tabelas dos marts e as views do servico (com o prefixo do esquema)."""
-    expected = {t: int(scalar(con, f"SELECT count(*) FROM marts.{t}")) for t in tables(con, "marts")}
-    views = con.execute(
-        "SELECT view_name FROM duckdb_views() WHERE schema_name = 'servico' AND NOT internal"
-    ).fetchall()
-    return expected | {
-        f"servico.{v}": int(scalar(con, f"SELECT count(*) FROM servico.{v}")) for (v,) in views
-    }
+    """O que o publish deve devolver: as tabelas e views dos marts, com as linhas de cada uma."""
+    return {t: int(scalar(con, f"SELECT count(*) FROM marts.{t}")) for t in tables(con, "marts")}
 
 
 @needs_postgres
-def test_every_mart_and_every_service_view_is_published_with_the_same_number_of_rows(
+def test_every_mart_is_published_with_the_same_number_of_rows(
     full: tuple[Connection, Settings], service: duckdb.DuckDBPyConnection
 ) -> None:
     con, settings = full
     expected = expected_rows(con)
-    assert any(name.startswith("servico.") for name in expected)
+    assert any(name.startswith("app_") for name in expected)
     assert run(full) == expected
-    assert query(service, "SELECT count(*) FROM marts.pessoas") == [(expected["pessoas"],)]
-    assert query(service, "SELECT count(*) FROM servico.cargo_ocupantes") == [
-        (expected["servico.cargo_ocupantes"],)
+    assert query(service, "SELECT count(*) FROM marts.dim_pessoas_cadastro") == [
+        (expected["dim_pessoas_cadastro"],)
+    ]
+    assert query(service, "SELECT count(*) FROM marts.app_cargo_ocupantes") == [
+        (expected["app_cargo_ocupantes"],)
     ]
 
 
@@ -74,17 +69,21 @@ def test_the_reader_role_can_select_and_nothing_stays_in_the_staging_schema(
     full: tuple[Connection, Settings], service: duckdb.DuckDBPyConnection
 ) -> None:
     run(full)
-    assert query(service, "SELECT has_table_privilege('leitor', 'marts.pessoas', 'SELECT')") == [(True,)]
-    assert query(service, "SELECT has_table_privilege('leitor', 'marts.pessoas', 'INSERT')") == [(False,)]
-    assert query(service, "SELECT has_table_privilege('leitor', 'servico.cargo_ocupantes', 'SELECT')") == [
+    assert query(service, "SELECT has_table_privilege('leitor', 'marts.dim_pessoas_cadastro', 'SELECT')") == [
         (True,)
     ]
-    assert query(service, "SELECT has_table_privilege('leitor', 'servico.cargo_ocupantes', 'INSERT')") == [
+    assert query(service, "SELECT has_table_privilege('leitor', 'marts.dim_pessoas_cadastro', 'INSERT')") == [
+        (False,)
+    ]
+    assert query(service, "SELECT has_table_privilege('leitor', 'marts.app_cargo_ocupantes', 'SELECT')") == [
+        (True,)
+    ]
+    assert query(service, "SELECT has_table_privilege('leitor', 'marts.app_cargo_ocupantes', 'INSERT')") == [
         (False,)
     ]
     assert query(
         service,
-        "SELECT count(*) FROM information_schema.schemata WHERE schema_name IN ('marts_novo', 'servico_novo')",
+        "SELECT count(*) FROM information_schema.schemata WHERE schema_name = 'marts_novo'",
     ) == [(0,)]
 
 
@@ -96,16 +95,16 @@ def test_every_published_table_and_column_carries_its_description(
     tables_without = query(
         service,
         "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-        "WHERE n.nspname IN ('marts', 'servico') AND c.relkind = 'r' AND obj_description(c.oid) IS NULL",
+        "WHERE n.nspname = 'marts' AND c.relkind = 'r' AND obj_description(c.oid) IS NULL",
     )
     columns_without = query(
         service,
         "SELECT c.relname || '.' || a.attname FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid "
-        "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname IN ('marts', 'servico') AND c.relkind = 'r' "
+        "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'marts' AND c.relkind = 'r' "
         "AND a.attnum > 0 AND NOT a.attisdropped AND col_description(a.attrelid, a.attnum) IS NULL",
     )
     assert (tables_without, columns_without) == ([], [])
-    assert query(service, "SELECT obj_description('marts.pessoas'::regclass)")[0][0]
+    assert query(service, "SELECT obj_description('marts.dim_pessoas_cadastro'::regclass)")[0][0]
 
 
 @needs_postgres
@@ -115,7 +114,9 @@ def test_publishing_again_replaces_the_marts_without_duplicating_rows(
     first = run(full)
     second = publish.publish(replace(full[1], service_dsn=DSN))
     assert first == second
-    assert query(service, "SELECT count(*) FROM marts.pessoas") == [(first["pessoas"],)]
+    assert query(service, "SELECT count(*) FROM marts.dim_pessoas_cadastro") == [
+        (first["dim_pessoas_cadastro"],)
+    ]
 
 
 def test_publish_without_a_connection_string_explains_what_is_missing(settings: Settings) -> None:

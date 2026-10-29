@@ -1,0 +1,263 @@
+version: 2
+
+models:
+  - name: fct_candidaturas
+    description: >
+      Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era,
+      por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do
+      projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em
+      eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer
+      novato.
+    meta: {sensitivity: publico-agente-publico, grain: candidatura, owner: fundador do projeto, freshness: a cada eleição}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - {name: id_candidatura, data_type: varchar, tests: [unique, not_null], description: "Identificador da candidatura: ano da eleição, unidade eleitoral e sequencial do candidato, como o TSE informa."}
+      - name: id_disputa
+        data_type: varchar
+        tests:
+          - relationships: {to: ref('dim_disputas'), field: id_disputa}
+          - not_null: {config: {severity: warn}}
+        description: "Disputa da candidatura (dim_disputas); vazio quando o arquivo de vagas do TSE não traz a unidade do candidato. O teste de aviso mede quantas ficam assim."
+      - {name: sq_candidato, data_type: bigint, description: "Número sequencial do candidato na eleição, como o TSE informa; liga ao nome do arquivo de foto."}
+      - {name: numero, data_type: varchar, description: "Número do candidato na urna."}
+      - {name: numero_partido, data_type: varchar, description: "Número do partido na urna, como o TSE informa. Não identifica o partido ao longo do tempo: o mesmo número já foi usado por partidos diferentes (por exemplo, um número foi de um partido e depois de outro)."}
+      - {name: nome, data_type: varchar, description: "Nome civil do candidato, com caixa padronizada."}
+      - {name: nome_urna, data_type: varchar, description: "Nome de urna, com caixa padronizada."}
+      - {name: nome_social, data_type: varchar, meta: {pii: true}, description: "Nome social declarado pelo candidato; o TSE às vezes repete o nome civil ou grava Não divulgável (dado protegido)."}
+      - {name: genero, data_type: varchar, description: "Gênero do candidato, como o TSE informa."}
+      - {name: grau_instrucao, data_type: varchar, meta: {pii: true}, description: "Grau de instrução declarado; Não divulgável quando o TSE protege o dado."}
+      - {name: estado_civil, data_type: varchar, meta: {pii: true}, description: "Estado civil declarado na candidatura; Não divulgável quando o TSE protege o dado."}
+      - {name: ocupacao, data_type: varchar, description: "Ocupação declarada, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - name: id_partido
+        data_type: integer
+        tests:
+          - relationships: {to: ref('dim_partidos'), field: id_partido}
+          - not_null: {config: {severity: warn}}
+        description: "Partido da candidatura (dim_partidos), achado pela sigla, pelo número e pelo ano da eleição em partidos_siglas, nunca só pelo número. Vazio quando a combinação não foi curada; o teste de aviso mede quantas."
+      - {name: partido, data_type: varchar, description: "Sigla do partido na eleição, como o TSE informa."}
+      - {name: partido_nome, data_type: varchar, description: "Nome do partido na eleição."}
+      - {name: federacao, data_type: varchar, description: "Sigla da federação partidária (desde 2022); vazia nos anos anteriores."}
+      - {name: coligacao, data_type: varchar, description: "Nome da coligação da candidatura; vazio sem coligação."}
+      - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no último turno em que consta, como o TSE informa (por exemplo, deferido, indeferido)."}
+      - {name: qtd_turnos, data_type: integer, description: "Número do último turno em que a candidatura consta (2 quando foi ao segundo turno)."}
+      - {name: resultado, data_type: varchar, description: "Resultado do último turno como o arquivo de candidaturas do TSE informa (eleito, suplente, não eleito, 2º turno); vazio quando o TSE não informa, como o 2º turno de presidente de 2006."}
+      - {name: fl_eleito, data_type: boolean, description: "Verdadeiro quando o TSE marca a candidatura como eleita em algum turno. Falso não quer dizer derrota quando o resultado está vazio."}
+      - {name: fl_mais_votado_no_ultimo_turno, data_type: boolean, description: "DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no último turno com votos. Vazio sem votos carregados ou em cargo de várias vagas."}
+      - {name: id_pessoa_tse, data_type: varchar, description: "Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato."}
+      - {name: id_pessoa, data_type: bigint, tests: [{relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa do projeto (dim_pessoas) quando a candidatura é de alguém eleito alguma vez; vazio para quem nunca foi eleito, por regra (ADR 0031)."}
+      - {name: foto_arquivo, data_type: varchar, description: "Nome do arquivo da foto oficial no pacote do TSE; vazio quando o pacote não traz foto do candidato."}
+      - {name: foto_caminho, data_type: varchar, description: "Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto."}
+      - {name: foto_pacote_url, data_type: varchar, description: "Endereço oficial do pacote de fotos do TSE que contém a foto."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__captures'), field: id_captura}}], description: "Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures)."}
+
+  - name: fct_resultados
+    description: >
+      O que aconteceu em cada turno da eleição, candidatura a candidatura, só com arquivos do TSE. Uma linha por
+      candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo
+      do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente).
+      fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE.
+    meta: {sensitivity: publico-agente-publico, grain: candidatura e turno, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [id_candidatura, turno]}}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - name: id_candidatura
+        data_type: varchar
+        tests:
+          - not_null
+          - relationships: {to: ref('fct_candidaturas'), field: id_candidatura}
+        description: "Candidatura (fct_candidaturas)."
+      - {name: turno, data_type: integer, description: "Turno da votação."}
+      - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no turno, como o arquivo de candidaturas informa."}
+      - {name: resultado, data_type: varchar, description: "Resultado do turno como o arquivo de candidaturas do TSE informa; vazio quando não informa."}
+      - {name: resultado_votacao, data_type: varchar, description: "Resultado do turno como o arquivo de votação do TSE informa; vazio quando não informa."}
+      - {name: qtd_votos_validos, data_type: bigint, description: "Votos válidos do candidato no turno, somados de todos os municípios e zonas; vazio se a votação não foi carregada."}
+      - {name: qtd_votos_nominais, data_type: bigint, description: "Votos nominais do candidato no turno, somados de todos os municípios e zonas."}
+      - {name: percentual_votos_validos, data_type: "decimal(5,2)", description: "Percentual dos votos válidos do candidato sobre os votos válidos de todos os candidatos da mesma disputa e turno, sem votos de legenda; vazio sem votos carregados."}
+      - {name: fl_mais_votado_no_turno, data_type: boolean, description: "DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no turno; vazio sem votos carregados ou em cargo de várias vagas."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__captures'), field: id_captura}}], description: "Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures)."}
+
+  - name: fct_campanhas
+    description: >
+      A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de
+      contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o
+      arquivo daquele dado não foi carregado ou não traz o candidato.
+    meta: {sensitivity: publico-agente-publico, grain: candidatura, owner: fundador do projeto, freshness: a cada prestação de contas}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - name: id_candidatura
+        data_type: varchar
+        tests:
+          - unique
+          - not_null
+          - relationships: {to: ref('fct_candidaturas'), field: id_candidatura, config: {severity: warn}}
+        description: "Candidatura (fct_candidaturas). 434 candidaturas com bens (2012, 2016, 2020 e 2024) são de eleições suplementares ou renovadas, que as candidaturas não trazem (issue 74); o teste de aviso mede essas."
+      - {name: qtd_bens, data_type: bigint, description: "Quantidade de bens declarados; vazio se o candidato não declarou ou o arquivo não foi carregado."}
+      - {name: valor_bens, data_type: "decimal(18,2)", description: "Soma dos valores dos bens declarados, em reais, sem correção."}
+      - {name: qtd_receitas, data_type: bigint, description: "Quantidade de receitas na prestação de contas; vazio se o arquivo não foi carregado ou não traz o candidato."}
+      - {name: valor_receitas, data_type: "decimal(18,2)", description: "Soma das receitas declaradas, em reais."}
+      - {name: qtd_despesas, data_type: bigint, description: "Quantidade de despesas contratadas na prestação de contas; vazio se o arquivo não foi carregado ou não traz o candidato."}
+      - {name: valor_despesas, data_type: "decimal(18,2)", description: "Soma das despesas contratadas declaradas, em reais."}
+      - {name: dt_prestacao, data_type: date, description: "Data mais recente da prestação de contas entre receitas e despesas."}
+      - {name: id_captura_bens, data_type: bigint, description: "Captura do arquivo de bens de origem; vazia sem bens."}
+      - {name: id_captura_receitas, data_type: bigint, description: "Captura do arquivo de receitas de origem; vazia sem receitas."}
+      - {name: id_captura_despesas, data_type: bigint, description: "Captura do arquivo de despesas de origem; vazia sem despesas."}
+
+  - name: fct_mandatos
+    description: >
+      Um mandato por candidatura eleita, de todos os cargos (inclusive vereador e o vice e os suplentes eleitos junto):
+      o mandato nasce da eleição, não do exercício. Quem assumiu depois como suplente não tem linha aqui (será
+      fct_exercicios). O início vem da regra da Constituição com a vigência (dim_cargos_posse); onde a Constituição não fixa a data,
+      da data de posse do TSE quando plausível. O fim é sempre derivado da
+      duração do cargo. Só TSE; a ligação com a pessoa do projeto virá com as pessoas de todos os eleitos. O nome do
+      modelo leva o prefixo fatos_ só porque fct_mandatos ainda existe; a tabela é fct_mandatos.
+    meta: {sensitivity: publico-agente-publico, grain: mandato (candidatura eleita), owner: fundador do projeto, freshness: a cada eleição}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - name: id_candidatura
+        data_type: varchar
+        tests: [unique, not_null, {relationships: {to: ref('fct_candidaturas'), field: id_candidatura}}]
+        description: "Candidatura eleita que originou o mandato (fct_candidaturas); identifica o mandato."
+      - name: id_disputa
+        data_type: varchar
+        tests: [{not_null: {config: {severity: warn}}}, {relationships: {to: ref('dim_disputas'), field: id_disputa}}]
+        description: "Disputa em que foi eleito (dim_disputas); vazio nas candidaturas sem disputa (o teste de aviso mede)."
+      - {name: id_eleicao, data_type: varchar, description: "Eleição (dim_eleicoes)."}
+      - {name: id_cargo, data_type: varchar, description: "Cargo do mandato (dim_cargos)."}
+      - {name: id_territorio, data_type: varchar, description: "Território do mandato (dim_territorios); vazio onde o TSE não liga a um território."}
+      - {name: id_partido, data_type: integer, description: "Partido pelo qual foi eleito (dim_partidos)."}
+      - {name: base_eleicao, data_type: varchar, tests: [not_null, {accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como se sabe que foi eleito: informado pelo TSE ou DERIVADO dos votos pela Constituição (disputa de uma vaga de eleição passada em que o TSE não informa o vencedor, como o 2º turno de presidente de 2006)."}
+      - {name: id_pessoa_tse, data_type: varchar, description: "Identificador da pessoa entre as eleições do TSE; vazio sem ligação."}
+      - {name: id_pessoa, data_type: bigint, tests: [{not_null: {config: {severity: warn}}}, {relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa do projeto (dim_pessoas); todo eleito tem. O teste de aviso mede os que ficaram sem."}
+      - {name: dt_posse_tse, data_type: date, description: "Data de posse exatamente como o TSE informa na disputa, mesmo quando impossível (por exemplo, antes da eleição); guardada para auditoria."}
+      - {name: dt_inicio, data_type: date, tests: [{not_null: {config: {severity: warn}}}], description: "Início do mandato. Derivado da Constituição com a vigência por ano de eleição (dim_cargos_posse) onde ela fixa a data; sem regra (vereador, deputado estadual), a data de posse do TSE quando cai no ano seguinte ao da eleição e a eleição não é a do ano corrente. Vazio nos demais casos."}
+      - {name: base_dt_inicio, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como dt_inicio foi obtida: derivado (regra da Constituição, com artigo e vigência em dim_cargos_posse) ou informado (data do TSE, só onde a Constituição não fixa a data). Vazio quando dt_inicio é vazio."}
+      - {name: dt_fim_prevista, data_type: date, description: "DERIVADO: dt_inicio mais a duração do cargo na Constituição, menos um dia. É o fim previsto, não o fim real (cassação, renúncia e morte não entram)."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures)."}
+
+  - name: fct_exercicios
+    description: >
+      Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais
+      (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Nada é derivado de
+      regra. Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois
+      não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos). O nome do modelo
+      leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fct_exercicios.
+    meta: {sensitivity: publico-agente-publico, grain: período de exercício, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara ou senado)."}
+      - {name: id_exercicio, data_type: varchar, tests: [unique, not_null], description: "Identificador do período: fonte e identificador da fonte (Câmara: deputado, legislatura e momento da entrada)."}
+      - name: id_pessoa
+        data_type: bigint
+        tests: [{not_null: {config: {severity: warn}}}]
+        description: "Pessoa do projeto (dim_pessoas_cadastro); vazio se a ligação não existe (o teste de aviso mede)."
+      - {name: id_cargo, data_type: varchar, tests: [{relationships: {to: ref('dim_cargos'), field: id_cargo}}], description: "Cargo exercido (dim_cargos): deputado_federal ou senador (suplente em exercício ocupa a vaga do titular)."}
+      - {name: condicao_na_fonte, data_type: varchar, description: "Condição como a fonte informa (Câmara: Titular, Suplente, Efetivado; Senado: Titular, 1º Suplente, 2º Suplente); vazia quando a fonte não informa."}
+      - {name: id_legislatura, data_type: integer, description: "Legislatura do período, só na Câmara; vazia no Senado, onde o mandato dura oito anos."}
+      - {name: uf, data_type: varchar, description: "UF representada, como a fonte informa."}
+      - {name: dt_inicio, data_type: date, tests: [not_null], description: "Início do período, como a fonte informa."}
+      - {name: dt_fim, data_type: date, description: "Fim do período; vazio enquanto está em exercício."}
+      - {name: causa_fim, data_type: varchar, description: "Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+
+  - name: fct_pessoas_partidos
+    description: >
+      O partido de cada pessoa em cada momento, de fontes oficiais (ADR 0032): o histórico de deputados da Câmara
+      (períodos em que o deputado aparece em um partido), os votos de deputados e senadores (o partido em cada voto, só
+      para quem não tem histórico) e a candidatura do TSE (o partido pelo qual a pessoa concorreu em
+      cada eleição, para toda pessoa que já foi eleita, inclusive vereador, prefeito e governador que nunca estiveram na
+      Câmara). Troca de partido são dois momentos seguidos da mesma pessoa com partidos diferentes. O partido da candidatura
+      não é a data de filiação, e a filiação partidária por data (arquivo de filiados do TSE) não é carregada: ver a base
+      legal em docs/03-consultar/05-lgpd-dados-pessoais.md. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela
+      é fct_pessoas_partidos.
+    meta: {sensitivity: publico-agente-publico, grain: partido de uma pessoa em um momento por fonte, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara, senado ou tse)."}
+      - {name: base, data_type: varchar, tests: [{accepted_values: {arguments: {values: [historico_de_deputados, inicio_da_legislatura, votos, candidatura]}}}], description: "De onde sai o partido: historico_de_deputados (períodos do histórico da Câmara), inicio_da_legislatura (partido no início de cada legislatura, para deputados sem períodos no histórico), votos (partido do parlamentar em cada voto, só para quem não tem histórico) ou candidatura (partido pelo qual concorreu no TSE)."}
+      - {name: id_pessoa_partido, data_type: varchar, tests: [unique, not_null], description: "Identificador da linha: fonte e o registro de origem (Câmara: deputado e momento do primeiro registro; TSE: candidatura)."}
+      - name: id_pessoa
+        data_type: bigint
+        tests: [{not_null: {config: {severity: warn}}}, {relationships: {to: ref('dim_pessoas'), field: id_pessoa}}]
+        description: "Pessoa do projeto (dim_pessoas)."
+      - name: id_partido
+        data_type: integer
+        tests:
+          - relationships: {to: ref('dim_partidos'), field: id_partido}
+          - not_null: {config: {severity: warn, where: "ano_referencia >= 1996 and lower(partido_na_fonte) not like 's.part%' and lower(partido_na_fonte) not in ('sem registro', 's/partido')"}}
+        description: "Partido (dim_partidos), achado pela sigla e pelo ano. Vazio para registro sem partido (S.Part.) e para sigla não curada; o teste de aviso mede as não curadas."
+      - {name: partido_na_fonte, data_type: varchar, description: "Sigla do partido como a fonte informa."}
+      - {name: ano_referencia, data_type: bigint, tests: [not_null], description: "Ano do momento: o do primeiro registro da Câmara ou o da eleição da candidatura."}
+      - {name: dt_inicio, data_type: date, description: "Só na Câmara: data do primeiro registro com este partido."}
+      - {name: dt_ultimo_registro, data_type: date, description: "Só na Câmara: data do último registro com este partido; não é o fim da filiação."}
+      - {name: id_candidatura, data_type: varchar, description: "Só no TSE: candidatura pela qual a pessoa concorreu por este partido."}
+      - {name: fl_mais_recente, data_type: boolean, description: "Verdadeiro na linha mais recente da pessoa (maior ano de referência; na Câmara, o último registro). É o partido mais recente que as fontes mostram, não necessariamente o de hoje."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+
+  - name: brg_votacoes_proposicoes
+    description: >
+      Que proposição (ou matéria) cada votação decidiu, uma linha por votação e proposição, com o papel. Troca a lista em
+      texto de fct_votacoes por linhas que ligam a fct_proposicoes. Câmara: afetada (a votação mudou a situação da
+      proposição) ou objeto (foi o assunto votado). Senado: a matéria da votação. Votação sem proposição na fonte não tem
+      linha. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é brg_votacoes_proposicoes.
+    meta: {sensitivity: publico, grain: votação e proposição, owner: fundador do projeto, freshness: diário}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [fonte, id_votacao, id_proposicao, papel]}}
+    columns:
+      - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte oficial do registro (camara ou senado)."}
+      - {name: id_votacao, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}
+      - name: id_proposicao
+        data_type: varchar
+        tests: [not_null]
+        description: "Identificador da proposição (Câmara) ou da matéria (Senado) na fonte; liga a fct_proposicoes (fonte e id_proposicao). O teste de aviso mede as que não estão carregadas lá."
+      - {name: papel, data_type: varchar, tests: [{accepted_values: {arguments: {values: [afetada, objeto, materia]}}}], description: "Papel da proposição na votação: afetada, objeto (Câmara) ou materia (Senado)."}
+
+  - name: fct_eventos
+    description: >
+      A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto
+      livre). O tipo vem do catálogo fechado dim_evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento
+      sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado
+      (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data, retorno de
+      afastamento) ainda não têm linha: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só
+      pela colisão de nomes; a tabela é fct_eventos.
+    meta: {sensitivity: publico-agente-publico, grain: evento da pessoa, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: id_evento, data_type: varchar, tests: [unique, not_null], description: "Tipo, fato de origem e identificador do registro de origem."}
+      - {name: id_pessoa, data_type: bigint, tests: [not_null, {relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa do evento (dim_pessoas)."}
+      - {name: id_tipo_evento, data_type: varchar, tests: [not_null, {relationships: {to: ref('dim_evento_tipos'), field: id_tipo_evento}}], description: "Tipo do evento, do catálogo fechado dim_evento_tipos."}
+      - {name: fato_origem, data_type: varchar, tests: [not_null], description: "Fato do qual o evento nasceu; precisa ser o fato_origem do tipo no catálogo."}
+      - {name: id_fato_origem, data_type: varchar, tests: [not_null], description: "Identificador do registro no fato de origem."}
+      - {name: ano_evento, data_type: bigint, tests: [not_null], description: "Ano do evento."}
+      - {name: dt_evento, data_type: date, description: "Dia do evento, só quando a fonte dá o dia; vazio quando só se conhece o ano (eleição, candidatura, nascimento só com o ano)."}
+      - {name: id_disputa, data_type: varchar, description: "Disputa do evento (dim_disputas), quando o tipo exige."}
+      - {name: id_cargo, data_type: varchar, description: "Cargo do evento (dim_cargos), quando o tipo exige."}
+      - {name: id_territorio, data_type: varchar, description: "Território do evento (dim_territorios), quando o tipo exige."}
+      - {name: id_partido, data_type: integer, description: "Partido do evento (dim_partidos), quando o tipo exige."}
+      - {name: base, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como o evento é obtido: informado pela fonte ou derivado de regra do projeto."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures); vazia quando o evento vem de outra tabela do projeto."}
+
+  - name: fct_votos
+    description: >
+      O voto nominal de cada parlamentar em cada votação (Câmara e Senado), com o partido que a pessoa tinha na data do voto
+      como chave (id_partido) e a sigla da fonte ao lado. A sigla pode ser de dois partidos (duas legendas diferentes em épocas
+      diferentes): vale o partido cujo período de uso da sigla está mais perto do ano do voto. Sem partido ("S.Part.", "Sem
+      registro") ou com sigla ainda não curada, o id_partido fica vazio; o teste de aviso mede as não curadas. Só votos de
+      quem tem pessoa no projeto.
+    meta: {sensitivity: publico-agente-publico, grain: voto de um parlamentar em uma votação, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte oficial do voto (camara ou senado)."}
+      - {name: id_votacao, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}
+      - name: id_pessoa
+        data_type: bigint
+        tests: [not_null, {relationships: {to: ref('dim_pessoas'), field: id_pessoa}}]
+        description: "Pessoa do projeto (dim_pessoas)."
+      - {name: voto, data_type: varchar, description: "Voto registrado, como a fonte informa (sim, não, abstenção, obstrução...)."}
+      - {name: dt_voto, data_type: timestamp, description: "Data e hora do voto, como a fonte informa."}
+      - name: id_partido
+        data_type: integer
+        tests:
+          - relationships: {to: ref('dim_partidos'), field: id_partido}
+          - not_null: {config: {severity: warn, where: "partido_na_fonte is not null and lower(partido_na_fonte) not like 's.part%' and lower(partido_na_fonte) not in ('sem registro', 's/partido')"}}
+        description: "Partido na data do voto (dim_partidos). Vazio para voto sem partido e para sigla não curada."
+      - {name: partido_na_fonte, data_type: varchar, description: "Sigla do partido como a fonte informa no voto."}
+      - {name: uf, data_type: varchar, description: "UF do parlamentar no voto, como a fonte informa."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+

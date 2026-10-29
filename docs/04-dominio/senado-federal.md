@@ -9,7 +9,7 @@ O Senado Federal é a casa dos estados da Câmara alta do Congresso Nacional: 81
 ## Votações e votos
 
 - **Votação nominal:** cada senador registra o voto; a plataforma guarda o texto da sigla como a fonte informa.
-- **Votação secreta:** a fonte não revela a escolha. Cada senador aparece com a sigla `Votou`, que significa apenas que participou. Em `marts.votacoes`, `fl_votacao_secreta` é verdadeiro.
+- **Votação secreta:** a fonte não revela a escolha. Cada senador aparece com a sigla `Votou`, que significa apenas que participou. Em `fct_votacoes`, `fl_votacao_secreta` é verdadeiro.
 - **Totais** de Sim, Não e Abstenção vêm preenchidos só em parte das votações; quando faltam, ficam vazios.
 
 Siglas de voto que a fonte usa (a descrição é a da própria fonte):

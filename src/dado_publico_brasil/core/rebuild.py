@@ -1,6 +1,6 @@
 """Começo da reconstrução do warehouse do zero (docs/02-fazer/04-operar-e-publicar.md).
 
-O warehouse se refaz do landing (raw, staging, intermediate, core, fatos, analise, servico e marts) e a
+O warehouse se refaz do landing (raw, staging, intermediate e marts) e a
 `identity` é criada de novo, com chaves novas. O que NÃO se refaz do landing hoje é o registro das capturas
 (URL, data, hash, ETag e itens de cada lote), que mora em `metadata` (issue 153). Por isso a reconstrução
 parte do warehouse antigo e leva dele só o `metadata`, marcando as capturas como ainda não carregadas.

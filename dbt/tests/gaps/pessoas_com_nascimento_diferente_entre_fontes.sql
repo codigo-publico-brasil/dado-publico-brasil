@@ -3,7 +3,7 @@
 -- sinal de ligação errada (ou de erro de uma das fontes). O TSE usa 1º de janeiro quando só conhece o ano; essas
 -- datas não entram na comparação.
 select p.id_pessoa, p.dt_nascimento as dt_nascimento_oficial, c.id_candidatura, c.dt_nascimento as dt_nascimento_tse
-from {{ ref('core_pessoas') }} as p
+from {{ ref('dim_pessoas') }} as p
 inner join {{ ref('stg_identity__pessoa_identificadores') }} as i
     on i.id_pessoa = p.id_pessoa and i.fonte = '{{ var("source_tse") }}' and i.id_tipo = '{{ var("id_type_tse_eleito") }}'
 inner join {{ ref('stg_tse__candidaturas') }} as c on c.id_candidatura = i.id_na_fonte

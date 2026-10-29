@@ -14,10 +14,6 @@ LAYERS = (
     "raw",
     "staging",
     "intermediate",
-    "core",
-    "fatos",
-    "analise",
-    "servico",
     "marts",
     "identity",
     "metadata",
@@ -54,16 +50,10 @@ def tables(settings: Settings) -> list[dict[str, str]]:
 
 
 def columns(settings: Settings) -> list[dict[str, str]]:
-    """Colunas do núcleo e dos marts (o contrato com a aplicação), com tipo e descrição."""
+    """Colunas dos marts (o contrato com a aplicação), com tipo e descrição."""
     found: list[dict[str, str]] = []
     for node in manifest(settings)["nodes"].values():
-        if node["resource_type"] == "model" and node["schema"] in (
-            "core",
-            "fatos",
-            "analise",
-            "servico",
-            "marts",
-        ):
+        if node["resource_type"] == "model" and node["schema"] == "marts":
             for column in node["columns"].values():
                 found.append(
                     {
@@ -109,7 +99,7 @@ def markdown(settings: Settings) -> str:
         for t in chosen:
             lines.append(f"| `{t['name']}` | {t['description']} | {t['sensitivity']} | {t['grain']} |")
         lines.append("")
-    lines += ["## Dicionário de colunas do núcleo, dos fatos e dos marts", ""]
+    lines += ["## Dicionário de colunas dos marts", ""]
     by_table: dict[tuple[str, str], list[dict[str, str]]] = {}
     for c in columns(settings):
         by_table.setdefault((c["schema"], c["table"]), []).append(c)

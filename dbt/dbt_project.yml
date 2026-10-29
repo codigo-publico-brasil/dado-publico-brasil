@@ -1,11 +1,8 @@
 # Projeto dbt da camada de dados (ADR 0006). Segue o guia de estrutura da dbt Labs:
 #   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
-#   core          referências do modelo (ADR 0030): pessoas, órgãos, territórios, cargos, partidos, eleições, disputas, tipos de evento.
-#   fatos         o que aconteceu, datado e com a fonte: candidaturas, resultados, campanhas, mandatos, exercícios, filiações (ADR 0030).
-#   analise       agregados e composições por período, derivados dos fatos (ADR 0030).
-#   servico       consultas dos aplicativos: só leitura dos fatos e do núcleo, sem regra de negócio (ADR 0030).
-#   marts         entidades prontas para consumo, uma por grain, com contrato de colunas.
+#   marts         entidades e consultas prontas, com contrato de colunas, nomeadas pelo tipo (ADR 0033):
+#                 dim_ (dimensão), fct_ (fato), brg_ (ponte), agg_ (agregado) e app_ (consulta do aplicativo).
 name: dado_publico_brasil
 version: "0.1.0"
 profile: dado_publico_brasil
@@ -57,37 +54,17 @@ models:
       +meta:
         sensitivity: publico-agente-publico
         owner: fundador do projeto
-    core:
-      +schema: core
-      +materialized: table
-      +contract:
-        enforced: true
-      +meta:
-        owner: fundador do projeto
-    analise:
-      +schema: analise
-      +materialized: table
-      +contract:
-        enforced: true
-      +meta:
-        owner: fundador do projeto
-    fatos:
-      +schema: fatos
-      +materialized: table
-      +contract:
-        enforced: true
-      +meta:
-        owner: fundador do projeto
-    servico:
-      +schema: servico
-      +materialized: view
-      +meta:
-        owner: fundador do projeto
     marts:
       +schema: marts
       +materialized: table
       +contract:
         enforced: true
+      +meta:
+        owner: fundador do projeto
+      aplicacao:
+        +materialized: view
+        +contract:
+          enforced: false
 
 seeds:
   dado_publico_brasil:
@@ -96,9 +73,10 @@ seeds:
     +persist_docs:
       relation: true
       columns: true
-    core:
-      +schema: core
-      +column_types: {cd_cargo_tse: integer, duracao_anos: integer, id_partido: integer, id_partido_sucessor: integer, ano_fim: integer, nr_partido: integer, ano_inicio: integer, ano_eleicao_de: integer, ano_eleicao_ate: integer, mes_posse: integer, dia_posse: integer}
+    +column_types: {cd_cargo_tse: integer, duracao_anos: integer, id_partido: integer, id_partido_sucessor: integer, ano_fim: integer, nr_partido: integer, ano_inicio: integer, ano_eleicao_de: integer, ano_eleicao_ate: integer, mes_posse: integer, dia_posse: integer}
+    marts:
+      +schema: marts
+    intermediate:
       vinculos_aprovados:
         +full_refresh: true  # sem isso, o seed criado vazio fica com tipos inferidos errados quando entra a primeira linha
         +column_types: {origem_fonte: varchar, origem_tipo: varchar, id_origem: varchar, destino_fonte: varchar, destino_tipo: varchar, id_destino: varchar, aprovado_por: varchar, dt_aprovacao: date, evidencia: varchar}

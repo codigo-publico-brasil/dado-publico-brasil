@@ -21,11 +21,11 @@ Os dados públicos estão espalhados em portais com formatos diferentes, mudam s
 
 | Fonte oficial | O que entra | Tabelas principais |
 | --- | --- | --- |
-| Câmara dos Deputados | deputados, proposições, autorias, tramitações, votações e voto de cada deputado, órgãos, frentes | `pessoas`, `proposicoes`, `votacoes`, `votacoes_votos` |
-| Senado Federal | senadores, votações e votos, normas, vetos | `normas`, `vetos`, `vetos_votos` |
-| TSE | candidaturas, mandatos, bens, votos e contas de campanha | `candidaturas`, `mandatos`, `candidaturas_bens` |
-| Portal da Transparência | emendas parlamentares, convênios e favorecidos | `emendas`, `emendas_convenios` |
-| Constituição de 1988 | texto por dispositivo | `constituicao_dispositivos` |
+| Câmara dos Deputados | deputados, proposições, autorias, tramitações, votações e voto de cada deputado, órgãos, frentes | `dim_pessoas`, `fct_proposicoes`, `fct_votacoes`, `fct_votos` |
+| Senado Federal | senadores, votações e votos, normas, vetos | `fct_normas`, `fct_vetos`, `fct_vetos_votos` |
+| TSE | candidaturas, mandatos, bens, votos e contas de campanha | `fct_candidaturas`, `fct_mandatos`, `fct_candidaturas_bens` |
+| Portal da Transparência | emendas parlamentares, convênios e favorecidos | `fct_emendas`, `fct_emendas_convenios` |
+| Constituição de 1988 | texto por dispositivo | `dim_constituicao_dispositivos` |
 | Diário Oficial da União | arquivos originais, só guardados | (sem tabela) |
 
 Pessoas são ligadas entre as fontes por uma chave própria (`id_pessoa`), com regras conservadoras ([identidade de pessoas](docs/01-entender/05-identidade-de-pessoas.md)). Todas as tabelas e colunas estão no [catálogo](docs/03-consultar/01-catalogo.md); o que cada fonte não entrega, em [cobertura e lacunas](docs/03-consultar/04-cobertura-e-lacunas.md).
@@ -68,7 +68,7 @@ Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). Pos
 | --- | --- |
 | `sources/` | declaração das fontes: `sources/<poder>/<esfera>/<fonte>.yml` |
 | `src/dado_publico_brasil/` | o código: `core` (base), `ingestion`, `transformation` e `orchestration` (liga os dois) |
-| `dbt/` | modelos SQL: staging, intermediate, core, marts, com testes |
+| `dbt/` | modelos SQL: staging, intermediate e marts (`dim_`, `fct_`, `brg_`, `agg_`, `app_`), com testes |
 | `ddl/` | migrações das tabelas próprias (`metadata`, `identity`) |
 | `docs/` | a documentação |
 | `tests/` | testes |

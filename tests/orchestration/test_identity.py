@@ -65,7 +65,7 @@ def test_a_deputy_seen_only_in_the_votes_also_becomes_a_person(
 ) -> None:
     con, _ = full
     assert con.execute(
-        "SELECT p.nome, p.dt_nascimento, p.foto_url FROM marts.pessoas p "
+        "SELECT p.nome, p.dt_nascimento, p.foto_url FROM marts.dim_pessoas_cadastro p "
         "JOIN identity.pessoa_identificador i USING (id_pessoa) WHERE i.source_id = '12'"
     ).fetchone() == ("Caio", None, None)
 
@@ -75,7 +75,7 @@ def test_people_of_different_sources_with_the_same_name_are_never_linked(
 ) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT fonte, id_pessoa FROM marts.pessoas WHERE nome = 'Ana Árvore' ORDER BY fonte"
+        "SELECT fonte, id_pessoa FROM marts.dim_pessoas_cadastro WHERE nome = 'Ana Árvore' ORDER BY fonte"
     ).fetchall()
     assert [f for f, _ in found] == ["camara", "senado"]
     assert found[0][1] != found[1][1]
@@ -92,7 +92,7 @@ def test_every_elected_candidacy_has_a_person_and_those_who_never_won_have_none(
     assert elected > 0
     without_person = scalar(
         con,
-        "SELECT COUNT(*) FROM fatos.mandatos WHERE id_pessoa IS NULL",
+        "SELECT COUNT(*) FROM marts.fct_mandatos WHERE id_pessoa IS NULL",
     )
     assert without_person == 0
     never_elected = con.execute(
@@ -141,11 +141,11 @@ def test_core_people_have_the_source_of_each_attribute_and_only_published_data(
         "fonte_genero",
         "dt_entrada",
     ]
-    assert scalar(con, "SELECT COUNT(*) FROM core.pessoas") == scalar(
+    assert scalar(con, "SELECT COUNT(*) FROM marts.dim_pessoas") == scalar(
         con, "SELECT COUNT(*) FROM identity.pessoa"
     )
     # o prefeito eleito só existe no TSE: tudo vem de lá, e o gênero só aparece quando a fonte diz masculino ou feminino
     assert con.execute(
-        "SELECT fonte_nome_civil, fonte_dt_nascimento, genero FROM core.pessoas p "
+        "SELECT fonte_nome_civil, fonte_dt_nascimento, genero FROM marts.dim_pessoas p "
         "JOIN identity.pessoa_identificador i USING (id_pessoa) WHERE i.source_id LIKE '%:1010'"
     ).fetchone() == ("tse", "tse", "masculino")

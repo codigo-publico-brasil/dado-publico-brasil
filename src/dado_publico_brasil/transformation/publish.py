@@ -1,9 +1,9 @@
-"""Publica os marts e o esquema `servico` no PostgreSQL de serviço (ADR 0014): as aplicações leem de lá.
+"""Publica o esquema `marts` no PostgreSQL de serviço (ADR 0014 e 0033): as aplicações leem de lá.
 
-Nunca leem do DuckDB. Cada esquema é copiado para um esquema novo (`marts_novo`, `servico_novo`) sem tocar no
-que está no ar e trocado num único comando atômico: quem lê vê ou os dados antigos ou os novos, nunca metade.
-O papel `leitor` (somente leitura) é criado pela infraestrutura, não por este código. As views do `servico`
-viram tabelas no Postgres. Usa a extensão `postgres` do DuckDB; a primeira execução baixa a extensão.
+Nunca leem do DuckDB. O esquema é copiado para um esquema novo (`marts_novo`) sem tocar no que está no ar e
+trocado num único comando atômico: quem lê vê ou os dados antigos ou os novos, nunca metade. O papel `leitor`
+(somente leitura) é criado pela infraestrutura, não por este código. As views `app_` viram tabelas.
+Usa a extensão `postgres` do DuckDB; a primeira execução baixa a extensão.
 """
 
 import re
@@ -16,7 +16,7 @@ from dado_publico_brasil.core.settings import Settings
 READER = "leitor"
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "postgres"}  # "postgres": o serviço do compose.yaml
 SECURE_MODES = {"require", "verify-ca", "verify-full"}
-SCHEMAS = ("marts", "servico")  # o que vai para o Postgres; o resto do warehouse fica no DuckDB
+SCHEMAS = ("marts",)  # o que vai para o Postgres; o resto do warehouse fica no DuckDB
 
 
 def require_tls(dsn: str) -> None:
@@ -119,7 +119,7 @@ def _publish_schema(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -
 
 
 def publish(settings: Settings) -> dict[str, int]:
-    """Publica os marts e o `servico`; devolve as linhas por tabela (`servico.<nome>` no segundo)."""
+    """Publica os marts; devolve as linhas por tabela."""
     if not settings.service_dsn:
         raise ValueError("defina DADO_PUBLICO_POSTGRES_DSN (veja .env.example)")
     require_tls(settings.service_dsn)
@@ -132,8 +132,7 @@ def publish(settings: Settings) -> dict[str, int]:
         con.execute(f"ATTACH '{_quote(settings.service_dsn)}' AS service (TYPE postgres)")
         published: dict[str, int] = {}
         for schema in SCHEMAS:
-            counts = _publish_schema(con, catalog, schema)
-            published |= counts if schema == "marts" else {f"{schema}.{n}": c for n, c in counts.items()}
+            published |= _publish_schema(con, catalog, schema)
         return published
     finally:
         con.close()

@@ -1,0 +1,113 @@
+version: 2
+
+seeds:
+  - name: dim_cargos
+    description: >
+      Catálogo dos cargos eletivos, um por cargo, com poder, esfera, forma de investidura, duração do mandato e a regra
+      legal que a sustenta, com o artigo da Constituição. Curado à mão a partir do texto da Constituição carregado no
+      projeto (constituicao_dispositivos). Onde a Constituição não fixa a data de posse, o campo diz isso e nenhuma
+      data é inventada. Vice e suplente apontam para o cargo do titular.
+    meta: {sensitivity: publico, grain: cargo, owner: fundador do projeto, freshness: a cada emenda constitucional}
+    columns:
+      - {name: id_cargo, description: "Identificador do cargo, em texto legível (por exemplo, deputado_federal).", data_tests: [unique, not_null]}
+      - {name: cd_cargo_tse, description: "Código do cargo no TSE (CD_CARGO nos arquivos de vagas e candidaturas).", data_tests: [unique, not_null]}
+      - {name: nome, description: "Nome do cargo.", data_tests: [not_null]}
+      - {name: poder, description: "Poder ao qual o cargo pertence (executivo ou legislativo).", data_tests: [{accepted_values: {arguments: {values: [executivo, legislativo]}}}]}
+      - {name: esfera, description: "Esfera do cargo (federal, estadual, distrital ou municipal).", data_tests: [{accepted_values: {arguments: {values: [federal, estadual, distrital, municipal]}}}]}
+      - {name: investidura, description: "Como o cargo é preenchido: majoritaria, proporcional ou suplencia.", data_tests: [{accepted_values: {arguments: {values: [majoritaria, proporcional, suplencia]}}}]}
+      - {name: id_cargo_titular, description: "Cargo do titular, quando o cargo é de vice ou de suplente; vazio nos demais.", data_tests: [{relationships: {to: ref('dim_cargos'), field: id_cargo}}]}
+      - {name: duracao_anos, description: "Duração do mandato, em anos, segundo a Constituição."}
+      - {name: regra_legal, description: "Regra legal do mandato, com o artigo da Constituição que a sustenta."}
+      - {name: fonte_url, description: "Texto oficial da Constituição no Planalto."}
+
+  - name: dim_evento_tipos
+    description: >
+      Catálogo fechado dos tipos de evento da pessoa (nascimento, eleito, posse, troca de partido...). A tabela de eventos
+      só aceita tipo que exista aqui. Cada tipo diz de qual fato nasce, que contexto exige e se o evento é informado pela
+      fonte ou derivado de regra do projeto. Tipo novo entra com linha aqui, regra e teste. Desenho aprovado no ADR 0030.
+    meta: {sensitivity: publico, grain: tipo de evento, owner: fundador do projeto, freshness: a cada tipo novo}
+    columns:
+      - {name: id_tipo_evento, description: "Identificador do tipo, em texto legível (por exemplo, troca_de_partido).", data_tests: [unique, not_null]}
+      - {name: categoria, description: "Grupo do tipo: vida, eleicao, mandato, partido, nomeacao ou vinculo.", data_tests: [{accepted_values: {arguments: {values: [vida, eleicao, mandato, partido, nomeacao, vinculo]}}}]}
+      - {name: descricao, description: "O que o evento significa.", data_tests: [not_null]}
+      - {name: fato_origem, description: "Tabela de fatos da qual o evento nasce; vazia quando ainda não há fonte aberta."}
+      - {name: contexto_exigido, description: "Contexto que o evento precisa trazer (disputa, partido, órgão, cargo, território); vazio quando nenhum."}
+      - {name: base, description: "Como o evento é obtido: informado pela fonte, derivado de regra do projeto ou os dois.", data_tests: [{accepted_values: {arguments: {values: [informado, derivado, informado ou derivado]}}}]}
+
+  - name: dim_partidos
+    description: >
+      Cada partido político como entidade, e não como sigla: a sigla e o número do TSE mudam e se repetem entre partidos
+      diferentes (o 18 foi PST e depois REDE; o PL de antes de 2006 não é o PL de hoje; o Podemos passou do 19 ao 20). Uma
+      linha por partido, com o ano em que deixou de existir e o sucessor (fusão ou incorporação), conferidos à mão nos
+      eventos de partidos_eventos. Fusão cria partido novo; incorporação mantém o do incorporador. Onde nenhum evento
+      conferido liga duas siglas, elas ficam como partidos separados e a observação diz isso. Curado à mão; não é inferido
+      do número. O nome do arquivo leva o prefixo core_ só porque dim_partidos_camara (identificador da Câmara, com o mesmo nome
+      de coluna) ainda existe; a tabela é dim_partidos.
+    meta: {sensitivity: publico, grain: partido, owner: fundador do projeto, freshness: a cada fusão, incorporação ou novo partido}
+    columns:
+      - {name: id_partido, description: "Identificador do partido, estável: nunca muda nem é reaproveitado.", data_tests: [unique, not_null]}
+      - {name: sigla, description: "Sigla mais recente do partido nos arquivos do TSE (ou a última, se foi extinto), com o período entre parênteses quando outro partido usou a mesma sigla.", data_tests: [not_null]}
+      - {name: ano_fim, description: "Ano em que o partido deixou de existir por fusão ou incorporação; vazio se continua."}
+      - {name: id_partido_sucessor, description: "Partido que o sucedeu (resultante da fusão ou incorporador); vazio se continua.", data_tests: [{relationships: {to: ref('dim_partidos'), field: id_partido}}]}
+      - {name: fonte_url, description: "Página oficial do TSE que registra o fim do partido; vazia se continua."}
+      - {name: observacao, description: "Nomes anteriores, ressalvas e ligações não conferidas."}
+
+  - name: partidos_siglas
+    description: >
+      Sigla e número que cada partido usou nos arquivos do TSE, por período de eleições. Liga o texto da fonte ao
+      id_partido sem inferir pelo número: o mesmo número serve a partidos diferentes em anos diferentes. Uma linha por
+      partido, sigla e número; os períodos de uma mesma sigla e número não se sobrepõem. Os anos são os das eleições em que
+      a sigla e o número aparecem nas candidaturas carregadas; nas siglas que só a Câmara usa (PEN, PATRI, PMR e SDD),
+      os dos registros do histórico de deputados.
+    meta: {sensitivity: publico, grain: partido, sigla e número, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [sigla_na_fonte, nr_partido, ano_inicio]}}
+    columns:
+      - {name: id_partido, description: "Partido (dim_partidos).", data_tests: [not_null, {relationships: {to: ref('dim_partidos'), field: id_partido}}]}
+      - {name: sigla_na_fonte, description: "Sigla como o TSE grava na candidatura.", data_tests: [not_null]}
+      - {name: nr_partido, description: "Número do partido na urna; vazio nas siglas que só a Câmara usa (PEN, PATRI, PMR e SDD), que não aparecem nas candidaturas."}
+      - {name: ano_inicio, description: "Primeira eleição em que a sigla e o número aparecem.", data_tests: [not_null]}
+      - {name: ano_fim, description: "Última eleição em que a sigla e o número aparecem (inclusive).", data_tests: [not_null]}
+
+  - name: dim_cargos_posse
+    description: >
+      Data de posse (dia e mês) de cada cargo com a regra da Constituição e a vigência por ano de eleição, conferida nos
+      textos das emendas no Planalto. Existe porque a data de posse que o TSE publica não é confiável (traz 1º de janeiro
+      para deputados e senadores, e a posse é em 1º de fevereiro). A EC 111/2021 mudou a posse de governador (6 de janeiro)
+      e de presidente (5 de janeiro) só a partir das eleições de 2026 (art. 5º da emenda). Cargos sem regra na Constituição
+      (vereador e deputado estadual ou distrital) não aparecem: a data fica vazia. Curado à mão.
+    meta: {sensitivity: publico, grain: cargo e vigência, owner: fundador do projeto, freshness: a cada emenda constitucional}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [id_cargo, ano_eleicao_de]}}
+    columns:
+      - {name: id_cargo, description: "Cargo (dim_cargos).", data_tests: [not_null, {relationships: {to: ref('dim_cargos'), field: id_cargo}}]}
+      - {name: ano_eleicao_de, description: "Primeiro ano de eleição em que a regra vale.", data_tests: [not_null]}
+      - {name: ano_eleicao_ate, description: "Último ano de eleição em que a regra vale (9999 enquanto vigente).", data_tests: [not_null]}
+      - {name: mes_posse, description: "Mês da posse.", data_tests: [not_null]}
+      - {name: dia_posse, description: "Dia da posse.", data_tests: [not_null]}
+      - {name: regra_legal, description: "Artigo e emenda que fixam a data, com a vigência.", data_tests: [not_null]}
+      - {name: fonte_url, description: "Texto oficial no Planalto.", data_tests: [not_null]}
+
+  - name: partidos_eventos
+    description: Mudanças de nome, fusões e incorporações de partidos, conferidas à mão no TSE, com a página oficial de cada evento. Alimenta partidos_linhagem. Uma linha por partido de origem e evento.
+    columns:
+      - {name: sigla_anterior, description: "Sigla do partido antes do evento, como aparece nos votos."}
+      - {name: sigla_posterior, description: "Sigla depois do evento (a do partido resultante, em fusão e incorporação)."}
+      - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
+      - {name: dt_aprovacao, description: "Data da aprovação pelo TSE; vazia quando só o mês é conhecido."}
+      - {name: ano, description: "Ano do evento."}
+      - {name: fonte_url, description: "Página oficial do TSE que registra o evento."}
+      - {name: observacao, description: "Divergência de data, resolução ou ressalva da fonte."}
+
+  - name: vinculos_aprovados
+    description: Vínculos entre registros de fontes diferentes que a regra automática não resolve (homônimo, nome diferente entre as fontes), conferidos por uma pessoa, com a evidência escrita. Uma linha por vínculo aprovado.
+    columns:
+      - {name: origem_fonte, description: "Fonte do registro de origem do vínculo (por exemplo, tse)."}
+      - {name: origem_tipo, description: "Tipo de identificador do registro de origem (por exemplo, candidato)."}
+      - {name: id_origem, description: "Identificador do registro de origem, na fonte de origem."}
+      - {name: destino_fonte, description: "Fonte do registro de destino do vínculo (por exemplo, camara)."}
+      - {name: destino_tipo, description: "Tipo de identificador do registro de destino (por exemplo, deputado)."}
+      - {name: id_destino, description: "Identificador do registro de destino, na fonte de destino."}
+      - {name: aprovado_por, description: "Quem conferiu e aprovou o vínculo."}
+      - {name: dt_aprovacao, description: "Data em que o vínculo foi aprovado."}
+      - {name: evidencia, description: "Evidência escrita que justifica o vínculo, com o endereço da fonte."}

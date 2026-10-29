@@ -10,7 +10,7 @@ de eleitor e e-mail de propósito: a plataforma não os lê. As candidaturas mon
 - CARLOS ELEITO: eleito a deputado federal e sem correspondente: fica sem vínculo (lacuna medida);
 - FULANO ESTADUAL: deputado estadual eleito em SP;
 - MUNICIPAIS: prefeito e vereadores do município 60011 (eleitos e não eleito) e um prefeito de eleição suplementar,
-  que não entra em `fatos.mandatos`.
+  que não entra em `marts.fct_mandatos`.
 """
 
 import csv

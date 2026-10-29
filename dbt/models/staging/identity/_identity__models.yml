@@ -20,6 +20,6 @@ models:
     description: Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa, uma linha por chave absorvida.
     columns:
       - {name: id_pessoa_absorvida, description: "Chave que deixou de existir.", tests: ["unique", "not_null"]}
-      - {name: id_pessoa_sobrevivente, description: "Chave que a substituiu (marts.pessoas)."}
+      - {name: id_pessoa_sobrevivente, description: "Chave que a substituiu (dim_pessoas_cadastro)."}
       - {name: metodo, description: "Regra que ligou as duas chaves."}
       - {name: dt_fusao, description: "Momento da fusão."}
