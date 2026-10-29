@@ -1,0 +1,37 @@
+version: 2
+
+unit_tests:
+  - name: campanha_do_vencedor_derivado_sai_eleita_com_a_base_e_o_resultado_do_tse_intacto
+    description: >
+      O TSE não informa o resultado do 2º turno de 2006; o vencedor vem da regra da Constituição (int_tse_eleitos).
+      A candidatura derivada sai eleita com base derivada e `resultado` vazio; a informada, com base informada; a
+      outra, sem eleição, fica sem base e sem marca de eleita.
+    model: pessoa_campanhas
+    given:
+      - input: ref('fatos_candidaturas')
+        rows:
+          - {id_candidatura: "2006:BR:1", id_pessoa: 1, id_disputa: d, resultado: null, fl_eleito: null}
+          - {id_candidatura: "2022:BR:1", id_pessoa: 1, id_disputa: d, resultado: Eleito, fl_eleito: true}
+          - {id_candidatura: "2022:BR:2", id_pessoa: 2, id_disputa: d, resultado: Não eleito, fl_eleito: false}
+      - input: ref('stg_tse__candidaturas')
+        rows:
+          - {id_candidatura: "2006:BR:1", ano_eleicao: 2006}
+          - {id_candidatura: "2022:BR:1", ano_eleicao: 2022}
+          - {id_candidatura: "2022:BR:2", ano_eleicao: 2022}
+      - input: ref('int_tse_eleitos')
+        rows:
+          - {id_candidatura: "2006:BR:1", base_eleicao: derivado}
+          - {id_candidatura: "2022:BR:1", base_eleicao: informado}
+      - input: ref('disputas')
+        rows: []
+      - input: ref('cargos')
+        rows: []
+      - input: ref('campanhas')
+        rows: []
+      - input: ref('core_partidos')
+        rows: []
+    expect:
+      rows:
+        - {id_candidatura: "2006:BR:1", resultado: null, fl_eleito: true, base_eleito: derivado}
+        - {id_candidatura: "2022:BR:1", resultado: Eleito, fl_eleito: true, base_eleito: informado}
+        - {id_candidatura: "2022:BR:2", resultado: Não eleito, fl_eleito: false, base_eleito: null}
