@@ -94,10 +94,21 @@ def read_results(
     ]
 
 
-def invoke(settings: Settings, *args: str, results_file: str = "run_results.json") -> Outcome:
-    """Roda `dbt <args>` no projeto da camada de dados e lê o arquivo de resultados."""
+def invoke(
+    settings: Settings, *args: str, results_file: str = "run_results.json", stream: bool = False
+) -> Outcome:
+    """Roda `dbt <args>` no projeto da camada de dados e lê o arquivo de resultados.
+
+    Com `stream`, a saída do dbt (uma linha por modelo e teste) sai na hora, para acompanhar o progresso."""
     install_packages(settings)
     command, env = _command(settings, *args)
-    process = subprocess.run(command, env=env, capture_output=True, text=True, check=False)
+    with subprocess.Popen(
+        command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace"
+    ) as process:
+        output = ""
+        for line in process.stdout or ():
+            if stream:
+                print(line, end="", flush=True)
+            output = (output + line)[-2000:]
     results = read_results(settings, results_file)
-    return Outcome(process.returncode, (process.stdout + process.stderr)[-2000:], results)
+    return Outcome(process.returncode, output, results)

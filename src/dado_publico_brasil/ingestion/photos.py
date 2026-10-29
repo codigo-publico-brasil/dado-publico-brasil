@@ -2,7 +2,7 @@
 
 O pacote original continua intacto no landing (com hash). Aqui só se extrai cada imagem para
 `<pasta de dados>/fotos/<ano>/<UF>/<SQ_CANDIDATO>.<jpg|jpeg>`, o caminho que
-`marts.eleicoes_candidaturas.foto_caminho` indica. É uma cópia derivada: refaz-se do landing quando
+`marts.fct_candidaturas.foto_caminho` indica. É uma cópia derivada: refaz-se do landing quando
 quiser, e só se escreve o que falta ou mudou.
 """
 
