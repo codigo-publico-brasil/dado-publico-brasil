@@ -290,10 +290,14 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `cargo` |  | Nome do cargo. |  |
 | `territorio` |  | Nome do território do mandato. |  |
 | `partido` |  | Sigla do partido pelo qual foi eleito. |  |
-| `dt_inicio` |  | Início do mandato. |  |
+| `ano_inicio` |  | Ano de início do mandato: o ano seguinte ao da eleição, como a Constituição e as eleições ordinárias determinam; sempre preenchido. |  |
+| `dt_inicio` |  | Dia do início do mandato; vazio quando o dia não está numa fonte nem numa regra (por exemplo, deputado estadual de 2026, que depende da constituição de cada estado). |  |
 | `base_do_inicio` |  | Como o início foi obtido: derivado da Constituição ou informado pelo TSE. |  |
 | `dt_fim_prevista` |  | Fim previsto do mandato (derivado da duração do cargo). |  |
 | `base_eleicao` |  | Como se sabe que foi eleito: informado pelo TSE ou derivado dos votos. |  |
+| `tipo_mandato` |  | novato (primeiro mandato no cargo e a base já cobria o ciclo anterior), reeleito (continuou do mandato anterior, um mandato atrás) ou retorno (já teve mandato, voltou depois de um intervalo); vazio quando não há prova. Abaixo do nível federal, compara o mesmo cargo na mesma unidade. |  |
+| `fonte_url` |  | Arquivo oficial do TSE de onde saiu a eleição, na captura registrada. |  |
+| `dt_captura` |  | Data da captura desse arquivo. |  |
 
 ### marts.app_composicao_comparada
 
@@ -364,6 +368,12 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `valor_receitas` |  | Soma das receitas declaradas, em reais; vazia sem prestação de contas carregada. |  |
 | `valor_despesas` |  | Soma das despesas contratadas declaradas, em reais. |  |
 | `valor_bens` |  | Soma dos bens declarados, em reais. |  |
+| `fonte_url` |  | Arquivo oficial do TSE de onde saíram a candidatura e o resultado, na captura registrada. |  |
+| `dt_captura` |  | Data da captura desse arquivo. |  |
+| `fonte_url_receitas` |  | Arquivo oficial do TSE das receitas da campanha; vazio sem prestação de contas carregada. |  |
+| `fonte_url_despesas` |  | Arquivo oficial do TSE das despesas da campanha; vazio sem prestação de contas carregada. |  |
+| `fonte_url_bens` |  | Arquivo oficial do TSE dos bens declarados; vazio quando o arquivo da eleição não foi carregado. |  |
+| `dt_captura_campanha` |  | Data da captura mais recente entre os arquivos de receitas, despesas e bens. |  |
 
 ### marts.app_pessoa_eventos
 
@@ -418,13 +428,15 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_pessoa` |  | Pessoa do projeto. |  |
 | `nome` |  | Nome pelo qual a pessoa é conhecida. |  |
 | `nome_civil` |  | Nome civil, como a fonte informa. |  |
+| `nome_social` |  | Nome social declarado na candidatura mais recente do TSE que o informa; vazio para quase todos (poucos declaram). |  |
 | `genero` |  | Masculino ou feminino, só quando a fonte diz. |  |
 | `dt_nascimento` |  | Data de nascimento informada pela fonte. |  |
 | `dt_falecimento` |  | Data de falecimento informada pela fonte. |  |
 | `municipio_nascimento` |  | Município de nascimento informado pela fonte. |  |
-| `uf_nascimento` |  | UF de nascimento informada pela fonte. |  |
-| `escolaridade` |  | Escolaridade informada no cadastro da Câmara; vazia onde a fonte não informa. |  |
-| `profissoes` |  | Profissões declaradas, separadas por ponto e vírgula. |  |
+| `uf_nascimento` |  | UF de nascimento: a do cadastro da Câmara ou do Senado quando existe; senão, a declarada na candidatura mais recente do TSE (ZZ para nascido no exterior). |  |
+| `escolaridade` |  | Escolaridade: a do cadastro da Câmara quando existe; senão, o grau de instrução declarado na candidatura mais recente do TSE que o informa (Não divulgável quando o TSE protege o dado). |  |
+| `estado_civil` |  | Estado civil declarado na candidatura mais recente do TSE que o informa; vazio quando nenhuma informa (Não divulgável quando o TSE protege o dado). |  |
+| `profissoes` |  | Profissões: as do cadastro da Câmara (separadas por ponto e vírgula) quando existem; senão, a ocupação declarada na candidatura mais recente do TSE que a informa. |  |
 | `situacao_atual` |  | Situação no último status da Câmara (por exemplo, Exercício ou Licença); vazia onde a fonte não informa. |  |
 | `email_institucional` |  | E-mail institucional do gabinete, como a Câmara ou o Senado publica. |  |
 | `telefone_institucional` |  | Telefone institucional do gabinete. |  |
@@ -435,7 +447,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `foto_caminho` |  | Foto oficial do TSE da candidatura mais recente (caminho do arquivo local); vazia sem foto. |  |
 | `foto_url` |  | Endereço da foto oficial da Câmara ou do Senado; vazio onde a fonte não informa. |  |
 | `fontes` |  | Fontes em que a pessoa aparece no cadastro (por exemplo, camara, senado); vazio para quem só tem o TSE. |  |
-| `dt_captura` |  | Data da captura do cadastro. |  |
+| `fonte_url` |  | Arquivo oficial de onde saem os dados da ficha: o cadastro da Câmara ou do Senado quando a pessoa tem, senão o arquivo de candidaturas do TSE, na captura registrada. |  |
+| `dt_captura` |  | Data da captura desse arquivo. |  |
 
 ### marts.brg_frentes_membros
 
@@ -749,6 +762,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `grau_instrucao` | varchar | Grau de instrução declarado; Não divulgável quando o TSE protege o dado. | sim |
 | `estado_civil` | varchar | Estado civil declarado na candidatura; Não divulgável quando o TSE protege o dado. | sim |
 | `ocupacao` | varchar | Ocupação declarada, como o TSE informa; Não divulgável quando o TSE protege o dado. |  |
+| `uf_nascimento` | varchar | UF de nascimento declarada na candidatura, como o TSE informa (ZZ para nascido no exterior); vazia quando o TSE não informa. |  |
 | `id_partido` | integer | Partido da candidatura (dim_partidos), achado pela sigla, pelo número e pelo ano da eleição em partidos_siglas, nunca só pelo número. Vazio quando a combinação não foi curada; o teste de aviso mede quantas. |  |
 | `partido` | varchar | Sigla do partido na eleição, como o TSE informa. |  |
 | `partido_nome` | varchar | Nome do partido na eleição. |  |

@@ -15,6 +15,7 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 - Todo dado exibido tem fonte oficial, URL e data de captura.
 - O landing é imutável (arquivo original, hash, URL, data). Nunca edite nem apague.
 - Nunca invente, estime nem complete dado: faltou, fica vazio, e o teste mede a lacuna.
+- Atributo cadastral da pessoa: se qualquer fonte oficial carregada o tem, a ficha o traz (o cadastro da Câmara e do Senado primeiro, o TSE no que faltar); nunca depender de a pessoa estar na fonte mais rica. Um teste confere (`app_pessoas_sem_dado_que_o_tse_tem`).
 - Nenhum documento pessoal (CPF, RG...); nenhum segredo ou dado pessoal no repositório.
 - Sem ranking, nota ou métrica avaliativa derivada. Conteúdo de IA fica em tabelas próprias, rotulado.
 - Camadas posteriores são reproduzíveis do landing por código; pipelines são idempotentes.

@@ -195,3 +195,31 @@ def test_servico_views_for_the_person_page_keep_every_row_of_their_facts(
         "SELECT nome, profissoes, foto_url FROM marts.app_pessoas WHERE nome = 'Ana Árvore'"
     ).fetchone()
     assert ana is not None and ana[0] == "Ana Árvore" and ana[1]  # o cadastro da Câmara chega à ficha
+
+
+def test_app_views_carry_the_source_and_capture_date_and_the_birth_state_from_the_tse(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    for view in ("app_cargo_ocupantes", "app_pessoa_campanhas", "app_pessoas"):
+        total, with_source = con.execute(
+            f"SELECT count(*), count(fonte_url) FILTER (WHERE dt_captura IS NOT NULL) FROM marts.{view}"
+        ).fetchone()  # type: ignore[misc]
+        assert total > 0 and with_source == total, view
+    assert not scalar(
+        con, "SELECT count(*) FROM marts.app_cargo_ocupantes WHERE ano_inicio IS NULL OR fonte_url IS NULL"
+    )
+    allowed = {"novato", "reeleito", "retorno", None}
+    found = {
+        r[0] for r in con.execute("SELECT DISTINCT tipo_mandato FROM marts.app_cargo_ocupantes").fetchall()
+    }
+    assert found <= allowed
+    # a UF de nascimento da ficha vem do cadastro da Câmara ou do Senado e, sem ele, da candidatura do TSE
+    assert (
+        scalar(
+            con,
+            "SELECT count(*) FROM marts.app_pessoas a JOIN marts.fct_candidaturas c USING (id_pessoa) "
+            "WHERE a.uf_nascimento IS NULL AND c.uf_nascimento IS NOT NULL",
+        )
+        == 0
+    )

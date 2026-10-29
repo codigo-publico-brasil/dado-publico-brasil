@@ -14,7 +14,13 @@ select
     ca.foto_caminho,
     cm.valor_receitas,
     cm.valor_despesas,
-    cm.valor_bens
+    cm.valor_bens,
+    cap.url as fonte_url,
+    cast(cap.dt_captura as date) as dt_captura,
+    cr.url as fonte_url_receitas,
+    cd.url as fonte_url_despesas,
+    cb.url as fonte_url_bens,
+    cast(greatest(cr.dt_captura, cd.dt_captura, cb.dt_captura) as date) as dt_captura_campanha
 
 from {{ ref('fct_candidaturas') }} as ca
 
@@ -30,5 +36,13 @@ left join {{ ref('int_tse_eleitos') }} as e on e.id_candidatura = ca.id_candidat
 left join {{ ref('fct_campanhas') }} as cm on cm.id_candidatura = ca.id_candidatura
 
 left join {{ ref('dim_partidos') }} as pa on pa.id_partido = ca.id_partido
+
+left join {{ ref('stg_metadata__captures') }} as cap on cap.id_captura = ca.id_captura
+
+left join {{ ref('stg_metadata__captures') }} as cr on cr.id_captura = cm.id_captura_receitas
+
+left join {{ ref('stg_metadata__captures') }} as cd on cd.id_captura = cm.id_captura_despesas
+
+left join {{ ref('stg_metadata__captures') }} as cb on cb.id_captura = cm.id_captura_bens
 
 where ca.id_pessoa is not null
