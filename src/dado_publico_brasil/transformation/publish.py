@@ -50,20 +50,20 @@ def _count(con: duckdb.DuckDBPyConnection, sql: str) -> int:
     return int(row[0]) if row else 0
 
 
-def _relations(con: duckdb.DuckDBPyConnection, schema: str) -> list[str]:
+def _relations(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -> list[str]:
     """As tabelas e views de um esquema do warehouse."""
     return [
         name
         for (name,) in con.execute(
-            "SELECT table_name FROM duckdb_tables() WHERE database_name = 'wh' AND schema_name = ? "
-            "UNION SELECT view_name FROM duckdb_views() WHERE database_name = 'wh' AND schema_name = ? "
-            "AND NOT internal ORDER BY 1",
+            f"SELECT table_name FROM duckdb_tables() WHERE database_name = '{catalog}' AND schema_name = ? "
+            f"UNION SELECT view_name FROM duckdb_views() WHERE database_name = '{catalog}' "
+            "AND schema_name = ? AND NOT internal ORDER BY 1",
             (schema, schema),
         ).fetchall()
     ]
 
 
-def _comments(con: duckdb.DuckDBPyConnection, schema: str) -> str:
+def _comments(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -> str:
     """`COMMENT ON` de cada tabela, view e coluna de um esquema, lidos do DuckDB, para o Postgres."""
 
     def text(value: str) -> str:
@@ -74,9 +74,9 @@ def _comments(con: duckdb.DuckDBPyConnection, schema: str) -> str:
         f'COMMENT ON TABLE {staging}."{table}" IS {text(comment)}'
         for table, comment in con.execute(
             "SELECT table_name, comment FROM duckdb_tables() "
-            "WHERE database_name = 'wh' AND schema_name = ? AND comment IS NOT NULL "
+            f"WHERE database_name = '{catalog}' AND schema_name = ? AND comment IS NOT NULL "
             "UNION SELECT view_name, comment FROM duckdb_views() "
-            "WHERE database_name = 'wh' AND schema_name = ? AND comment IS NOT NULL AND NOT internal",
+            f"WHERE database_name = '{catalog}' AND schema_name = ? AND comment IS NOT NULL AND NOT internal",
             (schema, schema),
         ).fetchall()
     ]
@@ -84,22 +84,22 @@ def _comments(con: duckdb.DuckDBPyConnection, schema: str) -> str:
         f'COMMENT ON COLUMN {staging}."{table}"."{column}" IS {text(comment)}'
         for table, column, comment in con.execute(
             "SELECT table_name, column_name, comment FROM duckdb_columns() "
-            "WHERE database_name = 'wh' AND schema_name = ? AND comment IS NOT NULL",
+            f"WHERE database_name = '{catalog}' AND schema_name = ? AND comment IS NOT NULL",
             (schema,),
         ).fetchall()
     ]
     return "; ".join(statements)
 
 
-def _publish_schema(con: duckdb.DuckDBPyConnection, schema: str) -> dict[str, int]:
+def _publish_schema(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -> dict[str, int]:
     """Copia as tabelas e views de um esquema e troca o esquema no ar. Devolve as linhas por nome."""
     staging = f"{schema}_novo"
-    names = _relations(con, schema)
+    names = _relations(con, catalog, schema)
     con.execute(f"DROP SCHEMA IF EXISTS service.{staging} CASCADE")
     con.execute(f"CREATE SCHEMA service.{staging}")
     for name in names:
-        con.execute(f"CREATE TABLE service.{staging}.{name} AS SELECT * FROM wh.{schema}.{name}")
-    comments = _comments(con, schema)
+        con.execute(f"CREATE TABLE service.{staging}.{name} AS SELECT * FROM {catalog}.{schema}.{name}")
+    comments = _comments(con, catalog, schema)
     if comments:
         con.execute(f"CALL postgres_execute('service', '{_quote(comments)}')")  # descrições, como no DuckDB
     swap = (
@@ -112,7 +112,7 @@ def _publish_schema(con: duckdb.DuckDBPyConnection, schema: str) -> dict[str, in
         name: _count(con, f"SELECT * FROM postgres_query('service', 'SELECT count(*) FROM {schema}.{name}')")
         for name in names
     }
-    sent = {name: _count(con, f"SELECT count(*) FROM wh.{schema}.{name}") for name in names}
+    sent = {name: _count(con, f"SELECT count(*) FROM {catalog}.{schema}.{name}") for name in names}
     if published != sent:
         raise RuntimeError(f"publicação divergente em {schema}: {published} <> {sent}")
     return published
@@ -123,15 +123,16 @@ def publish(settings: Settings) -> dict[str, int]:
     if not settings.service_dsn:
         raise ValueError("defina DADO_PUBLICO_POSTGRES_DSN (veja .env.example)")
     require_tls(settings.service_dsn)
+    catalog = settings.warehouse.stem  # as views do dbt citam o banco pelo nome do arquivo
     con = duckdb.connect()
     try:
         con.execute("INSTALL postgres")
         con.execute("LOAD postgres")
-        con.execute(f"ATTACH '{_quote(settings.warehouse.as_posix())}' AS wh (READ_ONLY)")
+        con.execute(f"ATTACH '{_quote(settings.warehouse.as_posix())}' AS {catalog} (READ_ONLY)")
         con.execute(f"ATTACH '{_quote(settings.service_dsn)}' AS service (TYPE postgres)")
         published: dict[str, int] = {}
         for schema in SCHEMAS:
-            counts = _publish_schema(con, schema)
+            counts = _publish_schema(con, catalog, schema)
             published |= counts if schema == "marts" else {f"{schema}.{n}": c for n, c in counts.items()}
         return published
     finally:
