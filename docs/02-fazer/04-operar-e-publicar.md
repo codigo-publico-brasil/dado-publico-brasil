@@ -83,6 +83,41 @@ O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md))
 
 **Limites:** o Dagster só propaga a partir do que ele mesmo materializou, então na primeira vez rode `atualizar_tudo`. A interface **não tem login** no Dagster de código aberto: o serviço do `compose.yaml` escuta só em `127.0.0.1`; não o exponha à rede sem uma camada de autenticação na frente (ainda em aberto).
 
+## Reconstruir o warehouse do zero, a partir do landing
+
+Quando o warehouse precisa ser refeito (mudança incompatível, arquivo corrompido, limpeza geral). O raw, o dbt e as consultas se refazem do landing; a **identidade é criada de novo, com chaves `id_pessoa` novas** (a cópia da anterior fica em `snapshots/identity`), então só faça isso se nenhuma aplicação guarda as chaves antigas. O que **não** se refaz do landing é o registro das capturas (URL, data, hash, ETag e itens de cada lote), que mora em `metadata` (issue 153): por isso o comando leva o `metadata` do warehouse antigo e descarta o resto.
+
+1. **Pare tudo que escreve no warehouse**, em especial o Dagster (`docker stop dado-publico-brasil-dagster-1`): uma imagem com código antigo apagaria as ligações novas da identidade.
+2. Mova o warehouse antigo para fora do caminho, **sem apagá-lo** (ele é a fonte do `metadata`):
+
+```bash
+mkdir data_store/backup
+mv data_store/warehouse.duckdb data_store/backup/
+```
+
+3. Rode a reconstrução (cria o warehouse, leva o `metadata`, guarda o estado antigo do dlt como `.state/dlt.antes-<data>`, recarrega o raw do landing com `load --rebuild`, roda o dbt, cria a identidade e roda o dbt de novo). **Leva cerca de seis horas**: o raw tem uns 70 milhões de linhas e quase todo o tempo vai na votação do TSE (55 milhões), que o dlt grava em `INSERT ... VALUES` (issue 154). A parte do dbt e da identidade leva cerca de vinte minutos:
+
+```bash
+uv run dado-publico rebuild --old-warehouse data_store/backup/warehouse.duckdb
+```
+
+Se parar no meio, `uv run dado-publico load --rebuild` e `uv run dado-publico transform` retomam as duas metades.
+
+4. **Confira** antes de religar o Dagster e de apagar o backup:
+
+| Conferência | Como |
+| --- | --- |
+| Todas as capturas carregaram | `uv run dado-publico query --sql "select count(*), count(loaded_at) from metadata.captures"` (as duas contagens iguais) |
+| O raw tem as mesmas linhas do antigo | compare `select count(*)` de cada tabela `raw_*` com o warehouse antigo (abra o antigo somente leitura com `duckdb`) |
+| O landing está íntegro e a identidade tem cópia | `uv run dado-publico verify` |
+| Nenhum teste do dbt reprova | `uv run dado-publico observe` (0 reprovados; a seção "Saúde por dimensão" mostra o resto) |
+| Os modelos novos têm o tamanho esperado | `select count(*)` em `core.pessoas`, `fatos.mandatos`, `fatos.eventos`, `analise.composicoes`, `fatos.votos` e `servico.*` contra o warehouse antigo |
+| A identidade está sã | `core.pessoas` e `identity.pessoa` com o mesmo número; nenhum mandato sem `id_pessoa` |
+| O raw bate com o antigo | As diferenças esperadas são só de versões: o `load --rebuild` carrega a **versão mais recente** de cada arquivo, e a carga diária **soma** as versões nos datasets `merge` (issue 155). Fora disso, as contagens devem ser iguais; uma diferença de dobro é duplicação no antigo (foi o caso da votação de 2022) |
+| Reconstruiu igual | rode `transform` de novo: nenhuma pessoa nova, nenhum snapshot novo |
+
+5. Reconstrua a imagem do Dagster com o código atual (`docker compose --profile pipeline up -d --build`) antes de religá-lo.
+
 ## Como saber o que está desatualizado
 
 Dois tempos diferentes, os dois em `metadata.captures`: `captured_at` (quando **chegou conteúdo novo** da fonte) e `last_checked_at` (quando o pipeline **perguntou** à fonte pela última vez). Dataset com `last_checked_at` antigo está sem rodar; com `captured_at` antigo mas verificação recente, a fonte é que não publicou nada.
