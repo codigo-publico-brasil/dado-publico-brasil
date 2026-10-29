@@ -81,6 +81,8 @@ O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md))
 
 **Ver o que está atrasado e executar:** na interface, *Assets* mostra a última atualização de cada ativo e os atrasos (verificação *freshness*); selecione os ativos parados e use *Materialize* (com *downstream*, se quiser propagar). Os sensores `propagar_atualizacoes` e `verificar_atrasos` e os agendamentos sobem ligados.
 
+**Memória e temporários:** o dbt chega a 6,5 GB de memória na fase pós-identidade (issue 160), então o Docker Desktop precisa de pelo menos 8 GB. O compose monta um volume do Docker em `/data/warehouse.duckdb.tmp`: os arquivos temporários do DuckDB (spill) num bind mount do Windows falham ao ser relidos (`Cannot allocate memory`). Trocar o `temp_directory` pelo perfil do dbt não funciona: o DuckDB recusa mudar o diretório depois de usado.
+
 **Limites:** o Dagster só propaga a partir do que ele mesmo materializou, então na primeira vez rode `atualizar_tudo`. A interface **não tem login** no Dagster de código aberto: o serviço do `compose.yaml` escuta só em `127.0.0.1`; não o exponha à rede sem uma camada de autenticação na frente (ainda em aberto).
 
 ## Reconstruir o warehouse do zero, a partir do landing

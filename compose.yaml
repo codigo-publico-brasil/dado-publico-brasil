@@ -40,9 +40,12 @@ services:
       - "127.0.0.1:3000:3000"
     volumes:
       - ./data_store:/data
+      # temporários do DuckDB (spill) num volume do Docker: no bind mount do Windows a releitura falha
+      - duckdb_tmp:/data/warehouse.duckdb.tmp
       - dagster_home:/dagster_home
       - ./dagster.yaml:/dagster_home/dagster.yaml:ro
 
 volumes:
   pgdata:
   dagster_home:
+  duckdb_tmp:
