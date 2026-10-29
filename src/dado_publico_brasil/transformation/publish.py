@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 
 import duckdb
 
+from dado_publico_brasil.core import warehouse
 from dado_publico_brasil.core.settings import Settings
 
 READER = "leitor"
@@ -124,7 +125,7 @@ def publish(settings: Settings) -> dict[str, int]:
         raise ValueError("defina DADO_PUBLICO_POSTGRES_DSN (veja .env.example)")
     require_tls(settings.service_dsn)
     catalog = settings.warehouse.stem  # as views do dbt citam o banco pelo nome do arquivo
-    con = duckdb.connect()
+    con = duckdb.connect(config=warehouse.CONFIG)
     try:
         con.execute("INSTALL postgres")
         con.execute("LOAD postgres")

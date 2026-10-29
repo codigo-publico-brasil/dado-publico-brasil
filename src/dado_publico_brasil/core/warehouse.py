@@ -12,13 +12,17 @@ from dado_publico_brasil.core.settings import Settings
 
 Connection = duckdb.DuckDBPyConnection
 
+# O padrão do DuckDB é 80% da RAM; num container isso deixa pouco para o sistema e a leitura e a escrita do arquivo
+# falham com "Cannot allocate memory" (issue 160). O que passa do teto vai para o disco.
+CONFIG: dict[str, str | bool | int | float | list[str]] = {"memory_limit": "5GB"}
+
 
 def connect(settings: Settings, read_only: bool = False) -> Connection:
     path = settings.warehouse
     if read_only:
-        return duckdb.connect(str(path), read_only=True)
+        return duckdb.connect(str(path), read_only=True, config=CONFIG)
     path.parent.mkdir(parents=True, exist_ok=True)
-    return duckdb.connect(str(path))
+    return duckdb.connect(str(path), config=CONFIG)
 
 
 def scalar(con: Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:
