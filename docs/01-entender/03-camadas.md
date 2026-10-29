@@ -24,7 +24,7 @@ Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas
 | **fatos** | "O que aconteceu, datado e com a fonte (candidaturas, resultados, campanhas, mandatos, exercícios, partidos da pessoa, votos, votações e proposições, eventos)?" | **dbt** (tabelas, com contrato de colunas) | sim |
 | **analise** | "Quem ocupa cada cargo em cada período (composições)?" | **dbt** (tabelas derivadas dos fatos, com contrato) | sim |
 | **servico** | "O que o aplicativo lê, já filtrável por data, pessoa, votação ou município?" | **dbt** (views só de leitura sobre fatos e núcleo, sem regra de negócio) | sim |
-| **marts** | "Como entregar cada entidade pronta para consumo?" | **dbt** (tabelas, com contrato de colunas) | sim |
+| **marts** (em extinção, ADR 0033) | "Como entregar cada entidade pronta para consumo?" | **dbt** (tabelas, com contrato de colunas) | sim |
 | **identity** | "Quem é cada pessoa, em todas as fontes?" | código próprio (pacote `transformation`, `identity.py`) | não: a chave não se reaproveita |
 | **metadata** | "O que rodou, quando, com que resultado?" | código próprio e dbt | não |
 
@@ -46,7 +46,7 @@ Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e 
 | `fatos` | o que aconteceu, datado e com a fonte; toda tabela tem `id_captura` ou a fonte | dbt | [ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) |
 | `analise` | composições por período (eleita e em exercício, separadas), derivadas dos fatos | dbt | [ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) |
 | `servico` | views dos aplicativos (cargo_ocupantes, pessoa_eventos, pessoa_campanhas, decisao, decisao_partidos, composicao_comparada, municipio_governo); substituem `eleitos*` e `candidaturas` quando os aplicativos migrarem | dbt | [ADR 0030](../05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) |
-| `marts` | entidades prontas, com contrato; **o que a aplicação lê** | dbt | guia da dbt Labs |
+| `marts` | entidades prontas, com contrato; **em extinção**: migram para `fatos` e `core` e deixam de ser publicados ([ADR 0033](../05-decisoes/0033-uma-camada-publicada-servico.md)) | dbt | guia da dbt Labs |
 | `identity` | chave própria de pessoa e tabela de ligação | código próprio | específico do projeto (não se reconstrói) |
 | `metadata` | execuções, capturas, resultado dos testes, migrações | código próprio e dbt | específico do projeto |
 | `main` | schema padrão do DuckDB; fica vazio | DuckDB | padrão do DuckDB |
