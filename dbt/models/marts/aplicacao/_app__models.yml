@@ -4,10 +4,10 @@ version: 2
 # tabela larga que o aplicativo filtra pelo parâmetro (data, pessoa, votação, município).
 models:
   - name: app_cargo_ocupantes
-    description: Quem ocupa cada cargo, uma linha por mandato; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. É a composição eleita, não o exercício (cassação, renúncia e morte não entram no fim). Só mandatos com início.
-    meta: {sensitivity: publico-agente-publico, grain: mandato, owner: fundador do projeto, freshness: diário}
+    description: Quem ocupa cada cargo, uma linha por período de ocupação; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. Deputado federal e senador vêm do exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu e eleito em eleição suplementar); quem foi eleito e ainda não assumiu e os demais cargos vêm do mandato da eleição, com o fim previsto pela duração do cargo (cassação e renúncia desses cargos não aparecem, issue 162). Sem data de posse, entra com dt_inicio vazio e ano_inicio preenchido.
+    meta: {sensitivity: publico-agente-publico, grain: período de ocupação, owner: fundador do projeto, freshness: diário}
     columns:
-      - {name: id_candidatura, description: "Candidatura eleita que originou o mandato."}
+      - {name: id_candidatura, description: "Candidatura eleita do mandato a que a ocupação pertence; vazia para o suplente que assumiu e para o eleito em eleição suplementar."}
       - {name: id_pessoa, description: "Pessoa do projeto."}
       - {name: nome, description: "Nome público da pessoa."}
       - {name: cargo, description: "Nome do cargo."}
@@ -16,10 +16,12 @@ models:
       - {name: ano_inicio, description: "Ano de início do mandato: o ano seguinte ao da eleição, como a Constituição e as eleições ordinárias determinam; sempre preenchido."}
       - {name: dt_inicio, description: "Dia do início do mandato; vazio quando o dia não está numa fonte nem numa regra (por exemplo, deputado estadual de 2026, que depende da constituição de cada estado)."}
       - {name: base_do_inicio, description: "Como o início foi obtido: derivado da Constituição ou informado pelo TSE."}
-      - {name: dt_fim_prevista, description: "Fim previsto do mandato (derivado da duração do cargo)."}
+      - {name: dt_fim_prevista, description: "Fim da ocupação: o fim real do exercício quando a fonte o registra (base_do_fim informado) ou o fim previsto pela duração do mandato (derivado). Use esta coluna com dt_inicio para saber quem ocupa o cargo em uma data."}
+      - {name: base_do_fim, description: "informado (a Câmara ou o Senado registra o fim do exercício) ou derivado (fim do mandato pela duração do cargo)."}
       - {name: base_eleicao, description: "Como se sabe que foi eleito: informado pelo TSE ou derivado dos votos."}
       - {name: tipo_mandato, description: "novato (primeiro mandato no cargo e a base já cobria o ciclo anterior), reeleito (continuou do mandato anterior, um mandato atrás) ou retorno (já teve mandato, voltou depois de um intervalo); vazio quando não há prova. Abaixo do nível federal, compara o mesmo cargo na mesma unidade."}
-      - {name: fonte_url, description: "Arquivo oficial do TSE de onde saiu a eleição, na captura registrada."}
+      - {name: tipo_registro, description: "exercicio (período em que a Câmara ou o Senado registra a pessoa em exercício) ou mandato (período da eleição)."}
+      - {name: fonte_url, description: "Arquivo oficial de onde saiu o registro (o do TSE para o mandato; o da Câmara ou do Senado para o exercício), na captura registrada."}
       - {name: dt_captura, description: "Data da captura desse arquivo."}
 
   - name: app_pessoa_eventos

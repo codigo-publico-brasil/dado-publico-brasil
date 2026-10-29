@@ -209,6 +209,16 @@ def test_app_views_carry_the_source_and_capture_date_and_the_birth_state_from_th
     assert not scalar(
         con, "SELECT count(*) FROM marts.app_cargo_ocupantes WHERE ano_inicio IS NULL OR fonte_url IS NULL"
     )
+    # deputado federal e senador com exercício registrado entram pelo exercício, com o fim real quando a fonte o dá
+    kinds = {
+        r[0] for r in con.execute("SELECT DISTINCT tipo_registro FROM marts.app_cargo_ocupantes").fetchall()
+    }
+    assert kinds <= {"exercicio", "mandato"} and "exercicio" in kinds
+    assert not scalar(
+        con,
+        "SELECT count(*) FROM marts.app_cargo_ocupantes WHERE tipo_registro = 'exercicio' AND dt_fim_prevista IS NULL "
+        "AND dt_inicio IS NOT NULL AND cargo IN ('Senador', 'Deputado federal') AND base_do_fim = 'informado'",
+    )
     allowed = {"novato", "reeleito", "retorno", None}
     found = {
         r[0] for r in con.execute("SELECT DISTINCT tipo_mandato FROM marts.app_cargo_ocupantes").fetchall()

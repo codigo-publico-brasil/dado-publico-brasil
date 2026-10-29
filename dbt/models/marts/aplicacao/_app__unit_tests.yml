@@ -68,6 +68,10 @@ unit_tests:
         rows: []
       - input: ref('dim_partidos')
         rows: []
+      - input: ref('fct_exercicios')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows: []
       - input: ref('stg_metadata__captures')
         rows:
           - {id_captura: 1, url: "https://exemplo.gov.br/arquivo.zip", dt_captura: "2026-10-21 10:00:00"}
@@ -80,3 +84,52 @@ unit_tests:
         - {id_candidatura: c20, ano_inicio: 2021, tipo_mandato: null, fonte_url: "https://exemplo.gov.br/arquivo.zip"}
         - {id_candidatura: c24, ano_inicio: 2025, tipo_mandato: novato, fonte_url: "https://exemplo.gov.br/arquivo.zip"}
         - {id_candidatura: d20, ano_inicio: 2021, tipo_mandato: null, fonte_url: "https://exemplo.gov.br/arquivo.zip"}
+
+  - name: ocupacao_vem_do_exercicio_na_camara_e_no_senado_e_do_mandato_no_resto
+    description: >
+      O deputado federal e o senador com exercício registrado entram pelo exercício, com o fim real (a cassada some depois
+      da cassação) e o suplente que assumiu sem mandato eleito; o eleito que ainda não assumiu entra pelo mandato.
+    model: app_cargo_ocupantes
+    given:
+      - input: ref('fct_mandatos')
+        rows:
+          - {id_candidatura: s18a, id_pessoa: 1, id_eleicao: "2018-1", id_cargo: senador, id_partido: 7, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31", id_captura: 1}
+          - {id_candidatura: s18b, id_pessoa: 2, id_eleicao: "2018-1", id_cargo: senador, id_partido: 7, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31", id_captura: 1}
+          - {id_candidatura: s26, id_pessoa: 5, id_eleicao: "2026-1", id_cargo: senador, id_partido: 7, dt_inicio: "2027-02-01", dt_fim_prevista: "2035-01-31", id_captura: 1}
+          - {id_candidatura: g22, id_pessoa: 6, id_eleicao: "2022-1", id_cargo: governador, id_territorio: "35", dt_inicio: "2023-01-01", dt_fim_prevista: "2026-12-31", id_captura: 1}
+      - input: ref('fct_exercicios')
+        rows:
+          - {id_exercicio: e1, id_pessoa: 1, id_cargo: senador, uf: SP, dt_inicio: "2019-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31", id_captura: 1}
+          - {id_exercicio: e2, id_pessoa: 2, id_cargo: senador, uf: SP, dt_inicio: "2019-02-01", dt_fim: "2019-12-20", dt_mandato_fim: "2027-01-31", id_captura: 1}
+          - {id_exercicio: e3, id_pessoa: 3, id_cargo: senador, uf: SP, dt_inicio: "2020-03-01", dt_fim: null, dt_mandato_fim: "2027-01-31", id_captura: 1}
+      - input: ref('fct_pessoas_partidos')
+        rows:
+          - {id_pessoa: 3, id_partido: 9, ano_referencia: 2018}
+      - input: ref('dim_cargos')
+        rows:
+          - {id_cargo: senador, nome: Senador, duracao_anos: 8, esfera: federal}
+          - {id_cargo: governador, nome: Governador, duracao_anos: 4, esfera: estadual}
+      - input: ref('dim_pessoas')
+        rows:
+          - {id_pessoa: 1, nome_publico: Um}
+          - {id_pessoa: 2, nome_publico: Dois}
+          - {id_pessoa: 3, nome_publico: Tres}
+          - {id_pessoa: 5, nome_publico: Cinco}
+          - {id_pessoa: 6, nome_publico: Seis}
+      - input: ref('dim_territorios')
+        rows:
+          - {id_territorio: "35", tipo: uf, nome: Sao Paulo, sigla: SP}
+      - input: ref('dim_partidos')
+        rows:
+          - {id_partido: 7, sigla: AAA}
+          - {id_partido: 9, sigla: BBB}
+      - input: ref('stg_metadata__captures')
+        rows:
+          - {id_captura: 1, url: "https://exemplo.gov.br/arquivo.zip", dt_captura: "2026-10-21 10:00:00"}
+    expect:
+      rows:
+        - {id_pessoa: 1, tipo_registro: exercicio, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31", base_do_fim: derivado, partido: AAA}
+        - {id_pessoa: 2, tipo_registro: exercicio, dt_inicio: "2019-02-01", dt_fim_prevista: "2019-12-20", base_do_fim: informado, partido: AAA}
+        - {id_pessoa: 3, tipo_registro: exercicio, dt_inicio: "2020-03-01", dt_fim_prevista: "2027-01-31", base_do_fim: derivado, partido: BBB}
+        - {id_pessoa: 5, tipo_registro: mandato, dt_inicio: "2027-02-01", dt_fim_prevista: "2035-01-31", base_do_fim: derivado, partido: AAA}
+        - {id_pessoa: 6, tipo_registro: mandato, dt_inicio: "2023-01-01", dt_fim_prevista: "2026-12-31", base_do_fim: derivado, partido: null}
