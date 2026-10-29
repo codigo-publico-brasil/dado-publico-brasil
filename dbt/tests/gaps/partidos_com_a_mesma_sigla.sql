@@ -6,7 +6,7 @@ select
     sigla,
     count(*) as registros
 
-from {{ ref('partidos') }}
+from {{ ref('dim_partidos_camara') }}
 
 group by sigla
 

@@ -1,4 +1,4 @@
--- Quem foi eleito, com a base de cada eleição. Entrada da identidade e de fatos.mandatos.
+-- Quem foi eleito, com a base de cada eleição. Entrada da identidade e de fct_mandatos.
 --  - informado: o arquivo de candidaturas do TSE diz "Eleito" (em algum turno).
 --  - derivado: o TSE não diz quem venceu uma disputa de UMA vaga (presidente, governador, prefeito) de eleição já passada
 --    (em 2006 o TSE não informa o vencedor do 2º turno de presidente), e então vale a regra da Constituição: vence quem

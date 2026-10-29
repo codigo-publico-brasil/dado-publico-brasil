@@ -5,7 +5,7 @@ Para quem precisa **confiar** nos dados ou **conferir** de onde veio cada um. Re
 ## O rastro de um dado, da tabela até a resposta da fonte
 
 ```text
-mart (marts.proposicoes_tramitacoes)
+mart (fct_proposicoes_tramitacoes)
   -> staging e raw: cada linha do raw leva `_source_file_id`
      -> metadata.captures: URL, hash, tamanho, data, caminho do arquivo no landing, execução que trouxe
         -> arquivo do landing (imutável, com o hash no nome)

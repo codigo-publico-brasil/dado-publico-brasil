@@ -1,0 +1,102 @@
+version: 2
+
+models:
+  - name: dim_territorios
+    description: >
+      Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos
+      municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato
+      que fala de lugar (ADR 0030).
+    meta: {sensitivity: publico, grain: território, owner: fundador do projeto, freshness: a cada mudança do IBGE}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (ibge)."}
+      - {name: id_territorio, data_type: varchar, tests: [unique, not_null], description: "Chave do território: BR para o país, o código do IBGE de 2 dígitos para a UF e o de 7 dígitos para o município."}
+      - {name: tipo, data_type: varchar, tests: [{accepted_values: {arguments: {values: [pais, uf, municipio]}}}], description: "Nível do território: pais, uf ou municipio."}
+      - {name: nome, data_type: varchar, tests: [not_null], description: "Nome do território, como o IBGE informa."}
+      - {name: sigla, data_type: varchar, description: "Sigla da UF (e BR para o país); vazia nos municípios."}
+      - {name: id_territorio_pai, data_type: varchar, tests: [{relationships: {to: ref('dim_territorios'), field: id_territorio}}], description: "Território que contém este: a UF para o município e o país para a UF; vazio no país."}
+      - {name: regiao_sigla, data_type: varchar, description: "Sigla da grande região (N, NE, SE, S, CO); vazia no país."}
+      - {name: cd_municipio_tse, data_type: varchar, description: "Código do município no TSE (unidade eleitoral das eleições municipais); vazio quando nome e UF não ligam a um só município e fora dos municípios."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__captures'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+
+  - name: dim_eleicoes
+    description: >
+      Eleições do arquivo de vagas do TSE, uma por ano e código do TSE, ordinárias e suplementares. Se a eleição é
+      ordinária é regra do projeto (cobertura de unidades por ano e cargo), e não informação do TSE.
+    meta: {sensitivity: publico, grain: eleição, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [ano_eleicao, cd_eleicao]}}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - {name: id_eleicao, data_type: varchar, tests: [unique, not_null], description: "Chave da eleição: ano e código do TSE (por exemplo, 2022-544)."}
+      - {name: ano_eleicao, data_type: integer, tests: [not_null], description: "Ano da eleição."}
+      - {name: cd_eleicao, data_type: integer, tests: [not_null], description: "Código da eleição no TSE."}
+      - {name: nome, data_type: varchar, description: "Descrição da eleição, como o TSE informa."}
+      - {name: fl_ordinaria, data_type: boolean, description: "DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__captures'), field: id_captura}}], description: "Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures)."}
+
+  - name: dim_disputas
+    description: >
+      Cada cargo em cada unidade eleitoral de uma eleição, com o número de vagas que o TSE informa. Uma linha por
+      eleição, cargo e unidade. É a base das candidaturas e dos resultados, e permite medir se alguma vaga ficou sem eleito.
+    meta: {sensitivity: publico, grain: eleição, cargo e unidade eleitoral, owner: fundador do projeto, freshness: a cada eleição}
+    data_tests:
+      - dbt_utils.equal_rowcount: {arguments: {compare_model: ref('stg_tse__vagas')}}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
+      - {name: id_disputa, data_type: varchar, tests: [unique, not_null], description: "Chave da disputa: ano, código da eleição, código do cargo no TSE e unidade eleitoral."}
+      - {name: id_eleicao, data_type: varchar, tests: [not_null, {relationships: {to: ref('dim_eleicoes'), field: id_eleicao}}], description: "Eleição da disputa."}
+      - {name: id_cargo, data_type: varchar, tests: [not_null, {relationships: {to: ref('dim_cargos'), field: id_cargo}}], description: "Cargo disputado."}
+      - name: id_territorio
+        data_type: varchar
+        tests:
+          - relationships: {to: ref('dim_territorios'), field: id_territorio}
+          - not_null: {config: {severity: warn}}
+        description: "Território da unidade eleitoral (país, UF ou município do IBGE); vazio quando o código de município do TSE não liga a um só município. O teste de aviso mede quantas disputas ficam assim."
+      - {name: ue, data_type: varchar, description: "Unidade eleitoral como o TSE publica: sigla da UF, BR ou o código do município. Guardada para auditoria."}
+      - {name: ue_nome, data_type: varchar, description: "Nome da unidade eleitoral, com caixa padronizada."}
+      - {name: qtd_vagas, data_type: integer, description: "Número de vagas da disputa, como o TSE informa."}
+      - {name: dt_posse, data_type: date, description: "Data de posse como o arquivo de vagas do TSE informa; o campo não é confiável em todos os anos (issue 71) e não substitui a regra legal do cargo."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__captures'), field: id_captura}}], description: "Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures)."}
+
+  - name: dim_pessoas
+    description: >
+      Quem já teve pelo menos um cargo (ADR 0030 e 0031): parlamentar da Câmara ou do Senado e todo eleito do TSE, a partir
+      do momento da eleição. Quem só se candidatou e nunca foi eleito não está aqui. Uma linha por pessoa do projeto,
+      com a chave de identidade que nunca muda nem é reaproveitada. Cada atributo diz de qual fonte veio (a Câmara e o
+      Senado valem mais que o TSE; o TSE vale a candidatura mais recente que o traz). Só o que a fonte publica; nada é
+      inferido.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: id_pessoa, data_type: bigint, tests: [unique, not_null], description: "Chave própria e estável da pessoa (schema identity)."}
+      - {name: nome_civil, data_type: varchar, description: "Nome civil, como a fonte publica, com caixa padronizada."}
+      - {name: fonte_nome_civil, data_type: varchar, description: "Fonte do nome civil (camara, senado ou tse)."}
+      - {name: nome_publico, data_type: varchar, description: "Nome pelo qual a pessoa é conhecida: nome parlamentar ou, sem ele, nome de urna da candidatura mais recente."}
+      - {name: fonte_nome_publico, data_type: varchar, description: "Fonte do nome público."}
+      - {name: dt_nascimento, data_type: date, description: "Data de nascimento como a fonte publica; vazia quando nenhuma fonte informa. O TSE usa 1º de janeiro quando só conhece o ano."}
+      - {name: fonte_dt_nascimento, data_type: varchar, description: "Fonte da data de nascimento."}
+      - {name: genero, data_type: varchar, description: "Masculino ou feminino, só quando a fonte diz; vazio nos demais casos (inclusive dado protegido)."}
+      - {name: fonte_genero, data_type: varchar, description: "Fonte do gênero."}
+      - {name: dt_entrada, data_type: date, description: "Dia em que a pessoa entrou na identidade do projeto (para o eleito do TSE, a primeira execução depois da eleição)."}
+
+  - name: dim_orgaos
+    description: >
+      Os órgãos onde o mandato é exercido: comissões, plenário, mesa diretora e conselhos da Câmara. A chave id_orgao é do
+      projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Senado, assembleias e
+      câmaras municipais ainda não têm fonte carregada.
+    meta: {sensitivity: publico, grain: órgão, owner: fundador do projeto, freshness: diário}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara)."}
+      - {name: id_orgao, data_type: varchar, tests: [unique, not_null], description: "Chave do órgão no projeto: fonte e identificador da fonte."}
+      - {name: id_orgao_na_fonte, data_type: bigint, description: "Identificador do órgão na fonte."}
+      - {name: sigla, data_type: varchar, description: "Sigla do órgão."}
+      - {name: nome_curto, data_type: varchar, description: "Nome curto do órgão, como a fonte informa."}
+      - {name: nome, data_type: varchar, description: "Nome oficial do órgão."}
+      - {name: tipo, data_type: varchar, description: "Tipo do órgão segundo a fonte."}
+      - {name: casa, data_type: varchar, description: "Casa legislativa informada pela fonte; vazia quando não informa."}
+      - {name: situacao, data_type: varchar, description: "Situação do órgão segundo a fonte."}
+      - {name: dt_inicio, data_type: date, description: "Início do órgão, quando a fonte informa."}
+      - {name: dt_instalacao, data_type: date, description: "Data de instalação, quando a fonte informa."}
+      - {name: dt_fim, data_type: date, description: "Fim do órgão, quando a fonte informa."}
+      - {name: fonte_url, data_type: varchar, description: "Endereço do órgão na fonte oficial."}
+      - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
+

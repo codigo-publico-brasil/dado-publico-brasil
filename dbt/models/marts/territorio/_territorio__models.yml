@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: municipios
+  - name: dim_municipios
     description: Municípios do Brasil segundo o IBGE, com UF e região. Uma linha por município.
     meta: {sensitivity: publico, grain: município, owner: fundador do projeto, freshness: a cada mudança do IBGE}
     columns:
@@ -17,7 +17,7 @@ models:
       - {name: nome_busca, data_type: varchar, description: "Nome sem acento e em minúsculas, para buscar."}
       - {name: dt_captura, data_type: date, description: "Data da captura da lista de municípios."}
 
-  - name: municipios_codigos_tse
+  - name: dim_municipios_codigos_tse
     description: De-para entre o código de município do TSE e o do IBGE, por nome e UF únicos dos dois lados. Uma linha por município do TSE; sem correspondência fica com o código do IBGE vazio.
     meta: {sensitivity: publico, grain: município do TSE, owner: fundador do projeto, freshness: a cada eleição municipal}
     columns:
@@ -30,5 +30,5 @@ models:
         description: "Código do município no IBGE; vazio quando nome e UF não ligam a um só município."
         tests:
           - unique
-          - relationships: {to: ref('municipios'), field: id_municipio}
+          - relationships: {to: ref('dim_municipios'), field: id_municipio}
       - {name: metodo, data_type: varchar, description: "Regra que ligou os dois códigos (nome e UF iguais e únicos); vazio sem ligação."}

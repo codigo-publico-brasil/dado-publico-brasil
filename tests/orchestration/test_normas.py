@@ -10,30 +10,32 @@ def test_catalog_has_every_norm_with_the_official_page_and_the_popular_name(full
     con, _ = full
     found = con.execute(
         "SELECT tipo_sigla, numero, ano, dt_assinatura, apelido, ementa, ementa_oficial, fonte_url "
-        "FROM marts.normas WHERE id_norma = 1001"
+        "FROM marts.fct_normas WHERE id_norma = 1001"
     ).fetchone()
     assert found is not None
     assert found[:2] == ("LEI-n", "14999") and found[2] == 2024 and str(found[3]) == "2024-06-28"
     assert found[4] == "Lei do Teste"
     assert found[5] == "Altera a lei complementar x." and found[6] == "ALTERA A LEI COMPLEMENTAR X."
     assert found[7] == "https://legis.senado.leg.br/norma/1001"
-    assert scalar(con, "SELECT COUNT(*) FROM marts.normas") == 3  # inclui o decreto, que não é detalhado
+    assert scalar(con, "SELECT COUNT(*) FROM marts.fct_normas") == 3  # inclui o decreto, que não é detalhado
 
 
 def test_only_laws_amendments_and_provisional_measures_are_detailed_and_a_missing_list_is_tolerated(
     full: Env,
 ) -> None:
     con, _ = full
-    detailed = {r["id_norma"] for r in rows(con, "SELECT DISTINCT id_norma FROM marts.normas_publicacoes")}
+    detailed = {
+        r["id_norma"] for r in rows(con, "SELECT DISTINCT id_norma FROM marts.fct_normas_publicacoes")
+    }
     assert detailed == {1001, 1002, 579494}  # o decreto 1003 não entra; a emenda 1002 não tem relações ("")
-    assert scalar(con, "SELECT COUNT(*) FROM marts.normas_relacoes WHERE id_norma = 1002") == 0
+    assert scalar(con, "SELECT COUNT(*) FROM marts.brg_normas_relacoes WHERE id_norma = 1002") == 0
 
 
 def test_relations_say_what_changed_each_norm_and_publications_say_where_it_came_out(full: Env) -> None:
     con, _ = full
     found = con.execute(
         "SELECT tipo_relacao, id_norma_posterior, norma_posterior_nome, dt_norma_posterior_assinatura "
-        "FROM marts.normas_relacoes WHERE id_norma = 1001"
+        "FROM marts.brg_normas_relacoes WHERE id_norma = 1001"
     ).fetchall()
     assert [(f[0], f[1], f[2], str(f[3])) for f in found] == [
         (
@@ -44,7 +46,7 @@ def test_relations_say_what_changed_each_norm_and_publications_say_where_it_came
         )
     ]
     publication = con.execute(
-        "SELECT tipo_sigla, dt_publicacao, pagina, coluna, fl_tem_texto FROM marts.normas_publicacoes WHERE id_norma = 1001"
+        "SELECT tipo_sigla, dt_publicacao, pagina, coluna, fl_tem_texto FROM marts.fct_normas_publicacoes WHERE id_norma = 1001"
     ).fetchone()
     assert publication is not None and (publication[0], str(publication[1]), publication[4]) == (
         "PUB",
@@ -57,7 +59,7 @@ def test_a_veto_points_to_the_vetoed_matter_and_to_the_norm_that_came_out(full: 
     con, _ = full
     found = con.execute(
         "SELECT numero, ano, materia_vetada_sigla, materia_vetada_numero, id_norma, fl_veto_total, dt_recebimento, "
-        "quantidade_dispositivos, fonte_url FROM marts.vetos"
+        "quantidade_dispositivos, fonte_url FROM marts.fct_vetos"
     ).fetchall()
     assert len(found) == 1
     numero, ano, sigla, materia, norma, total, recebido, quantidade, url = found[0]
@@ -78,7 +80,7 @@ def test_vetoed_provisions_keep_the_text_the_reason_and_the_decision_as_the_sour
     con, _ = full
     found = con.execute(
         "SELECT id_dispositivo, id_veto, texto_vetado, razao_veto, situacao, fl_possui_votos, tipo_votacao, dt_sessao "
-        "FROM marts.vetos_dispositivos ORDER BY id_dispositivo"
+        "FROM marts.fct_vetos_dispositivos ORDER BY id_dispositivo"
     ).fetchall()
     assert [(f[0], f[1], f[4], f[5], f[6], str(f[7])) for f in found] == [
         (9001, 7001, "Rejeitado", True, "Painel", "2024-09-10"),
@@ -94,7 +96,7 @@ def test_vetoed_provisions_keep_the_text_the_reason_and_the_decision_as_the_sour
 def test_veto_votes_come_with_name_party_and_state_and_are_not_linked_to_people(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT casa, nome_parlamentar, partido, uf, voto FROM marts.vetos_votos ORDER BY casa, nome_parlamentar"
+        "SELECT casa, nome_parlamentar, partido, uf, voto FROM marts.fct_vetos_votos ORDER BY casa, nome_parlamentar"
     ).fetchall()
     assert found == [
         ("Câmara", "Bia", "BBB", "RJ", "Sim"),
@@ -108,7 +110,7 @@ def test_veto_votes_come_with_name_party_and_state_and_are_not_linked_to_people(
 
 def test_the_norm_a_matter_generated_points_to_the_catalog(full: Env) -> None:
     con, _ = full
-    assert scalar(con, "SELECT COUNT(*) FROM marts.normas_geradas WHERE id_norma IS NOT NULL") >= 1
+    assert scalar(con, "SELECT COUNT(*) FROM marts.fct_normas_geradas WHERE id_norma IS NOT NULL") >= 1
 
 
 def test_the_constitution_is_classified_with_the_context_of_each_provision(full: Env) -> None:
@@ -117,7 +119,7 @@ def test_the_constitution_is_classified_with_the_context_of_each_provision(full:
         r["identificador"]: r["tipo"]
         for r in rows(
             con,
-            "SELECT identificador, tipo FROM marts.constituicao_dispositivos "
+            "SELECT identificador, tipo FROM marts.dim_constituicao_dispositivos "
             "WHERE parte = 'Constituição' AND identificador IS NOT NULL",
         )
     }
@@ -134,7 +136,7 @@ def test_the_constitution_is_classified_with_the_context_of_each_provision(full:
         "Art. 8": "artigo",
     }
     chapter = con.execute(
-        "SELECT titulo, capitulo FROM marts.constituicao_dispositivos WHERE identificador = 'Art. 6' AND parte = 'Constituição'"
+        "SELECT titulo, capitulo FROM marts.dim_constituicao_dispositivos WHERE identificador = 'Art. 6' AND parte = 'Constituição'"
     ).fetchone()
     assert chapter == ("TÍTULO I DOS PRINCÍPIOS FUNDAMENTAIS", "CAPÍTULO II DOS DIREITOS SOCIAIS")
 
@@ -145,7 +147,7 @@ def test_the_file_header_the_preamble_and_the_signatures_have_no_provision_conte
         r["tipo"]: r["artigo"]
         for r in rows(
             con,
-            "SELECT tipo, artigo FROM marts.constituicao_dispositivos "
+            "SELECT tipo, artigo FROM marts.dim_constituicao_dispositivos "
             "WHERE parte = 'Constituição' AND tipo IN ('cabeçalho do arquivo', 'preâmbulo', 'assinaturas')",
         )
     }
@@ -153,14 +155,14 @@ def test_the_file_header_the_preamble_and_the_signatures_have_no_provision_conte
     assert (
         scalar(
             con,
-            "SELECT COUNT(DISTINCT atualizada_ate_emenda) FROM marts.constituicao_dispositivos WHERE parte = 'Constituição'",
+            "SELECT COUNT(DISTINCT atualizada_ate_emenda) FROM marts.dim_constituicao_dispositivos WHERE parte = 'Constituição'",
         )
         == 1
     )
     assert (
         scalar(
             con,
-            "SELECT MAX(atualizada_ate_emenda) FROM marts.constituicao_dispositivos WHERE parte = 'Constituição'",
+            "SELECT MAX(atualizada_ate_emenda) FROM marts.dim_constituicao_dispositivos WHERE parte = 'Constituição'",
         )
         == 99
     )
@@ -171,7 +173,7 @@ def test_amendment_notes_become_rows_with_kind_number_and_year_only_when_one_ame
 ) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT identificador, tipo_alteracao, emenda_numero, emenda_ano FROM marts.constituicao_alteracoes "
+        "SELECT identificador, tipo_alteracao, emenda_numero, emenda_ano FROM marts.fct_constituicao_alteracoes "
         "WHERE parte = 'Constituição' ORDER BY ordem, emenda_numero"
     ).fetchall()
     assert found == [

@@ -5,7 +5,7 @@ Problema: uma mesma pessoa pode aparecer em várias fontes e em vários cargos. 
 ## A solução: três tabelas
 
 ```text
-        identity.pessoa                   identity.pessoa_identificador             marts.mandatos
+        identity.pessoa                   identity.pessoa_identificador             fct_mandatos
   ┌──────────────────────────┐        ┌───────────────────────────────────┐   ┌─────────────────────────────┐
   │ id_pessoa  (chave nossa) │◄───────│ id_pessoa                         │   │ id_pessoa                   │
   │ nome, nome_civil         │        │ fonte        ex.: camara          │   │ cargo   Deputado federal    │
@@ -46,7 +46,7 @@ Decidida na spec 008: um erro de ligação (juntar duas pessoas diferentes, ou s
 
 ### Fusão de chaves
 
-Quando a regra mostra que um deputado e um senador são a mesma pessoa, a chave mais **nova** é absorvida pela mais **antiga**: os identificadores passam a apontar para a sobrevivente, a chave absorvida sai de `identity.pessoa` e **nunca é reaproveitada**, e a fusão fica em `identity.pessoa_fusao` (mart `pessoas_fusoes`) para quem guardou a chave antiga resolver a atual. `marts.pessoas` tem uma linha por pessoa (dados da Câmara quando está nas duas casas; coluna `fontes` com todas).
+Quando a regra mostra que um deputado e um senador são a mesma pessoa, a chave mais **nova** é absorvida pela mais **antiga**: os identificadores passam a apontar para a sobrevivente, a chave absorvida sai de `identity.pessoa` e **nunca é reaproveitada**, e a fusão fica em `identity.pessoa_fusao` (mart `pessoas_fusoes`) para quem guardou a chave antiga resolver a atual. `dim_pessoas_cadastro` tem uma linha por pessoa (dados da Câmara quando está nas duas casas; coluna `fontes` com todas).
 
 Hoje só existe a fonte Câmara, então toda ligação é a automática "identificador oficial da própria fonte". O código está em [`identity.py`](../../src/dado_publico_brasil/transformation/identity.py) e as tabelas são criadas por [migração](../../ddl/0002_identity.sql). Os dados da pessoa (nome, foto, nascimento) e o mandato são modelos SQL do dbt ([`int_pessoas_unidas_cadastro`](../../dbt/models/intermediate/int_pessoas_unidas_cadastro.sql) e [`mandatos`](../../dbt/models/marts/legislativo/mandatos.sql)).
 
@@ -56,7 +56,7 @@ Além do parlamentar da Câmara e do Senado, **todo candidato eleito pelo menos 
 
 - **A âncora é a candidatura** (`id_candidatura`, estável), na ponte com o tipo `candidatura_de_eleito`. O `id_pessoa_tse` agrupa as candidaturas, mas o rótulo dele muda quando entra uma candidatura com outro nome; por isso ele nunca é o identificador.
 - **Se um grupo toca duas pessoas, elas se fundem.** A pessoa da Câmara ou do Senado sobrevive sempre (a chave dela já foi publicada). **Duas pessoas oficiais nunca se fundem por aqui**: o caso aparece no teste `pessoas_de_grupo_do_tse_com_mais_de_uma_pessoa` e entra em `vinculos_aprovados` se uma pessoa confirmar.
-- Os atributos (nome, nascimento, gênero) ficam em `core.pessoas`, cada um com a fonte de onde veio.
+- Os atributos (nome, nascimento, gênero) ficam em `dim_pessoas`, cada um com a fonte de onde veio.
 - Os riscos e o teste de cada um estão na [issue 130](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/130).
 
 ## Mandato: o que é oficial e o que é observado

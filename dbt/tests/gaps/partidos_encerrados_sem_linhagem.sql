@@ -10,11 +10,11 @@ with ativos as (
 
 )
 
-select v.partido
-from {{ ref('votacoes_votos') }} as v
-where v.partido is not null
-    and v.partido not in ('S/Partido', 'Sem registro', 'S.PART.')
-group by v.partido
-having max(v.dt_voto) < (select max(dt_voto) from {{ ref('votacoes_votos') }}) - interval 1 year
-    and v.partido not in (select sigla_anterior from {{ ref('partidos_eventos') }})
-    and upper(v.partido) not in (select sigla from ativos)
+select v.partido_na_fonte
+from {{ ref('fct_votos') }} as v
+where v.partido_na_fonte is not null
+    and v.partido_na_fonte not in ('S/Partido', 'Sem registro', 'S.PART.')
+group by v.partido_na_fonte
+having max(v.dt_voto) < (select max(dt_voto) from {{ ref('fct_votos') }}) - interval 1 year
+    and v.partido_na_fonte not in (select sigla_anterior from {{ ref('partidos_eventos') }})
+    and upper(v.partido_na_fonte) not in (select sigla from ativos)

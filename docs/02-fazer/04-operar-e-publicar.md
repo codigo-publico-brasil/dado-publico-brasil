@@ -46,7 +46,7 @@ Pela página de comparação do Elementary (consultada em 24/10/2026), a versão
 | --- | --- |
 | Catalog | `docs/03-consultar/01-catalogo.md`, gerado do dbt (`dado-publico catalog`) |
 | Data health | `dado-publico observe` |
-| Fotos dos candidatos | `uv run dado-publico fotos` extrai as imagens dos pacotes do TSE (já no landing) para `<pasta de dados>/fotos/<ano>/<UF>/<sq>.jpg`, só o que falta ou mudou; o caminho está em `fatos.candidaturas.foto_caminho`. Hospedagem pública das fotos depende da decisão do VPS (#30) |
+| Fotos dos candidatos | `uv run dado-publico fotos` extrai as imagens dos pacotes do TSE (já no landing) para `<pasta de dados>/fotos/<ano>/<UF>/<sq>.jpg`, só o que falta ou mudou; o caminho está em `fct_candidaturas.foto_caminho`. Hospedagem pública das fotos depende da decisão do VPS (#30) |
 | Alert rules | alerta por e-mail do `observe` (o Elementary aberto só alerta por Slack e Teams) |
 | Environment | não se aplica: há um ambiente |
 | Pull requests | o próprio GitHub |
@@ -59,7 +59,7 @@ A máquina não prova que o dado está certo. A cada fonte nova: comparar a cont
 
 | Resultado | Onde está hoje | Como acessar |
 | --- | --- | --- |
-| Marts e esquema `servico` (as views viram tabelas) | PostgreSQL de serviço | `dado-publico publish` ([`01-rodar-localmente.md`](01-rodar-localmente.md)) |
+| Esquema `marts` (as views `app_` viram tabelas) | PostgreSQL de serviço | `dado-publico publish` ([`01-rodar-localmente.md`](01-rodar-localmente.md)) |
 | Catálogo e dicionário de colunas | Arquivo no repositório | [`03-consultar/01-catalogo.md`](../03-consultar/01-catalogo.md), gerado por `dado-publico catalog` |
 | Site do dbt (linhagem, descrições, links das fontes) | **Só local** | `dado-publico docs`, em http://127.0.0.1:8080, com o pipeline parado |
 | Relatório de observabilidade | Local ou e-mail | `dado-publico observe [--html] [--email]` |
@@ -113,8 +113,8 @@ Se parar no meio, `uv run dado-publico load --rebuild` e `uv run dado-publico tr
 | O raw tem as mesmas linhas do antigo | compare `select count(*)` de cada tabela `raw_*` com o warehouse antigo (abra o antigo somente leitura com `duckdb`) |
 | O landing está íntegro e a identidade tem cópia | `uv run dado-publico verify` |
 | Nenhum teste do dbt reprova | `uv run dado-publico observe` (0 reprovados; a seção "Saúde por dimensão" mostra o resto) |
-| Os modelos novos têm o tamanho esperado | `select count(*)` em `core.pessoas`, `fatos.mandatos`, `fatos.eventos`, `analise.composicoes`, `fatos.votos` e `servico.*` contra o warehouse antigo |
-| A identidade está sã | `core.pessoas` e `identity.pessoa` com o mesmo número; nenhum mandato sem `id_pessoa` |
+| Os modelos novos têm o tamanho esperado | `select count(*)` em `dim_pessoas`, `fct_mandatos`, `fct_eventos`, `agg_composicoes`, `fct_votos` e `app_*` contra o warehouse antigo |
+| A identidade está sã | `dim_pessoas` e `identity.pessoa` com o mesmo número; nenhum mandato sem `id_pessoa` |
 | O raw bate com o antigo | As diferenças esperadas são só de versões: o `load --rebuild` carrega a **versão mais recente** de cada arquivo, e a carga diária **soma** as versões nos datasets `merge` (issue 155). Fora disso, as contagens devem ser iguais; uma diferença de dobro é duplicação no antigo (foi o caso da votação de 2022) |
 | Reconstruiu igual | rode `transform` de novo: nenhuma pessoa nova, nenhum snapshot novo |
 

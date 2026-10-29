@@ -14,7 +14,7 @@ Outros modos: `--incremental` (a execução automática: só a partição em cur
 **Conexões e segredos** vão em variáveis de ambiente: copie `.env.example` para `.env` (fora do git) e use `uv run --env-file .env dado-publico ...` (o `dagster dev` já carrega o `.env` da pasta). Em produção, a infraestrutura injeta as variáveis, de preferência a partir de um gerenciador de segredos.
 
 ```bash
-uv run dado-publico query --sql "SELECT * FROM marts.pessoas LIMIT 10"
+uv run dado-publico query --sql "SELECT * FROM dim_pessoas_cadastro LIMIT 10"
 uv run dado-publico docs      # grafo de linhagem e dicionário de colunas (dbt docs)
 ```
 
@@ -82,8 +82,8 @@ Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por ve
 O warehouse é `data_store/warehouse.duckdb`. Um arquivo DuckDB aceita um escritor por vez; com o pipeline parado, qualquer um dos três serve:
 
 ```bash
-uv run dado-publico query --sql "SELECT * FROM marts.pessoas WHERE nome_busca LIKE '%maria%'"
-uv run python -c "import duckdb; print(duckdb.connect('data_store/warehouse.duckdb', read_only=True).sql('SELECT COUNT(*) FROM marts.votacoes_votos'))"
+uv run dado-publico query --sql "SELECT * FROM dim_pessoas_cadastro WHERE nome_busca LIKE '%maria%'"
+uv run python -c "import duckdb; print(duckdb.connect('data_store/warehouse.duckdb', read_only=True).sql('SELECT COUNT(*) FROM fct_votos'))"
 ```
 
 O [catálogo](../03-consultar/01-catalogo.md) lista todas as tabelas, gerado do dbt (`uv run dado-publico catalog`).

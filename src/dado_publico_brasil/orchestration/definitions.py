@@ -264,7 +264,7 @@ def _marts() -> list[AssetKey]:
     ]
 
 
-@asset(key=AssetKey(["servico", "marts"]), deps=_marts(), group_name="servico", automation_condition=EAGER)
+@asset(key=AssetKey(["publicacao", "marts"]), deps=_marts(), group_name="marts", automation_condition=EAGER)
 def publish_asset() -> MaterializeResult[Any]:
     """Copia os marts para o PostgreSQL de serviço, numa troca atômica (ADR 0014)."""
     tables = publish.publish(SETTINGS)

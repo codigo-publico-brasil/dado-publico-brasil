@@ -6,6 +6,6 @@ select
     nome_tse,
     uf
 
-from {{ ref('municipios_codigos_tse') }}
+from {{ ref('dim_municipios_codigos_tse') }}
 
 where id_municipio is null

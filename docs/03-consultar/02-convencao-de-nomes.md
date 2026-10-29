@@ -7,7 +7,18 @@ Para quem cria ou altera tabelas e colunas (pessoas e agentes de IA): como nomea
 - **Tema na frente, detalhe depois**, sem conectivos (`de`, `em`, `por`, `do`). Assim as tabelas parecidas ficam juntas na ordem alfabética: `proposicoes`, `proposicoes_autorias`, `proposicoes_tramitacoes`.
 - Plural, minúsculas, sem acento, palavras separadas por `_`.
 - O nome diz o objeto: `proposicoes_autorias` (autoria de quê?) e não `autorias`.
-- Modelos de staging seguem o padrão do dbt, `stg_<fonte>__<tabela>`, e a parte `<tabela>` segue esta regra.
+- Modelos de staging seguem o padrão do dbt, `stg_<fonte>__<tabela>`, e a parte `<tabela>` segue esta regra. Os de intermediate levam `int_`.
+- **Nos marts, o prefixo diz o tipo da tabela** (terminologia de Kimball, a que o guia da dbt Labs usa):
+
+  | Prefixo | O que é | Exemplos |
+  | --- | --- | --- |
+  | `dim_` | dimensão: algo que existe (pessoa, cargo, partido, território, órgão). Se guarda a história por período (SCD tipo 2), usa `dt_inicio`, `dt_fim` e `fl_vigente` na própria tabela, sem outro prefixo | `dim_pessoas`, `dim_partidos` |
+  | `fct_` | fato: algo que aconteceu, datado e com a fonte (voto, mandato, candidatura, proposição) | `fct_votos`, `fct_mandatos` |
+  | `brg_` | ponte entre duas entidades, quando a relação é muitos-para-muitos | `brg_proposicoes_autorias`, `brg_frentes_membros` |
+  | `agg_` | agregado por período, derivado dos fatos | `agg_composicoes` |
+  | `app_` | consulta pronta do aplicativo, larga e sem regra de negócio; pode ser view | `app_pessoas`, `app_cargo_ocupantes` |
+
+  Tabela de entrada curada à mão (seed) que é dimensão leva `dim_` e fica em `marts`; a que só alimenta o dbt (`vinculos_aprovados`, `partidos_eventos`) fica em `intermediate`, sem prefixo. Snapshots do dbt, se vierem, levam `snp_`.
 - Tabelas do raw espelham o nome da fonte (ver abaixo).
 
 ## Colunas
