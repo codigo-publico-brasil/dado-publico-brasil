@@ -20,8 +20,10 @@ sources:
       - name: senadores
         description: Senadores por legislatura (o mesmo senador aparece em várias), com os mandatos em tabelas filhas.
       - name: senadores__mandatos_mandato
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Mandatos de cada senador na legislatura (titular ou suplente), lista `Mandatos.Mandato`.
       - name: senadores__mandatos_mandato__exercicios__exercicio
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Períodos de exercício de cada mandato, com a causa de afastamento (lista `Exercicios.Exercicio`).
       - name: votacoes
         description: Votações em plenário com resultado, totais e a matéria votada.
@@ -29,18 +31,21 @@ sources:
           - name: codigo_sessao_votacao
             tests: [unique, not_null]
       - name: votacoes__votos
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Voto de cada senador em cada votação nominal (lista `votos` da votação).
       - name: processos
         description: >
           Processo de cada matéria votada, buscado por item na API (`_item` é o id do processo), só das já
           buscadas: situação atual e norma gerada.
       - name: processos__autoria_iniciativa
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Autoria de cada processo (lista `autoriaIniciativa`).
       - name: senadores_detalhe
         description: >
           Detalhe de cada senador, buscado por item na API (`_item` é o código do senador): nascimento, naturalidade
           e foto, páginas oficiais e contato institucional do gabinete, só dos já buscados.
       - name: senadores_detalhe__telefones_telefone
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Telefones do gabinete de cada senador (lista `Telefones` do detalhe), uma linha por telefone.
       - name: normas
         description: Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...), por ano de assinatura, só os metadados.
@@ -50,18 +55,24 @@ sources:
       - name: normas_detalhe
         description: Detalhe, buscado por item na API, das leis, leis complementares, emendas e medidas provisórias já buscadas (`_item` é o código da norma).
       - name: normas_detalhe__publicacoes_publicacao
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Publicações de cada norma no Diário Oficial (lista `publicacoes.publicacao`).
       - name: normas_detalhe__vides_vide
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Relações de cada norma com atos posteriores (alteração, regulamentação, veto; lista `vides.vide`).
       - name: normas_detalhe__vides_vide__itens__item
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Dispositivos da norma a que cada relação se refere (lista `itens.item` de cada vide).
       - name: normas_detalhe_constituicao
         description: Detalhe da Constituição de 1988 (norma 579494), um documento só.
       - name: normas_detalhe_constituicao__publicacoes_publicacao
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Publicações da Constituição no Diário Oficial.
       - name: normas_detalhe_constituicao__vides_vide
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Relações da Constituição com atos posteriores (quem a alterou, regulamentou e interpretou).
       - name: normas_detalhe_constituicao__vides_vide__itens__item
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Dispositivos da Constituição a que cada relação se refere (lista `itens.item` de cada vide).
       - name: vetos
         description: Vetos presidenciais apreciados pelo Congresso, por ano, de 1994 em diante.
@@ -73,6 +84,8 @@ sources:
       - name: vetos_votos
         description: Voto nominal em cada dispositivo votado em painel, buscado por item (`_item` é o código do dispositivo).
       - name: vetos_votos__camara_voto
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Votos dos deputados no dispositivo (nome, partido, UF e voto, sem código do parlamentar).
       - name: vetos_votos__senado_voto
+        freshness: null  # tabela filha do dlt: não tem _dlt_load_id; vale o frescor da tabela mãe
         description: Votos dos senadores no dispositivo (nome, partido, UF e voto, sem código do parlamentar).
