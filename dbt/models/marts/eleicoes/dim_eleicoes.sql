@@ -31,15 +31,15 @@ ordinarias as (
 datas as (
 
     -- o dia de cada turno, como o TSE informa nos arquivos de candidaturas (o mesmo para todas as unidades da eleição)
+    -- por ano: o TSE usa outro código de eleição no 2º turno, e a eleição geral e a municipal nunca caem no mesmo ano
     select
         ano_eleicao,
-        cd_eleicao,
         min(dt_eleicao) filter (where turno = 1) as dt_primeiro_turno,
         min(dt_eleicao) filter (where turno = 2) as dt_segundo_turno
 
     from {{ ref('stg_tse__candidaturas') }}
 
-    group by ano_eleicao, cd_eleicao
+    group by ano_eleicao
 
 )
 
@@ -58,6 +58,6 @@ from vagas as v
 
 left join ordinarias as o on o.ano_eleicao = v.ano_eleicao and o.cd_eleicao = v.cd_eleicao
 
-left join datas as d on d.ano_eleicao = v.ano_eleicao and d.cd_eleicao = v.cd_eleicao
+left join datas as d on d.ano_eleicao = v.ano_eleicao
 
 group by v.ano_eleicao, v.cd_eleicao, o.cd_eleicao

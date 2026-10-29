@@ -575,8 +575,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `cd_eleicao` | integer | Código da eleição no TSE. |  |
 | `nome` | varchar | Descrição da eleição, como o TSE informa. |  |
 | `fl_ordinaria` | boolean | DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE. |  |
-| `dt_primeiro_turno` | date | Dia do 1º turno da eleição, como o TSE informa nos arquivos de candidaturas. |  |
-| `dt_segundo_turno` | date | Dia do 2º turno, quando houve disputa em 2º turno em algum cargo da eleição; vazio nos demais casos. |  |
+| `dt_primeiro_turno` | date | Dia do 1º turno do ano, como o TSE informa nos arquivos de candidaturas (a eleição geral e a municipal nunca caem no mesmo ano). |  |
+| `dt_segundo_turno` | date | Dia do 2º turno do ano, quando houve disputa em 2º turno; vazio nos demais casos e em 2006, cujo arquivo de candidaturas não traz o 2º turno de presidente. Em 2020 vale o primeiro dia (29/11): o 2º turno de Macapá foi adiado para 20/12. |  |
 | `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
 
 ### marts.dim_frentes

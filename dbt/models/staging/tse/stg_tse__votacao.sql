@@ -19,6 +19,7 @@ with source as (
 select
     try_cast(ano_eleicao as integer) as ano_eleicao,
     try_cast(nr_turno as integer) as turno,
+    try_strptime(dt_eleicao, '%d/%m/%Y')::date as dt_eleicao,
     tp_abrangencia as abrangencia,
     sg_uf as uf,
     ue_do_cargo as cd_ue,
