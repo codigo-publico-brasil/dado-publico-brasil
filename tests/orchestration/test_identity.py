@@ -129,7 +129,7 @@ def test_core_people_have_the_source_of_each_attribute_and_only_published_data(
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
-    assert warehouse.columns(con, "core", "pessoas") == [
+    assert warehouse.columns(con, "marts", "dim_pessoas") == [
         "id_pessoa",
         "nome_civil",
         "fonte_nome_civil",

@@ -1,6 +1,5 @@
 """Marts (entidades prontas para consumo) e o que as camadas anteriores entregam a eles."""
 
-
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, scalar, tables
 from dado_publico_brasil.transformation import catalog

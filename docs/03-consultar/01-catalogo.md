@@ -760,7 +760,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fl_eleito` | boolean | Verdadeiro quando o TSE marca a candidatura como eleita em algum turno. Falso não quer dizer derrota quando o resultado está vazio. |  |
 | `fl_mais_votado_no_ultimo_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no último turno com votos. Vazio sem votos carregados ou em cargo de várias vagas. |  |
 | `id_pessoa_tse` | varchar | Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato. |  |
-| `id_pessoa` | bigint | Pessoa do projeto (dim_pessoas) quando a candidatura é de alguém eleito alguma vez; vazio para quem nunca foi eleito, por regra (ADR 0031). |  |
+| `id_pessoa` | bigint | Pessoa do projeto (dim_pessoas) quando a candidatura é de alguém eleito alguma vez ou que foi deputado ou senador (ligada pelo nome e o nascimento); vazio para quem nunca foi eleito, por regra (ADR 0031). |  |
 | `foto_arquivo` | varchar | Nome do arquivo da foto oficial no pacote do TSE; vazio quando o pacote não traz foto do candidato. |  |
 | `foto_caminho` | varchar | Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto. |  |
 | `foto_pacote_url` | varchar | Endereço oficial do pacote de fotos do TSE que contém a foto. |  |

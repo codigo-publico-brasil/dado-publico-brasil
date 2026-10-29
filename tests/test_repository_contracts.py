@@ -23,7 +23,7 @@ def test_catalog_document_is_up_to_date_with_the_dbt_project() -> None:
 
 def test_catalog_covers_every_table_the_pipeline_builds() -> None:
     names = {(t["schema"], t["name"]) for t in catalog.tables(Settings())}
-    assert ("marts", "pessoas") in names
+    assert ("marts", "dim_pessoas_cadastro") in names
     assert ("staging", "stg_camara__votos") in names
     assert ("raw_federal_camara", "votacoes_votos") in names
     assert ("identity", "pessoa") in names
@@ -97,18 +97,18 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
         "graph = defs.resolve_asset_graph();"
         "keys = {k.to_user_string() for k in graph.get_all_asset_keys()};"
         "scheduled = sorted(s.source for s in contract.find_all() if s.schedule);"
-        "print(len(keys), 'marts/pessoas' in keys, 'identity/pessoa' in keys, {'landing/camara', 'landing/senado'} <= keys,"
+        "print(len(keys), 'marts/dim_pessoas_cadastro' in keys, 'identity/pessoa' in keys, {'landing/camara', 'landing/senado'} <= keys,"
         " sorted(s.name for s in defs.schedules or []) == [f'captura_{n}' for n in scheduled],"
         " sorted(j.name for j in defs.jobs or []) ==  sorted(['atualizar_tudo', 'capturar_tudo', 'processar_tudo'] + [f'{p}_{c.source}' for c in contract.find_all() for p in ('atualizar', 'captura')]),"
         " sorted(s.name for s in defs.sensors or []),"
-        " graph.get(AssetKey(['marts', 'pessoas'])).automation_condition is not None,"
+        " graph.get(AssetKey(['marts', 'dim_pessoas_cadastro'])).automation_condition is not None,"
         " graph.get(AssetKey(['identity', 'pessoa'])).automation_condition is not None,"
         " graph.get(AssetKey(['tse', 'candidaturas'])).automation_condition is None,"
         " len([c for c in graph.asset_check_keys if c.name == 'saude_da_fonte']) > 0,"
         " defs.resolve_job_def('atualizar_tudo').tags.get('dado_publico/refazer') == 'true'"
         " and 'dado_publico/refazer' not in defs.resolve_job_def('captura_camara').tags,"
         " {a.specs_by_key[k].group_name for a in [d for d in defs.assets if hasattr(d, 'specs_by_key')] for k in a.keys if k.path[0] in ('staging', 'intermediate', 'marts')}"
-        " <= {'staging', 'intermediate', 'core', 'fatos', 'analise', 'servico', 'marts', 'seeds'},"
+        " <= {'staging', 'intermediate', 'marts', 'seeds'},"
         " len([c for c in graph.asset_check_keys if c.asset_key.path[0] == 'landing' and c.name != 'saude_da_fonte']) == len(scheduled))"
     )
     env = {**os.environ, "DADO_PUBLICO_STORAGE_ROOT": str(settings.storage_root)}

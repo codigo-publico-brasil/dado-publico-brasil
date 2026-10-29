@@ -61,9 +61,9 @@ def test_the_table_with_personal_data_of_third_parties_is_classified_and_its_col
 
     settings = Settings()
     sensitivity = {t["name"]: t["sensitivity"] for t in catalog.tables(settings) if t["schema"] == "marts"}
-    assert sensitivity["emendas_favorecidos"] == "publico-dados-pessoais-de-terceiros"
+    assert sensitivity["fct_emendas_favorecidos"] == "publico-dados-pessoais-de-terceiros"
     marked = {
-        c["name"] for c in catalog.columns(settings) if c["table"] == "emendas_favorecidos" and c["pii"]
+        c["name"] for c in catalog.columns(settings) if c["table"] == "fct_emendas_favorecidos" and c["pii"]
     }
     assert marked == {"favorecido", "cd_favorecido"}
 

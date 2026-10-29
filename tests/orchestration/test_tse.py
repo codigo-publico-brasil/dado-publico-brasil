@@ -48,8 +48,10 @@ def test_raw_has_candidacies_of_every_office_from_the_brasil_file_and_never_the_
 def test_candidacy_is_linked_to_the_person_by_civil_name_and_birth_date(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT p.nome, c.ano_eleicao, c.cargo, c.partido, c.situacao_candidatura, c.resultado, c.uf "
-        "FROM marts.fct_candidaturas c JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) ORDER BY c.id_candidatura"
+        "SELECT p.nome, s.ano_eleicao, s.cargo, c.partido, c.situacao_candidatura, c.resultado, s.uf "
+        "FROM marts.fct_candidaturas c JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) "
+        "JOIN (SELECT DISTINCT id_candidatura, ano_eleicao, cargo, uf FROM staging.stg_tse__candidaturas) s "
+        "USING (id_candidatura) ORDER BY c.id_candidatura"
     ).fetchall()
     assert found == [
         (
@@ -70,7 +72,14 @@ def test_homonyms_in_the_same_election_and_unmatched_candidates_are_not_linked_a
     full: Env,
 ) -> None:
     con, _ = full
-    linked = {r["id_candidatura"] for r in rows(con, "SELECT id_candidatura FROM marts.fct_candidaturas")}
+    linked = {
+        r["id_candidatura"]
+        for r in rows(
+            con,
+            "SELECT id_candidatura FROM marts.fct_candidaturas "
+            "WHERE id_pessoa IN (SELECT id_pessoa FROM marts.dim_pessoas_cadastro)",
+        )
+    }
     assert linked == {
         "2018:SP:2007",  # ligada pelo nome de urna (mudou de nome civil)
         "2022:RJ:1001",
@@ -169,7 +178,7 @@ def test_the_tse_markers_for_no_value_never_reach_the_staging_tables(full: Env) 
 def test_candidate_declarations_reach_the_marts_and_documents_never_do(full: Env) -> None:
     con, _ = full
     row = con.execute(
-        "SELECT nome_social, grau_instrucao, estado_civil, ocupacao, coligacao_nome, federacao_sigla "
+        "SELECT nome_social, grau_instrucao, estado_civil, ocupacao, coligacao, federacao "
         "FROM marts.fct_candidaturas WHERE id_candidatura LIKE '2022:%:1001'"
     ).fetchone()
     assert row == ("Bia Social", "Superior completo", "Solteiro(a)", "Advogado", "COLIGACAO TESTE", "FED")
