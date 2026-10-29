@@ -621,7 +621,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `numero` |  | Número do candidato na urna. |  |
 | `partido` |  | Sigla do partido da candidatura. |  |
 | `resultado` |  | Resultado do último turno como o TSE informa; vazio quando não informa. |  |
-| `fl_eleito` |  | Verdadeiro quando o TSE marca a candidatura como eleita. |  |
+| `fl_eleito` |  | Verdadeiro quando a candidatura foi eleita: o TSE marca como eleita ou, sem essa informação, vence no último turno pelos votos válidos (base_eleito diz qual). |  |
+| `base_eleito` |  | Base de fl_eleito verdadeiro: informado (o TSE diz Eleito) ou derivado (regra da Constituição, pelos votos do último turno); vazio quando a candidatura não foi eleita. |  |
 | `foto_caminho` |  | Caminho da foto oficial; vazio sem foto. |  |
 | `valor_receitas` |  | Soma das receitas declaradas, em reais; vazia sem prestação de contas carregada. |  |
 | `valor_despesas` |  | Soma das despesas contratadas declaradas, em reais. |  |

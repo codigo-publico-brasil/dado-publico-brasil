@@ -45,7 +45,8 @@ models:
       - {name: numero, description: "Número do candidato na urna."}
       - {name: partido, description: "Sigla do partido da candidatura."}
       - {name: resultado, description: "Resultado do último turno como o TSE informa; vazio quando não informa."}
-      - {name: fl_eleito, description: "Verdadeiro quando o TSE marca a candidatura como eleita."}
+      - {name: fl_eleito, description: "Verdadeiro quando a candidatura foi eleita: o TSE marca como eleita ou, sem essa informação, vence no último turno pelos votos válidos (base_eleito diz qual)."}
+      - {name: base_eleito, description: "Base de fl_eleito verdadeiro: informado (o TSE diz Eleito) ou derivado (regra da Constituição, pelos votos do último turno); vazio quando a candidatura não foi eleita."}
       - {name: foto_caminho, description: "Caminho da foto oficial; vazio sem foto."}
       - {name: valor_receitas, description: "Soma das receitas declaradas, em reais; vazia sem prestação de contas carregada."}
       - {name: valor_despesas, description: "Soma das despesas contratadas declaradas, em reais."}

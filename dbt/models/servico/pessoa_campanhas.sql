@@ -1,4 +1,6 @@
 -- Todas as candidaturas da pessoa, com foto, resultado e campanha, tenha ela vencido ou não. Só leitura dos fatos.
+-- `fl_eleito` vale também para o vencedor derivado pela regra da Constituição quando o TSE não informa o resultado (por
+-- exemplo, o 2º turno de presidente de 2006); `base_eleito` diz de onde vem, e `resultado` segue como o TSE informa.
 select
     ca.id_candidatura,
     ca.id_pessoa,
@@ -7,7 +9,8 @@ select
     ca.numero,
     pa.sigla as partido,
     ca.resultado,
-    ca.fl_eleito,
+    case when e.id_candidatura is not null then true else ca.fl_eleito end as fl_eleito,
+    e.base_eleicao as base_eleito,
     ca.foto_caminho,
     cm.valor_receitas,
     cm.valor_despesas,
@@ -21,6 +24,8 @@ inner join (select distinct id_candidatura, ano_eleicao from {{ ref('stg_tse__ca
 left join {{ ref('disputas') }} as d on d.id_disputa = ca.id_disputa
 
 left join {{ ref('cargos') }} as c on c.id_cargo = d.id_cargo
+
+left join {{ ref('int_tse_eleitos') }} as e on e.id_candidatura = ca.id_candidatura
 
 left join {{ ref('campanhas') }} as cm on cm.id_candidatura = ca.id_candidatura
 
