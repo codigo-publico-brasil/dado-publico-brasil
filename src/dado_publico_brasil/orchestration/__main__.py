@@ -13,6 +13,7 @@ Reparos sem baixar nada: backfill (cria `_ingested_at` no raw e preenche as linh
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
 Publicação: publish copia os marts para o PostgreSQL de serviço (DADO_PUBLICO_POSTGRES_DSN).
 Auditoria: verify (hashes do landing e cópia da identidade) e coverage (itens obtidos nos datasets por item).
+Reconstrução do zero: `rebuild --old-warehouse ARQUIVO` (docs/02-fazer/04-operar-e-publicar.md).
 Observabilidade: observe resume a saúde dos dados (fontes, carga, testes, anomalias) e falha se houver
 problema; --email envia o relatório e --html gera o do Elementary (anexo, se houver --email).
 Datasets por item (tramitação, processos): `--foreach 200` busca os 200 mais recentes que faltam;
@@ -25,7 +26,7 @@ Modos de extração: --years (anos pedidos), --historical --from-year N (carga m
 import argparse
 from pathlib import Path
 
-from dado_publico_brasil.core import alert, migrations, warehouse
+from dado_publico_brasil.core import alert, migrations, rebuild, warehouse
 from dado_publico_brasil.core import settings as settings_module
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.ingestion import contract, foreach, landing, loader, photos
@@ -48,6 +49,7 @@ COMMANDS = (
     "coverage",
     "observe",
     "fotos",
+    "rebuild",
 )
 
 
@@ -145,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--force", action="store_true", help="baixa mesmo que a fonte diga que não mudou")
     p.add_argument("--rebuild", action="store_true", help="carrega tudo de novo no raw")
+    p.add_argument("--old-warehouse", help="rebuild: o warehouse antigo, do qual só o metadata é levado")
     p.add_argument("--email", action="store_true", help="envia o relatório do comando observe por e-mail")
     p.add_argument("--html", action="store_true", help="gera o relatório HTML do Elementary (observe)")
     p.add_argument("--sql", help="consulta para o comando query (somente leitura)")
@@ -183,6 +186,14 @@ def main(argv: list[str] | None = None) -> int:
                     dataset_name=args.dataset,
                 )
             )
+        case "rebuild":
+            if not args.old_warehouse:
+                p.error("rebuild exige --old-warehouse (o warehouse antigo; só o metadata é levado)")
+            print("metadata levado do antigo:", rebuild.start_from(settings, Path(args.old_warehouse)))
+            args.command, args.rebuild = "load", True
+            _ingest(settings, args)
+            build.run(settings)
+            print("warehouse reconstruído do landing (raw, dbt, identidade com chaves novas e dbt)")
         case "transform":
             build.run(settings)
             print("dbt concluído (staging, intermediate, identidade e marts)")

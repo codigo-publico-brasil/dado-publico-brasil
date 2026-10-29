@@ -62,3 +62,48 @@ def test_settings_come_from_the_environment_and_explicit_arguments_win(
     settings = load_settings()
     assert settings.warehouse == Path("from_env/my.duckdb")
     assert load_settings(storage_root=Path("explicit")).storage_root == Path("explicit")
+
+
+def test_rebuild_carries_only_the_metadata_and_moves_the_sequences_past_the_old_ids(tmp_path: Path) -> None:
+    from dado_publico_brasil.core import rebuild
+
+    old = Settings(storage_root=tmp_path / "antigo")
+    con = migrations.open_warehouse(old)
+    con.execute(
+        "INSERT INTO metadata.captures (id, source, dataset, year, url, sha256, size_bytes, path, captured_at, "
+        "last_checked_at, loaded_at) VALUES (40, 'camara', 'votacoes', 2024, 'https://x/a', 'abc', 1, 'p', "
+        "'2026-10-20', '2026-10-21', '2026-10-22')"
+    )
+    con.execute("INSERT INTO identity.pessoa VALUES (1, '2026-10-23')")
+    con.execute(
+        "INSERT INTO metadata.source_checks (id, checked_at, source, dataset, check_name, status, detail) "
+        "VALUES (90, '2026-10-21', 'camara', 'votacoes', 'carga', 'ok', 'x')"
+    )
+    con.close()
+    new = Settings(storage_root=tmp_path / "novo")
+    dlt = new.state_dir / "dlt"
+    dlt.mkdir(parents=True)
+    copied = rebuild.start_from(new, old.warehouse)
+    assert copied["captures"] == 1 and copied["source_checks"] == 1
+    fresh = warehouse.connect(new)
+    assert fresh.execute("SELECT id, loaded_at FROM metadata.captures").fetchall() == [
+        (40, None)
+    ]  # recarrega tudo
+    assert fresh.execute("SELECT count(*) FROM identity.pessoa").fetchone() == (0,)  # a identidade não vem
+    assert fresh.execute("SELECT nextval('metadata.seq_captures')").fetchone()[0] > 40  # type: ignore[index]
+    assert fresh.execute("SELECT nextval('metadata.seq_source_checks')").fetchone()[0] > 90  # type: ignore[index]
+    fresh.close()
+    assert not dlt.exists() and list(
+        new.state_dir.glob("dlt.antes-*")
+    )  # o estado do dlt antigo ficou de lado
+
+
+def test_rebuild_refuses_to_overwrite_a_warehouse_or_start_from_a_missing_one(tmp_path: Path) -> None:
+    from dado_publico_brasil.core import rebuild
+
+    existing = Settings(storage_root=tmp_path / "x")
+    migrations.open_warehouse(existing).close()
+    with pytest.raises(FileExistsError):
+        rebuild.start_from(existing, existing.warehouse)
+    with pytest.raises(FileNotFoundError):
+        rebuild.start_from(Settings(storage_root=tmp_path / "y"), tmp_path / "nao-existe.duckdb")
