@@ -40,7 +40,7 @@ create or replace macro proper_name(x) as
         else array_to_string(
             list_transform(
                 regexp_extract_all(clean_text(x), '\p{L}+|[^\p{L}]+'),
-                (t, i) -> case
+                lambda t, i: case
                     when not regexp_matches(t, '^\p{L}+$') then t
                     when upper(t) in ('II', 'III', 'IV', 'VI', 'VII', 'VIII', 'IX', 'X') then upper(t)
                     when length(t) <= 3 and not regexp_matches(upper(t), '[AEIOUÁÀÂÃÉÊÍÓÔÕÚ]') then upper(t)
@@ -59,7 +59,7 @@ create or replace macro standardize_summary(x, siglas) as
         else array_to_string(
             list_transform(
                 regexp_extract_all(clean_text(x), '\p{L}+|[^\p{L}]+'),
-                (t, i) -> case
+                lambda t, i: case
                     when not regexp_matches(t, '^\p{L}+$') then t
                     when list_contains(siglas, t) and t = upper(t) then t
                     when i = 1 then upper(t[1]) || lower(t[2:])
