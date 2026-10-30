@@ -47,7 +47,7 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 - **Conteúdo:** candidaturas (inclui bens, coligações, redes sociais, fotos e certidões criminais), prestação de contas, resultados por município, zona e seção, eleitorado, dados processuais.
 - **Licença (verificado em 21/10/2026):** cada conjunto declara Creative Commons Attribution (CC BY): citar a fonte. Os pacotes de candidaturas de cada eleição têm cerca de 3 a 5 MB; o arquivo `_BRASIL.csv` dentro do pacote reúne os estados.
 - **Complementar (verificado em 23/10/2026):** `bem_candidato_{ano}.zip` (bens declarados, de 2006 a 2026, 31 MB no total; 1998 e 2002 não existem; 2006 e 2010 usam outros nomes de coluna) e `votacao_candidato_munzona_{ano}.zip` (votos de cada candidato por município e zona, de 1998 a 2026, **2,4 GB compactados**; 2022 sozinho tem 580 MB, 4,3 GB descompactados e 9,38 milhões de linhas, de todos os cargos). Os dois trazem `SQ_CANDIDATO`, a chave que liga à candidatura.
-- **Cuidado:** são dados pessoais de candidatos. O nome social e as certidões criminais não entram; CPF, título de eleitor e e-mail nunca entram. Fora da carga por enquanto: redes sociais, fotos, propostas, notas fiscais e prestação de contas.
+- **Cuidado:** são dados pessoais de candidatos. As certidões criminais não entram; CPF, título de eleitor e e-mail nunca entram. Já carregados (30/10/2026): nome social, bens, coligações, fotos e a prestação de contas de 2018, 2022 e 2026. Fora da carga por enquanto: redes sociais, propostas, notas fiscais e a prestação de contas das demais eleições (issue 150).
 
 ### TSE: eleições gerais de 2026 (verificado em 25/10/2026)
 

@@ -1,5 +1,7 @@
 # Identidade de pessoas
 
+Para quem entende ou altera como as pessoas se ligam entre fontes. Responde: como o projeto sabe que dois registros são a mesma pessoa e o que cada tabela guarda.
+
 Problema: uma mesma pessoa pode aparecer em várias fontes e em vários cargos. Quem foi deputado, depois senador, depois ministro ou presidente tem, em cada fonte, um identificador diferente. Se a "pessoa" do projeto fosse o cadastro de deputados da Câmara, o senador seria outra pessoa, e a história se perderia.
 
 ## A solução: três tabelas
@@ -8,16 +10,16 @@ Problema: uma mesma pessoa pode aparecer em várias fontes e em vários cargos. 
         identity.pessoa                   identity.pessoa_identificador             fct_mandatos
   ┌──────────────────────────┐        ┌───────────────────────────────────┐   ┌─────────────────────────────┐
   │ id_pessoa  (chave nossa) │◄───────│ id_pessoa                         │   │ id_pessoa                   │
-  │ nome, nome_civil         │        │ fonte        ex.: camara          │   │ cargo   Deputado federal    │
-  │ nascimento, foto, redes  │        │ tipo_id      ex.: deputado        │   │ casa    Câmara dos Deputados│
-  └──────────────────────────┘        │ id_na_fonte  ex.: 74161           │   │ legislatura, uf             │
-            ▲                         │ metodo, confirmado_por, data      │   │ inicio, fim (oficiais)      │
+  │ (cadastro em dim_pessoas)│        │ fonte        ex.: camara          │   │ id_cargo, id_territorio     │
+  │ nome, nascimento, gênero │        │ tipo_id      ex.: deputado        │   │ id_eleicao, id_candidatura  │
+  └──────────────────────────┘        │ id_na_fonte  ex.: 74161           │   │ dt_inicio, dt_fim_prevista  │
+            ▲                         │ metodo, confirmado_por, data      │   │ base_dt_inicio (derivado)   │
             └─────────────────────────┴───────────────────────────────────┘   └─────────────────────────────┘
 ```
 
 - **`pessoa`:** a pessoa do projeto, com chave própria (`id_pessoa`) que não significa nada fora do projeto e nunca muda.
 - **`pessoa_identificador`:** a ponte. Uma pessoa tem vários identificadores (Câmara, Senado, TSE...). Cada ligação registra o **método** (como foi ligada), **quem confirmou** e **quando**.
-- **`mandato`:** o que a pessoa foi e quando. Mudar de cargo cria outro mandato, não outra pessoa.
+- **`fct_mandatos`:** o que a pessoa foi e quando, uma linha por candidatura eleita. Mudar de cargo cria outro mandato, não outra pessoa; o exercício real (licença, suplente que assume) está em `fct_exercicios`.
 
 > **Conceito: chave substituta (*surrogate key*).** Usar o identificador de uma fonte como chave da entidade prende o projeto àquela fonte. A chave própria isola o modelo das fontes: trocar ou acrescentar fonte não muda quem a pessoa é.
 
@@ -41,14 +43,14 @@ Decidida na spec 008: um erro de ligação (juntar duas pessoas diferentes, ou s
 1. **Ligação automática por identificador oficial:** só quando uma chave oficial constar nas duas fontes.
 2. **Ligação por nome civil e data de nascimento** ([ADR 0013](../05-decisoes/0013-tse-ligacao-por-nome-civil-e-nascimento.md)): só quando os dois são **iguais e únicos**. Nome sem acento, em minúsculas e com espaços únicos; "único" quer dizer que, dentro de cada fonte, só um registro tem aquele par (homônimo com a mesma data não liga) e, numa eleição, só uma candidatura o tem. É o que liga a candidatura do TSE à pessoa e o deputado ao senador que são a mesma pessoa.
 3. **Nunca** ligar só por nome, nem por nome e ano de nascimento. Há homônimos, e nomes de urna se repetem.
-4. Caso ambíguo ou sem correspondência (nome grafado diferente entre as fontes, nascimento ausente) **não liga**, é medido por teste e a curadoria manual decide. A curadoria é a tabela [`vinculos_aprovados.csv`](../../dbt/seeds/core/vinculos_aprovados.csv): cada linha liga um registro de origem a um de destino, com quem aprovou, quando e a evidência escrita; o método gravado é "vínculo aprovado por ...". Um teste barra linha que aponta para registro inexistente. Só uma pessoa edita essa tabela; o código nunca a preenche.
+4. Caso ambíguo ou sem correspondência (nome grafado diferente entre as fontes, nascimento ausente) **não liga**, é medido por teste e a curadoria manual decide. A curadoria é a tabela [`vinculos_aprovados.csv`](../../dbt/seeds/intermediate/vinculos_aprovados.csv): cada linha liga um registro de origem a um de destino, com quem aprovou, quando e a evidência escrita; o método gravado é "vínculo aprovado por ...". Um teste barra linha que aponta para registro inexistente. Só uma pessoa edita essa tabela; o código nunca a preenche.
 5. Toda ligação é registrada com método e data (`identity.pessoa_identificador`), e uma fusão entre casas fica em `identity.pessoa_fusao`.
 
 ### Fusão de chaves
 
-Quando a regra mostra que um deputado e um senador são a mesma pessoa, a chave mais **nova** é absorvida pela mais **antiga**: os identificadores passam a apontar para a sobrevivente, a chave absorvida sai de `identity.pessoa` e **nunca é reaproveitada**, e a fusão fica em `identity.pessoa_fusao` (mart `pessoas_fusoes`) para quem guardou a chave antiga resolver a atual. `dim_pessoas_cadastro` tem uma linha por pessoa (dados da Câmara quando está nas duas casas; coluna `fontes` com todas).
+Quando a regra mostra que um deputado e um senador são a mesma pessoa, a chave mais **nova** é absorvida pela mais **antiga**: os identificadores passam a apontar para a sobrevivente, a chave absorvida sai de `identity.pessoa` e **nunca é reaproveitada**, e a fusão fica em `identity.pessoa_fusao` (`fct_pessoas_fusoes` em `marts`) para quem guardou a chave antiga resolver a atual. `dim_pessoas_cadastro` tem uma linha por pessoa (dados da Câmara quando está nas duas casas; coluna `fontes` com todas).
 
-Hoje só existe a fonte Câmara, então toda ligação é a automática "identificador oficial da própria fonte". O código está em [`identity.py`](../../src/dado_publico_brasil/transformation/identity.py) e as tabelas são criadas por [migração](../../ddl/0002_identity.sql). Os dados da pessoa (nome, foto, nascimento) e o mandato são modelos SQL do dbt ([`int_pessoas_unidas_cadastro`](../../dbt/models/intermediate/int_pessoas_unidas_cadastro.sql) e [`mandatos`](../../dbt/models/marts/legislativo/mandatos.sql)).
+Câmara, Senado e TSE entram na identidade: a ligação por identificador oficial vale dentro de cada casa, e entre fontes valem as regras 2 a 4. O código está em [`identity.py`](../../src/dado_publico_brasil/transformation/identity.py) e as tabelas são criadas por [migração](../../ddl/0002_identity.sql). Os dados da pessoa (nome, foto, nascimento) e o mandato são modelos SQL do dbt ([`int_pessoas_unidas_cadastro`](../../dbt/models/intermediate/int_pessoas_unidas_cadastro.sql) e [`fct_mandatos`](../../dbt/models/marts/eleicoes/fct_mandatos.sql)).
 
 ## Pessoa de todo eleito ([ADR 0031](../05-decisoes/0031-pessoas-de-todo-eleito.md))
 
@@ -63,13 +65,13 @@ Além do parlamentar da Câmara e do Senado, **todo candidato eleito pelo menos 
 
 O arquivo de deputados da Câmara informa a primeira e a última legislatura, mas não que o deputado serviu em todas as legislaturas do intervalo (houve suplentes, licenças e interrupções). Por isso o projeto não deduz mandato dessas duas datas.
 
-Hoje o mandato nasce dos **votos observados**: existe um mandato por pessoa e legislatura em que há voto registrado, com a UF do voto mais recente. `inicio` e `fim` oficiais ficam **vazios** até entrar uma fonte que os informe (por exemplo, a composição por legislatura da Câmara ou o TSE). As colunas `primeiro_voto_observado` e `ultimo_voto_observado` mostram só o que foi visto, e `base` diz de onde o mandato veio.
+O mandato (`fct_mandatos`) nasce da **eleição**: uma linha por candidatura eleita, de todos os cargos, com o início derivado da regra da Constituição para o cargo (`base_dt_inicio` diz se é derivado ou informado) e o fim previsto pela duração. O **exercício real** de deputados federais e senadores (licença, suplente que assume, causa do fim) vem do que a Câmara e o Senado publicam e fica em `fct_exercicios`. Para vereador, prefeito, governador e presidente não há fonte de exercício, então o fim é o previsto (issue 162). Quem foi eleito e nunca assumiu não tem linha em `fct_exercicios`.
 
-> **Conceito: não completar o que a fonte não diz.** Campo vazio com a origem explicada é mais confiável do que campo preenchido por estimativa. A página mostrará "sem informação" em vez de um valor inventado.
+> **Conceito: não completar o que a fonte não diz.** Campo vazio com a origem explicada é mais confiável do que campo preenchido por estimativa. O aplicativo mostra "sem informação" em vez de um valor inventado.
 
-## O que ainda não existe e o que decidir quando entrar
+## O que ainda não existe
 
-- **Partido por data.** O partido de um voto vem do arquivo de votos (`sigla_partido_na_data`). Filiação partidária por período exigiria o TSE; fica em aberto.
-- **Pessoa que nunca foi parlamentar** (ministro, presidente, vereador). Entra com outras fontes; o modelo já comporta (uma pessoa, um identificador, um mandato).
-- **Proposição entre casas.** Um projeto aprovado na Câmara segue ao Senado com outro número. Hoje proposição se identifica por (`fonte`, `id_na_fonte`); a relação "é a mesma proposição" entre casas será modelada quando o Senado entrar.
-- **Pessoa privada.** Nenhuma pessoa privada entra no modelo; só agentes públicos no exercício da função.
+- **Filiação partidária por data.** O ADR [0032](../05-decisoes/0032-partido-da-pessoa-por-fonte-e-filiacao.md) decidiu não carregar o arquivo de filiados do TSE: o partido da pessoa vem da candidatura, do histórico da Câmara, do início da legislatura e dos votos, sem afirmar a data de filiação.
+- **Pessoa nomeada** (ministro, secretário). Entra com a fonte de nomeações (issue 19); o modelo já comporta (uma pessoa, um identificador, um mandato).
+- **Proposição entre casas.** Um projeto aprovado na Câmara segue ao Senado com outro número. Hoje a proposição se identifica por (`fonte`, `id_na_fonte`); a relação "é a mesma proposição" entre casas não está modelada.
+- **Pessoa privada.** Nenhuma pessoa privada entra no modelo; só agentes públicos no exercício da função. Quem se candidatou e nunca foi eleito não tem pessoa.

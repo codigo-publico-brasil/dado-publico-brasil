@@ -133,13 +133,15 @@ def load_file(
     return stats
 
 
-def reset_dataset(settings: Settings, contract: SourceContract, dataset: Dataset) -> None:
+def reset_dataset(
+    settings: Settings, contract: SourceContract, dataset: Dataset, con: Connection | None = None
+) -> None:
     """Descarta a tabela raw do dataset (e as tabelas filhas) e o estado do dlt, para recarregar do zero.
 
     Necessário quando o contrato muda a chave primária: o dlt não acrescenta uma coluna de chave a uma tabela
     que já existe. O landing não é tocado; a tabela é refeita pelos arquivos dele."""
     name = normalize(dataset.name)
-    p = pipeline(settings, contract)
+    p = pipeline(settings, contract, con)
     if p.default_schema_name and name in p.default_schema.tables:
         pipeline_drop(p, resources=[name])()
 
@@ -221,7 +223,7 @@ def load_pending(
             continue
         if rebuild and capture["dataset"] not in reset:
             reset.add(capture["dataset"])
-            reset_dataset(settings, contract, contract.datasets[capture["dataset"]])
+            reset_dataset(settings, contract, contract.datasets[capture["dataset"]], con)
         rows += load_capture(con, settings, contract, capture)
         captures += 1
     return captures, rows

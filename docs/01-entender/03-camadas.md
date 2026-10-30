@@ -1,12 +1,12 @@
 # Camadas do Dado Público Brasil
 
-Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas fazem cada passo e onde mudar cada coisa. Serve também de material de estudo: os quadros **Conceito** nomeiam a prática de engenharia de dados por trás de cada decisão. Decisões formais: ADRs [0004](../05-decisoes/0004-camadas-da-plataforma-de-dados.md), [0005](../05-decisoes/0005-fontes-declarativas-e-portabilidade.md), [0006](../05-decisoes/0006-adotar-dlt-dbt-e-dagster.md), [0007](../05-decisoes/0007-dois-pacotes-e-camadas-de-mercado.md), [0008](../05-decisoes/0008-motores-separados-e-organizacao-por-poder-e-esfera.md) [0009](../05-decisoes/0009-repositorio-de-dados-pacote-unico.md), [0010](../05-decisoes/0010-duas-pastas-env-e-specs-fora.md) [0011](../05-decisoes/0011-buscar-ler-custom-e-chave-por-fonte.md) e [0012](../05-decisoes/0012-dataset-por-item-lotes-com-envelope.md).
+Para quem precisa saber por onde o dado passa e onde mudar cada coisa. Responde: como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas fazem cada passo e onde mudar cada coisa. Serve também de material de estudo: os quadros **Conceito** nomeiam a prática de engenharia de dados por trás de cada decisão. Decisões formais: ADRs [0004](../05-decisoes/0004-camadas-da-plataforma-de-dados.md), [0005](../05-decisoes/0005-fontes-declarativas-e-portabilidade.md), [0006](../05-decisoes/0006-adotar-dlt-dbt-e-dagster.md), [0007](../05-decisoes/0007-dois-pacotes-e-camadas-de-mercado.md), [0008](../05-decisoes/0008-motores-separados-e-organizacao-por-poder-e-esfera.md) [0009](../05-decisoes/0009-repositorio-de-dados-pacote-unico.md), [0010](../05-decisoes/0010-duas-pastas-env-e-specs-fora.md) [0011](../05-decisoes/0011-buscar-ler-custom-e-chave-por-fonte.md) e [0012](../05-decisoes/0012-dataset-por-item-lotes-com-envelope.md).
 
 ## O desenho
 
 ```text
  FONTE OFICIAL      landing           raw_federal_camara   staging  →  intermediate  →  marts          aplicação
- (Câmara, Senado,   arquivos          tabelas fiéis       dbt: renomear,            dbt: entidades    (explorador,
+ (Câmara, Senado,   arquivos          tabelas fiéis       dbt: renomear,            dbt: entidades    (aplicativos,
   TSE, DOU...)  ──► intactos   ──►    à fonte        ──►  tipar, padronizar   ──►   joins,       ──► prontas p/      portal, API)
                     + hash            (dlt)               (1 modelo por tabela)     identidade       consumo, com
                                                                                      (Python)         contrato
@@ -30,7 +30,7 @@ Como o dado percorre o projeto, da página oficial ao consumo, quais ferramentas
 
 ## Mapa de schemas do warehouse
 
-Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e por quê:
+Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e por quê: O DuckDB tem teto de memória de 5 GB (`memory_limit`, no perfil do dbt e em toda conexão do projeto): o que passa disso vai para o disco, em vez de disputar a RAM com o sistema.
 
 | Schema | Papel | Quem cria | Segue o padrão de... |
 | --- | --- | --- | --- |
@@ -41,6 +41,7 @@ Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e 
 | `marts` | o que a aplicação lê, com contrato, nomeado pelo tipo: `dim_` (dimensão), `fct_` (fato), `brg_` (ponte), `agg_` (agregado) e `app_` (consulta do aplicativo); a única camada publicada ([ADR 0033](../05-decisoes/0033-marts-com-a-terminologia-da-dbt-labs.md)) | dbt | guia da dbt Labs; convenção em [`02-convencao-de-nomes.md`](../03-consultar/02-convencao-de-nomes.md) |
 | `identity` | chave própria de pessoa e tabela de ligação | código próprio | específico do projeto (não se reconstrói) |
 | `metadata` | execuções, capturas, resultado dos testes, migrações | código próprio e dbt | específico do projeto |
+| `elementary` | resultados dos testes e métricas de anomalia que o pacote Elementary grava a cada build do dbt | dbt (pacote) | específico do pacote (`observe --html` lê daqui) |
 | `main` | schema padrão do DuckDB; fica vazio | DuckDB | padrão do DuckDB |
 
 O dbt, por padrão, grava em `<schema do perfil>_<schema do modelo>`; aqui a macro `generate_schema_name` usa só o nome do schema do modelo, o que é permitido e recomendado quando cada ambiente tem o seu banco. As tabelas `_dlt_loads`, `_dlt_pipeline_state` e `_dlt_version` dentro de `raw_federal_camara` são controle do dlt.
@@ -54,7 +55,7 @@ As outras camadas guardam o **dado da fonte** em estágios de tratamento. Estas 
 
 ## Descrições e dicionário de colunas
 
-Cada tabela e coluna dos marts é descrita **uma vez**, no YAML do dbt (`_legislativo__models.yml`). Daí saem:
+Cada tabela e coluna dos marts é descrita **uma vez**, no YAML do dbt (um arquivo por tipo e pasta em `dbt/models/marts/`: `_dim__models.yml`, `_fct__models.yml`, `_agg__models.yml`, `aplicacao/_app__models.yml`, `legislativo/_legislativo__models.yml`). Daí saem:
 
 - o [catálogo e o dicionário de colunas](../03-consultar/01-catalogo.md), gerados por `uv run dado-publico catalog`;
 - os comentários gravados no próprio banco (`persist_docs`), visíveis em `duckdb_tables()` e `duckdb_columns()` e em ferramentas como o DBeaver;
@@ -64,7 +65,7 @@ Um teste falha se alguma coluna dos marts ficar sem descrição.
 
 ## Poder, esfera e fonte
 
-O projeto vai capturar dados dos três poderes (legislativo, executivo, judiciário) e das três esferas (federal, estadual, municipal); hoje só existe o legislativo federal. A regra de organização:
+O projeto vai capturar dados dos três poderes (legislativo, executivo, judiciário) e das três esferas (federal, estadual, municipal); hoje há o legislativo federal (Câmara, Senado e a legislação), o judiciário federal (TSE) e, do executivo federal, o Portal da Transparência, o IBGE e o Diário Oficial (só no landing). A regra de organização:
 
 | Eixo | Onde aparece |
 | --- | --- |
@@ -72,7 +73,7 @@ O projeto vai capturar dados dos três poderes (legislativo, executivo, judiciá
 | esfera | pasta `sources/<poder>/<esfera>/...`, campo `level` e o nome do schema `raw_<esfera>_<fonte>` |
 | fonte | nome do arquivo da declaração, prefixo `stg_<fonte>__` e a coluna `fonte` dos marts |
 
-Os marts são **por entidade** (`pessoas`, `proposicoes`, `votacoes`...), não por fonte, para que Câmara e Senado sejam consultados juntos. Para fonte nova: declaração em `sources/`, modelos de staging e, se for entidade nova, um mart (ver [especificação de fonte](../02-fazer/03-especificacao-de-fonte.md)).
+Os marts são **por entidade e por tipo** (`dim_pessoas`, `fct_proposicoes`, `fct_votacoes`...), não por fonte, para que Câmara e Senado sejam consultados juntos. Para fonte nova: declaração em `sources/`, modelos de staging e, se for entidade nova, um mart (ver [especificação de fonte](../02-fazer/03-especificacao-de-fonte.md)).
 
 ## Como a captura é flexível
 

@@ -60,7 +60,7 @@ Consequência para o dado: "autoria" não equivale a "responsabilidade pela inic
 4. **Plenário:** quando vai ao plenário, é votada pelos deputados.
 5. **Outra casa:** se aprovada, segue ao Senado (ou volta à Câmara, se começou lá), que pode aprovar, rejeitar ou emendar.
 6. **Sanção ou veto:** o presidente sanciona (vira lei) ou veta. O Congresso pode derrubar o veto.
-7. **Publicação** no Diário Oficial da União (fonte futura do projeto).
+7. **Publicação** no Diário Oficial da União (o projeto já captura os arquivos do DOU no landing, sem extrair dados; [ADR 0019](../05-decisoes/0019-dou-so-no-landing.md)).
 
 A qualquer momento a proposição pode ser **arquivada**, **apensada** (anexada a outra de tema semelhante, e passa a tramitar em conjunto) ou perder o objeto.
 
@@ -88,7 +88,7 @@ Uma **votação** é um ato em que um órgão (o plenário ou uma comissão) dec
 | **Simbólica** | o presidente da sessão pede que se levantem os que são a favor; ninguém registra voto individual | **só o resultado, sem voto individual** |
 | **Secreta** | casos previstos na Constituição e no Regimento | resultado sem a identificação do voto |
 
-Por isso o projeto mostra **"sem voto individual"** em vez de preencher: ausência de voto individual não é abstenção nem falta. O teste `votacao_sem_voto_individual` mede quantas votações estão nesse caso.
+Por isso o projeto mostra **"sem voto individual"** em vez de preencher: ausência de voto individual não é abstenção nem falta. O teste `votacoes_sem_voto_individual` mede quantas votações estão nesse caso.
 
 ### Valores do voto
 
@@ -108,14 +108,14 @@ Antes de votações importantes, os líderes de partidos e blocos **orientam** c
 
 ## O que a Câmara publica e como o projeto usa
 
-| Conjunto da fonte | Conteúdo | Tabela padronizada |
+| Conjunto da fonte | Conteúdo | Tabela no staging e no mart |
 | --- | --- | --- |
-| `deputados` | cadastro (sem documentos pessoais no projeto) | `camara_deputado` |
-| `deputadosProfissoes`, `deputadosOcupacoes` | profissões e ocupações declaradas | `camara_deputado_profissao`, `camara_deputado_ocupacao` |
-| `proposicoes`, `proposicoesAutores` | proposições e autores, por ano | `camara_proposicao`, `camara_proposicao_autor` |
-| `votacoes`, `votacoesVotos` | votações e votos nominais, por ano | `camara_votacao`, `camara_voto` |
-| `votacoesOrientacoes` | orientação de bancada | `camara_orientacao` |
-| `votacoesProposicoes`, `votacoesObjetos` | proposições afetadas e objeto de cada votação | `camara_votacao_proposicao` |
+| `deputados` | cadastro (sem documentos pessoais no projeto) | `stg_camara__deputados`, `dim_pessoas_cadastro` |
+| `deputadosProfissoes`, `deputadosOcupacoes` | profissões e ocupações declaradas | `stg_camara__deputados_profissoes`, `stg_camara__deputados_ocupacoes`, `brg_pessoas_ocupacoes` |
+| `proposicoes`, `proposicoesAutores` | proposições e autores, por ano | `fct_proposicoes`, `brg_proposicoes_autorias` |
+| `votacoes`, `votacoesVotos` | votações e votos nominais, por ano | `fct_votacoes`, `fct_votos` |
+| `votacoesOrientacoes` | orientação de bancada | `stg_camara__votacoes_orientacoes` |
+| `votacoesProposicoes`, `votacoesObjetos` | proposições afetadas e objeto de cada votação | `brg_votacoes_proposicoes` |
 
 A cobertura e o que ainda não vem da Câmara estão em [cobertura-e-lacunas](../03-consultar/04-cobertura-e-lacunas.md).
 
