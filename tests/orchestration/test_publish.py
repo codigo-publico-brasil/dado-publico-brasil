@@ -24,11 +24,13 @@ def service() -> duckdb.DuckDBPyConnection:
     con.execute("INSTALL postgres")
     con.execute("LOAD postgres")
     con.execute(f"ATTACH '{DSN}' AS service (TYPE postgres)")
-    con.execute(
-        "CALL postgres_execute('service', \"DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'leitor') "
-        "THEN CREATE ROLE leitor; END IF; END $$; DROP SCHEMA IF EXISTS marts CASCADE; "
-        'DROP SCHEMA IF EXISTS marts_novo CASCADE")'
-    )
+    for statement in (
+        "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'leitor') "
+        "THEN CREATE ROLE leitor; END IF; END $$",
+        "DROP SCHEMA IF EXISTS marts CASCADE",
+        "DROP SCHEMA IF EXISTS marts_novo CASCADE",
+    ):
+        con.execute("CALL postgres_execute('service', $sql$" + statement + "$sql$)")
     return con
 
 
