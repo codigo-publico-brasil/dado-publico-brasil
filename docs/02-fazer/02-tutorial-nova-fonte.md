@@ -34,7 +34,7 @@ Um modelo `stg_<fonte>__<entidades>.sql` por tabela do raw, **view**, só renome
 
 ## 5. Intermediate e marts
 
-Se a fonte traz entidade nova, crie o mart (nome simples, no plural, um grain por tabela, com contrato de colunas); se completa uma entidade existente, junte-a num modelo `int_...`. Pessoas de fonte nova entram na identidade com a regra conservadora ([`../01-entender/05-identidade-de-pessoas.md`](../01-entender/05-identidade-de-pessoas.md)). Sem dado inventado: faltou, fica vazio, e um teste `warn` mede a lacuna.
+Se a fonte traz entidade nova, crie o mart (prefixo do tipo: `dim_`, `fct_`, `brg_` ou `agg_`; um grain por tabela; contrato de colunas); se completa uma entidade existente, junte-a num modelo `int_...`. Pessoas de fonte nova entram na identidade com a regra conservadora ([`../01-entender/05-identidade-de-pessoas.md`](../01-entender/05-identidade-de-pessoas.md)). Sem dado inventado: faltou, fica vazio, e um teste `warn` mede a lacuna.
 
 ## 6. Testes e descrições
 

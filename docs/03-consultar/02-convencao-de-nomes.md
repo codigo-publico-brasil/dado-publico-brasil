@@ -60,7 +60,7 @@ O projeto e os dados gerados precisam ser fáceis de auditar pelo público: cada
 
 1. Renomeie o modelo ou a coluna no SQL e no YAML do dbt, com a descrição.
 2. Atualize testes, `docs/03-consultar/01-catalogo.md` (`uv run dado-publico catalog`) e quem lê o mart (as aplicações).
-3. Registre o nome antigo e o novo em [`renomeacao-dos-marts.md`](../99-historico/renomeacao-dos-marts.md), para quem consome os dados.
+3. Avise quem consome os dados: renomear um mart quebra as aplicações. Se a mudança for de padrão, registre num ADR novo (o mapa de nomes antigos para novos está no [ADR 0033](../05-decisoes/0033-marts-com-a-terminologia-da-dbt-labs.md)).
 
 ## Como é garantido
 

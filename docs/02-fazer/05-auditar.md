@@ -23,7 +23,7 @@ Toda execução (`metadata.runs`) registra a versão do código (commit), linhas
 | Cada resposta de um dataset por item continua igual? | o mesmo `verify` confere o hash de cada resposta dentro dos lotes e o índice `metadata.capture_items` |
 | Quanto já foi buscado e quanto falta? | `uv run dado-publico coverage`: itens esperados, obtidos, inexistentes (404), com falha e faltantes, por dataset |
 | A fonte respondeu, mudou de colunas, encolheu? | `metadata.source_checks` (`availability`, `schema`, `volume`, `coverage`) |
-| O dado está fresco? | `freshness` do dbt, em `metadata.dbt_results`; atraso por arquivo na página de qualidade do explorador |
+| O dado está fresco? | `freshness` do dbt, em `metadata.dbt_results`; o atraso por arquivo aparece no Dagster e em `dado-publico observe` |
 | Alguma linha se perdeu entre as camadas? | testes de reconciliação do dbt (severidade erro), por exemplo `votos_perdidos_do_staging_aos_marts` |
 | Quais lacunas conhecidas existem e de que tamanho? | testes `warn` do dbt (a contagem de linhas que falham mede a lacuna) e [cobertura e lacunas](../03-consultar/04-cobertura-e-lacunas.md) |
 
@@ -41,7 +41,7 @@ Toda execução (`metadata.runs`) registra a versão do código (commit), linhas
 
 - Amostragem contra as páginas oficiais (cada número conferido à mão) e relatório periódico de `verify`.
 - Alerta (e-mail ou mensagem) quando `verify`, `schema` ou `volume` falham; hoje o registro é em tabela.
-- Exibir a linhagem na página da aplicação.
+- Exibir a linhagem no aplicativo que consome os dados.
 
 ## Datasets por item e auditoria
 

@@ -53,16 +53,17 @@ O [TSE](../../sources/judiciario/federal/tse.yml) é o exemplo:
   candidaturas:
     url: "{base_url}/consulta_cand/consulta_cand_{year}.zip"
     load: yearly
-    first_year: 1998
-    step: 4                     # só os anos a cada 4 a partir de first_year (eleições gerais)
-    max_age_days: 3             # idade máxima da última verificação da fonte; mais velha que isso, `observe` e o e-mail acusam (captura velha)
+    first_year: 1996
+    step: 2                     # um ano sim, outro não a partir de first_year (eleições gerais e municipais)
     archive: zip                # o landing guarda o pacote original; o leitor lê o membro dentro dele, sem extrair
     member: "*_BRASIL.csv"      # padrão (glob) do nome do membro
-    only: {DS_CARGO: ["DEPUTADO FEDERAL", "SENADOR"]}   # minimização: só linhas com estes valores entram no raw
+    write: merge
+    primary_key: [ANO_ELEICAO, CD_ELEICAO, SG_UE, SQ_CANDIDATO, NR_TURNO]   # chave natural: recarregar atualiza a linha
     columns: [...]              # a lista permitida: CPF, título e e-mail não estão nela
+    optional: [SG_FEDERACAO, DS_COMPOSICAO_FEDERACAO]   # colunas que os arquivos antigos não têm
 ```
 
-`only` filtra as linhas **do raw** (o arquivo original no landing continua inteiro, para auditoria); `columns` filtra as colunas.
+`columns` filtra as colunas (minimização: o que não está na lista nunca entra no raw). `only: {COLUNA: [valores]}` filtra as linhas **do raw** quando a fonte traz o que não se deve guardar (o arquivo original no landing continua inteiro, para auditoria); o TSE não usa `only`, porque todos os cargos entram. `optional` lista colunas que podem faltar nos arquivos de alguns anos (a ausência vira vazio, não erro). `max_age_days` (por exemplo, `14` na votação) faz o `observe` acusar o dataset cuja última verificação passou do prazo. `primary_key: [_row_hash]` usa o hash da linha inteira como chave, para fontes sem chave natural.
 
 ## Dataset por item (`load: foreach`)
 
@@ -106,7 +107,7 @@ O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósi
 
 ## Receitas
 
-**Acrescentar uma coluna:** uma linha em `columns`. Na próxima carga o dlt cria a coluna (linhas antigas ficam vazias até `load --rebuild`). Para usá-la, acrescente-a ao modelo de staging e, se for exibida, ao mart e ao seu `schema.yml` (o contrato do mart falha se faltar).
+**Acrescentar uma coluna:** uma linha em `columns`. Na próxima carga o dlt cria a coluna (linhas antigas ficam vazias até recarregar a captura). **Atenção com a chave:** se o dataset usa `primary_key: [_row_hash]` (votação e prestação de contas do TSE), acrescentar uma coluna muda o hash de toda linha, e recarregar a captura **duplica** as linhas em vez de atualizá-las; veja as [armadilhas operacionais](04-operar-e-publicar.md#armadilhas-operacionais) antes de recarregar. Em dataset com chave natural a recarga só atualiza. Para usá-la, acrescente-a ao modelo de staging e, se for exibida, ao mart e ao seu `schema.yml` (o contrato do mart falha se faltar).
 
 **Remover uma coluna:** apague de `columns` e rode `load --rebuild`; o dlt recria a tabela do landing. O `dbt build` acusa os modelos que a usavam.
 
