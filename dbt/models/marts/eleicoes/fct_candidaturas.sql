@@ -56,7 +56,7 @@ cadastro as (
     -- dados de cadastro da candidatura (iguais nos turnos): vale o primeiro turno
     select distinct on (id_candidatura)
         id_candidatura, ano_eleicao, cd_eleicao, ue, cd_cargo, sq_candidato, numero, numero_partido, nome, nome_urna, nome_social, genero,
-        grau_instrucao, estado_civil, ocupacao, partido_sigla, partido_nome, federacao_sigla, coligacao_nome
+        grau_instrucao, estado_civil, ocupacao, uf_nascimento, partido_sigla, partido_nome, federacao_sigla, coligacao_nome
 
     from {{ ref('stg_tse__candidaturas') }}
 
@@ -78,6 +78,7 @@ select
     c.grau_instrucao,
     c.estado_civil,
     c.ocupacao,
+    c.uf_nascimento,
     ps.id_partido,
     c.partido_sigla as partido,
     c.partido_nome,

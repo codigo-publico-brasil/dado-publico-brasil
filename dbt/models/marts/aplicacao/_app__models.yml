@@ -4,19 +4,25 @@ version: 2
 # tabela larga que o aplicativo filtra pelo parâmetro (data, pessoa, votação, município).
 models:
   - name: app_cargo_ocupantes
-    description: Quem ocupa cada cargo, uma linha por mandato; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. É a composição eleita, não o exercício (cassação, renúncia e morte não entram no fim). Só mandatos com início.
-    meta: {sensitivity: publico-agente-publico, grain: mandato, owner: fundador do projeto, freshness: diário}
+    description: Quem ocupa cada cargo, uma linha por período de ocupação; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. Deputado federal e senador vêm do exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu e eleito em eleição suplementar); quem foi eleito e ainda não assumiu e os demais cargos vêm do mandato da eleição, com o fim previsto pela duração do cargo (cassação e renúncia desses cargos não aparecem, issue 162). Sem data de posse, entra com dt_inicio vazio e ano_inicio preenchido.
+    meta: {sensitivity: publico-agente-publico, grain: período de ocupação, owner: fundador do projeto, freshness: diário}
     columns:
-      - {name: id_candidatura, description: "Candidatura eleita que originou o mandato."}
+      - {name: id_candidatura, description: "Candidatura eleita do mandato a que a ocupação pertence; vazia para o suplente que assumiu e para o eleito em eleição suplementar."}
       - {name: id_pessoa, description: "Pessoa do projeto."}
       - {name: nome, description: "Nome público da pessoa."}
       - {name: cargo, description: "Nome do cargo."}
       - {name: territorio, description: "Nome do território do mandato."}
       - {name: partido, description: "Sigla do partido pelo qual foi eleito."}
-      - {name: dt_inicio, description: "Início do mandato."}
+      - {name: ano_inicio, description: "Ano de início do mandato: o ano seguinte ao da eleição, como a Constituição e as eleições ordinárias determinam; sempre preenchido."}
+      - {name: dt_inicio, description: "Dia do início do mandato; vazio quando o dia não está numa fonte nem numa regra (por exemplo, deputado estadual de 2026, que depende da constituição de cada estado)."}
       - {name: base_do_inicio, description: "Como o início foi obtido: derivado da Constituição ou informado pelo TSE."}
-      - {name: dt_fim_prevista, description: "Fim previsto do mandato (derivado da duração do cargo)."}
+      - {name: dt_fim_prevista, description: "Fim da ocupação: o fim real do exercício quando a fonte o registra (base_do_fim informado) ou o fim previsto pela duração do mandato (derivado). Use esta coluna com dt_inicio para saber quem ocupa o cargo em uma data."}
+      - {name: base_do_fim, description: "informado (a Câmara ou o Senado registra o fim do exercício) ou derivado (fim do mandato pela duração do cargo)."}
       - {name: base_eleicao, description: "Como se sabe que foi eleito: informado pelo TSE ou derivado dos votos."}
+      - {name: tipo_mandato, description: "novato (primeiro mandato no cargo e a base já cobria o ciclo anterior), reeleito (continuou do mandato anterior, um mandato atrás) ou retorno (já teve mandato, voltou depois de um intervalo); vazio quando não há prova. Abaixo do nível federal, compara o mesmo cargo na mesma unidade."}
+      - {name: tipo_registro, description: "exercicio (período em que a Câmara ou o Senado registra a pessoa em exercício) ou mandato (período da eleição)."}
+      - {name: fonte_url, description: "Arquivo oficial de onde saiu o registro (o do TSE para o mandato; o da Câmara ou do Senado para o exercício), na captura registrada."}
+      - {name: dt_captura, description: "Data da captura desse arquivo."}
 
   - name: app_pessoa_eventos
     description: A ficha da pessoa com a linha do tempo, um evento por linha, com o nome do tipo, do cargo e do território e o endereço do arquivo original da fonte.
@@ -51,6 +57,12 @@ models:
       - {name: valor_receitas, description: "Soma das receitas declaradas, em reais; vazia sem prestação de contas carregada."}
       - {name: valor_despesas, description: "Soma das despesas contratadas declaradas, em reais."}
       - {name: valor_bens, description: "Soma dos bens declarados, em reais."}
+      - {name: fonte_url, description: "Arquivo oficial do TSE de onde saíram a candidatura e o resultado, na captura registrada."}
+      - {name: dt_captura, description: "Data da captura desse arquivo."}
+      - {name: fonte_url_receitas, description: "Arquivo oficial do TSE das receitas da campanha; vazio sem prestação de contas carregada."}
+      - {name: fonte_url_despesas, description: "Arquivo oficial do TSE das despesas da campanha; vazio sem prestação de contas carregada."}
+      - {name: fonte_url_bens, description: "Arquivo oficial do TSE dos bens declarados; vazio quando o arquivo da eleição não foi carregado."}
+      - {name: dt_captura_campanha, description: "Data da captura mais recente entre os arquivos de receitas, despesas e bens."}
 
   - name: app_decisao
     description: Uma linha por votação e proposição, com o resultado e os totais, para consumo pelas aplicações.
@@ -111,13 +123,15 @@ models:
       - {name: id_pessoa, description: "Pessoa do projeto.", tests: [unique, not_null]}
       - {name: nome, description: "Nome pelo qual a pessoa é conhecida."}
       - {name: nome_civil, description: "Nome civil, como a fonte informa."}
+      - {name: nome_social, description: "Nome social declarado na candidatura mais recente do TSE que o informa; vazio para quase todos (poucos declaram)."}
       - {name: genero, description: "Masculino ou feminino, só quando a fonte diz."}
       - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
       - {name: dt_falecimento, description: "Data de falecimento informada pela fonte."}
       - {name: municipio_nascimento, description: "Município de nascimento informado pela fonte."}
-      - {name: uf_nascimento, description: "UF de nascimento informada pela fonte."}
-      - {name: escolaridade, description: "Escolaridade informada no cadastro da Câmara; vazia onde a fonte não informa."}
-      - {name: profissoes, description: "Profissões declaradas, separadas por ponto e vírgula."}
+      - {name: uf_nascimento, description: "UF de nascimento: a do cadastro da Câmara ou do Senado quando existe; senão, a declarada na candidatura mais recente do TSE (ZZ para nascido no exterior)."}
+      - {name: escolaridade, description: "Escolaridade: a do cadastro da Câmara quando existe; senão, o grau de instrução declarado na candidatura mais recente do TSE que o informa (Não divulgável quando o TSE protege o dado)."}
+      - {name: estado_civil, description: "Estado civil declarado na candidatura mais recente do TSE que o informa; vazio quando nenhuma informa (Não divulgável quando o TSE protege o dado)."}
+      - {name: profissoes, description: "Profissões: as do cadastro da Câmara (separadas por ponto e vírgula) quando existem; senão, a ocupação declarada na candidatura mais recente do TSE que a informa."}
       - {name: situacao_atual, description: "Situação no último status da Câmara (por exemplo, Exercício ou Licença); vazia onde a fonte não informa."}
       - {name: email_institucional, description: "E-mail institucional do gabinete, como a Câmara ou o Senado publica."}
       - {name: telefone_institucional, description: "Telefone institucional do gabinete."}
@@ -128,7 +142,8 @@ models:
       - {name: foto_caminho, description: "Foto oficial do TSE da candidatura mais recente (caminho do arquivo local); vazia sem foto."}
       - {name: foto_url, description: "Endereço da foto oficial da Câmara ou do Senado; vazio onde a fonte não informa."}
       - {name: fontes, description: "Fontes em que a pessoa aparece no cadastro (por exemplo, camara, senado); vazio para quem só tem o TSE."}
-      - {name: dt_captura, description: "Data da captura do cadastro."}
+      - {name: fonte_url, description: "Arquivo oficial de onde saem os dados da ficha: o cadastro da Câmara ou do Senado quando a pessoa tem, senão o arquivo de candidaturas do TSE, na captura registrada."}
+      - {name: dt_captura, description: "Data da captura desse arquivo."}
 
   - name: app_pessoa_votos
     description: O voto de cada pessoa em cada votação nominal da Câmara e do Senado, com a data, a descrição e o resultado da votação como a fonte publica. Uma linha por pessoa e votação; as proposições votadas estão em app_decisao.

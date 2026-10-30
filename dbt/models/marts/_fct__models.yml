@@ -28,6 +28,7 @@ models:
       - {name: grau_instrucao, data_type: varchar, meta: {pii: true}, description: "Grau de instrução declarado; Não divulgável quando o TSE protege o dado."}
       - {name: estado_civil, data_type: varchar, meta: {pii: true}, description: "Estado civil declarado na candidatura; Não divulgável quando o TSE protege o dado."}
       - {name: ocupacao, data_type: varchar, description: "Ocupação declarada, como o TSE informa; Não divulgável quando o TSE protege o dado."}
+      - {name: uf_nascimento, data_type: varchar, description: "UF de nascimento declarada na candidatura, como o TSE informa (ZZ para nascido no exterior); vazia quando o TSE não informa."}
       - name: id_partido
         data_type: integer
         tests:
@@ -156,6 +157,7 @@ models:
       - {name: uf, data_type: varchar, description: "UF representada, como a fonte informa."}
       - {name: dt_inicio, data_type: date, tests: [not_null], description: "Início do período, como a fonte informa."}
       - {name: dt_fim, data_type: date, description: "Fim do período; vazio enquanto está em exercício."}
+      - {name: dt_mandato_fim, data_type: date, description: "Fim do mandato a que o período pertence, como a fonte publica: no Senado, o do mandato do titular (inclusive de quem assume como suplente); na Câmara, o fim da legislatura. Diferente de dt_fim, que é o fim do período de exercício."}
       - {name: causa_fim, data_type: varchar, description: "Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.captures)."}
 

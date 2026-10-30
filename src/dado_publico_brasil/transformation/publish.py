@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 
 import duckdb
 
+from dado_publico_brasil.core import warehouse
 from dado_publico_brasil.core.settings import Settings
 
 READER = "leitor"
@@ -63,7 +64,13 @@ def _relations(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -> lis
     ]
 
 
-def _comments(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -> str:
+def _postgres(con: duckdb.DuckDBPyConnection, statements: list[str]) -> None:
+    """Executa no Postgres um comando por vez (o `postgres_execute` do DuckDB 2 recusa vários juntos)."""
+    for statement in statements:
+        con.execute(f"CALL postgres_execute('service', '{_quote(statement)}')")
+
+
+def _comments(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -> list[str]:
     """`COMMENT ON` de cada tabela, view e coluna de um esquema, lidos do DuckDB, para o Postgres."""
 
     def text(value: str) -> str:
@@ -88,7 +95,7 @@ def _comments(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -> str:
             (schema,),
         ).fetchall()
     ]
-    return "; ".join(statements)
+    return statements
 
 
 def _publish_schema(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -> dict[str, int]:
@@ -99,15 +106,16 @@ def _publish_schema(con: duckdb.DuckDBPyConnection, catalog: str, schema: str) -
     con.execute(f"CREATE SCHEMA service.{staging}")
     for name in names:
         con.execute(f"CREATE TABLE service.{staging}.{name} AS SELECT * FROM {catalog}.{schema}.{name}")
-    comments = _comments(con, catalog, schema)
-    if comments:
-        con.execute(f"CALL postgres_execute('service', '{_quote(comments)}')")  # descrições, como no DuckDB
-    swap = (
-        f"DROP SCHEMA IF EXISTS {schema} CASCADE; ALTER SCHEMA {staging} RENAME TO {schema}; "
-        f"GRANT USAGE ON SCHEMA {schema} TO {READER}; "
-        f"GRANT SELECT ON ALL TABLES IN SCHEMA {schema} TO {READER}"
+    _postgres(con, _comments(con, catalog, schema))  # descrições, como no DuckDB
+    _postgres(
+        con,
+        [
+            f"DROP SCHEMA IF EXISTS {schema} CASCADE",
+            f"ALTER SCHEMA {staging} RENAME TO {schema}",
+            f"GRANT USAGE ON SCHEMA {schema} TO {READER}",
+            f"GRANT SELECT ON ALL TABLES IN SCHEMA {schema} TO {READER}",
+        ],
     )
-    con.execute(f"CALL postgres_execute('service', '{swap}')")
     published = {
         name: _count(con, f"SELECT * FROM postgres_query('service', 'SELECT count(*) FROM {schema}.{name}')")
         for name in names
@@ -124,7 +132,7 @@ def publish(settings: Settings) -> dict[str, int]:
         raise ValueError("defina DADO_PUBLICO_POSTGRES_DSN (veja .env.example)")
     require_tls(settings.service_dsn)
     catalog = settings.warehouse.stem  # as views do dbt citam o banco pelo nome do arquivo
-    con = duckdb.connect()
+    con = duckdb.connect(config=warehouse.CONFIG)
     try:
         con.execute("INSTALL postgres")
         con.execute("LOAD postgres")

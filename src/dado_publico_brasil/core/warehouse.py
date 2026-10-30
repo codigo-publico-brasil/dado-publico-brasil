@@ -12,6 +12,13 @@ from dado_publico_brasil.core.settings import Settings
 
 Connection = duckdb.DuckDBPyConnection
 
+# O padrão do DuckDB é 80% da RAM; num container isso deixa pouco para o sistema, e ler ou escrever o
+# arquivo falha com "Cannot allocate memory" (issue 160). O que passa do teto vai para o disco. Vale para
+# conexões que não dividem o arquivo com outra do mesmo processo (o publish e o perfil do dbt): o DuckDB
+# recusa abrir o mesmo arquivo com configuração diferente, e o dlt abre o warehouse por conta própria,
+# então `connect` não a aplica.
+CONFIG: dict[str, str | bool | int | float | list[str]] = {"memory_limit": "5GB"}
+
 
 def connect(settings: Settings, read_only: bool = False) -> Connection:
     path = settings.warehouse

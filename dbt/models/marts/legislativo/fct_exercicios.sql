@@ -58,6 +58,9 @@ periodos as (
         uf_sigla as uf,
         cast(dt_registro as date) as dt_inicio,
         cast(dt_saida as date) as dt_fim,
+        -- o mandato da Câmara acaba com a legislatura
+        cast((select l.dt_fim from {{ ref('dim_legislaturas') }} as l where l.id_legislatura = camara.id_legislatura) as date)
+            as dt_mandato_fim,
         causa_saida as causa_fim,
         id_captura
 
@@ -79,6 +82,7 @@ periodos as (
         uf,
         dt_inicio,
         dt_fim,
+        cast(dt_mandato_fim as date),
         causa_afastamento,
         id_captura
 
@@ -96,6 +100,7 @@ select
     p.uf,
     p.dt_inicio,
     p.dt_fim,
+    p.dt_mandato_fim,
     p.causa_fim,
     p.id_captura
 
