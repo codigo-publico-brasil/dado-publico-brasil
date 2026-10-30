@@ -39,6 +39,7 @@ models:
       - {name: partido_nome, data_type: varchar, description: "Nome do partido na eleição."}
       - {name: federacao, data_type: varchar, description: "Sigla da federação partidária (desde 2022); vazia nos anos anteriores."}
       - {name: coligacao, data_type: varchar, description: "Nome da coligação da candidatura; vazio sem coligação."}
+      - {name: dt_eleicao, data_type: date, description: "Dia da votação do último turno que a candidatura disputou, como o TSE informa (DT_ELEICAO)."}
       - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no último turno em que consta, como o TSE informa (por exemplo, deferido, indeferido)."}
       - {name: qtd_turnos, data_type: integer, description: "Número do último turno em que a candidatura consta (2 quando foi ao segundo turno)."}
       - {name: resultado, data_type: varchar, description: "Resultado do último turno como o arquivo de candidaturas do TSE informa (eleito, suplente, não eleito, 2º turno); vazio quando o TSE não informa, como o 2º turno de presidente de 2006."}

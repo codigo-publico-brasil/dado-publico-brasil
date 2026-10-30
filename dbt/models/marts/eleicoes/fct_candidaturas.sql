@@ -9,6 +9,7 @@ with turnos as (
     select
         id_candidatura,
         max(turno) as qtd_turnos,
+        max(dt_eleicao) as dt_eleicao,
         arg_max(situacao_candidatura, turno) as situacao_candidatura,
         arg_max(resultado, turno) as resultado,
         bool_or(resultado like 'Eleito%') as fl_eleito,
@@ -37,6 +38,13 @@ ultimo_turno as (
     where fl_mais_votado_no_turno is not null
 
     qualify row_number() over (partition by id_candidatura order by turno desc) = 1
+
+),
+
+dia_votado as (
+
+    -- o dia de cada turno que a votação traz (em 2006 só ela tem o 2º turno de presidente)
+    select id_candidatura, turno, max(dt_eleicao) as dt_eleicao from {{ ref('stg_tse__votacao') }} group by id_candidatura, turno
 
 ),
 
@@ -84,6 +92,12 @@ select
     c.partido_nome,
     c.federacao_sigla as federacao,
     c.coligacao_nome as coligacao,
+    -- o dia do último turno: o da votação quando ela tem o turno que o arquivo de candidaturas não tem; sem a data, vazio
+    case
+        when greatest(t.qtd_turnos, coalesce(tv.ultimo_turno_votado, 0)) = t.qtd_turnos
+            then coalesce(dv.dt_eleicao, t.dt_eleicao)
+        else dv.dt_eleicao
+    end as dt_eleicao,
     t.situacao_candidatura,
     greatest(t.qtd_turnos, coalesce(tv.ultimo_turno_votado, 0)) as qtd_turnos,
     t.resultado,
@@ -120,6 +134,9 @@ left join {{ ref('partidos_siglas') }} as ps
     and try_cast(c.ano_eleicao as integer) between ps.ano_inicio and ps.ano_fim
 
 left join turnos_votados as tv on tv.id_candidatura = c.id_candidatura
+
+left join dia_votado as dv
+    on dv.id_candidatura = c.id_candidatura and dv.turno = greatest(t.qtd_turnos, coalesce(tv.ultimo_turno_votado, 0))
 
 left join ultimo_turno as u on u.id_candidatura = c.id_candidatura
 

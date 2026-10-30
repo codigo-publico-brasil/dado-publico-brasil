@@ -72,6 +72,8 @@ unit_tests:
         rows: []
       - input: ref('fct_pessoas_partidos')
         rows: []
+      - input: ref('fct_candidaturas')
+        rows: []
       - input: ref('stg_metadata__captures')
         rows:
           - {id_captura: 1, url: "https://exemplo.gov.br/arquivo.zip", dt_captura: "2026-10-21 10:00:00"}
@@ -124,6 +126,8 @@ unit_tests:
         rows:
           - {id_partido: 7, sigla: AAA}
           - {id_partido: 9, sigla: BBB}
+      - input: ref('fct_candidaturas')
+        rows: []
       - input: ref('stg_metadata__captures')
         rows:
           - {id_captura: 1, url: "https://exemplo.gov.br/arquivo.zip", dt_captura: "2026-10-21 10:00:00"}

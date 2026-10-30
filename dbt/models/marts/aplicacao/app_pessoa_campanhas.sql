@@ -6,6 +6,7 @@ select
     ca.id_pessoa,
     a.ano_eleicao,
     c.nome as cargo,
+    ca.dt_eleicao,
     ca.numero,
     pa.sigla as partido,
     ca.resultado,

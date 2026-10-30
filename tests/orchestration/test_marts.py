@@ -233,3 +233,19 @@ def test_app_views_carry_the_source_and_capture_date_and_the_birth_state_from_th
         )
         == 0
     )
+
+
+def test_election_results_carry_the_voting_day_and_the_election_has_the_date_of_each_turn(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    assert not scalar(
+        con,
+        "SELECT count(*) FROM marts.fct_eventos WHERE id_tipo_evento IN ('eleito', 'nao_eleito', 'suplente_eleito', "
+        "'segundo_turno_disputado') AND dt_evento IS NULL",
+    )
+    first_round = scalar(
+        con, "SELECT dt_primeiro_turno FROM marts.dim_eleicoes WHERE id_eleicao = '2022-544'"
+    )
+    assert first_round is not None  # a data do 1º turno do ano vem dos arquivos de candidaturas
+    assert scalar(con, "SELECT count(*) FROM marts.app_pessoa_campanhas WHERE dt_eleicao IS NULL") == 0

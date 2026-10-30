@@ -41,6 +41,7 @@ select
     ano_eleicao || ':' || sg_ue || ':' || sq_candidato as id_candidatura,
     try_cast(cd_eleicao as integer) as cd_eleicao,
     ds_eleicao as eleicao,
+    try_strptime(dt_eleicao, '%d/%m/%Y')::date as dt_eleicao,
     sg_ue as ue,
     proper_name(nm_ue) as ue_nome,
     sg_uf as uf,

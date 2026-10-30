@@ -192,6 +192,7 @@ select
     o.dt_fim_prevista,
     o.base_do_fim,
     o.base_eleicao,
+    fc.dt_eleicao,
     o.tipo_mandato,
     o.tipo_registro,
     cap.url as fonte_url,
@@ -202,5 +203,7 @@ from ocupacao as o
 inner join {{ ref('dim_pessoas') }} as p on p.id_pessoa = o.id_pessoa
 
 left join {{ ref('dim_partidos') }} as pa on pa.id_partido = o.id_partido
+
+left join {{ ref('fct_candidaturas') }} as fc on fc.id_candidatura = o.id_candidatura
 
 left join {{ ref('stg_metadata__captures') }} as cap on cap.id_captura = o.id_captura

@@ -32,6 +32,8 @@ models:
       - {name: cd_eleicao, data_type: integer, tests: [not_null], description: "Código da eleição no TSE."}
       - {name: nome, data_type: varchar, description: "Descrição da eleição, como o TSE informa."}
       - {name: fl_ordinaria, data_type: boolean, description: "DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE."}
+      - {name: dt_primeiro_turno, data_type: date, description: "Dia do 1º turno do ano, como o TSE informa nos arquivos de candidaturas (a eleição geral e a municipal nunca caem no mesmo ano)."}
+      - {name: dt_segundo_turno, data_type: date, description: "Dia do 2º turno do ano, quando houve disputa em 2º turno; vazio nos demais casos e em 2006, cujo arquivo de candidaturas não traz o 2º turno de presidente. Em 2020 vale o primeiro dia (29/11): o 2º turno de Macapá foi adiado para 20/12."}
       - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__captures'), field: id_captura}}], description: "Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures)."}
 
   - name: dim_disputas
