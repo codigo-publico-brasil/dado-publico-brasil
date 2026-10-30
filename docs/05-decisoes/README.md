@@ -22,6 +22,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0003](0003-ferramentas-de-seguranca-do-ci.md) | Ferramentas de segurança do CI | proposto |
 | [0006](0006-adotar-dlt-dbt-e-dagster.md) | Adotar dlt, dbt-core e Dagster | vigente (pastas e nomes: [0007](0007-dois-pacotes-e-camadas-de-mercado.md)) |
 | [0014](0014-warehouse-lake-duckdb-e-postgres-de-servico.md) | DuckDB calcula, PostgreSQL serve | vigente |
+| [0034](0034-manter-duckdb-e-postgres.md) | Manter DuckDB e PostgreSQL; sem DuckLake nem arquivos separados por ora, com gatilhos para reabrir | proposto (decisão do fundador) |
 
 ### Estrutura do repositório e das camadas
 
