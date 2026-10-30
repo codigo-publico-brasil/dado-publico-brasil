@@ -1,9 +1,0 @@
-- Usar o repositório como algo didático também para outras pessoas aprenderem a usar as ferramentas usadas: pra isso precisamos explicar o que estamos usando e o motivo (por exemplo: uv, dbt, dlt, dagster...)
-- "uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest" o que cada instrução dessa faz. Verificar se está no readme tbm
-- README não está legal, tudo certo até as regras de dados porém depois disso é confuso
-- não fica claro oq ue é cada pasta e as camadas
-- no docs do dbt tem como para as sources colocar os devidos links? Melhorar os modelos para ficar bem documentado
-- como e onde publica esse resultado do docs do dbt?
-- seria bom ter descrição nas colunas das raw tbm
-- adicionar nas instruções de agentes que precisa manter a documentação atualizada
-- 
