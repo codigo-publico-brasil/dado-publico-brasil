@@ -56,6 +56,7 @@ models:
     columns:
       - {name: ano_eleicao, description: "Ano da eleição que a formou."}
       - {name: turno, description: "Turno da votação."}
+      - {name: dt_eleicao, description: "Dia em que o turno foi votado, como o TSE informa (DT_ELEICAO); vazio quando o arquivo não traz ou não é uma data."}
       - {name: abrangencia, description: "Abrangência da eleição, como o TSE informa (campo TP_ABRANGENCIA)."}
       - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
       - {name: cd_ue, description: "Código da unidade eleitoral do cargo: BR para presidente, a sigla da UF para os cargos estaduais e federais e o código do município para prefeito e vereador, igual ao das candidaturas."}
