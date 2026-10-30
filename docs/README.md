@@ -14,9 +14,9 @@ Para quem chega ao projeto: onde cada coisa mora em `docs/` e em que ordem ler. 
 ## Ordem de leitura
 
 1. [`01-entender/`](01-entender/), na ordem: visão geral, arquitetura, camadas, ferramentas.
-2. [`01-entender/08-modelo-de-dados.html`](01-entender/08-modelo-de-dados.html) (o modelo alvo dos dados, ADR [0030](05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md)), [`01-entender/05-identidade-de-pessoas.md`](01-entender/05-identidade-de-pessoas.md) e [`06-governanca.md`](01-entender/06-governanca.md) e [`07-lgpd-dados-pessoais.md`](01-entender/07-lgpd-dados-pessoais.md).
+2. [`01-entender/05-identidade-de-pessoas.md`](01-entender/05-identidade-de-pessoas.md) e o [`08-modelo-de-dados.html`](01-entender/08-modelo-de-dados.html) (o modelo de dados vigente, com figuras; ADR [0030](05-decisoes/0030-modelo-de-dados-pessoa-no-centro.md) a [0033](05-decisoes/0033-marts-com-a-terminologia-da-dbt-labs.md)). O desenho de produção está em [`arquitetura-producao.html`](01-entender/arquitetura-producao.html) (ADR [0014](05-decisoes/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)).
 3. [`02-fazer/`](02-fazer/), na ordem: rodar localmente, tutorial de nova fonte, especificação da fonte, operar e publicar, auditar.
-5. [`03-consultar/`](03-consultar/): conforme a necessidade.
+4. [`03-consultar/`](03-consultar/): conforme a necessidade (convenção de nomes antes de criar tabela ou coluna).
 
 ## Regras
 
