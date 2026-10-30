@@ -2,111 +2,218 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Desenho de referência da arquitetura de produção do Dado Público Brasil: componentes, integrações e portões de revisão, sem fixar provedor de nuvem.">
 <title>Arquitetura de dados e infraestrutura</title>
 <style>
-  :root { --bg:#fff; --fg:#1b1f24; --muted:#5b6570; --line:#cfd5dc; --card:#f4f6f9; --accent:#0b5cad; --ok:#1a7f4b; --warn:#a15c00; --zone:#eaf1f9; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#14181d; --fg:#e6e9ed; --muted:#9aa5b1; --line:#2f3740; --card:#1c2128; --accent:#6cb0ff; --ok:#4cc38a; --warn:#e3a33b; --zone:#192433; } }
-  body { background:var(--bg); color:var(--fg); font:16px/1.55 system-ui,Segoe UI,Arial,sans-serif; margin:0; }
-  main { max-width:1040px; margin:0 auto; padding:24px 16px 64px; }
-  h1 { font-size:1.7rem; margin:.2em 0; } h2 { font-size:1.25rem; margin-top:2em; border-bottom:1px solid var(--line); padding-bottom:.25em; }
-  p.lead { color:var(--muted); margin-top:0; }
-  table { border-collapse:collapse; width:100%; margin:1em 0; font-size:.9rem; }
-  th,td { border:1px solid var(--line); padding:.4em .55em; text-align:left; vertical-align:top; }
-  th { background:var(--card); }
-  .box { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:.8em 1em; margin:1em 0; }
-  .scroll { overflow-x:auto; }
-  svg { width:100%; min-width:760px; height:auto; } svg text { fill:var(--fg); font:12.5px system-ui,Segoe UI,Arial,sans-serif; }
-  svg .b { fill:var(--card); stroke:var(--line); stroke-width:1.2; }
-  svg .z { fill:var(--zone); stroke:var(--line); stroke-width:1.2; stroke-dasharray:5 4; }
-  svg .a { fill:none; stroke:var(--accent); stroke-width:1.6; marker-end:url(#h); }
-  svg .d { fill:none; stroke:var(--muted); stroke-width:1.2; stroke-dasharray:4 3; marker-end:url(#g); }
-  svg .t { fill:var(--muted); font-size:11px; } svg .hd { font-weight:600; } svg .zt { font-weight:700; fill:var(--accent); font-size:12px; }
-  svg .k { fill:var(--accent); } svg .kg { fill:var(--muted); }
-  code { background:var(--card); padding:.1em .35em; border-radius:4px; font-size:.88em; }
-  ol li, ul li { margin:.25em 0; }
+/* Estilo comum dos documentos HTML de docs/01-entender: tinta azul de urna como único acento e cores semânticas
+   (informado, derivado, parcial, falta) para varrer as matrizes. Sem fonte externa: pilha do sistema. */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --ink: #15202b; --muted: #566574; --line: #d5dce3;
+  --accent: #2a4fc4; --accent-soft: #e3e9fb;
+  --ok: #1d7a4d; --ok-soft: #dff2e8; --warn: #8a5a00; --warn-soft: #fbefcf; --bad: #b3261e; --bad-soft: #f9dfdc;
+  --code-bg: #eaeef2;
+  --font-body: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e141b; --surface: #151d27; --ink: #e6ecf2; --muted: #9aa9b8; --line: #2a3644;
+    --accent: #8ba5ff; --accent-soft: #1d2a4d; --ok: #5cc48e; --ok-soft: #14301f;
+    --warn: #e0b34a; --warn-soft: #38300f; --bad: #f08178; --bad-soft: #3d1a18; --code-bg: #1b2531;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-block: 24px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.skip { position: absolute; left: -999px; top: 8px; background: var(--accent); color: var(--surface); padding: 8px 12px; z-index: 10; }
+.skip:focus { left: 8px; }
+.page { max-width: 1040px; margin: 0 auto; }
+nav.toc { position: sticky; top: 16px; align-self: start; font-size: 14px; line-height: 1.35; max-height: calc(100vh - 32px); overflow: auto; }
+nav.toc p { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc a { display: block; padding: 5px 8px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover { color: var(--accent); border-left-color: var(--accent); }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+main { min-width: 0; }
+header.doc { padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 36px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
+.back { font-size: 14px; margin: 0 0 18px; }
+h1 { font-weight: 700; font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 0 0 16px; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-weight: 700; font-size: 26px; line-height: 1.2; margin: 52px 0 14px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-weight: 700; font-size: 18px; margin: 28px 0 8px; scroll-margin-top: 16px; }
+p { margin: 0 0 14px; max-width: 72ch; }
+ul { margin: 0 0 16px; padding-left: 22px; max-width: 72ch; }
+li { margin-bottom: 6px; }
+.lede { font-size: 18px; max-width: 66ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--muted); margin: 18px 0 0; }
+.meta b { color: var(--ink); font-weight: 600; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+.callout { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 14px 16px; margin: 18px 0; max-width: 76ch; }
+.callout p:last-child { margin-bottom: 0; }
+.callout.warn { background: var(--warn-soft); border-left-color: var(--warn); }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 18px 0; }
+.q { background: var(--surface); border: 1px solid var(--line); padding: 16px; min-width: 0; }
+.q h3 { margin-top: 0; color: var(--accent); }
+.q p { font-size: 15px; }
+.q ul { font-size: 15px; padding-left: 18px; }
+figure { margin: 22px 0 28px; }
+figure .fig { background: var(--surface); border: 1px solid var(--line); padding: 14px; overflow-x: auto; }
+figure svg { display: block; width: 100%; min-width: 640px; height: auto; color: var(--ink); }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; max-width: 80ch; }
+details.alt { margin-top: 8px; font-size: 14px; color: var(--muted); max-width: 80ch; }
+details.alt summary { cursor: pointer; }
+svg text { font-family: var(--font-body); fill: currentColor; }
+svg .svg-t { font-size: 14px; font-weight: 600; }
+svg .svg-s { font-size: 12px; fill: var(--muted); }
+svg .svg-m { font-family: var(--font-mono); font-size: 12px; }
+svg .svg-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+svg .svg-core { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+svg .svg-ln { stroke: currentColor; stroke-width: 1.4; fill: none; }
+svg .svg-dash { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; fill: none; }
+svg .svg-bar { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.3; }
+svg .svg-sup { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 1.3; }
+svg .svg-ink { fill: currentColor; }
+svg .svg-zone { fill: var(--accent-soft); stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 5 4; }
+svg .svg-hd { font-size: 12.5px; font-weight: 600; }
+svg .svg-zt { font-size: 12px; font-weight: 700; fill: var(--accent); letter-spacing: .04em; }
+svg .svg-arrow { fill: none; stroke: var(--accent); stroke-width: 1.6; marker-end: url(#h); }
+svg .svg-darrow { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 3; marker-end: url(#g); }
+svg .svg-k { fill: var(--accent); }
+svg .svg-kg { fill: var(--muted); }
+.scroll { overflow-x: auto; margin: 14px 0 24px; border: 1px solid var(--line); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+caption { text-align: left; font-size: 14px; color: var(--muted); padding: 10px 12px 0; caption-side: top; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-mono); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tbody th { font-family: var(--font-body); font-size: inherit; letter-spacing: 0; text-transform: none; color: var(--ink); font-weight: 600; background: none; }
+tr:last-child td, tr:last-child th { border-bottom: 0; }
+td.num, th.num { font-variant-numeric: tabular-nums; text-align: right; }
+.chip { display: inline-block; font-family: var(--font-mono); font-size: 12px; letter-spacing: .02em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+.chip.part { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+.chip.miss { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+.chip.der { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 14px; color: var(--muted); margin: 8px 0 4px; align-items: center; }
+pre { background: var(--code-bg); border: 1px solid var(--line); padding: 12px 14px; overflow-x: auto; margin: 10px 0 18px; font-size: 13px; line-height: 1.5; max-width: 100%; }
+pre code { background: none; padding: 0; font-size: inherit; }
+footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+@media (max-width: 960px) {
+  .page { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  nav.toc { position: static; max-height: none; overflow: visible; }
+  nav.toc ol { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 6px; }
+  nav.toc a { white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
 </head>
 <body>
-<main>
-<h1>Arquitetura de dados e infraestrutura</h1>
-<p class="lead">Proposta aprovada em ADR 0014. Descreve componentes e integrações sem fixar provedor de nuvem; federal primeiro, estados e municípios entram como novas fontes sobre a mesma estrutura.</p>
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+<div class="page">
+<main id="conteudo">
+<header class="doc">
+  <p class="back"><a href="../README.md">← Mapa da documentação</a></p>
+  <p class="eyebrow">Arquitetura · desenho de referência · ADR 0014</p>
+  <h1>Arquitetura de dados e infraestrutura</h1>
+  <p class="lede">Para quem opera ou vai hospedar a plataforma. Responde: quais componentes existem, como se integram e quando cada decisão deve ser revista, sem fixar provedor de nuvem. Federal primeiro; estados e municípios entram como novas fontes sobre a mesma estrutura.</p>
+  <div class="meta">
+    <span><b>Atualizado em</b> 30/10/2026</span>
+    <span><b>Estado</b> desenho de referência; hoje roda em uma máquina com Docker</span>
+    <span><b>Decisão</b> <a href="../05-decisoes/0014-warehouse-lake-duckdb-e-postgres-de-servico.md">ADR 0014</a></span>
+  </div>
+</header>
 
+<div class="callout">
+  <p><b>O que existe hoje.</b> Uma máquina com Docker roda o Dagster e o PostgreSQL de serviço (<code>compose.yaml</code>), o arquivo DuckDB fica em disco local, o landing em pasta e o Postgres recebe só o esquema <code>marts</code>. Armazenamento de objetos, rede privada, borda, cofre de segredos e hospedagem pública são o desenho de produção abaixo e ainda não estão implantados (hospedagem: <a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/30">#30</a>). Como operar o que existe: <a href="../02-fazer/04-operar-e-publicar.md">Operar e publicar</a>.</p>
+</div>
 <h2>1. Decisão</h2>
-<div class="box">
+<div class="callout">
 <b>Arquivos e DuckDB calculam; PostgreSQL serve.</b> O bruto é imutável num armazenamento de objetos; um único servidor de processamento ingere e transforma (Dagster, dbt, DuckDB); o PostgreSQL recebe só os <i>marts</i> (e os documentos com pgvector) e é o único ponto de leitura das aplicações. A identidade de pessoas tem <i>snapshot</i> imutável a cada execução. Cada componente é trocável por um equivalente em qualquer nuvem ou servidor próprio.
 </div>
 
 <h2>2. Desenho completo</h2>
-<div class="scroll">
-<svg viewBox="0 0 1040 760" role="img" aria-label="Arquitetura: fontes oficiais, rede privada com servidor de processamento, armazenamento de objetos e PostgreSQL, zona de aplicações, plataforma transversal">
+<figure>
+<div class="fig">
+<svg viewBox="0 0 1040 760" role="img" aria-labelledby="f1t" aria-describedby="f1d">
+<title id="f1t">Desenho completo da arquitetura</title>
+<desc id="f1d">Fontes oficiais na internet; rede privada com o servidor de processamento, o armazenamento de objetos e o PostgreSQL; zona pública com a borda e as aplicações; plataforma transversal de entrega, segredos, observabilidade e backup.</desc>
 <defs>
-<marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="k"/></marker>
-<marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="kg"/></marker>
+<marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="svg-k"/></marker>
+<marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="svg-kg"/></marker>
 </defs>
 
 <!-- Zona 1: internet / fontes -->
-<rect class="z" x="8" y="20" width="168" height="410" rx="10"/><text class="zt" x="20" y="40">INTERNET: FONTES</text>
-<rect class="b" x="20" y="54" width="144" height="150" rx="8"/><text class="hd" x="30" y="74">Fontes oficiais</text>
-<text class="t" x="30" y="94">Câmara, Senado, TSE</text><text class="t" x="30" y="110">Planalto, DOU, TCU</text><text class="t" x="30" y="126">Portal da Transparência</text><text class="t" x="30" y="142">CNPJ, CNJ</text><text class="t" x="30" y="162">API, CSV, ZIP, HTML</text><text class="t" x="30" y="178">(RPA onde não houver API)</text>
-<rect class="b" x="20" y="220" width="144" height="76" rx="8"/><text class="hd" x="30" y="240">Saída controlada</text><text class="t" x="30" y="258">NAT / IP fixo de saída</text><text class="t" x="30" y="274">só o worker sai à rede</text>
+<rect class="svg-zone" x="8" y="20" width="168" height="410" rx="10"/><text class="svg-zt" x="20" y="40">INTERNET: FONTES</text>
+<rect class="svg-box" x="20" y="54" width="144" height="150" rx="8"/><text class="svg-hd" x="30" y="74">Fontes oficiais</text>
+<text class="svg-s" x="30" y="94">Câmara, Senado, TSE</text><text class="svg-s" x="30" y="110">Planalto, DOU, TCU</text><text class="svg-s" x="30" y="126">Transparência</text><text class="svg-s" x="30" y="142">CNPJ, CNJ</text><text class="svg-s" x="30" y="162">API, CSV, ZIP, HTML</text><text class="svg-s" x="30" y="178">RPA sem API</text>
+<rect class="svg-box" x="20" y="220" width="144" height="76" rx="8"/><text class="svg-hd" x="30" y="240">Saída controlada</text><text class="svg-s" x="30" y="258">NAT, IP fixo</text><text class="svg-s" x="30" y="274">só o worker sai</text>
 
 <!-- Zona 2: rede privada -->
-<rect class="z" x="196" y="20" width="560" height="560" rx="10"/><text class="zt" x="208" y="40">REDE PRIVADA (sem IP público)</text>
+<rect class="svg-zone" x="196" y="20" width="560" height="560" rx="10"/><text class="svg-zt" x="208" y="40">REDE PRIVADA (sem IP público)</text>
 
-<rect class="b" x="212" y="54" width="250" height="300" rx="8"/><text class="hd" x="222" y="74">Servidor de processamento (1 nó)</text>
-<text class="t" x="222" y="90">VM ou contêiner, disco local rápido</text>
-<rect class="b" x="224" y="100" width="226" height="48" rx="6"/><text class="hd" x="232" y="118">Dagster</text><text class="t" x="232" y="134">web + daemon: agenda, linhagem, alertas</text>
-<rect class="b" x="224" y="156" width="226" height="48" rx="6"/><text class="hd" x="232" y="174">Ingestão (dlt + contratos)</text><text class="t" x="232" y="190">buscar, guardar, ler; monitora a fonte</text>
-<rect class="b" x="224" y="212" width="226" height="48" rx="6"/><text class="hd" x="232" y="230">dbt + DuckDB</text><text class="t" x="232" y="246">staging, intermediate, marts, testes</text>
-<rect class="b" x="224" y="268" width="226" height="44" rx="6"/><text class="hd" x="232" y="286">Arquivo DuckDB (disco local)</text><text class="t" x="232" y="302">raw, identity, metadata; escritor único</text>
-<text class="t" x="222" y="334">Fila serial: um pipeline por vez</text>
-<text class="t" x="222" y="348">Imagem de contêiner versionada</text>
+<rect class="svg-box" x="212" y="54" width="250" height="300" rx="8"/><text class="svg-hd" x="222" y="74">Servidor de processamento (1 nó)</text>
+<text class="svg-s" x="222" y="90">VM ou contêiner, disco local</text>
+<rect class="svg-box" x="224" y="100" width="226" height="48" rx="6"/><text class="svg-hd" x="232" y="118">Dagster</text><text class="svg-s" x="232" y="134">web + daemon: agenda e alertas</text>
+<rect class="svg-box" x="224" y="156" width="226" height="48" rx="6"/><text class="svg-hd" x="232" y="174">Ingestão (dlt + contratos)</text><text class="svg-s" x="232" y="190">buscar, guardar, ler, monitorar</text>
+<rect class="svg-box" x="224" y="212" width="226" height="48" rx="6"/><text class="svg-hd" x="232" y="230">dbt + DuckDB</text><text class="svg-s" x="232" y="246">staging, intermediate, marts</text>
+<rect class="svg-box" x="224" y="268" width="226" height="44" rx="6"/><text class="svg-hd" x="232" y="286">Arquivo DuckDB (disco local)</text><text class="svg-s" x="232" y="302">raw, identity, metadata</text>
+<text class="svg-s" x="222" y="334">Fila serial: um pipeline por vez</text>
+<text class="svg-s" x="222" y="348">Imagem de contêiner versionada</text>
 
-<rect class="b" x="212" y="372" width="250" height="90" rx="8"/><text class="hd" x="222" y="392">Gerador de embeddings (futuro)</text>
-<text class="t" x="222" y="410">Modelo aberto, roda sob demanda</text><text class="t" x="222" y="426">lê trechos, grava vetores</text><text class="t" x="222" y="442">só depois da trilha de documentos</text>
+<rect class="svg-box" x="212" y="372" width="250" height="90" rx="8"/><text class="svg-hd" x="222" y="392">Gerador de embeddings (futuro)</text>
+<text class="svg-s" x="222" y="410">Modelo aberto, roda sob demanda</text><text class="svg-s" x="222" y="426">lê trechos, grava vetores</text><text class="svg-s" x="222" y="442">só depois da trilha de documentos</text>
 
-<rect class="b" x="492" y="54" width="248" height="236" rx="8"/><text class="hd" x="502" y="74">Armazenamento de objetos (S3)</text>
-<text class="t" x="502" y="90">Buckets privados, versionados, criptografados</text>
-<rect class="b" x="504" y="100" width="224" height="38" rx="6"/><text class="hd" x="512" y="118">landing/</text><text class="t" x="512" y="132">arquivos originais com hash; nunca se apaga</text>
-<rect class="b" x="504" y="144" width="224" height="38" rx="6"/><text class="hd" x="512" y="162">curated/ (Parquet)</text><text class="t" x="512" y="176">quando o volume pedir (portão do ADR)</text>
-<rect class="b" x="504" y="188" width="224" height="38" rx="6"/><text class="hd" x="512" y="206">snapshots/identity/</text><text class="t" x="512" y="220">uma cópia imutável por execução</text>
-<rect class="b" x="504" y="232" width="224" height="46" rx="6"/><text class="hd" x="512" y="250">backups/</text><text class="t" x="512" y="266">cópia do DuckDB e dumps do Postgres</text>
+<rect class="svg-box" x="492" y="54" width="248" height="236" rx="8"/><text class="svg-hd" x="502" y="74">Armazenamento de objetos (S3)</text>
+<text class="svg-s" x="502" y="90">Privados, versionados e cifrados</text>
+<rect class="svg-box" x="504" y="100" width="224" height="38" rx="6"/><text class="svg-hd" x="512" y="118">landing/</text><text class="svg-s" x="512" y="132">originais com hash, imutáveis</text>
+<rect class="svg-box" x="504" y="144" width="224" height="38" rx="6"/><text class="svg-hd" x="512" y="162">curated/ (Parquet)</text><text class="svg-s" x="512" y="176">quando o volume pedir (portão)</text>
+<rect class="svg-box" x="504" y="188" width="224" height="38" rx="6"/><text class="svg-hd" x="512" y="206">snapshots/identity/</text><text class="svg-s" x="512" y="220">uma cópia imutável por execução</text>
+<rect class="svg-box" x="504" y="232" width="224" height="46" rx="6"/><text class="svg-hd" x="512" y="250">backups/</text><text class="svg-s" x="512" y="266">cópias do DuckDB e do Postgres</text>
 
-<rect class="b" x="492" y="310" width="248" height="252" rx="8"/><text class="hd" x="502" y="330">PostgreSQL de serviço</text>
-<text class="t" x="502" y="346">Instância própria ou gerenciada; TLS; PITR</text>
-<rect class="b" x="504" y="356" width="224" height="38" rx="6"/><text class="hd" x="512" y="374">marts (contrato público)</text><text class="t" x="512" y="388">só leitura para aplicações</text>
-<rect class="b" x="504" y="400" width="224" height="38" rx="6"/><text class="hd" x="512" y="418">documents (pgvector)</text><text class="t" x="512" y="432">trechos e vetores</text>
-<rect class="b" x="504" y="444" width="224" height="38" rx="6"/><text class="hd" x="512" y="462">pool de conexões</text><text class="t" x="512" y="476">PgBouncer na frente</text>
-<rect class="b" x="504" y="488" width="224" height="64" rx="6"/><text class="hd" x="512" y="506">Papéis</text><text class="t" x="512" y="522">publicador (escreve marts), leitor por app</text><text class="t" x="512" y="538">banco separado para o estado do Dagster</text>
+<rect class="svg-box" x="492" y="310" width="248" height="252" rx="8"/><text class="svg-hd" x="502" y="330">PostgreSQL de serviço</text>
+<text class="svg-s" x="502" y="346">Própria ou gerenciada; TLS; PITR</text>
+<rect class="svg-box" x="504" y="356" width="224" height="38" rx="6"/><text class="svg-hd" x="512" y="374">marts (contrato público)</text><text class="svg-s" x="512" y="388">só leitura para aplicações</text>
+<rect class="svg-box" x="504" y="400" width="224" height="38" rx="6"/><text class="svg-hd" x="512" y="418">documents (pgvector)</text><text class="svg-s" x="512" y="432">trechos e vetores</text>
+<rect class="svg-box" x="504" y="444" width="224" height="38" rx="6"/><text class="svg-hd" x="512" y="462">pool de conexões</text><text class="svg-s" x="512" y="476">PgBouncer na frente</text>
+<rect class="svg-box" x="504" y="488" width="224" height="64" rx="6"/><text class="svg-hd" x="512" y="506">Papéis</text><text class="svg-s" x="512" y="522">publicador; leitor por app</text><text class="svg-s" x="512" y="538">banco à parte para o Dagster</text>
 
 <!-- Zona 3: aplicações -->
-<rect class="z" x="776" y="20" width="256" height="410" rx="10"/><text class="zt" x="788" y="40">ZONA PÚBLICA: APLICAÇÕES</text>
-<rect class="b" x="788" y="54" width="232" height="70" rx="8"/><text class="hd" x="798" y="74">Borda: CDN, WAF, TLS</text><text class="t" x="798" y="92">única entrada pública</text><text class="t" x="798" y="108">limite de requisições</text>
-<rect class="b" x="788" y="140" width="232" height="110" rx="8"/><text class="hd" x="798" y="160">Aplicações (repos próprios)</text><text class="t" x="798" y="178">API aberta,</text><text class="t" x="798" y="194">estudo de IA, painéis</text><text class="t" x="798" y="214">contêineres sem estado</text><text class="t" x="798" y="230">leem só marts e documents</text>
-<rect class="b" x="788" y="266" width="232" height="60" rx="8"/><text class="hd" x="798" y="286">Cidadãos e pesquisadores</text><text class="t" x="798" y="304">navegador e API pública</text>
+<rect class="svg-zone" x="776" y="20" width="256" height="410" rx="10"/><text class="svg-zt" x="788" y="40">ZONA PÚBLICA: APLICAÇÕES</text>
+<rect class="svg-box" x="788" y="54" width="232" height="70" rx="8"/><text class="svg-hd" x="798" y="74">Borda: CDN, WAF, TLS</text><text class="svg-s" x="798" y="92">única entrada pública</text><text class="svg-s" x="798" y="108">limite de requisições</text>
+<rect class="svg-box" x="788" y="140" width="232" height="110" rx="8"/><text class="svg-hd" x="798" y="160">Aplicações (repos próprios)</text><text class="svg-s" x="798" y="178">API aberta,</text><text class="svg-s" x="798" y="194">estudo de IA, painéis</text><text class="svg-s" x="798" y="214">contêineres sem estado</text><text class="svg-s" x="798" y="230">leem só marts e documents</text>
+<rect class="svg-box" x="788" y="266" width="232" height="60" rx="8"/><text class="svg-hd" x="798" y="286">Cidadãos e pesquisadores</text><text class="svg-s" x="798" y="304">navegador e API pública</text>
 
 <!-- Zona 4: plataforma transversal -->
-<rect class="z" x="8" y="600" width="1024" height="148" rx="10"/><text class="zt" x="20" y="620">PLATAFORMA TRANSVERSAL</text>
-<rect class="b" x="20" y="634" width="240" height="100" rx="8"/><text class="hd" x="30" y="654">Entrega</text><text class="t" x="30" y="672">GitHub + CI (testes, segredos)</text><text class="t" x="30" y="688">registro de imagens</text><text class="t" x="30" y="704">OpenTofu: a infra como código</text><text class="t" x="30" y="720">deploy por aprovação</text>
-<rect class="b" x="272" y="634" width="240" height="100" rx="8"/><text class="hd" x="282" y="654">Segredos e acesso</text><text class="t" x="282" y="672">cofre de segredos (hoje: .env)</text><text class="t" x="282" y="688">identidade por serviço</text><text class="t" x="282" y="704">privilégio mínimo</text><text class="t" x="282" y="720">chaves rotacionadas</text>
-<rect class="b" x="524" y="634" width="240" height="100" rx="8"/><text class="hd" x="534" y="654">Observabilidade</text><text class="t" x="534" y="672">logs e métricas centralizados</text><text class="t" x="534" y="688">alertas: verify, esquema, volume,</text><text class="t" x="534" y="704">falha de execução, disco, backup</text><text class="t" x="534" y="720">canal de notificação</text>
-<rect class="b" x="776" y="634" width="244" height="100" rx="8"/><text class="hd" x="786" y="654">Backup e continuidade</text><text class="t" x="786" y="672">snapshot de identidade a cada run</text><text class="t" x="786" y="688">PITR do Postgres, dump diário</text><text class="t" x="786" y="704">cópia do bucket em outra região</text><text class="t" x="786" y="720">teste de restauração periódico</text>
+<rect class="svg-zone" x="8" y="600" width="1024" height="148" rx="10"/><text class="svg-zt" x="20" y="620">PLATAFORMA TRANSVERSAL</text>
+<rect class="svg-box" x="20" y="634" width="240" height="100" rx="8"/><text class="svg-hd" x="30" y="654">Entrega</text><text class="svg-s" x="30" y="672">GitHub + CI (testes, segredos)</text><text class="svg-s" x="30" y="688">registro de imagens</text><text class="svg-s" x="30" y="704">OpenTofu: a infra como código</text><text class="svg-s" x="30" y="720">deploy por aprovação</text>
+<rect class="svg-box" x="272" y="634" width="240" height="100" rx="8"/><text class="svg-hd" x="282" y="654">Segredos e acesso</text><text class="svg-s" x="282" y="672">cofre de segredos (hoje: .env)</text><text class="svg-s" x="282" y="688">identidade por serviço</text><text class="svg-s" x="282" y="704">privilégio mínimo</text><text class="svg-s" x="282" y="720">chaves rotacionadas</text>
+<rect class="svg-box" x="524" y="634" width="240" height="100" rx="8"/><text class="svg-hd" x="534" y="654">Observabilidade</text><text class="svg-s" x="534" y="672">logs e métricas centralizados</text><text class="svg-s" x="534" y="688">alertas: verify, esquema, volume,</text><text class="svg-s" x="534" y="704">falha de execução, disco, backup</text><text class="svg-s" x="534" y="720">canal de notificação</text>
+<rect class="svg-box" x="776" y="634" width="244" height="100" rx="8"/><text class="svg-hd" x="786" y="654">Backup e continuidade</text><text class="svg-s" x="786" y="672">snapshot de identidade a cada run</text><text class="svg-s" x="786" y="688">PITR do Postgres, dump diário</text><text class="svg-s" x="786" y="704">cópia do bucket em outra região</text><text class="svg-s" x="786" y="720">teste de restauração periódico</text>
 
 <!-- Setas principais -->
-<path class="a" d="M212 258H166"/><text class="t" x="170" y="250">baixa</text>
-<path class="a" d="M92 220V206"/>
-<path class="a" d="M462 119H502"/><text class="t" x="466" y="112">grava</text>
-<path class="a" d="M462 165H502"/>
-<path class="a" d="M462 207H502"/>
-<path class="a" d="M462 290L492 380"/><text class="t" x="448" y="330">publica</text>
-<path class="a" d="M740 460H764V195H786"/><text class="t" x="744" y="452">lê (somente leitura)</text>
-<path class="a" d="M904 124V138"/><path class="a" d="M904 250V264"/>
-<path class="d" d="M337 354V372"/>
-<path class="d" d="M384 462L492 440"/>
-<path class="d" d="M728 310V280"/>
+<path class="svg-arrow" d="M212 258H166"/><text class="svg-s" x="170" y="250">baixa</text>
+<path class="svg-arrow" d="M92 220V206"/>
+<path class="svg-arrow" d="M462 119H502"/><text class="svg-s" x="466" y="112">grava</text>
+<path class="svg-arrow" d="M462 165H502"/>
+<path class="svg-arrow" d="M462 207H502"/>
+<path class="svg-arrow" d="M462 290L492 380"/><text class="svg-s" x="448" y="330">publica</text>
+<path class="svg-arrow" d="M740 460H764V195H786"/><text class="svg-s" x="744" y="452">lê (somente leitura)</text>
+<path class="svg-arrow" d="M904 124V138"/><path class="svg-arrow" d="M904 250V264"/>
+<path class="svg-darrow" d="M337 354V372"/>
+<path class="svg-darrow" d="M384 462L492 440"/>
+<path class="svg-darrow" d="M728 310V280"/>
 </svg>
 </div>
+<figcaption>Figura 1. Desenho completo. Só o servidor de processamento sai à internet; banco e armazenamento ficam em rede privada; a única entrada pública é a borda.</figcaption>
+<details class="alt"><summary>Descrição em texto da Figura 1</summary><p>À esquerda, as fontes oficiais e a saída controlada (NAT com IP fixo). No centro, a rede privada: o servidor de processamento (Dagster, ingestão, dbt com DuckDB e o arquivo DuckDB), o armazenamento de objetos (landing, curated, snapshots e backups) e o PostgreSQL de serviço (marts, documentos, pool de conexões e papéis). À direita, a zona pública com a borda (CDN, WAF, TLS), as aplicações e os cidadãos. Embaixo, a plataforma transversal: entrega, segredos e acesso, observabilidade e backup.</p></details>
+</figure>
 
 <h2>3. Como o dado caminha</h2>
 <ol>
@@ -121,27 +228,31 @@
 </ol>
 
 <h2>4. Componentes de infraestrutura</h2>
-<table>
-<tr><th>Componente</th><th>Função</th><th>Requisitos</th><th>Opções (sem escolher provedor)</th></tr>
-<tr><td>Servidor de processamento</td><td>Roda Dagster, ingestão, dbt e DuckDB</td><td>1 nó; disco local rápido; CPU e RAM proporcionais ao maior dataset; acesso de saída por IP fixo</td><td>VM em qualquer nuvem, servidor próprio, ou contêiner com volume persistente</td></tr>
-<tr><td>Armazenamento de objetos</td><td>Landing, curados, snapshots, backups</td><td>API S3; versionamento; criptografia; imutabilidade (bloqueio de objeto) no landing; cópia em outra região</td><td>S3, GCS ou Azure Blob (via compatibilidade), MinIO ou Ceph em servidor próprio</td></tr>
-<tr><td>PostgreSQL de serviço</td><td>Marts, documentos e vetores</td><td>Versão com pgvector; TLS; recuperação em ponto no tempo; papéis por aplicação</td><td>Postgres gerenciado ou instância própria com réplica opcional</td></tr>
-<tr><td>Pool de conexões</td><td>Protege o banco de picos das aplicações</td><td>Modo por transação</td><td>PgBouncer ou o do provedor</td></tr>
-<tr><td>Rede</td><td>Isola dados e processamento</td><td>Rede privada; banco e storage sem IP público; saída controlada; só a borda é pública</td><td>VPC e sub-redes, ou VLAN em servidor próprio</td></tr>
-<tr><td>Borda</td><td>Entrada pública das aplicações</td><td>TLS, WAF, cache, limite de requisições</td><td>CDN e WAF do provedor, ou proxy reverso aberto (Caddy ou Nginx)</td></tr>
-<tr><td>Segredos</td><td>Tokens e senhas fora do repositório</td><td>Cofre com rotação; acesso por identidade de serviço</td><td>Cofre do provedor, Vault, ou arquivos protegidos no servidor (<code>.env</code> só em dev)</td></tr>
-<tr><td>CI/CD e infra como código</td><td>Testar, construir e implantar</td><td>Aprovação humana para produção; imagens versionadas</td><td>GitHub Actions, registro de imagens, OpenTofu</td></tr>
-<tr><td>Observabilidade</td><td>Saber se rodou e se está correto</td><td>Logs, métricas e alertas de dados (não só de máquina)</td><td>Prometheus e Grafana, ou serviços do provedor</td></tr>
-<tr><td>Backup e restauração</td><td>Perder o servidor não perde o projeto</td><td>Identidade e <code>landing</code> com prioridade; restauração testada</td><td>Versionamento do bucket, snapshots, dump agendado</td></tr>
-</table>
+<div class="scroll"><table>
+<caption>Componentes de infraestrutura</caption>
+<thead><tr><th scope="col">Componente</th><th scope="col">Função</th><th scope="col">Requisitos</th><th scope="col">Opções (sem escolher provedor)</th></tr></thead>
+<tbody>
+<tr><th scope="row">Servidor de processamento</th><td>Roda Dagster, ingestão, dbt e DuckDB</td><td>1 nó; disco local rápido; CPU e RAM proporcionais ao maior dataset; acesso de saída por IP fixo</td><td>VM em qualquer nuvem, servidor próprio, ou contêiner com volume persistente</td></tr>
+<tr><th scope="row">Armazenamento de objetos</th><td>Landing, curados, snapshots, backups</td><td>API S3; versionamento; criptografia; imutabilidade (bloqueio de objeto) no landing; cópia em outra região</td><td>S3, GCS ou Azure Blob (via compatibilidade), MinIO ou Ceph em servidor próprio</td></tr>
+<tr><th scope="row">PostgreSQL de serviço</th><td>Marts, documentos e vetores</td><td>Versão com pgvector; TLS; recuperação em ponto no tempo; papéis por aplicação</td><td>Postgres gerenciado ou instância própria com réplica opcional</td></tr>
+<tr><th scope="row">Pool de conexões</th><td>Protege o banco de picos das aplicações</td><td>Modo por transação</td><td>PgBouncer ou o do provedor</td></tr>
+<tr><th scope="row">Rede</th><td>Isola dados e processamento</td><td>Rede privada; banco e storage sem IP público; saída controlada; só a borda é pública</td><td>VPC e sub-redes, ou VLAN em servidor próprio</td></tr>
+<tr><th scope="row">Borda</th><td>Entrada pública das aplicações</td><td>TLS, WAF, cache, limite de requisições</td><td>CDN e WAF do provedor, ou proxy reverso aberto (Caddy ou Nginx)</td></tr>
+<tr><th scope="row">Segredos</th><td>Tokens e senhas fora do repositório</td><td>Cofre com rotação; acesso por identidade de serviço</td><td>Cofre do provedor, Vault, ou arquivos protegidos no servidor (<code>.env</code> só em dev)</td></tr>
+<tr><th scope="row">CI/CD e infra como código</th><td>Testar, construir e implantar</td><td>Aprovação humana para produção; imagens versionadas</td><td>GitHub Actions, registro de imagens, OpenTofu</td></tr>
+<tr><th scope="row">Observabilidade</th><td>Saber se rodou e se está correto</td><td>Logs, métricas e alertas de dados (não só de máquina)</td><td>Prometheus e Grafana, ou serviços do provedor</td></tr>
+<tr><th scope="row">Backup e restauração</th><td>Perder o servidor não perde o projeto</td><td>Identidade e <code>landing</code> com prioridade; restauração testada</td><td>Versionamento do bucket, snapshots, dump agendado</td></tr></tbody>
+</table></div>
 
 <h2>5. Ambientes</h2>
-<table>
-<tr><th>Ambiente</th><th>Composição</th></tr>
-<tr><td>Local</td><td>Mesmo código; Docker com PostgreSQL e um S3 local (MinIO); landing em pasta se preferir</td></tr>
-<tr><td>CI</td><td>Testes sintéticos; PostgreSQL como serviço para o passo de publicação</td></tr>
-<tr><td>Produção</td><td>O desenho acima; só mudam as variáveis do <code>.env</code> e os segredos</td></tr>
-</table>
+<div class="scroll"><table>
+<caption>Ambientes</caption>
+<thead><tr><th scope="col">Ambiente</th><th scope="col">Composição</th></tr></thead>
+<tbody>
+<tr><th scope="row">Local</th><td>Mesmo código; Docker com PostgreSQL e um S3 local (MinIO); landing em pasta se preferir</td></tr>
+<tr><th scope="row">CI</th><td>Testes sintéticos; PostgreSQL como serviço para o passo de publicação</td></tr>
+<tr><th scope="row">Produção</th><td>O desenho acima; só mudam as variáveis do <code>.env</code> e os segredos</td></tr></tbody>
+</table></div>
 
 <h2>6. Segurança</h2>
 <ul>
@@ -153,23 +264,32 @@
 </ul>
 
 <h2>7. Portões de revisão (medir, não presumir)</h2>
-<table>
-<tr><th>Sinal</th><th>Ação</th></tr>
-<tr><td>Arquivo DuckDB passa de ~300 GB, ou execução completa passa de ~6 h</td><td>Exportar curados para Parquet particionado em <code>curated/</code> e ler por ele</td></tr>
-<tr><td>Um dataset não cabe num nó (provável: processos do Judiciário)</td><td>Mover só ele para ClickHouse ou Trino; contrato dos marts não muda</td></tr>
-<tr><td>PostgreSQL passa de ~500 GB ou a leitura pesa</td><td>Particionar e criar réplica de leitura</td></tr>
-<tr><td>Escrita concorrente virar necessidade</td><td>Reavaliar DuckLake quando a maturidade for verificada</td></tr>
-</table>
-<p>Os limites numéricos são hipóteses; a primeira medição real os corrige. Hoje: warehouse de 1,4 GiB, landing de 3,1 GB, maior tabela com 2,2 milhões de linhas.</p>
+<div class="scroll"><table>
+<caption>Portões de revisão</caption>
+<thead><tr><th scope="col">Sinal</th><th scope="col">Ação</th></tr></thead>
+<tbody>
+<tr><th scope="row">Arquivo DuckDB passa de ~300 GB, ou execução completa passa de ~6 h</th><td>Exportar curados para Parquet particionado em <code>curated/</code> e ler por ele</td></tr>
+<tr><th scope="row">Um dataset não cabe num nó (provável: processos do Judiciário)</th><td>Mover só ele para ClickHouse ou Trino; contrato dos marts não muda</td></tr>
+<tr><th scope="row">PostgreSQL passa de ~500 GB ou a leitura pesa</th><td>Particionar e criar réplica de leitura</td></tr>
+<tr><th scope="row">Escrita concorrente virar necessidade</th><td>Reavaliar DuckLake quando a maturidade for verificada</td></tr></tbody>
+</table></div>
+<p>Os limites numéricos são hipóteses; a primeira medição real os corrige. Em 30/10/2026: warehouse de 10,4 GiB, landing de 14 GB, maior tabela de entrega (<code>fct_eventos</code>) com 3,7 milhões de linhas.</p>
 
 <h2>8. Pontos em aberto</h2>
-<table>
-<tr><th>Decisão</th><th>Observação</th></tr>
-<tr><td>Provedor ou servidor próprio</td><td>Não bloqueia o desenvolvimento: o código fala S3 e SQL padrão</td></tr>
-<tr><td>Dimensionamento inicial</td><td>A definir depois de medir uma execução completa em servidor real</td></tr>
-<tr><td>Vetores e documentos</td><td>pgvector atrás de uma interface mínima, trechos relacionais como fonte da verdade; só quando houver o primeiro documento a indexar</td></tr>
-<tr><td>Carga total da tramitação da Câmara</td><td>Cerca de 49 horas; última etapa, quando o fundador pedir</td></tr>
-</table>
+<div class="scroll"><table>
+<caption>Pontos em aberto</caption>
+<thead><tr><th scope="col">Decisão</th><th scope="col">Observação</th></tr></thead>
+<tbody>
+<tr><th scope="row">Provedor ou servidor próprio</th><td>Não bloqueia o desenvolvimento: o código fala S3 e SQL padrão</td></tr>
+<tr><th scope="row">Dimensionamento inicial</th><td>A definir depois de medir uma execução completa em servidor real</td></tr>
+<tr><th scope="row">Vetores e documentos</th><td>pgvector atrás de uma interface mínima, trechos relacionais como fonte da verdade; só quando houver o primeiro documento a indexar</td></tr>
+<tr><th scope="row">Carga total da tramitação da Câmara</th><td>Cerca de 49 horas; última etapa, quando a coordenação do projeto pedir</td></tr></tbody>
+</table></div>
+
+<footer>
+  <p>Desenho de referência atualizado em 30/10/2026. Decisão: ADR 0014. Pendências são issues deste repositório. <a href="../README.md">Mapa da documentação</a> · <a href="02-arquitetura.md">Arquitetura (texto)</a> · <a href="08-modelo-de-dados.html">Modelo de dados</a></p>
+</footer>
 </main>
+</div>
 </body>
 </html>
