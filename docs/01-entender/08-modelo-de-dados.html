@@ -499,7 +499,21 @@ where d.id_votacao = :votacao;</code></pre>
     <tr><th scope="row">Diplomação, pendência judicial, eleições de 1994</th><td>Sem fonte aberta carregada.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/59">#59</a>, <a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/60">#60</a>, <a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/75">#75</a></td></tr>
   </tbody>
 </table></div>
-<p>Há também diferenças entre este desenho e o que foi implementado, ainda sem issue: o catálogo de órgãos cobre só a Câmara e nenhum fato carrega <code>id_orgao</code>; a composição é por cargo, não por órgão; a SCD tipo 2 não foi implementada; os eventos <code>diplomacao</code>, <code>retorno</code>, <code>filiacao</code>, <code>desfiliacao</code>, <code>entrada_em_orgao</code> e <code>saida_de_orgao</code> não emitem linha; <code>agg_pessoas_atividade</code> segue como modelo intermediário; e as seeds <code>partidos_eventos</code> e <code>vinculos_aprovados</code> ficam em <code>intermediate</code>. O mapa dos nomes antigos para os atuais está no <a href="../05-decisoes/0033-marts-com-a-terminologia-da-dbt-labs.md">ADR 0033</a>.</p>
+<div class="scroll"><table>
+  <caption>Diferenças entre o desenho original e o que foi implementado</caption>
+  <thead><tr><th scope="col">O que falta</th><th scope="col">Efeito hoje</th><th scope="col">Onde acompanhar</th></tr></thead>
+  <tbody>
+    <tr><th scope="row">Catálogo de órgãos completo e <code>id_orgao</code> nos fatos</th><td>Só a Câmara tem órgãos; a composição é por cargo e território, não por órgão.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/179">#179</a></td></tr>
+    <tr><th scope="row">Eventos sem linha</th><td><code>retorno</code>, <code>entrada_em_orgao</code>, <code>saida_de_orgao</code>, <code>filiacao</code> e <code>desfiliacao</code> não emitem linha.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/180">#180</a></td></tr>
+    <tr><th scope="row">Precisão da data, regra e confiança da ligação</th><td>Não há <code>cd_precisao_data</code>, <code>id_regra</code> nem nível de confiança na identidade.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/181">#181</a></td></tr>
+    <tr><th scope="row">Atividade da pessoa</th><td>As contagens e o último partido seguem em <code>dim_pessoas_cadastro</code>, via modelo intermediário.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/182">#182</a></td></tr>
+    <tr><th scope="row">Cortes na posse e soma exata das vagas</th><td>Só há cortes de 1º/1 e 1º/7 e um teste de limite superior.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/183">#183</a></td></tr>
+    <tr><th scope="row">Motivo da cassação</th><td><code>candidatura_cassada</code> sem a causa.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/184">#184</a></td></tr>
+    <tr><th scope="row">Doadores de campanha (pessoa jurídica)</th><td>Sem modelo.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/185">#185</a></td></tr>
+    <tr><th scope="row">Seeds curadas, <code>fato_origem</code> do catálogo e SCD tipo 2</th><td>Seeds em <code>intermediate</code>; nomes antigos no catálogo de eventos; SCD não implementada.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/186">#186</a></td></tr>
+  </tbody>
+</table></div>
+<p>O mapa dos nomes antigos para os atuais está no <a href="../05-decisoes/0033-marts-com-a-terminologia-da-dbt-labs.md">ADR 0033</a>.</p>
 
 <h2 id="referencias">11 Referências</h2>
 <p>O desenho segue práticas conhecidas; as fontes abaixo são o ponto de partida de quem quiser aprofundar.</p>
