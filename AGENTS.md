@@ -6,6 +6,8 @@ Regras para agentes de IA neste repositório. `CLAUDE.md` aponta para cá. Quem 
 
 **Quanto menos código e menos estrutura, melhor.** Prefira declaração (YAML, SQL do dbt) e o que dlt, dbt e DuckDB já fazem a código próprio. Seja sucinto, mas resolva o problema da melhor forma: estrutura simples reduz a manutenção e os tokens gastos por agentes.
 
+**Seja sucinto para economizar tokens (vale para todos os agentes):** respostas e relatórios diretos, sem repetir o pedido nem o que o código já mostra; leia só o trecho necessário (busque antes de abrir arquivo inteiro); não copie documentação, linke; entregue conclusão e evidência, não o passo a passo.
+
 ## Antes de começar
 
 Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/03-camadas.md`. Não contrarie um ADR de `docs/05-decisoes/` sem propor outro. **Proponha antes de executar** qualquer mudança de arquitetura, estrutura ou ferramenta e espere aprovação. Se faltar contexto, pergunte.
@@ -41,10 +43,12 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 | jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/dado_publico_brasil/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
 | regra de transformação, teste de dado, descrição de coluna | `dbt/` (modelos, YAML ao lado) |
 | tabela própria (metadata, identity) | `ddl/` |
+| página inicial do lake público (texto, layout, logos) | `site/index.html` (depois `dado-publico publish-docs`) |
 | ordem das etapas, agendamento | `src/dado_publico_brasil/orchestration/` |
 | ambiente (pasta de dados, warehouse) | variáveis `DADO_PUBLICO_STORAGE_ROOT`, `DADO_PUBLICO_WAREHOUSE` |
+| papel dos agentes (`engenheiro`, `arquiteto`, `qa`, `auditor`) | `.claude/agents/<nome>.md` (só o que é específico do papel; as regras comuns ficam neste arquivo) |
 
-`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português (`pessoas`, `proposicoes`, `votos`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `publish`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `fotos`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
+`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português (`pessoas`, `proposicoes`, `votos`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `fotos`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
 
 O fundador usa o projeto para aprender arquitetura de dados e de sistemas: explique decisões e alternativas em poucas linhas e aponte o que merece ADR.
 

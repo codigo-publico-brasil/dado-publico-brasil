@@ -33,19 +33,19 @@ Pessoas são ligadas entre as fontes por uma chave própria (`id_pessoa`), com r
 ## Como funciona
 
 ```text
-fonte oficial ─► landing ─► raw ─► staging ─► intermediate ─► marts ─► PostgreSQL ─► aplicações
-                (arquivos   (dlt)   └──────── dbt ────────┘     (publish)  (só leitura)
+fonte oficial ─► landing ─► raw ─► staging ─► intermediate ─► marts ─► export ─► lake público (Parquet no R2)
+                (arquivos   (dlt)   └──────── dbt ────────┘    └─► publish ─► PostgreSQL ─► aplicações
                  + hash)
 ```
 
-O arquivo original nunca é alterado; o resto se refaz a partir dele. Cada camada, o porquê das ferramentas (dlt, dbt, DuckDB, Dagster, PostgreSQL) e as alternativas descartadas estão em [arquitetura](docs/01-entender/02-arquitetura.md) e [camadas](docs/01-entender/03-camadas.md).
+O arquivo original nunca é alterado; o resto se refaz a partir dele. O DuckDB é só o motor de cálculo: o dado público é o **Parquet no lake** (`staging`, `intermediate`, `marts` e `metadata.capturas`, em caminho estável, com catálogo e manifesto), consultável sem instalar nada além do DuckDB ([consumir o lake](docs/03-consultar/06-consumir-o-lake.md)). O landing (que guarda campos que o raw descarta) nunca é público. O PostgreSQL serve só os marts às aplicações. Cada camada, o porquê das ferramentas (dlt, dbt, DuckDB, Dagster, PostgreSQL) e as alternativas descartadas estão em [arquitetura](docs/01-entender/02-arquitetura.md) e [camadas](docs/01-entender/03-camadas.md).
 
 ## Estado
 
 Projeto em desenvolvimento, **ainda sem versão publicada e sem garantia de estabilidade** dos nomes de tabelas e colunas.
 
 - **Funciona hoje:** captura com hash e monitoramento das fontes; carga e transformação em camadas com testes de qualidade; identidade de pessoas; catálogo e dicionário de colunas; cópia dos marts para um PostgreSQL local de leitura.
-- **Falta:** infraestrutura de produção, trilha de documentos com busca vetorial, estados e municípios, e a publicação aberta dos dados.
+- **Falta:** infraestrutura de produção, trilha de documentos com busca vetorial, estados e municípios, e a primeira publicação do lake no R2 ([ADR 0035](docs/05-decisoes/0035-lakehouse-publico-no-r2.md), proposto).
 - **Pendências e decisões abertas:** [issues do repositório](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues).
 
 ## Começar em poucos minutos
@@ -69,9 +69,11 @@ Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). Pos
 | `sources/` | declaração das fontes: `sources/<poder>/<esfera>/<fonte>.yml` |
 | `src/dado_publico_brasil/` | o código: `core` (base), `ingestion`, `transformation` e `orchestration` (liga os dois) |
 | `dbt/` | modelos SQL: staging, intermediate e marts (`dim_`, `fct_`, `brg_`, `agg_`, `app_`), com testes |
+| `site/` | página inicial do lake público (`index.html`), publicada por `dado-publico publish-docs` |
 | `ddl/` | migrações das tabelas próprias (`metadata`, `identity`) |
 | `docs/` | a documentação |
 | `tests/` | testes |
+| `.claude/agents/` | agentes de IA do projeto (arquiteto, engenheiro, auditor, qa) |
 | `docker/`, `compose.yaml` | PostgreSQL de desenvolvimento |
 | `data_store/` | landing e warehouse (fora do git) |
 

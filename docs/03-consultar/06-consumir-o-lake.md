@@ -1,0 +1,82 @@
+# Consumir o lake público
+
+Para quem quer **consultar ou auditar** os dados sem rodar o pipeline (jornalistas, pesquisadores, outras aplicações). Responde: onde estão os arquivos, como ler no DuckDB, em Python e em outras ferramentas, e como conferir que o arquivo é o que foi publicado. Decisão: [ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md). Quem publica está em [operar e publicar](../02-fazer/04-operar-e-publicar.md).
+
+## O que existe
+
+Tudo é Parquet (ZSTD) em `https://datalake.codigopublicobrasil.com.br` (a página inicial resume o lake e linka as docs), sem login. O caminho é estável e sempre aponta para o dado atual:
+
+| Caminho | Conteúdo |
+| --- | --- |
+| `staging/<poder>/<esfera>/<fonte>/<modelo>.parquet` | a base tratada de cada fonte (nomes e tipos padronizados); a árvore é a de `sources/` (ex.: `staging/legislativo/federal/camara/...`) |
+| `intermediate/<modelo>.parquet` | passos intermediários da derivação |
+| `marts/<domínio>/<tabela>.parquet` | o que se consome (contrato de colunas); domínio = `legislativo`, `eleicoes`, `pessoas`, `territorio` |
+| `metadata/capturas.parquet` | URL, hash SHA-256 e data de cada arquivo capturado da fonte |
+| `<caminho>/ano=AAAA/part-0.parquet` | as tabelas grandes que o dbt declara com partição: uma pasta por ano no lugar do arquivo único |
+| `catalogo.duckdb` | porta de entrada: uma view por tabela, com descrições |
+| `manifesto.json` | para quem não usa DuckDB: caminho, arquivos, linhas, bytes, SHA-256, esquema, descrições, `particao`, `ano` e `camada_medalhao` |
+
+**Equivalência com o medalhão** (os nomes do projeto são os da dbt Labs; o `manifesto.json` traz `camada_medalhao` em cada tabela):
+
+| Medalhão | Aqui |
+| --- | --- |
+| bronze | landing e `raw` (o `raw` não é público; `metadata/capturas` guarda a origem) |
+| prata | `staging` e `intermediate` |
+| ouro | `marts` |
+
+Não entram o `raw`, a identidade e o landing (guardam dado pessoal) nem colunas de documento pessoal. O bucket não lista pastas: por isso o catálogo e o manifesto enumeram os arquivos.
+
+## DuckDB (o jeito mais curto)
+
+```sql
+ATTACH 'https://datalake.codigopublicobrasil.com.br/catalogo.duckdb' AS cpb (READ_ONLY);
+SHOW ALL TABLES;                                    -- uma view por tabela
+SELECT * FROM cpb.marts.dim_pessoas LIMIT 10;
+SELECT table_name, comment FROM duckdb_views() WHERE database_name = 'cpb' AND comment IS NOT NULL;
+SELECT * FROM cpb.metadata.exportacao;              -- execução, data e commit (`versao_commit`) desta publicação
+```
+
+O DuckDB lê só os trechos dos arquivos de que a consulta precisa (filtros e colunas), então não é preciso baixar tudo. Tabelas com `particao` no `manifesto.json` têm a coluna `ano` (e, se grandes, uma pasta por ano): filtre por ela e o DuckDB só abre os anos pedidos. Pela view do catálogo, `WHERE ano = 2022`. Direto nos arquivos, com o curinga e `hive_partitioning`:
+
+```sql
+-- exemplo: fct_candidaturas, que vem por ano (veja `particao` e `ano` dela no manifesto):
+SELECT count(*) FROM read_parquet('https://datalake.codigopublicobrasil.com.br/marts/eleicoes/fct_candidaturas/ano=2022/part-0.parquet');
+-- ou, em disco/S3 com listagem: read_parquet('.../fct_candidaturas/**/*.parquet', hive_partitioning = true) WHERE ano = 2022
+```
+
+`ano` é o ano inteiro da expressão `particao` (nunca o dia), declarada no dbt: nas candidaturas, resultados e campanhas é o ano da eleição; na votação, nos bens e nas receitas e despesas do TSE, `ano_eleicao`; nos votos, o ano do voto; nas proposições, o ano da apresentação. Só vira pasta por ano a tabela que passa de cerca de 128 MB comprimida; as menores ficam num arquivo só.
+
+**A descrição vai dentro de cada Parquet**, sem arquivo à parte: no rodapé estão `descricao` (da tabela) e `descricoes_colunas` (JSON nome -> descrição, sem colunas de documento pessoal). Ex.: `SELECT key, value FROM parquet_kv_metadata('.../dim_pessoas.parquet')`, ou `pyarrow.parquet.read_metadata(arq).metadata`. Iguais ao `COMMENT` do catálogo.
+
+As tabelas pequenas com `particao` vêm num arquivo só, ordenado pelo período (o Parquet pula grupos pelas estatísticas). Para um arquivo avulso: `SELECT * FROM 'https://datalake.codigopublicobrasil.com.br/marts/pessoas/dim_pessoas.parquet'`.
+
+## Python, pandas e outras ferramentas
+
+```python
+import duckdb, pandas as pd
+
+df = duckdb.sql(
+    "SELECT * FROM 'https://datalake.codigopublicobrasil.com.br/marts/pessoas/dim_pessoas.parquet'"
+).df()
+df = pd.read_parquet(
+    "https://datalake.codigopublicobrasil.com.br/marts/pessoas/dim_pessoas.parquet"
+)  # precisa de pyarrow e fsspec
+```
+
+Qualquer ferramenta que leia Parquet por HTTP (Polars, Spark, R com `arrow`) serve. Para listar tabelas e descrições sem DuckDB, leia o `manifesto.json`.
+
+## Auditar: o arquivo é o que foi publicado?
+
+Cada arquivo do `manifesto.json` traz `sha256`, `bytes` e `linhas`. Para conferir:
+
+```bash
+curl -s https://datalake.codigopublicobrasil.com.br/marts/pessoas/dim_pessoas.parquet | sha256sum   # compare com o manifesto
+```
+
+E para ir do dado à fonte oficial: toda linha leva `id_captura`, que aponta para `metadata/capturas` (URL oficial, SHA-256 do arquivo original e data da captura). O arquivo original fica no landing privado; com o hash, a fonte confirma que é o mesmo.
+
+## Cuidados
+
+- O caminho é sempre o dado **atual**: não há pasta por versão. Para citar um número, anote o `id_execucao` de `metadata.exportacao` (ou do `manifesto.json`) e guarde o resultado.
+- Nas tabelas particionadas por ano, durante o envio pode haver uma janela curta com anos de execuções diferentes; confira o `id_execucao` do manifesto.
+- Sem ranking nem nota: as tabelas trazem o que as fontes publicam, com a origem rastreável.

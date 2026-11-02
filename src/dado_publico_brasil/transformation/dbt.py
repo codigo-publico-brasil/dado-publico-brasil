@@ -76,6 +76,14 @@ def serve_docs(settings: Settings, port: int = 8080) -> int:
     return 0
 
 
+def static_docs(settings: Settings) -> Path:
+    """Gera o site do dbt em um único HTML (`docs generate --static`), pronto para publicar."""
+    outcome = invoke(settings, "docs", "generate", "--static")
+    if outcome.returncode != 0:
+        raise RuntimeError(f"dbt docs generate falhou: {outcome.output}")
+    return target_dir(settings) / "static_index.html"
+
+
 def read_results(
     settings: Settings, results_file: str = "run_results.json", target: Path | None = None
 ) -> list[dict[str, Any]]:
