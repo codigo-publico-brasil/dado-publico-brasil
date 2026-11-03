@@ -6,7 +6,7 @@ from pathlib import Path
 from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection
-from dado_publico_brasil.ingestion import landing, monitoring
+from dado_publico_brasil.ingestion import fetch, landing, monitoring
 from dado_publico_brasil.ingestion.contract import SourceContract, load_contract
 
 CONTRACT = """
@@ -109,3 +109,67 @@ def test_extract_plan_records_the_state_of_the_partitions_for_the_observability(
         "SELECT resultado, detalhe FROM metadata.fontes_verificacoes WHERE verificacao = 'particoes' AND dataset = 'votos'"
     ).fetchone()
     assert row is not None and row[0] == "warn" and "1 de" in row[1] and "faltam:" in row[1]
+
+
+def test_the_monthly_incremental_plan_asks_for_the_current_and_the_previous_month(tmp_path: Path) -> None:
+    def mensal(today: date) -> list[int | None]:
+        return [p for d, p in landing.plan_incremental(contract(tmp_path), today) if d == "mensal"]
+
+    assert mensal(TODAY) == [202609, 202610]
+    assert mensal(date(2027, 1, 2)) == [202612, 202701]  # a virada do ano pede o dezembro anterior
+    assert landing.previous_month(202701) == 202612
+
+
+def test_a_404_of_the_previous_month_at_the_turn_of_the_month_is_not_unavailable(
+    con: Connection, tmp_path: Path
+) -> None:
+    monitoring.record(con, "teste", "mensal", 202610, "availability", "error", "HTTP Error 404: Not Found")
+    monitoring.record(con, "teste", "mensal", 202609, "availability", "error", "HTTP Error 404: Not Found")
+    gaps = landing.partition_gaps(con, contract(tmp_path), date(2026, 11, 2))["mensal"]
+    assert gaps["indisponiveis"] == [202609] and 202610 in gaps["faltam"]
+
+
+def ok_downloader(url: str, folder: Path) -> tuple[Path, str, int]:
+    folder.mkdir(parents=True, exist_ok=True)
+    file = folder / url.rsplit("/", 1)[-1]
+    file.write_text("codigo\n1\n", encoding="utf-8")
+    return file, f"h{url}", file.stat().st_size
+
+
+def no_head(url: str) -> dict[str, str | None]:
+    return {}
+
+
+def test_a_blocked_source_records_the_block_and_stops_the_rest_of_the_plan(
+    con: Connection, tmp_path: Path, settings: Settings
+) -> None:
+    asked: list[str] = []
+
+    def second_is_blocked(url: str, folder: Path) -> tuple[Path, str, int]:
+        asked.append(url)
+        if url.endswith("2025.csv"):
+            raise fetch.SourceBlocked(f"{url}: HTTP 429")
+        return ok_downloader(url, folder)
+
+    source = contract(tmp_path)
+    items: list[landing.Item] = [("votos", 2024), ("votos", 2025), ("votos", 2026)]
+    done = landing.extract_plan(con, settings, source, items, second_is_blocked, no_head)
+    assert done == 1 and len(asked) == 2  # o terceiro nem é pedido
+    assert monitoring.latest_status(con, "teste", "votos")[0] == "error"
+    # a fonte volta a responder: o bloqueio deixa de contar
+    assert landing.extract_plan(con, settings, source, items[1:2], ok_downloader, no_head) == 1
+    assert not [d for d in monitoring.latest_status(con, "teste", "votos")[1] if "bloqueio" in d]
+
+
+def test_a_head_that_the_source_refuses_does_not_block_the_download(
+    con: Connection, tmp_path: Path, settings: Settings
+) -> None:
+    def head_403(url: str) -> dict[str, str | None]:
+        raise fetch.SourceBlocked(f"{url}: HTTP 403")
+
+    done = landing.extract_plan(con, settings, contract(tmp_path), [("votos", 2024)], ok_downloader, head_403)
+    assert done == 1
+    assert con.execute("SELECT count(*) FROM metadata.capturas").fetchone() == (1,)
+    assert con.execute(
+        "SELECT count(*) FROM metadata.fontes_verificacoes WHERE verificacao = 'bloqueio'"
+    ).fetchone() == (0,)

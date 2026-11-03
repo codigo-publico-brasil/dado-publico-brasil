@@ -108,7 +108,33 @@ Uma chamada para cada linha de outro dataset da mesma fonte. Exemplo (tramitaç�
     columns: [_item, sequencia, dataHora, ...]
 ```
 
-Roda só com `--foreach N` (os N mais recentes que faltam) ou `--foreach all`. Cada lote vai ao landing com a resposta de cada item byte a byte, e `metadata.capturas_itens` registra status e hash ([ADR 0012](../05-decisoes/0012-dataset-por-item-lotes-com-envelope.md)). Conferir com `dado-publico verify` e `dado-publico coverage`. A taxa é `access.rate_limit` (padrão 4 por segundo).
+Roda só com `--foreach N` (os N mais recentes que faltam) ou `--foreach all`. Cada lote vai ao landing com a resposta de cada item byte a byte, e `metadata.capturas_itens` registra status e hash ([ADR 0012](../05-decisoes/0012-dataset-por-item-lotes-com-envelope.md)). Conferir com `dado-publico verify` e `dado-publico coverage`. A taxa é `access.rate_limit` (padrão 4 por segundo; ver Cortesia e bloqueio).
+
+## Partição mensal (`partition: month`)
+
+Para fontes que publicam um arquivo por mês (o DOU, e as de transparência do executivo):
+
+```yaml
+  despesas:
+    url: "{base_url}/despesas/{month}"   # {month} é o valor da partição, AAAAMM (como {year} nos anuais)
+    load: yearly
+    partition: month
+    first_month: 202401                  # primeiro mês publicado; meses anteriores não são pedidos
+```
+
+O plano incremental pede o mês em curso **e o anterior**: o mês fechado sem mudança custa só um HEAD, e a virada do mês não perde o fim dele. Um 404 do mês anterior não o torna "indisponível" (só os meses mais antigos viram lacuna sem tentativa eterna).
+
+## Cortesia e bloqueio
+
+`access.rate_limit` (requisições por segundo, padrão 4; deve ser maior que zero) é o intervalo mínimo entre as requisições do **download padrão** (HEAD e GET do arquivo) da fonte. **Não vale** para `fetch.get` (datasets `foreach`, que têm o próprio intervalo) nem para módulos `custom/` que fazem a própria requisição.
+
+No download padrão, nada é gravado no landing e o resto da fonte é interrompido naquela execução (sem nova tentativa até o próximo agendamento; a verificação `bloqueio` fica como erro em `metadata.fontes_verificacoes` e é zerada quando a fonte volta a responder) se o **GET** devolve HTTP 403 ou 429, página HTML no lugar do arquivo ou redirecionamento para outro site. Detalhes:
+
+- **HEAD é brando:** qualquer falha do HEAD (403, 405, 429...) vira "sem informação" e o GET decide; só o GET bloqueia.
+- **HTML legítimo:** a regra do HTML não vale quando o formato esperado é `html` (`format: html`).
+- **Mesmo site:** o redirecionamento só bloqueia se sair do domínio registrável (`www.in.gov.br` para `in.gov.br` passa).
+
+[ADR 0038](../05-decisoes/0038-cortesia-e-bloqueio-na-ingestao.md). Contornar bloqueio (proxy, troca de IP) está fora do projeto: abra uma issue.
 
 ## Credenciais, arquivo compactado, SOAP, robô
 

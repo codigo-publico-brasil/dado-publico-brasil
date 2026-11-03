@@ -28,6 +28,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0035](0035-lakehouse-publico-no-r2.md) | Lakehouse público no R2: Parquet em caminho estável, staging a marts, catálogo e manifesto; DuckDB só calcula | proposto; altera 0014 (item 1 e gatilho 6a) e 0033; item 7 detalhado no 0036 |
 | [0036](0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md) | R2 privado é a fonte da verdade da identidade e do metadata; disco local descartável; landing só local por ora (risco aceito) | proposto; complementa 0014 (item 4) e 0035 (item 7) |
 | [0037](0037-arquivos-no-lake-com-prefixo-arq.md) | Arquivos (DOU, fotos) no lake público: pasta `arq_` na camada da fonte, com tabela de controle `arq_<nome>.parquet`; publicar é opt-in por dataset | proposto (decisão do fundador); altera 0035 (item 7) e 0036 (fotos) |
+| [0038](0038-cortesia-e-bloqueio-na-ingestao.md) | Cortesia em toda requisição, bloqueio sem insistência e partição mensal | aceito; complementa o [0012](0012-dataset-por-item-lotes-com-envelope.md) |
 | [0038](0038-lake-como-unica-publicacao.md) | O lake é a única publicação: sem PostgreSQL de serviço, cada aplicação monta as suas consultas sobre os marts | proposto (decisão do fundador); substitui 0034 e altera 0014 e 0033 |
 
 ### Estrutura do repositório e das camadas
