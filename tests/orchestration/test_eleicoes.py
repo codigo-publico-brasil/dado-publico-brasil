@@ -2,7 +2,7 @@
 
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, rows, scalar
-from dado_publico_brasil.ingestion import photos
+from dado_publico_brasil.ingestion import arquivos, contract
 
 Env = tuple[Connection, Settings]
 
@@ -49,15 +49,19 @@ def test_the_official_photo_is_listed_and_only_for_the_candidate_in_the_package(
         "SELECT sq_candidato, foto_caminho, foto_pacote_url FROM marts.fct_candidaturas "
         "WHERE foto_arquivo IS NOT NULL",
     )
-    assert [(r["sq_candidato"], r["foto_caminho"]) for r in found] == [(1001, "2022/RJ/1001.jpg")]
+    assert [(r["sq_candidato"], r["foto_caminho"]) for r in found] == [
+        (1001, "staging/judiciario/federal/tse/arq_fotos/2022/RJ/1001.jpg")
+    ]
     assert str(found[0]["foto_pacote_url"]).endswith("/eleicoes2022/fotos/foto_cand2022_RJ_div.zip")
 
 
-def test_extracting_the_photos_writes_each_image_once(full: Env) -> None:
+def test_the_photo_is_materialized_where_the_mart_says_it_is(full: Env) -> None:
     con, settings = full
-    assert photos.extract_all(con, settings) == 1
-    assert (settings.storage_root / "fotos" / "2022" / "RJ" / "1001.jpg").read_bytes().startswith(b"\xff\xd8")
-    assert photos.extract_all(con, settings) == 0
+    spec = contract.find("tse")
+    assert arquivos.materialize(con, settings, spec) == 0  # a captura já materializou
+    path = scalar(con, "SELECT foto_caminho FROM marts.fct_candidaturas WHERE foto_arquivo IS NOT NULL")
+    on_disk = settings.storage_root / "arquivos" / str(path).removeprefix("staging/")
+    assert on_disk.read_bytes().startswith(bytes([0xFF, 0xD8]))
 
 
 def test_a_campaign_total_is_empty_not_zero_when_the_file_has_no_data(full: Env) -> None:

@@ -265,6 +265,7 @@ curl -s https://datalake.codigopublicobrasil.com.br/marts/pessoas/dim_pessoas.pa
           <tbody>
             <tr><td><code>marts/&lt;domínio&gt;/&lt;tabela&gt;.parquet</code></td><td>O que se consome, com contrato de colunas (legislativo, eleições, pessoas, território).</td></tr>
             <tr><td><code>staging/</code> e <code>intermediate/</code></td><td>A base tratada de cada fonte e os passos da derivação.</td></tr>
+            <tr><td><code>arq_*</code> (pastas de arquivos)</td><td>Arquivos que não são tabela, cada coleção com sua lista <code>arq_*.parquet</code>: os zips originais do Diário Oficial da União (<strong>fonte: Imprensa Nacional</strong>, licença CC BY-ND 3.0, sem modificação) e as fotos oficiais dos candidatos (TSE).</td></tr>
             <tr><td><code>metadata/capturas.parquet</code></td><td>URL oficial, SHA-256 e data de cada arquivo capturado da fonte.</td></tr>
           </tbody>
         </table>

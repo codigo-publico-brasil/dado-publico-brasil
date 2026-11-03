@@ -46,7 +46,7 @@ models:
       - {name: id_pessoa_tse, data_type: varchar, description: "Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato."}
       - {name: id_pessoa, data_type: bigint, tests: [{relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa do projeto (dim_pessoas) quando a candidatura é de alguém eleito alguma vez ou que foi deputado ou senador (ligada pelo nome e o nascimento); vazio para quem nunca foi eleito, por regra (ADR 0031)."}
       - {name: foto_arquivo, data_type: varchar, description: "Nome do arquivo da foto oficial no pacote do TSE; vazio quando o pacote não traz foto do candidato."}
-      - {name: foto_caminho, data_type: varchar, description: "Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto."}
+      - {name: foto_caminho, data_type: varchar, description: "Caminho da foto na raiz do lake público, na coleção arq_fotos do TSE (ano, UF do pacote e sequencial; ADR 0037); vazio sem foto."}
       - {name: foto_pacote_url, data_type: varchar, description: "Endereço oficial do pacote de fotos do TSE que contém a foto."}
       - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.capturas)."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}

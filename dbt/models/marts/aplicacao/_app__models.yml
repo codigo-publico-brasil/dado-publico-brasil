@@ -47,7 +47,7 @@ models:
       - {name: resultado, description: "Resultado do último turno como o TSE informa; vazio quando não informa."}
       - {name: fl_eleito, description: "Verdadeiro quando a candidatura foi eleita: o TSE marca como eleita ou, sem essa informação, vence no último turno pelos votos válidos (base_eleito diz qual)."}
       - {name: base_eleito, description: "Base de fl_eleito verdadeiro: informado (o TSE diz Eleito) ou derivado (regra da Constituição, pelos votos do último turno); vazio quando a candidatura não foi eleita."}
-      - {name: foto_caminho, description: "Caminho da foto oficial; vazio sem foto."}
+      - {name: foto_caminho, description: "Caminho da foto oficial no lake público (coleção arq_fotos); vazio sem foto."}
       - {name: valor_receitas, description: "Soma das receitas declaradas, em reais; vazia sem prestação de contas carregada."}
       - {name: valor_despesas, description: "Soma das despesas contratadas declaradas, em reais."}
       - {name: valor_bens, description: "Soma dos bens declarados, em reais."}
@@ -125,7 +125,7 @@ models:
       - {name: pagina_url, description: "Página oficial da pessoa no Senado; vazia onde a fonte não informa."}
       - {name: site_url, description: "Site informado no cadastro."}
       - {name: rede_social_url, description: "Primeira rede social informada no cadastro."}
-      - {name: foto_caminho, description: "Foto oficial do TSE da candidatura mais recente (caminho do arquivo local); vazia sem foto."}
+      - {name: foto_caminho, description: "Foto oficial do TSE da candidatura mais recente (caminho no lake público, coleção arq_fotos); vazia sem foto."}
       - {name: foto_url, description: "Endereço da foto oficial da Câmara ou do Senado; vazio onde a fonte não informa."}
       - {name: fontes, description: "Fontes em que a pessoa aparece no cadastro (por exemplo, camara, senado); vazio para quem só tem o TSE."}
       - {name: dt_captura, description: "Data da captura do cadastro."}

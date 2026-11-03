@@ -64,6 +64,27 @@ O [TSE](../../sources/judiciario/federal/tse.yml) é o exemplo:
 
 `only` filtra as linhas **do raw** (o arquivo original no landing continua inteiro, para auditoria); `columns` filtra as colunas.
 
+## Arquivos servidos ao público (`arquivos`)
+
+Bloco opcional por dataset para arquivos que não são tabela e que o público deve poder baixar ([ADR 0037](../05-decisoes/0037-arquivos-no-lake-com-prefixo-arq.md)). Sem ele, o arquivo fica só no landing (que pode ter campos pessoais e nunca é público).
+
+```yaml
+  secao1:                       # DOU: sem `membro`, o arquivo da captura sobe como está (fl_original = true)
+    arquivos: {colecao: secoes, caminho: "{dataset}/{particao}/{nome}", publicar: true}
+  fotos_br:                     # TSE: com `membro`, cada membro do zip que casa é extraído (fl_original = false)
+    archive: zip
+    arquivos:
+      colecao: fotos
+      membro: '^F?(?P<uf>[A-Z]{2})(?P<sq>\d+)_div\.(?P<ext>jpe?g|png)$'
+      caminho: "{particao}/{uf}/{sq}.{ext}"
+      publicar: true
+```
+
+- `colecao`: a pasta é `arq_<colecao>`. `caminho`: modelo do caminho dentro dela, estável (sem hash nem pasta por versão); campos `dataset`, `particao`, `nome` (nome do arquivo ou do membro; no arquivo capturado, sem o hash que o landing põe) e os grupos nomeados de `membro`.
+- `membro` (regex, exige `archive: zip`): só os membros que casam são extraídos.
+- `publicar: true` autoriza o `export` a subir a coleção ao lake público, com a tabela `arq_<colecao>`; `false` (padrão) só materializa no disco local.
+- A carga materializa a cópia derivada em `<pasta de dados>/arquivos/<poder>/<esfera>/<fonte>/arq_<colecao>/` e anota hash e captura de origem em `metadata.arquivos`. Captura corrompida vira aviso (as demais seguem); membro que some de uma captura nova mantém a última cópia, com a captura de origem anterior. O mesmo código serve a qualquer fonte e tipo de arquivo; formato que o padrão não cobre (SOAP, robô) segue em `ingestion/custom/`.
+
 ## Dataset por item (`load: foreach`)
 
 Uma chamada para cada linha de outro dataset da mesma fonte. Exemplo (tramitação da Câmara):

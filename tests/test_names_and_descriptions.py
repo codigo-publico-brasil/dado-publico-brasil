@@ -4,7 +4,8 @@ import re
 
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, rows
-from dado_publico_brasil.transformation import catalog
+from dado_publico_brasil.ingestion import contract as contracts
+from dado_publico_brasil.transformation import catalog, export
 
 CONVENTION = "docs/03-consultar/02-convencao-de-nomes.md"
 OWN_LAYERS = ("staging", "intermediate", "marts", "identity", "metadata")
@@ -124,3 +125,21 @@ def test_source_staging_and_marts_carry_the_audit_columns_and_the_standard_meta(
         ]
     assert missing == [], f"sem colunas de auditoria (ADR 0035; ou declare meta.auditoria_excecao): {missing}"
     assert bad_meta == [], f"meta fora do padrão (owner, sensitivity, fonte_oficial): {bad_meta}"
+
+
+def test_file_collections_follow_the_convention() -> None:
+    """Tabelas de controle `arq_<colecao>` (ADR 0037): nome sem conectivo, colunas com prefixo de tipo e descritas."""
+    wrong: list[str] = []
+    for source in contracts.find_all():
+        for dataset in source.datasets.values():
+            if dataset.arquivos:
+                name = f"arq_{dataset.arquivos.colecao}"
+                wrong += [f"{name}: conectivo"] if CONNECTIVES & set(name.split("_")) else []
+    for name, kind, description in export.CONTROL_COLUMNS:
+        if kind.startswith(("DATE", "TIMESTAMP")) != name.startswith("dt_") or (
+            kind == "BOOLEAN"
+        ) != name.startswith("fl_"):
+            wrong.append(f"{name} ({kind}): prefixo")
+        if not description:
+            wrong.append(f"{name}: sem descrição")
+    assert export.CONTROL_DESCRIPTION % "x" and wrong == [], f"arq_ fora da convenção ({CONVENTION}): {wrong}"

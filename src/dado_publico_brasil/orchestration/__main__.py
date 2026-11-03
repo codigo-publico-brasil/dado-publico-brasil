@@ -12,7 +12,7 @@ Reparos sem baixar nada: backfill (cria `_ingested_at` no raw e preenche as linh
 (refaz a checagem de cabeçalho dos arquivos do landing).
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
 Lake público: export grava Parquet, manifesto e catálogo no R2 (DADO_PUBLICO_R2_*) ou em <storage_root>/lake;
-export --verificar confere cada arquivo do manifesto.
+export --verificar confere cada arquivo do manifesto e das coleções arq_ (ADR 0037).
 Publicação: publish copia os marts para o PostgreSQL de serviço (DADO_PUBLICO_POSTGRES_DSN).
 Auditoria: verify (hashes do landing e cópia da identidade) e coverage (itens obtidos nos datasets por item).
 Reconstrução do zero: `rebuild --old-warehouse ARQUIVO` (docs/02-fazer/04-operar-e-publicar.md).
@@ -31,7 +31,7 @@ from pathlib import Path
 from dado_publico_brasil.core import alert, migrations, rebuild, warehouse
 from dado_publico_brasil.core import settings as settings_module
 from dado_publico_brasil.core.settings import Settings
-from dado_publico_brasil.ingestion import contract, foreach, landing, loader, photos
+from dado_publico_brasil.ingestion import contract, foreach, landing, loader
 from dado_publico_brasil.orchestration import pipeline
 from dado_publico_brasil.transformation import build, catalog, dbt, export, observability, publish, snapshot
 
@@ -52,7 +52,6 @@ COMMANDS = (
     "verify",
     "coverage",
     "observe",
-    "fotos",
     "rebuild",
 )
 
@@ -233,11 +232,6 @@ def main(argv: list[str] | None = None) -> int:
             return 1 if failed else 0
         case "coverage":
             _coverage(settings, args.source)
-        case "fotos":
-            con = migrations.open_warehouse(settings)
-            n = photos.extract_all(con, settings)
-            con.close()
-            print(f"{n} fotos extraídas para {settings.storage_root / 'fotos'}")
         case "identity":
             print(f"{build.resolve_identity(settings)} pessoas novas")
         case "export":

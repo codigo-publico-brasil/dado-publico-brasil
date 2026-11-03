@@ -22,6 +22,7 @@ vars:
   source_senado: senado
   id_type_senado: senador
   source_tse: tse
+  colecao_fotos_tse: staging/judiciario/federal/tse/arq_fotos  # pasta da coleção no lake (sources/.../tse.yml: arquivos)
   id_type_tse: candidato
   id_type_tse_eleito: candidatura_de_eleito
   url_proposicao_camara: "https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao="

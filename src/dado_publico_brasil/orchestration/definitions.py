@@ -264,7 +264,12 @@ def _marts() -> list[AssetKey]:
     ]
 
 
-@asset(key=AssetKey(["publicacao", "lake"]), deps=_marts(), group_name="marts", automation_condition=EAGER)
+@asset(
+    key=AssetKey(["publicacao", "lake"]),
+    deps=_marts(),
+    group_name="marts",
+    automation_condition=EAGER,
+)
 def export_asset() -> MaterializeResult[Any]:
     """Grava o lake público em Parquet (no R2, se houver segredo) depois dos testes do dbt (ADR 0035)."""
     return MaterializeResult(metadata=dict(export.export(SETTINGS)))

@@ -360,7 +360,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `resultado` |  | Resultado do último turno como o TSE informa; vazio quando não informa. |  |
 | `fl_eleito` |  | Verdadeiro quando a candidatura foi eleita: o TSE marca como eleita ou, sem essa informação, vence no último turno pelos votos válidos (base_eleito diz qual). |  |
 | `base_eleito` |  | Base de fl_eleito verdadeiro: informado (o TSE diz Eleito) ou derivado (regra da Constituição, pelos votos do último turno); vazio quando a candidatura não foi eleita. |  |
-| `foto_caminho` |  | Caminho da foto oficial; vazio sem foto. |  |
+| `foto_caminho` |  | Caminho da foto oficial no lake público (coleção arq_fotos); vazio sem foto. |  |
 | `valor_receitas` |  | Soma das receitas declaradas, em reais; vazia sem prestação de contas carregada. |  |
 | `valor_despesas` |  | Soma das despesas contratadas declaradas, em reais. |  |
 | `valor_bens` |  | Soma dos bens declarados, em reais. |  |
@@ -432,7 +432,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `pagina_url` |  | Página oficial da pessoa no Senado; vazia onde a fonte não informa. |  |
 | `site_url` |  | Site informado no cadastro. |  |
 | `rede_social_url` |  | Primeira rede social informada no cadastro. |  |
-| `foto_caminho` |  | Foto oficial do TSE da candidatura mais recente (caminho do arquivo local); vazia sem foto. |  |
+| `foto_caminho` |  | Foto oficial do TSE da candidatura mais recente (caminho no lake público, coleção arq_fotos); vazia sem foto. |  |
 | `foto_url` |  | Endereço da foto oficial da Câmara ou do Senado; vazio onde a fonte não informa. |  |
 | `fontes` |  | Fontes em que a pessoa aparece no cadastro (por exemplo, camara, senado); vazio para quem só tem o TSE. |  |
 | `dt_captura` |  | Data da captura do cadastro. |  |
@@ -788,7 +788,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_pessoa_tse` | varchar | Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato. |  |
 | `id_pessoa` | bigint | Pessoa do projeto (dim_pessoas) quando a candidatura é de alguém eleito alguma vez ou que foi deputado ou senador (ligada pelo nome e o nascimento); vazio para quem nunca foi eleito, por regra (ADR 0031). |  |
 | `foto_arquivo` | varchar | Nome do arquivo da foto oficial no pacote do TSE; vazio quando o pacote não traz foto do candidato. |  |
-| `foto_caminho` | varchar | Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto. |  |
+| `foto_caminho` | varchar | Caminho da foto na raiz do lake público, na coleção arq_fotos do TSE (ano, UF do pacote e sequencial; ADR 0037); vazio sem foto. |  |
 | `foto_pacote_url` | varchar | Endereço oficial do pacote de fotos do TSE que contém a foto. |  |
 | `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.capturas). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |

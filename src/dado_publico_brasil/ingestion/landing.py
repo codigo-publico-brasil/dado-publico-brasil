@@ -22,7 +22,7 @@ from typing import Any
 from dado_publico_brasil.core import privado, runs
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, rows, scalar
-from dado_publico_brasil.ingestion import fetch, monitoring
+from dado_publico_brasil.ingestion import arquivos, fetch, monitoring
 from dado_publico_brasil.ingestion.contract import Dataset, SourceContract
 from dado_publico_brasil.ingestion.fetch import Downloader, HeadRequest
 
@@ -371,5 +371,6 @@ def extract_plan(
         print(f"Extraindo {dataset} {year or ''}".strip(), flush=True)
         extract(con, settings, contract, dataset, year, downloader, head_request, force)
     record_gaps(con, contract)
+    arquivos.materialize(con, settings, contract)  # coleções `arq_` do contrato (ADR 0037)
     privado.push_metadata(con, settings)
     return len(items)

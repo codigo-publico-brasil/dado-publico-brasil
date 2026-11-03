@@ -1,6 +1,6 @@
 -- A ficha cadastral de cada pessoa do projeto (quem já foi eleito), com a foto. Só leitura do núcleo e dos marts: o cadastro
 -- de contato, escolaridade e profissões só existe para quem passou pela Câmara ou pelo Senado, e fica vazio para os demais.
--- `foto_caminho` é a foto oficial do TSE da candidatura mais recente (arquivo local); `foto_url` é a da Câmara ou do Senado.
+-- `foto_caminho` é a foto oficial do TSE da candidatura mais recente (coleção arq_fotos do lake); `foto_url` é a da Câmara ou do Senado.
 with foto_tse as (
 
     select ca.id_pessoa, ca.foto_caminho

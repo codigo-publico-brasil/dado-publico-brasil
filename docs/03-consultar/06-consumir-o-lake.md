@@ -12,6 +12,7 @@ Tudo é Parquet (ZSTD) em `https://datalake.codigopublicobrasil.com.br` (a pági
 | `intermediate/<modelo>.parquet` | passos intermediários da derivação |
 | `marts/<domínio>/<tabela>.parquet` | o que se consome (contrato de colunas); domínio = `legislativo`, `eleicoes`, `pessoas`, `territorio` |
 | `metadata/capturas.parquet` | URL, hash SHA-256 e data de cada arquivo capturado da fonte |
+| `staging/<poder>/<esfera>/<fonte>/arq_<coleção>/<caminho>` | **arquivos** que não são tabela (zip original do DOU, fotos dos candidatos), uma pasta `arq_` por coleção; o prefixo `arq_` distingue arquivo de tabela. A lista de cada coleção é a tabela `arq_<coleção>.parquet`, ao lado da pasta |
 | `<caminho>/ano=AAAA/part-0.parquet` | as tabelas grandes que o dbt declara com partição: uma pasta por ano no lugar do arquivo único |
 | `catalogo.duckdb` | porta de entrada: uma view por tabela, com descrições |
 | `manifesto.json` | para quem não usa DuckDB: caminho, arquivos, linhas, bytes, SHA-256, esquema, descrições, `particao`, `ano` e `camada_medalhao` |
@@ -24,7 +25,7 @@ Tudo é Parquet (ZSTD) em `https://datalake.codigopublicobrasil.com.br` (a pági
 | prata | `staging` e `intermediate` |
 | ouro | `marts` |
 
-Não entram o `raw`, a identidade e o landing (guardam dado pessoal) nem colunas de documento pessoal. O bucket não lista pastas: por isso o catálogo e o manifesto enumeram os arquivos.
+Não entram o `raw`, a identidade e o landing (guardam dado pessoal) nem colunas de documento pessoal; do landing saem só os arquivos que a fonte declara publicáveis (seção abaixo). O bucket não lista pastas: por isso o catálogo e o manifesto enumeram os arquivos.
 
 ## DuckDB (o jeito mais curto)
 
@@ -49,6 +50,20 @@ SELECT count(*) FROM read_parquet('https://datalake.codigopublicobrasil.com.br/m
 **A descrição vai dentro de cada Parquet**, sem arquivo à parte: no rodapé estão `descricao` (da tabela) e `descricoes_colunas` (JSON nome -> descrição, sem colunas de documento pessoal). Ex.: `SELECT key, value FROM parquet_kv_metadata('.../dim_pessoas.parquet')`, ou `pyarrow.parquet.read_metadata(arq).metadata`. Iguais ao `COMMENT` do catálogo.
 
 As tabelas pequenas com `particao` vêm num arquivo só, ordenado pelo período (o Parquet pula grupos pelas estatísticas). Para um arquivo avulso: `SELECT * FROM 'https://datalake.codigopublicobrasil.com.br/marts/pessoas/dim_pessoas.parquet'`.
+
+## Arquivos (`arq_`)
+
+Pasta que começa com `arq_` é uma coleção de arquivos; todo o resto é Parquet. Cada coleção tem uma tabela de controle com um arquivo por linha: `caminho` (relativo à pasta), `sha256_arquivo`, `qtd_bytes`, `content_type`, `fl_original` (verdadeiro se os bytes são idênticos ao capturado da fonte; falso se foram extraídos de um pacote) e as colunas de auditoria (`fonte`, `id_captura`, `dt_captura`, `url_fonte`, `sha256_captura`, que apontam o arquivo ou pacote de origem). Hoje: `arq_secoes` (DOU) e `arq_fotos` (fotos dos candidatos). Decisão: [ADR 0037](../05-decisoes/0037-arquivos-no-lake-com-prefixo-arq.md).
+
+```sql
+-- achar e baixar: a URL do arquivo é a pasta da coleção mais o caminho
+SELECT 'https://datalake.codigopublicobrasil.com.br/staging/executivo/federal/dou/arq_secoes/' || caminho AS url, sha256_arquivo
+FROM cpb.staging.arq_secoes WHERE caminho LIKE 'secao1/202608/%';
+```
+
+`fct_candidaturas.foto_caminho` já traz o caminho completo da foto no lake. Confira o arquivo baixado pelo `sha256_arquivo`; `dado-publico export --verificar` faz isso para o lake inteiro. Os arquivos levam `Cache-Control: public, max-age=86400, must-revalidate` (o caminho é estável, o conteúdo pode mudar).
+
+**Diário Oficial da União:** os zips são o original da Imprensa Nacional, sem modificação, sob a licença CC BY-ND 3.0. Redistribua-os inteiros e cite a **Imprensa Nacional** como fonte (a página inicial do lake traz a atribuição); trecho modificado não pode ser redistribuído. As fotos são do TSE, sob a licença dos dados abertos dele.
 
 ## Python, pandas e outras ferramentas
 

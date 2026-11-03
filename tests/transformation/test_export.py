@@ -4,7 +4,12 @@ Usa um warehouse pequeno montado aqui (rápido); o destino é a pasta local, o m
 segredo. O que depende de credencial real (COPY, LIST e DELETE em `r2://` e o PUT do catálogo) não é testado aqui.
 """
 
+import base64
+import hashlib
 import json
+import mimetypes
+import shutil
+import zipfile
 from pathlib import Path
 
 import duckdb
@@ -12,6 +17,8 @@ import pytest
 
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, scalar
+from dado_publico_brasil.ingestion import arquivos, landing
+from dado_publico_brasil.ingestion import contract as contracts
 from dado_publico_brasil.transformation import dbt, export, observability
 
 MODELS = {
@@ -357,3 +364,197 @@ def test_the_home_page_fills_the_card_from_the_published_manifest(
 
 def test_seed_mart_goes_to_the_reference_folder() -> None:
     assert export._key({}, "marts", "dim_cargos") == "marts/referencia/dim_cargos"
+
+
+# ---------------------------------------------------------------- arquivos no lake (ADR 0037)
+
+DOU = "staging/executivo/federal/dou/arq_secoes"
+FOTOS = "staging/judiciario/federal/tse/arq_fotos"
+JPG = b"\xff\xd8foto"
+FOTO_LOCAL = "2022/RJ/1001.jpg"
+
+
+def capture(
+    con: Connection,
+    settings: Settings,
+    source: str,
+    dataset: str,
+    part: int,
+    name: str,
+    members: dict[str, bytes],
+) -> None:
+    """Uma captura no landing: um zip com os membros dados."""
+    file = settings.landing_dir / source / dataset / str(part) / name
+    file.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(file, "w") as package:
+        for member, content in members.items():
+            package.writestr(member, content)
+    landing.register_capture(
+        con,
+        source,
+        dataset,
+        part,
+        f"https://exemplo.gov.br/{dataset}/{part}.zip",
+        hashlib.sha256(file.read_bytes()).hexdigest(),
+        file.stat().st_size,
+        file.relative_to(settings.storage_root).as_posix(),
+        0,
+    )
+
+
+def land_files(con: Connection, settings: Settings, photo: bytes = JPG) -> None:
+    """Capturas do DOU e de fotos do TSE (uma sem imagem) e uma não publicável; materializa todas."""
+    capture(con, settings, "dou", "secao1", 202608, "base-0123456789ab.zip", {"a.xml": b"<a/>"})
+    capture(con, settings, "tse", "fotos_rj", 2022, "fotos_rj-0123456789ab.zip", {"FRJ1001_div.jpg": photo})
+    capture(con, settings, "tse", "fotos_ms", 2022, "fotos_ms-0123456789ab.zip", {"leiame.txt": b"sem foto"})
+    capture(con, settings, "tse", "candidatos", 2022, "candidatos.zip", {"x.csv": b"x"})
+    for source in ("dou", "tse"):
+        arquivos.materialize(con, settings, contracts.find(source))
+
+
+def control(out: Path, folder: str) -> list[dict[str, object]]:
+    c = duckdb.connect()
+    cur = c.execute(f"SELECT * FROM read_parquet('{(out / folder).as_posix()}.parquet') ORDER BY caminho")
+    names = [d[0] for d in cur.description]
+    found = [dict(zip(names, r, strict=True)) for r in cur.fetchall()]
+    c.close()
+    return found
+
+
+def test_files_are_materialized_once_from_the_contract_and_only_the_matching_members(
+    con: Connection, settings: Settings
+) -> None:
+    land_files(con, settings)
+    base = settings.storage_root / "arquivos"
+    assert (base / "judiciario/federal/tse/arq_fotos" / FOTO_LOCAL).read_bytes() == JPG
+    assert (base / "executivo/federal/dou/arq_secoes/secao1/202608/base.zip").exists()  # o hash sai do nome
+    assert sorted(p.name for p in base.rglob("*") if p.is_file()) == ["1001.jpg", "base.zip"]
+    assert arquivos.materialize(con, settings, contracts.find("tse")) == 0  # idempotente
+    capture(
+        con,
+        settings,
+        "tse",
+        "fotos_rj",
+        2022,
+        "fotos_rj-ba9876543210.zip",
+        {"FRJ1001_div.jpg": b"\xff\xd8nova"},
+    )
+    assert arquivos.materialize(con, settings, contracts.find("tse")) == 1  # nova captura, mesmo caminho
+    assert (base / "judiciario/federal/tse/arq_fotos" / FOTO_LOCAL).read_bytes() == b"\xff\xd8nova"
+
+
+def test_published_collections_are_copied_with_a_control_table_and_unpublished_ones_are_not(
+    con: Connection, settings: Settings
+) -> None:
+    land_files(con, settings)
+    out, _ = run(con, settings)
+    dou, fotos = control(out, DOU), control(out, FOTOS)
+    assert [(r["caminho"], r["fl_original"], r["content_type"]) for r in dou] == [
+        ("secao1/202608/base.zip", True, mimetypes.guess_type("x.zip")[0])
+    ]
+    assert [(r["caminho"], r["fl_original"], r["content_type"]) for r in fotos] == [
+        (FOTO_LOCAL, False, "image/jpeg")
+    ]
+    zip_bytes = (out / DOU / "secao1/202608/base.zip").read_bytes()
+    assert dou[0]["sha256_arquivo"] == dou[0]["sha256_captura"] == hashlib.sha256(zip_bytes).hexdigest()
+    assert (out / FOTOS / FOTO_LOCAL).read_bytes() == JPG
+    assert fotos[0]["sha256_arquivo"] == hashlib.sha256(JPG).hexdigest()
+    assert fotos[0]["sha256_captura"] != fotos[0]["sha256_arquivo"]  # a captura é o zip de origem
+    assert fotos[0]["id_captura"] != dou[0]["id_captura"] and fotos[0]["fonte"] == "tse"
+    assert fotos[0]["url_fonte"] == "https://exemplo.gov.br/fotos_rj/2022.zip" and fotos[0][
+        "qtd_bytes"
+    ] == len(JPG)
+    assert not list((out / FOTOS).rglob("*.zip"))  # o zip das fotos não sobe
+    tables = {t["tabela"]: t for t in manifest(out)["tabelas"]}
+    assert tables["arq_secoes"]["caminho"] == DOU and tables["arq_fotos"]["caminho"] == FOTOS
+    assert all(c["descricao"] for t in ("arq_secoes", "arq_fotos") for c in tables[t]["colunas"])  # type: ignore[attr-defined]
+    assert kv(out / f"{FOTOS}.parquet")["descricao"]
+    catalog = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
+    assert scalar(catalog, "SELECT comment FROM duckdb_views() WHERE view_name = 'arq_fotos'")
+    catalog.close()
+
+
+def test_only_missing_or_changed_files_are_sent_and_verify_checks_the_objects(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    land_files(con, settings)
+    out, _ = run(con, settings)
+    stamp = (out / FOTOS / FOTO_LOCAL).stat().st_mtime_ns
+    sent: list[str] = []
+    monkeypatch.setattr(shutil, "copyfile", lambda s, d: sent.append(Path(d).as_posix()))
+    again = export.export(settings)
+    assert again["gravadas"] == 0 and sent == [
+        (out / "catalogo.duckdb").as_posix()
+    ]  # nenhum arquivo reenviado
+    monkeypatch.undo()
+    assert (out / FOTOS / FOTO_LOCAL).stat().st_mtime_ns == stamp
+    assert export.verify(settings) == []
+    nova = b"\xff\xd8nova"
+    con = duckdb.connect(str(settings.warehouse))
+    capture(con, settings, "tse", "fotos_rj", 2022, "fotos_rj-ba9876543210.zip", {"FRJ1001_div.jpg": nova})
+    arquivos.materialize(con, settings, contracts.find("tse"))
+    con.close()
+    export.export(settings)
+    assert (out / FOTOS / FOTO_LOCAL).read_bytes() == nova and export.verify(settings) == []
+    (out / FOTOS / FOTO_LOCAL).write_bytes(b"adulterada")
+    (out / FOTOS / "2022/RJ/solta.jpg").write_bytes(b"x")
+    assert sorted(export.verify(settings)) == [
+        f"{FOTOS}/2022/RJ/1001.jpg difere do controle",
+        f"{FOTOS}/2022/RJ/solta.jpg fora do controle",
+    ]
+    (out / DOU / "secao1/202608/base.zip").unlink()
+    assert f"falta {DOU}/secao1/202608/base.zip" in export.verify(settings)
+
+
+def test_a_file_missing_on_disk_stops_the_export_unless_pruned(con: Connection, settings: Settings) -> None:
+    land_files(con, settings)
+    out, _ = run(con, settings)
+    (settings.storage_root / "arquivos/judiciario/federal/tse/arq_fotos" / FOTO_LOCAL).unlink()
+    with pytest.raises(ValueError, match="--prune"):
+        export.export(settings)
+    assert (out / FOTOS / FOTO_LOCAL).exists() and len(control(out, FOTOS)) == 1  # nada encolheu
+    export.export(settings, prune=True)
+    assert not (out / FOTOS / FOTO_LOCAL).exists() and control(out, FOTOS) == []
+
+
+def test_a_published_collection_that_left_the_contract_stops_the_export_unless_pruned(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    land_files(con, settings)
+    out, _ = run(con, settings)
+    monkeypatch.setattr(export, "_published", lambda dataset: False)
+    with pytest.raises(ValueError, match="--prune"):
+        export.export(settings)
+    assert (out / FOTOS / FOTO_LOCAL).exists() and (out / DOU / "secao1/202608/base.zip").exists()
+    export.export(settings, prune=True)
+    assert not (out / FOTOS / FOTO_LOCAL).exists()
+    assert {t["tabela"] for t in manifest(out)["tabelas"]}.isdisjoint({"arq_fotos", "arq_secoes"})
+
+
+def test_publicar_only_counts_when_it_is_exactly_true() -> None:
+    assert export._published({"arquivos": {"publicar": True}})
+    assert not any(export._published({"arquivos": {"publicar": v}}) for v in ("false", "sim", 1, None))
+    assert not export._published({}) and not export._published({"arquivos": None})
+
+
+def test_the_signed_upload_carries_content_type_cache_control_and_checksum(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    seen: dict[str, str] = {}
+
+    class Done:
+        def close(self) -> None: ...
+
+    def fake_open(request: object, timeout: int) -> Done:
+        seen.update({k.lower(): v for k, v in request.headers.items()})  # type: ignore[attr-defined]
+        return Done()
+
+    keys = ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "BUCKET")
+    monkeypatch.setattr(export, "_r2", lambda: dict.fromkeys(keys, "x"))
+    monkeypatch.setattr(export.urllib.request, "urlopen", fake_open)  # type: ignore[attr-defined]
+    file = tmp_path / "f.jpg"
+    file.write_bytes(b"abc")
+    export.r2_request("PUT", "k/f.jpg", file, "image/jpeg", {"Cache-Control": export.CACHE_CONTROL})
+    assert seen["content-type"] == "image/jpeg" and seen["cache-control"] == export.CACHE_CONTROL
+    assert seen["x-amz-checksum-sha256"] == base64.b64encode(hashlib.sha256(b"abc").digest()).decode()
+    assert "cache-control" in seen["authorization"] and "x-amz-checksum-sha256" in seen["authorization"]

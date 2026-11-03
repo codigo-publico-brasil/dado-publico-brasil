@@ -143,6 +143,11 @@ datasets:
     write: merge
     primary_key: [member]
     columns: [member, size]
+    arquivos:           # as imagens extraídas do pacote vão ao lake público (arq_fotos); o zip não sobe
+      colecao: fotos
+      membro: '^F?(?P<uf>[A-Z]{2})(?P<sq>\d+)_div\.(?P<ext>jpe?g|png)$'
+      caminho: "{particao}/{uf}/{sq}.{ext}"
+      publicar: true
   fotos_ac:
     <<: *fotos
     url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_AC_div.zip"
