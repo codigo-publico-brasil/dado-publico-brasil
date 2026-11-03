@@ -27,8 +27,9 @@ select
     e.valor_restos_a_pagar_inscritos,
     e.valor_restos_a_pagar_cancelados,
     e.valor_restos_a_pagar_pagos,
+    e.id_captura,
     cast(k.dt_captura as date) as dt_captura
 
 from {{ ref('stg_transparencia__emendas') }} as e
 
-left join {{ ref('stg_metadata__captures') }} as k on k.id_captura = e.id_captura
+left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = e.id_captura

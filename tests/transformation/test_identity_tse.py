@@ -34,10 +34,10 @@ def groups(con: Connection, *rows: tuple[str, str]) -> None:
 
 def official(con: Connection, source: str, id_type: str, source_id: str) -> int:
     """Uma pessoa oficial (Câmara ou Senado), como a identidade as cria."""
-    person = int(scalar(con, "SELECT nextval('identity.seq_pessoa')"))
-    con.execute("INSERT INTO identity.pessoa VALUES (?, ?)", (person, NOW))
+    person = int(scalar(con, "SELECT nextval('identity.seq_pessoas')"))
+    con.execute("INSERT INTO identity.pessoas VALUES (?, ?)", (person, NOW))
     con.execute(
-        "INSERT INTO identity.pessoa_identificador VALUES (?, ?, ?, ?, 'teste', 'teste', ?)",
+        "INSERT INTO identity.pessoas_identificadores VALUES (?, ?, ?, ?, 'teste', 'teste', ?)",
         (source, id_type, source_id, person, NOW),
     )
     return person
@@ -45,7 +45,7 @@ def official(con: Connection, source: str, id_type: str, source_id: str) -> int:
 
 def person_of(con: Connection, candidacy: str) -> int | None:
     found = con.execute(
-        "SELECT id_pessoa FROM identity.pessoa_identificador WHERE source = 'tse' AND id_type = ? AND source_id = ?",
+        "SELECT id_pessoa FROM identity.pessoas_identificadores WHERE fonte = 'tse' AND id_tipo = ? AND id_na_fonte = ?",
         (identity.ELECTED_TYPE, candidacy),
     ).fetchall()
     assert len(found) <= 1
@@ -56,15 +56,18 @@ def test_each_group_becomes_one_person_and_all_its_candidacies_join_it(con: Conn
     groups(con, ("2016:1", "g1"), ("2020:1", "g1"), ("2020:2", "g2"))
     assert identity._tse_people(con, NOW) == 2
     assert person_of(con, "2016:1") == person_of(con, "2020:1") != person_of(con, "2020:2")
-    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa") == 2
+    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoas") == 2
 
 
 def test_running_again_changes_nothing(con: Connection) -> None:
     groups(con, ("2016:1", "g1"), ("2020:1", "g1"), ("2020:2", "g2"))
     identity._tse_people(con, NOW)
-    before = con.execute("SELECT * FROM identity.pessoa_identificador ORDER BY source_id").fetchall()
+    before = con.execute("SELECT * FROM identity.pessoas_identificadores ORDER BY id_na_fonte").fetchall()
     assert identity._tse_people(con, NOW) == 0
-    assert con.execute("SELECT * FROM identity.pessoa_identificador ORDER BY source_id").fetchall() == before
+    assert (
+        con.execute("SELECT * FROM identity.pessoas_identificadores ORDER BY id_na_fonte").fetchall()
+        == before
+    )
 
 
 def test_the_group_label_may_change_without_creating_another_person(con: Connection) -> None:
@@ -98,9 +101,9 @@ def test_a_tse_only_person_is_absorbed_by_the_official_person_who_appears_later(
     )
     identity._tse_people(con, NOW)
     assert person_of(con, "2022:1") == deputy  # a oficial sobrevive, mesmo sendo a mais nova
-    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa WHERE id_pessoa = ?", (tse_only,)) == 0
+    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoas WHERE id_pessoa = ?", (tse_only,)) == 0
     assert con.execute(
-        "SELECT id_pessoa_absorvida, id_pessoa_sobrevivente FROM identity.pessoa_fusao"
+        "SELECT id_pessoa_absorvida, id_pessoa_sobrevivente FROM identity.pessoas_fusoes"
     ).fetchall() == [(tse_only, deputy)]
 
 
@@ -117,9 +120,9 @@ def test_a_group_touching_two_official_people_is_never_merged(con: Connection) -
             (candidacy, source, id_type, source_id),
         )
     identity._tse_people(con, NOW)
-    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa_fusao") == 0
+    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoas_fusoes") == 0
     assert {senator, deputy} <= {
-        int(r[0]) for r in con.execute("SELECT id_pessoa FROM identity.pessoa").fetchall()
+        int(r[0]) for r in con.execute("SELECT id_pessoa FROM identity.pessoas").fetchall()
     }
     assert (
         person_of(con, "2018:1") is None and person_of(con, "2022:1") is None

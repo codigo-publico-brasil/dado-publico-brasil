@@ -19,9 +19,11 @@ select
     g.gabinete_email as email_institucional,
     g.gabinete_telefone as telefone_institucional,
     g.gabinete_endereco,
-    cast(null as varchar) as pagina_url
+    cast(null as varchar) as pagina_url,
+    c.id_captura,
+    c.dt_captura
 
-from {{ ref('stg_identity__pessoa_identificadores') }} as i
+from {{ ref('stg_identity__pessoas_identificadores') }} as i
 
 inner join {{ ref('int_deputados_ids_unidos') }} as d
     on i.fonte = '{{ var("source_camara") }}'

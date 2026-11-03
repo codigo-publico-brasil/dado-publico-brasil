@@ -55,7 +55,7 @@ from dado_publico_brasil.core import alert, migrations, runs, warehouse
 from dado_publico_brasil.core.settings import DBT_DIR, load_settings
 from dado_publico_brasil.ingestion import contract, landing, loader, monitoring
 from dado_publico_brasil.orchestration import pipeline
-from dado_publico_brasil.transformation import build, describe, observability, publish, quality
+from dado_publico_brasil.transformation import build, describe, export, observability, publish, quality
 from dado_publico_brasil.transformation import dbt as dbt_runner
 
 SETTINGS = load_settings()
@@ -85,7 +85,7 @@ class LayerTranslator(DagsterDbtTranslator):
         return EAGER
 
 
-PEOPLE = [AssetKey(["identity", "pessoa"]), AssetKey(["identity", "pessoa_identificador"])]
+PEOPLE = [AssetKey(["identity", "pessoas"]), AssetKey(["identity", "pessoas_identificadores"])]
 IDS_MODEL = AssetKey("int_pessoas_ids_vistos")
 
 
@@ -158,7 +158,7 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
         name=f"saude_{source.source}",
     )
     def source_health() -> Iterator[AssetCheckResult]:
-        """O último monitor da fonte e o balanço da carga de cada tabela (`metadata.source_checks`)."""
+        """O último monitor da fonte e o balanço da carga de cada tabela (`metadata.fontes_verificacoes`)."""
         con = warehouse.connect(SETTINGS, read_only=True)
         try:
             for key, name in raw.items():
@@ -191,7 +191,7 @@ def _cadence_slack(cron: str) -> timedelta:
 
 
 def _record_dbt(stage: str, target: Path) -> None:
-    """Grava o resultado dos modelos e testes em `metadata.dbt_results`, como a linha de comando faz."""
+    """Grava o resultado dos modelos e testes em `metadata.testes_resultados`, como a linha de comando faz."""
     con = warehouse.connect(SETTINGS)
     try:
         with runs.track(con, stage, "dbt") as run:
@@ -264,7 +264,18 @@ def _marts() -> list[AssetKey]:
     ]
 
 
-@asset(key=AssetKey(["publicacao", "marts"]), deps=_marts(), group_name="marts", automation_condition=EAGER)
+@asset(key=AssetKey(["publicacao", "lake"]), deps=_marts(), group_name="marts", automation_condition=EAGER)
+def export_asset() -> MaterializeResult[Any]:
+    """Grava o lake público em Parquet (no R2, se houver segredo) depois dos testes do dbt (ADR 0035)."""
+    return MaterializeResult(metadata=dict(export.export(SETTINGS)))
+
+
+@asset(
+    key=AssetKey(["publicacao", "marts"]),
+    deps=[AssetKey(["publicacao", "lake"])],
+    group_name="marts",
+    automation_condition=EAGER,
+)
 def publish_asset() -> MaterializeResult[Any]:
     """Copia os marts para o PostgreSQL de serviço, numa troca atômica (ADR 0014)."""
     tables = publish.publish(SETTINGS)
@@ -327,6 +338,7 @@ defs = Definitions(
         dbt_pre_identity,
         identity_asset,
         dbt_post_identity,
+        export_asset,
         *EXTRA,
     ],
     asset_checks=freshness,

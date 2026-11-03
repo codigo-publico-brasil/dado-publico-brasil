@@ -12,4 +12,8 @@ models:
       - {name: uf_nome, description: "Nome da UF."}
       - {name: regiao_sigla, description: "Sigla da grande região (N, NE, SE, S, CO)."}
       - {name: regiao_nome, description: "Nome da grande região."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}

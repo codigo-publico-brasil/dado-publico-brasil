@@ -8,7 +8,7 @@ models:
       composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente
       conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na
       eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes.
-    meta: {sensitivity: publico, grain: corte, tipo de composição, cargo, território e partido, owner: fundador do projeto, freshness: diário}
+    meta: {sensitivity: publico, grain: corte, tipo de composição, cargo, território e partido, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [dt_corte, tipo_composicao, id_cargo, id_territorio, id_partido]}}
     columns:

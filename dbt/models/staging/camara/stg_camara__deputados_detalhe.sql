@@ -19,10 +19,16 @@ renamed as (
                 'sala ' || nullif(trim(ultimo_status_gabinete_sala), ''),
                 'andar ' || nullif(trim(ultimo_status_gabinete_andar), '')),
             '') as gabinete_endereco,
+        ultimo_status_nome_eleitoral as nome_eleitoral,
+        ultimo_status_sigla_partido as partido_sigla,
+        ultimo_status_sigla_uf as uf_sigla,
+        try_cast(ultimo_status_id_legislatura as integer) as id_legislatura,
+        try_cast(ultimo_status_data as date) as dt_status,
+        nullif(trim(ultimo_status_gabinete_nome), '') as gabinete_nome,
         _source_file_id as id_captura
 
     from source
 
 )
 
-select * from renamed
+{{ colunas_auditoria('renamed') }}

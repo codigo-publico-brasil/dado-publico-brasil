@@ -8,4 +8,8 @@ models:
       - {name: ordem, description: "Posição do parágrafo no arquivo, a partir de 1.", tests: ["not_null"]}
       - {name: linha, description: "Texto de uma linha do arquivo da Constituição, como a Câmara publica."}
       - {name: emenda_do_arquivo, description: "Número da última emenda constitucional até a qual o arquivo do texto está atualizado."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}

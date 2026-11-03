@@ -6,4 +6,4 @@ select
     metodo,
     dt_fusao
 
-from {{ ref('stg_identity__pessoa_fusoes') }}
+from {{ ref('stg_identity__pessoas_fusoes') }}

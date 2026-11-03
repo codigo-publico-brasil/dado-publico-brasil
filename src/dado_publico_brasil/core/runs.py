@@ -1,4 +1,4 @@
-"""Registro de execuções (`metadata.runs`): quando, com qual código, quantas linhas, com que resultado.
+"""Registro de execuções (`metadata.execucoes`): quando, com qual código, quantas linhas, com que resultado.
 
 É a base do frescor, da auditoria e do agendamento.
 """
@@ -51,8 +51,9 @@ def track(
 ) -> Iterator[Run]:
     """Abre uma execução. Ao sair, marca `ok` ou `error` (e repassa a exceção)."""
     row = con.execute(
-        "INSERT INTO metadata.runs (stage, source, dataset, year, started_at, code_version, status) "
-        "VALUES (?, ?, ?, ?, ?, ?, 'running') RETURNING id",
+        "INSERT INTO metadata.execucoes (etapa, fonte, dataset, particao, dt_inicio, versao_commit, "
+        "resultado) "
+        "VALUES (?, ?, ?, ?, ?, ?, 'running') RETURNING id_execucao",
         (stage, source, dataset, year, now(), code_version()),
     ).fetchone()
     assert row is not None
@@ -67,7 +68,8 @@ def track(
 
 def _close(con: Connection, run: Run, status: str, message: str | None) -> None:
     con.execute(
-        "UPDATE metadata.runs SET finished_at = ?, rows_in = ?, rows_out = ?, status = ?, "
-        "message = ? WHERE id = ?",
+        "UPDATE metadata.execucoes SET dt_fim = ?, qtd_linhas_entrada = ?, qtd_linhas_saida = ?, "
+        "resultado = ?, "
+        "mensagem = ? WHERE id_execucao = ?",
         (now(), run.rows_in, run.rows_out, status, message, run.id),
     )

@@ -52,6 +52,9 @@ O raw **espelha a fonte**: guarda os nomes de tabela e de coluna como a fonte pu
 
 O projeto e os dados gerados precisam ser fáceis de auditar pelo público: cada informação deve poder ser rastreada até a fonte oficial. Por isso:
 
+- **colunas de auditoria ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)):** todo staging de fonte traz `fonte`, `id_captura`, `dt_captura`, `url_fonte` e `sha256_captura`, acrescentadas pela macro `colunas_auditoria()` (junção com `metadata.capturas`); intermediate e todo `dim_`, `fct_` e `brg_` propagam `fonte`, `id_captura` e `dt_captura`. Quem não tem arquivo de fonte próprio (identidade, curadoria, agregado, consulta do aplicativo) declara o motivo em `meta.auditoria_excecao`. `tests/test_names_and_descriptions.py` falha sem isso (a conferência é estrutural, por isso fica no CI e não no dbt);
+- o staging expõe **todas** as colunas do raw (teste do dbt `staging_sem_colunas_do_raw`, que roda a cada carga); a que ficar de fora tem o motivo em `meta.colunas_omitidas` (coluna: motivo);
+- todo modelo leva em `meta` as chaves `owner`, `sensitivity` e `fonte_oficial` (herdadas de `dbt_project.yml` quando iguais);
 - tabelas dos marts que trazem dado de fonte têm a fonte, o endereço da fonte e a data de captura;
 - padronizar um valor não apaga o original: guarde o valor como a fonte publica quando ele for alterado (por exemplo, a sigla original do partido);
 - nenhum nome ou transformação pode esconder de onde a informação veio.
@@ -65,4 +68,4 @@ O projeto e os dados gerados precisam ser fáceis de auditar pelo público: cada
 ## Como é garantido
 
 - Este documento é citado no `CLAUDE.md` e no `AGENTS.md`, que os agentes de IA leem antes de trabalhar, e no modelo de pull request.
-- Testes no CI (`tests/test_names_and_descriptions.py`) conferem, no warehouse que a pipeline constrói, os prefixos de tipo, os nomes de tabela sem conectivo e a descrição de toda tabela e coluna. A regra vale para staging, intermediate e marts; o raw espelha a fonte; `identity` e `metadata` são só descritos por enquanto (os nomes em inglês ficam para outra etapa); o esquema `elementary` é do pacote do Elementary e fica de fora.
+- Testes no CI (`tests/test_names_and_descriptions.py`) conferem, no warehouse que a pipeline constrói, os prefixos de tipo, os nomes de tabela sem conectivo e a descrição de toda tabela e coluna. A regra vale para staging, intermediate, marts, `identity` e `metadata` (nomes em português desde a migração `ddl/0007`); o raw espelha a fonte; o esquema `elementary` é do pacote do Elementary e fica de fora.

@@ -3,6 +3,7 @@ version: 2
 models:
   - name: stg_tse__candidaturas
     description: Candidaturas de todos os cargos nas eleições gerais e municipais, uma linha por candidatura e turno.
+    meta: {particao: "ano_eleicao", colunas_omitidas: {dt_eleicao: "Não está no contrato da fonte (columns de tse.yml); sobra de carga antiga que o dlt não remove e que cargas novas deixam vazia. O ano da eleição vem de ano_eleicao."}}
     columns:
       - {name: ano_eleicao, description: "Ano da eleição que a formou."}
       - {name: turno, description: "Turno da votação."}
@@ -34,9 +35,14 @@ models:
       - {name: coligacao_composicao, description: "Partidos da coligação, como o TSE informa."}
       - {name: federacao_sigla, description: "Sigla da federação partidária (desde 2022); vazia nos anos anteriores."}
       - {name: federacao_composicao, description: "Partidos da federação (desde 2022); vazia nos anos anteriores."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_tse__bens
     description: Bens declarados pelos candidatos de todos os cargos, uma linha por bem.
+    meta: {particao: "ano_eleicao"}
     columns:
       - {name: ano_eleicao, description: "Ano da eleição que a formou."}
       - {name: sq_candidato, description: "Número sequencial do candidato na eleição, como o TSE informa (único só dentro da unidade eleitoral)."}
@@ -46,12 +52,19 @@ models:
       - {name: ordem, description: "Posição do parágrafo no arquivo, a partir de 1."}
       - {name: cd_tipo, description: "Código do tipo, como a fonte informa."}
       - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
-      - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada."}
+      - {name: descricao, description: "Descrição do bem, como o candidato declarou. CPF (***.nnn.nnn-**) e número de agência e de conta bancária (após rótulo como agência, ag, conta, c/c, cc: 5 dígitos ou mais, ou com dígito verificador; 4 dígitos sem ano só em texto de banco) são mascarados (*****) pelo projeto; ano, cilindrada, placa e outros números não são tocados, e conta escrita fora desses padrões pode ficar visível; o original fica no landing."}
       - {name: valor, description: "Valor declarado em reais, sem correção."}
       - {name: dt_atualizacao, description: "Data da última atualização do bem na declaração."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: cd_eleicao, description: "Código da eleição no TSE."}
+      - {name: eleicao, description: "Descrição da eleição, como o TSE publica."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_tse__votacao
     description: Votos de cada candidato (todos os cargos) por município e zona, como o TSE publica.
+    meta: {particao: "ano_eleicao", colunas_omitidas: {dt_eleicao: "Não está no contrato da fonte (columns de tse.yml); sobra de carga antiga que o dlt não remove e que cargas novas deixam vazia. O ano da eleição vem de ano_eleicao."}}
     columns:
       - {name: ano_eleicao, description: "Ano da eleição que a formou."}
       - {name: turno, description: "Turno da votação."}
@@ -79,7 +92,13 @@ models:
       - {name: destinacao, description: "Destinação dos votos, como o TSE informa (campo NM_TIPO_DESTINACAO_VOTOS)."}
       - {name: votos_validos, description: "Votos nominais válidos; nos arquivos de 2002 a 2014, que não separam os válidos, os votos nominais."}
       - {name: resultado, description: "Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: cd_eleicao, description: "Código da eleição no TSE."}
+      - {name: eleicao, description: "Descrição da eleição, como o TSE publica."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
 
   - name: stg_tse__vagas
     description: Vagas de cada cargo em cada unidade eleitoral, uma linha por eleição, cargo e unidade, como o TSE publica; traz também as eleições suplementares.
@@ -94,10 +113,15 @@ models:
       - {name: cargo, description: "Cargo em disputa, com caixa padronizada."}
       - {name: qtd_vagas, description: "Quantidade de vagas do cargo na unidade eleitoral."}
       - {name: dt_posse, description: "Data de posse prevista, como o TSE informa. Não confirmada: em 2026 o arquivo de vagas traz 02/05/2027 para deputados e senadores, que não bate com a posse real (issue #71); não use como data legal da posse."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
 
   - name: stg_tse__receitas_candidatos
     description: Receitas declaradas pelos candidatos de todos os cargos, uma linha por receita; o valor é o declarado, sem nome nem documento de quem doou.
+    meta: {particao: "ano_eleicao"}
     columns:
       - {name: ano_eleicao, description: "Ano da eleição."}
       - {name: turno, description: "Turno da prestação de contas, como o TSE informa (campo ST_TURNO)."}
@@ -112,10 +136,16 @@ models:
       - {name: dt_prestacao, description: "Data da prestação de contas."}
       - {name: dt_receita, description: "Data da receita."}
       - {name: valor, description: "Valor da receita em reais, como declarado."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: descricao, description: "Descrição da receita, como o candidato declarou. CPF (***.nnn.nnn-**) é mascarado pelo projeto; o original fica no landing."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
 
   - name: stg_tse__despesas_candidatos
     description: Despesas contratadas declaradas pelos candidatos de todos os cargos, uma linha por despesa; o valor é o declarado, sem nome nem documento do fornecedor.
+    meta: {particao: "ano_eleicao"}
     columns:
       - {name: ano_eleicao, description: "Ano da eleição."}
       - {name: turno, description: "Turno da prestação de contas, como o TSE informa (campo ST_TURNO)."}
@@ -130,7 +160,12 @@ models:
       - {name: dt_prestacao, description: "Data da prestação de contas."}
       - {name: dt_despesa, description: "Data da despesa."}
       - {name: valor, description: "Valor da despesa contratada em reais, como declarado."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: descricao, description: "Descrição da despesa, como o candidato declarou. CPF (***.nnn.nnn-**) e número de agência e de conta bancária (após rótulo como agência, ag, conta, c/c, cc: 5 dígitos ou mais, ou com dígito verificador; 4 dígitos sem ano só em texto de banco) são mascarados (*****) pelo projeto; ano, cilindrada, placa e outros números não são tocados, e conta escrita fora desses padrões pode ficar visível; o original fica no landing."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_tse__fotos
     description: Arquivos de foto oficial das candidaturas das eleições gerais, um por imagem dentro de cada pacote por UF do TSE.
     columns:
@@ -139,4 +174,8 @@ models:
       - {name: sq_candidato, description: "Número sequencial do candidato na eleição, tirado do nome do arquivo; liga à candidatura.", tests: ["not_null"]}
       - {name: arquivo, description: "Nome do arquivo de imagem dentro do pacote (F, UF, sequencial e _div, com a extensão original)."}
       - {name: tamanho_bytes, description: "Tamanho da imagem em bytes, como o pacote informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}

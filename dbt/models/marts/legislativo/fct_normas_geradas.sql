@@ -10,10 +10,11 @@ select
     p.dt_norma_publicacao as dt_publicacao,
     p.norma_descricao as descricao,
     p.norma_veiculo as veiculo_publicacao,
+    p.id_captura,
     cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_senado__processos') }} as p
 
-left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = p.id_captura
+left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = p.id_captura
 
 where p.norma_descricao is not null

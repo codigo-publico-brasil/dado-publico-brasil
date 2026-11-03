@@ -9,8 +9,9 @@ select
     v.uf,
     v.voto,
     v.sessao,
+    v.id_captura,
     cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_senado__vetos_votos') }} as v
 
-left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = v.id_captura
+left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = v.id_captura

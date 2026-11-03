@@ -10,13 +10,14 @@ select distinct
     b.descricao,
     b.valor,
     b.dt_atualizacao,
+    b.id_captura,
     cast(k.dt_captura as date) as dt_captura
 
 from {{ ref('stg_tse__bens') }} as b
 
-inner join {{ ref('stg_identity__pessoa_identificadores') }} as i
+inner join {{ ref('stg_identity__pessoas_identificadores') }} as i
     on i.fonte = '{{ var("source_tse") }}'
     and i.id_tipo = '{{ var("id_type_tse") }}'
     and i.id_na_fonte = b.id_candidatura
 
-left join {{ ref('stg_metadata__captures') }} as k on k.id_captura = b.id_captura
+left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = b.id_captura

@@ -180,7 +180,7 @@ a { color: var(--accent); }
   <thead><tr><th>Achado</th><th>Evidência hoje</th><th>Ajuste</th><th>Fase</th></tr></thead>
   <tbody>
     <tr><td class="k">Texto no lugar de chave</td><td><code>partido</code> aparece em 7 tabelas, <code>cargo</code> em 8 e <code>uf</code> em 16, todos como texto, sem ligação com um catálogo. Uma mesma sigla já designou dois partidos diferentes ao longo do tempo (<code>partidos_linhagem</code>).</td><td>Todo fato ganha <code>id_partido</code>, <code>id_cargo</code>, <code>id_orgao</code> e <code>id_territorio</code>. O texto da fonte fica ao lado, em coluna <code>*_na_fonte</code>, para auditoria.</td><td>F1, F2</td></tr>
-    <tr><td class="k">Rastreio desigual até a fonte</td><td>16 das 39 tabelas não têm <code>dt_captura</code> e 5 não têm <code>fonte</code>. <code>fonte_url</code> e <code>dt_captura</code> se repetem em tabelas diferentes, com sentidos diferentes.</td><td>Toda tabela de fato carrega <code>id_captura</code>, que liga a <code>metadata.captures</code> (URL, data, hash). Um teste exige a coluna. Some a repetição.</td><td>todas</td></tr>
+    <tr><td class="k">Rastreio desigual até a fonte</td><td>16 das 39 tabelas não têm <code>dt_captura</code> e 5 não têm <code>fonte</code>. <code>fonte_url</code> e <code>dt_captura</code> se repetem em tabelas diferentes, com sentidos diferentes.</td><td>Toda tabela de fato carrega <code>id_captura</code>, que liga a <code>metadata.capturas</code> (URL, data, hash). Um teste exige a coluna. Some a repetição.</td><td>todas</td></tr>
     <tr><td class="k"><code>pessoas</code> mistura cadastro e atividade</td><td>Junto do cadastro há <code>qtd_propostas</code>, <code>qtd_votos</code>, <code>ultimo_partido</code>, <code>ultima_uf</code> e legislaturas com voto, valores que mudam a cada carga.</td><td><code>pessoas</code> fica só com cadastro. Os agregados vão para <code>analise.pessoas_atividade</code>.</td><td>F3</td></tr>
     <tr><td class="k"><code>eleitos</code> faz três trabalhos</td><td>31 colunas misturam o que o TSE informa, a ligação com a pessoa (<code>id_pessoa</code>, <code>vinculo_metodo</code>) e uma regra nossa (<code>tipo_mandato</code>).</td><td>Candidatura e resultado só TSE; vínculo no mandato; <code>tipo_mandato</code> derivado na análise, marcado como tal.</td><td>F2, F4</td></tr>
     <tr><td class="k">Lista dentro de coluna de texto</td><td><code>votacoes.proposicoes</code> guarda, em uma célula, mais de 60 itens (<code>EMP 4/0, PLP 186/2026, REQ 3756/2026…</code>) e não diz qual é o objeto da votação.</td><td>Relação <code>votacoes_proposicoes</code>, uma linha por item, com o papel quando a fonte informar.</td><td>F4</td></tr>
@@ -554,7 +554,7 @@ from fatos.eventos e
 join core.evento_tipos tp using (cd_tipo_evento)
 left join core.cargos c on c.id_cargo = e.id_cargo
 left join core.territorios t on t.id_territorio = e.id_territorio
-join metadata.captures cp on cp.id_captura = e.id_captura
+join metadata.capturas cp on cp.id_captura = e.id_captura
 where e.id_pessoa = :id_pessoa
 order by e.dt_evento</code></pre>
 <p><b>View <code>servico.pessoa_campanhas</code>: todas as candidaturas da pessoa, com foto e campanha, tenha ela vencido ou não.</b></p>

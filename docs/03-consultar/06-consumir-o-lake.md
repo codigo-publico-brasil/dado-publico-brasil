@@ -32,7 +32,7 @@ Não entram o `raw`, a identidade e o landing (guardam dado pessoal) nem colunas
 ATTACH 'https://datalake.codigopublicobrasil.com.br/catalogo.duckdb' AS cpb (READ_ONLY);
 SHOW ALL TABLES;                                    -- uma view por tabela
 SELECT * FROM cpb.marts.dim_pessoas LIMIT 10;
-SELECT table_name, comment FROM duckdb_views() WHERE database_name = 'cpb' AND comment IS NOT NULL;
+SELECT view_name, comment FROM duckdb_views() WHERE database_name = 'cpb' AND comment IS NOT NULL;
 SELECT * FROM cpb.metadata.exportacao;              -- execução, data e commit (`versao_commit`) desta publicação
 ```
 

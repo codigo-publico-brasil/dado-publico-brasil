@@ -26,12 +26,14 @@ def test_extract_keeps_the_original_with_hash_and_registers_the_capture(
         head_request=no_headers,
     )
     path, sha, run_id = con.execute(
-        "SELECT path, sha256, run_id FROM metadata.captures WHERE id = ?", (capture_id,)
+        "SELECT caminho, sha256, id_execucao FROM metadata.capturas WHERE id_captura = ?", (capture_id,)
     ).fetchone() or ("", "", 0)
     assert path.startswith("landing/camara/deputados/completo/")
     assert sha[:12] in path
     assert (settings.storage_root / path).exists()
-    assert con.execute("SELECT stage, status FROM metadata.runs WHERE id = ?", (run_id,)).fetchone() == (
+    assert con.execute(
+        "SELECT etapa, resultado FROM metadata.execucoes WHERE id_execucao = ?", (run_id,)
+    ).fetchone() == (
         "extract",
         "ok",
     )
@@ -44,7 +46,7 @@ def test_extracting_twice_does_not_duplicate_the_capture(
     a = landing.extract(con, settings, contract, "deputados", downloader=download, head_request=no_headers)
     b = landing.extract(con, settings, contract, "deputados", downloader=download, head_request=no_headers)
     assert a == b
-    assert scalar(con, "SELECT COUNT(*) FROM metadata.captures") == 1
+    assert scalar(con, "SELECT COUNT(*) FROM metadata.capturas") == 1
 
 
 def test_the_path_shows_source_dataset_reference_and_capture_date_and_the_same_content_on_another_day_is_not_kept_twice(
@@ -57,7 +59,7 @@ def test_the_path_shows_source_dataset_reference_and_capture_date_and_the_same_c
     download = fake_downloader(synthetic_files(tmp_path / "origin"))
     monkeypatch.setattr(runs, "now", lambda: "2026-10-01T10:00:00+00:00")
     first = landing.extract(con, settings, contract, "votacoes", 2024, download, no_headers)
-    path = scalar(con, "SELECT path FROM metadata.captures WHERE id = ?", (first,))
+    path = scalar(con, "SELECT caminho FROM metadata.capturas WHERE id_captura = ?", (first,))
     assert path.startswith("landing/camara/votacoes/2024/20261001/")
     monkeypatch.setattr(runs, "now", lambda: "2026-10-02T10:00:00+00:00")
     assert landing.extract(con, settings, contract, "votacoes", 2024, download, no_headers) == first
@@ -92,7 +94,7 @@ def test_current_captures_returns_only_the_latest_of_each_url(con: Connection) -
     args = ("camara", "deputados", None, "http://x/d.csv")
     landing.register_capture(con, *args, "h1", 1, "a", 1)
     latest = landing.register_capture(con, *args, "h2", 1, "b", 1)
-    assert [c["id"] for c in landing.current_captures(con, "camara")] == [latest]
+    assert [c["id_captura"] for c in landing.current_captures(con, "camara")] == [latest]
 
 
 def test_raw_has_only_allowed_columns_and_never_the_personal_document(
@@ -129,7 +131,7 @@ def test_every_raw_row_points_to_an_existing_capture(raw: tuple[Connection, Sett
         orphans = scalar(
             con,
             f"SELECT COUNT(*) FROM raw_federal_camara.{table} t "
-            "WHERE NOT EXISTS (SELECT 1 FROM metadata.captures c WHERE c.id = t._source_file_id)",
+            "WHERE NOT EXISTS (SELECT 1 FROM metadata.capturas c WHERE c.id_captura = t._source_file_id)",
         )
         assert orphans == 0, table
 
@@ -168,8 +170,8 @@ def test_backfill_fills_old_rows_with_the_load_time_of_their_capture(
     assert (
         scalar(
             con,
-            "SELECT COUNT(*) FROM raw_federal_camara.deputados t JOIN metadata.captures c ON c.id = t._source_file_id "
-            "WHERE t._ingested_at <> c.loaded_at::TIMESTAMPTZ",
+            "SELECT COUNT(*) FROM raw_federal_camara.deputados t JOIN metadata.capturas c ON c.id_captura = t._source_file_id "
+            "WHERE t._ingested_at <> (c.dt_carga AT TIME ZONE 'UTC')",
         )
         == 0
     )
@@ -180,14 +182,16 @@ def test_recheck_headers_reads_the_landing_files_again(
     raw: tuple[Connection, Settings], contract: SourceContract
 ) -> None:
     con, settings = raw
-    antes = scalar(con, "SELECT COUNT(*) FROM metadata.source_checks WHERE check_name = 'schema'")
+    antes = scalar(con, "SELECT COUNT(*) FROM metadata.fontes_verificacoes WHERE verificacao = 'schema'")
     assert loader.recheck_headers(con, settings, contract) > 0
-    assert scalar(con, "SELECT COUNT(*) FROM metadata.source_checks WHERE check_name = 'schema'") > antes
+    assert (
+        scalar(con, "SELECT COUNT(*) FROM metadata.fontes_verificacoes WHERE verificacao = 'schema'") > antes
+    )
 
 
 def test_load_marks_the_capture_as_loaded(raw: tuple[Connection, Settings]) -> None:
     con, _ = raw
-    assert scalar(con, "SELECT COUNT(*) FROM metadata.captures WHERE loaded_at IS NULL") == 0
+    assert scalar(con, "SELECT COUNT(*) FROM metadata.capturas WHERE dt_carga IS NULL") == 0
 
 
 CONTRACT = """
@@ -326,13 +330,13 @@ def test_the_load_registers_one_balance_that_is_an_error_for_collisions_and_reje
     monitoring.check_load(
         con, "teste", "ds", 2006, {"read": 10, "filtered": 3, "loaded": 6, "rejected": 1, "conflicting": 2}
     )
-    found = con.execute("SELECT check_name, status, detail FROM metadata.source_checks").fetchall()
+    found = con.execute("SELECT verificacao, resultado, detalhe FROM metadata.fontes_verificacoes").fetchall()
     assert [(c, s) for c, s, _ in found] == [("carga", "error")]
     assert "filtradas pelo only 3" in found[0][2] and "colisões de chave 2" in found[0][2]
     monitoring.check_load(
         con, "teste", "limpo", None, {"read": 5, "filtered": 0, "loaded": 5, "rejected": 0, "conflicting": 0}
     )
-    assert scalar(con, "SELECT status FROM metadata.source_checks WHERE dataset = 'limpo'") == "ok"
+    assert scalar(con, "SELECT resultado FROM metadata.fontes_verificacoes WHERE dataset = 'limpo'") == "ok"
 
 
 def test_rows_that_a_previous_capture_had_and_the_current_one_lacks_are_a_warning(
@@ -346,11 +350,11 @@ def test_rows_that_a_previous_capture_had_and_the_current_one_lacks_are_a_warnin
         file.write_text(text, encoding="utf-8")
         url = contract.url("pessoas")
         landing.register_capture(con, "teste", "pessoas", None, url, sha, len(text), f"landing/{sha}.csv", 1)
-        return rows(con, "SELECT * FROM metadata.captures WHERE sha256 = ?", (sha,))[0]
+        return rows(con, "SELECT * FROM metadata.capturas WHERE sha256 = ?", (sha,))[0]
 
     def checks() -> list[tuple[str, str]]:
         return con.execute(
-            "SELECT status, detail FROM metadata.source_checks WHERE check_name = 'linhas_removidas' ORDER BY id"
+            "SELECT resultado, detalhe FROM metadata.fontes_verificacoes WHERE verificacao = 'linhas_removidas' ORDER BY id_verificacao"
         ).fetchall()
 
     loader.load_capture(con, settings, contract, capture("codigo,nome\n1,Ana\n2,Bia\n", "a"))

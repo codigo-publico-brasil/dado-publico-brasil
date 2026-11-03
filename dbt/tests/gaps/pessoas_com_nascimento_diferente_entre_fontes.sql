@@ -4,7 +4,7 @@
 -- datas não entram na comparação.
 select p.id_pessoa, p.dt_nascimento as dt_nascimento_oficial, c.id_candidatura, c.dt_nascimento as dt_nascimento_tse
 from {{ ref('dim_pessoas') }} as p
-inner join {{ ref('stg_identity__pessoa_identificadores') }} as i
+inner join {{ ref('stg_identity__pessoas_identificadores') }} as i
     on i.id_pessoa = p.id_pessoa and i.fonte = '{{ var("source_tse") }}' and i.id_tipo = '{{ var("id_type_tse_eleito") }}'
 inner join {{ ref('stg_tse__candidaturas') }} as c on c.id_candidatura = i.id_na_fonte
 where p.fonte_dt_nascimento in ('{{ var("source_camara") }}', '{{ var("source_senado") }}')

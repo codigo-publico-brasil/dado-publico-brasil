@@ -7,7 +7,7 @@ seeds:
       legal que a sustenta, com o artigo da Constituição. Curado à mão a partir do texto da Constituição carregado no
       projeto (constituicao_dispositivos). Onde a Constituição não fixa a data de posse, o campo diz isso e nenhuma
       data é inventada. Vice e suplente apontam para o cargo do titular.
-    meta: {sensitivity: publico, grain: cargo, owner: fundador do projeto, freshness: a cada emenda constitucional}
+    meta: {sensitivity: publico, grain: cargo, owner: fundador do projeto, freshness: a cada emenda constitucional, fonte_oficial: "Constituição Federal (Planalto)", auditoria_excecao: "Referência curada do projeto, com a fonte oficial em fonte_url."}
     columns:
       - {name: id_cargo, description: "Identificador do cargo, em texto legível (por exemplo, deputado_federal).", data_tests: [unique, not_null]}
       - {name: cd_cargo_tse, description: "Código do cargo no TSE (CD_CARGO nos arquivos de vagas e candidaturas).", data_tests: [unique, not_null]}
@@ -25,7 +25,7 @@ seeds:
       Catálogo fechado dos tipos de evento da pessoa (nascimento, eleito, posse, troca de partido...). A tabela de eventos
       só aceita tipo que exista aqui. Cada tipo diz de qual fato nasce, que contexto exige e se o evento é informado pela
       fonte ou derivado de regra do projeto. Tipo novo entra com linha aqui, regra e teste. Desenho aprovado no ADR 0030.
-    meta: {sensitivity: publico, grain: tipo de evento, owner: fundador do projeto, freshness: a cada tipo novo}
+    meta: {sensitivity: publico, grain: tipo de evento, owner: fundador do projeto, freshness: a cada tipo novo, fonte_oficial: "Projeto (ADR 0030)", auditoria_excecao: "Catálogo do projeto (ADR 0030), sem fonte externa."}
     columns:
       - {name: id_tipo_evento, description: "Identificador do tipo, em texto legível (por exemplo, troca_de_partido).", data_tests: [unique, not_null]}
       - {name: categoria, description: "Grupo do tipo: vida, eleicao, mandato, partido, nomeacao ou vinculo.", data_tests: [{accepted_values: {arguments: {values: [vida, eleicao, mandato, partido, nomeacao, vinculo]}}}]}
@@ -43,7 +43,7 @@ seeds:
       conferido liga duas siglas, elas ficam como partidos separados e a observação diz isso. Curado à mão; não é inferido
       do número. O nome do arquivo leva o prefixo core_ só porque dim_partidos_camara (identificador da Câmara, com o mesmo nome
       de coluna) ainda existe; a tabela é dim_partidos.
-    meta: {sensitivity: publico, grain: partido, owner: fundador do projeto, freshness: a cada fusão, incorporação ou novo partido}
+    meta: {sensitivity: publico, grain: partido, owner: fundador do projeto, freshness: a cada fusão, incorporação ou novo partido, fonte_oficial: "Tribunal Superior Eleitoral", auditoria_excecao: "Referência curada do projeto, com a fonte oficial em fonte_url."}
     columns:
       - {name: id_partido, description: "Identificador do partido, estável: nunca muda nem é reaproveitado.", data_tests: [unique, not_null]}
       - {name: sigla, description: "Sigla mais recente do partido nos arquivos do TSE (ou a última, se foi extinto), com o período entre parênteses quando outro partido usou a mesma sigla.", data_tests: [not_null]}
@@ -59,7 +59,7 @@ seeds:
       partido, sigla e número; os períodos de uma mesma sigla e número não se sobrepõem. Os anos são os das eleições em que
       a sigla e o número aparecem nas candidaturas carregadas; nas siglas que só a Câmara usa (PEN, PATRI, PMR e SDD),
       os dos registros do histórico de deputados.
-    meta: {sensitivity: publico, grain: partido, sigla e número, owner: fundador do projeto, freshness: a cada eleição}
+    meta: {sensitivity: publico, grain: partido, sigla e número, owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "Tribunal Superior Eleitoral", auditoria_excecao: "Referência curada do projeto, com a fonte oficial em fonte_url."}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [sigla_na_fonte, nr_partido, ano_inicio]}}
     columns:
@@ -76,7 +76,7 @@ seeds:
       para deputados e senadores, e a posse é em 1º de fevereiro). A EC 111/2021 mudou a posse de governador (6 de janeiro)
       e de presidente (5 de janeiro) só a partir das eleições de 2026 (art. 5º da emenda). Cargos sem regra na Constituição
       (vereador e deputado estadual ou distrital) não aparecem: a data fica vazia. Curado à mão.
-    meta: {sensitivity: publico, grain: cargo e vigência, owner: fundador do projeto, freshness: a cada emenda constitucional}
+    meta: {sensitivity: publico, grain: cargo e vigência, owner: fundador do projeto, freshness: a cada emenda constitucional, fonte_oficial: "Constituição Federal (Planalto)", auditoria_excecao: "Referência curada do projeto, com a fonte oficial em fonte_url."}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [id_cargo, ano_eleicao_de]}}
     columns:
@@ -89,6 +89,7 @@ seeds:
       - {name: fonte_url, description: "Texto oficial no Planalto.", data_tests: [not_null]}
 
   - name: partidos_eventos
+    meta: {owner: fundador do projeto, sensitivity: publico, fonte_oficial: "Tribunal Superior Eleitoral", auditoria_excecao: "Referência curada do projeto, com a fonte oficial em fonte_url."}
     description: Mudanças de nome, fusões e incorporações de partidos, conferidas à mão no TSE, com a página oficial de cada evento. Alimenta partidos_linhagem. Uma linha por partido de origem e evento.
     columns:
       - {name: sigla_anterior, description: "Sigla do partido antes do evento, como aparece nos votos."}
@@ -100,6 +101,7 @@ seeds:
       - {name: observacao, description: "Divergência de data, resolução ou ressalva da fonte."}
 
   - name: vinculos_aprovados
+    meta: {owner: fundador do projeto, sensitivity: publico-agente-publico, fonte_oficial: "Projeto (vínculos aprovados por uma pessoa)", auditoria_excecao: "Vínculos aprovados por uma pessoa do projeto, com a evidência em cada linha."}
     description: Vínculos entre registros de fontes diferentes que a regra automática não resolve (homônimo, nome diferente entre as fontes), conferidos por uma pessoa, com a evidência escrita. Uma linha por vínculo aprovado.
     columns:
       - {name: origem_fonte, description: "Fonte do registro de origem do vínculo (por exemplo, tse)."}

@@ -1,14 +1,14 @@
 """Resolução de identidade de pessoas (ADR 0004): código próprio, não há ferramenta pronta.
 
 Pessoa tem chave própria (sequência, nunca reaproveitada); o identificador de cada fonte fica na
-tabela-ponte `identity.pessoa_identificador`, com método, quem confirmou e quando. Regra de ligação
+tabela-ponte `identity.pessoas_identificadores`, com método, quem confirmou e quando. Regra de ligação
 (conservadora): só por identificador oficial da própria fonte; nunca por nome. Os atributos da
 pessoa (nome, foto...) não ficam aqui: o dbt os une à chave nos modelos de intermediate e marts.
 
 Lê `intermediate.int_pessoas_ids_vistos` (saída da primeira fase do dbt, todas as fontes) e cria só as
 pessoas novas. Depois aplica `intermediate.int_vinculos_propostos` (ADR 0013): a candidatura do TSE ganha a
 pessoa a que se liga, e duas pessoas que a regra mostra serem a mesma (deputado que virou senador) são
-fundidas: a chave mais nova é absorvida pela mais antiga e a fusão fica em `identity.pessoa_fusao`.
+fundidas: a chave mais nova é absorvida pela mais antiga e a fusão fica em `identity.pessoas_fusoes`.
 
 Por fim dá pessoa a todo eleito do TSE (ADR 0031): as candidaturas do mesmo grupo (`int_tse_eleitos_grupos`)
 são uma pessoa só. A âncora é `id_candidatura` (estável), nunca o grupo. Se o grupo já toca pessoas, a
@@ -23,7 +23,7 @@ CONFIRMED_BY = "regra automática"
 SEEN = "intermediate.int_pessoas_ids_vistos"
 LINKS = "intermediate.int_vinculos_propostos"
 GROUPS = "intermediate.int_tse_eleitos_grupos"
-BRIDGE = "identity.pessoa_identificador"
+BRIDGE = "identity.pessoas_identificadores"
 ELECTED_TYPE = "candidatura_de_eleito"
 GROUP_METHOD = "candidaturas do mesmo grupo de eleito no TSE"
 GROUP_FUSION = "mesmo grupo de candidaturas do TSE"
@@ -34,15 +34,15 @@ def resolve(con: Connection) -> tuple[int, int]:
     with runs.track(con, "identity") as run:
         con.execute(
             "CREATE OR REPLACE TEMP TABLE new_people AS "
-            "SELECT nextval('identity.seq_pessoa') AS id_pessoa, s.fonte, s.id_tipo, s.id_na_fonte "
+            "SELECT nextval('identity.seq_pessoas') AS id_pessoa, s.fonte, s.id_tipo, s.id_na_fonte "
             f"FROM {SEEN} s WHERE NOT EXISTS ("
-            "SELECT 1 FROM identity.pessoa_identificador i "
-            "WHERE i.source = s.fonte AND i.id_type = s.id_tipo AND i.source_id = s.id_na_fonte)"
+            "SELECT 1 FROM identity.pessoas_identificadores i "
+            "WHERE i.fonte = s.fonte AND i.id_tipo = s.id_tipo AND i.id_na_fonte = s.id_na_fonte)"
         )
         moment = runs.now()
-        con.execute("INSERT INTO identity.pessoa SELECT id_pessoa, ? FROM new_people", (moment,))
+        con.execute("INSERT INTO identity.pessoas SELECT id_pessoa, ? FROM new_people", (moment,))
         con.execute(
-            "INSERT INTO identity.pessoa_identificador "
+            "INSERT INTO identity.pessoas_identificadores "
             "SELECT fonte, id_tipo, id_na_fonte, id_pessoa, ?, ?, ? FROM new_people",
             (METHOD, CONFIRMED_BY, moment),
         )
@@ -55,7 +55,7 @@ def resolve(con: Connection) -> tuple[int, int]:
 
 
 def _same(alias: str, *columns: str) -> str:
-    return f"({alias}.source, {alias}.id_type, {alias}.source_id) = ({', '.join('v.' + c for c in columns)})"
+    return f"({alias}.fonte, {alias}.id_tipo, {alias}.id_na_fonte) = ({', '.join('v.' + c for c in columns)})"
 
 
 def _link(con: Connection, moment: str) -> None:
@@ -70,18 +70,18 @@ def _link(con: Connection, moment: str) -> None:
         "WHERE v.origem_fonte <> 'tse' AND a.id_pessoa <> b.id_pessoa GROUP BY 1, 2"
     )
     con.execute(
-        "INSERT INTO identity.pessoa_fusao SELECT absorbed, survivor, metodo, ? FROM fusions", (moment,)
+        "INSERT INTO identity.pessoas_fusoes SELECT absorbed, survivor, metodo, ? FROM fusions", (moment,)
     )
     con.execute(
         f"UPDATE {BRIDGE} SET id_pessoa = f.survivor FROM fusions f WHERE {BRIDGE}.id_pessoa = f.absorbed"
     )
-    con.execute("DELETE FROM identity.pessoa WHERE id_pessoa IN (SELECT absorbed FROM fusions)")
+    con.execute("DELETE FROM identity.pessoas WHERE id_pessoa IN (SELECT absorbed FROM fusions)")
     # As ligações do TSE são derivadas: a regra as recalcula a cada execução. Uma que deixou de ser proposta
     # (a chave da candidatura mudou, ou surgiu um homônimo) sai; as aprovadas à mão entram pela mesma tabela.
     con.execute(
-        f"DELETE FROM {BRIDGE} WHERE source = 'tse' AND method <> '{GROUP_METHOD}' AND NOT EXISTS ("
-        f"SELECT 1 FROM {LINKS} v WHERE v.origem_fonte = 'tse' AND v.origem_tipo = {BRIDGE}.id_type "
-        f"AND v.id_origem = {BRIDGE}.source_id)"
+        f"DELETE FROM {BRIDGE} WHERE fonte = 'tse' AND metodo <> '{GROUP_METHOD}' AND NOT EXISTS ("
+        f"SELECT 1 FROM {LINKS} v WHERE v.origem_fonte = 'tse' AND v.origem_tipo = {BRIDGE}.id_tipo "
+        f"AND v.id_origem = {BRIDGE}.id_na_fonte)"
     )
     con.execute(
         f"INSERT INTO {BRIDGE} "
@@ -97,7 +97,7 @@ def _group_people_sql() -> str:
     target = _same("d", "destino_fonte", "destino_tipo", "id_destino")
     return (
         f"SELECT g.grupo, b.id_pessoa FROM {GROUPS} g JOIN {BRIDGE} b "
-        "ON b.source = 'tse' AND b.source_id = g.id_candidatura "
+        "ON b.fonte = 'tse' AND b.id_na_fonte = g.id_candidatura "
         f"UNION SELECT g.grupo, d.id_pessoa FROM {GROUPS} g JOIN {LINKS} v "
         f"ON v.origem_fonte = 'tse' AND v.id_origem = g.id_candidatura JOIN {BRIDGE} d ON {target}"
     )
@@ -132,7 +132,7 @@ def _tse_people(con: Connection, moment: str) -> int:
     official = {
         int(r[0])
         for r in con.execute(
-            f"SELECT DISTINCT id_pessoa FROM {BRIDGE} WHERE source IN ('camara', 'senado')"
+            f"SELECT DISTINCT id_pessoa FROM {BRIDGE} WHERE fonte IN ('camara', 'senado')"
         ).fetchall()
     }
     for component in _components(con.execute(_group_people_sql()).fetchall()):
@@ -143,27 +143,27 @@ def _tse_people(con: Connection, moment: str) -> int:
         survivor = next(iter(officials)) if officials else min(component)
         for absorbed in sorted(component - {survivor}):
             con.execute(
-                "INSERT INTO identity.pessoa_fusao VALUES (?, ?, ?, ?)",
+                "INSERT INTO identity.pessoas_fusoes VALUES (?, ?, ?, ?)",
                 (absorbed, survivor, GROUP_FUSION, moment),
             )
             con.execute(f"UPDATE {BRIDGE} SET id_pessoa = ? WHERE id_pessoa = ?", (survivor, absorbed))
-            con.execute("DELETE FROM identity.pessoa WHERE id_pessoa = ?", (absorbed,))
+            con.execute("DELETE FROM identity.pessoas WHERE id_pessoa = ?", (absorbed,))
     # grupos que ainda não têm pessoa ganham uma; depois toda candidatura do grupo entra na ponte
     con.execute(f"CREATE OR REPLACE TEMP TABLE group_people AS {_group_people_sql()}")
     con.execute(
         "CREATE OR REPLACE TEMP TABLE new_tse_people AS "
-        "SELECT grupo, nextval('identity.seq_pessoa') AS id_pessoa FROM "
+        "SELECT grupo, nextval('identity.seq_pessoas') AS id_pessoa FROM "
         f"(SELECT DISTINCT grupo FROM {GROUPS} WHERE grupo NOT IN (SELECT grupo FROM group_people))"
     )
-    con.execute("INSERT INTO identity.pessoa SELECT id_pessoa, ? FROM new_tse_people", (moment,))
+    con.execute("INSERT INTO identity.pessoas SELECT id_pessoa, ? FROM new_tse_people", (moment,))
     con.execute("INSERT INTO group_people SELECT grupo, id_pessoa FROM new_tse_people")
     # só entra na ponte o grupo com uma pessoa só; o que ainda toca mais de uma fica de fora (teste de lacuna)
     con.execute(
         f"INSERT INTO {BRIDGE} SELECT 'tse', '{ELECTED_TYPE}', g.id_candidatura, p.id_pessoa, ?, ?, ? "
         f"FROM {GROUPS} g JOIN (SELECT grupo, min(id_pessoa) AS id_pessoa FROM group_people GROUP BY grupo "
         "HAVING count(*) = 1) p USING (grupo) "
-        f"WHERE NOT EXISTS (SELECT 1 FROM {BRIDGE} b WHERE b.source = 'tse' AND b.id_type = '{ELECTED_TYPE}' "
-        "AND b.source_id = g.id_candidatura)",
+        f"WHERE NOT EXISTS (SELECT 1 FROM {BRIDGE} b WHERE b.fonte = 'tse' AND b.id_tipo = '{ELECTED_TYPE}' "
+        "AND b.id_na_fonte = g.id_candidatura)",
         (GROUP_METHOD, CONFIRMED_BY, moment),
     )
     return int(scalar(con, "SELECT COUNT(*) FROM new_tse_people"))

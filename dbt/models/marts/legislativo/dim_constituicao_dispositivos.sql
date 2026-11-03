@@ -118,6 +118,7 @@ final as (
 )
 
 select
+    'constituicao' as fonte,
     f.parte,
     f.ordem,
     if(f.nas_assinaturas and f.tipo = 'texto', 'assinaturas', f.tipo) as tipo,
@@ -143,8 +144,9 @@ select
     f.linha as texto,
     f.emenda_do_arquivo as atualizada_ate_emenda,
     'https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988' as fonte_url,
+    f.id_captura,
     cast(c.dt_captura as date) as dt_captura
 
 from final as f
 
-left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = f.id_captura
+left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = f.id_captura

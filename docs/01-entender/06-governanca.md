@@ -31,7 +31,7 @@ Regras (princípio IX da constituição do projeto):
 
 ## 3. Qualidade: acurácia, completude, consistência
 
-Os testes são do **dbt**: genéricos (`unique`, `not_null`, `relationships`) no YAML dos modelos, e singulares em `dbt/tests/` (`reconciliation/` com severidade `error`, `gaps/` com `warn`). Rodam junto com a transformação e **bloqueiam a publicação** se falharem (o `dbt build` não segue para as tabelas que dependem de um teste reprovado). As lacunas conhecidas da fonte são testes `warn`: a contagem de linhas que falharam mede o tamanho da lacuna. O resultado de cada execução é gravado em `metadata.dbt_results` e aparece na página de qualidade da aplicação. Os marts têm ainda **contrato de colunas e tipos**.
+Os testes são do **dbt**: genéricos (`unique`, `not_null`, `relationships`) no YAML dos modelos, e singulares em `dbt/tests/` (`reconciliation/` com severidade `error`, `gaps/` com `warn`). Rodam junto com a transformação e **bloqueiam a publicação** se falharem (o `dbt build` não segue para as tabelas que dependem de um teste reprovado). As lacunas conhecidas da fonte são testes `warn`: a contagem de linhas que falharam mede o tamanho da lacuna. O resultado de cada execução é gravado em `metadata.testes_resultados` e aparece na página de qualidade da aplicação. Os marts têm ainda **contrato de colunas e tipos**.
 
 | Dimensão | Pergunta | Exemplo de teste |
 | --- | --- | --- |
@@ -62,7 +62,7 @@ O que ainda falta: o agendamento. As etapas já são idempotentes e registram ex
 
 ## 5. Linhagem e auditoria
 
-Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta para a execução que a trouxe. Toda execução registra versão do código, linhas lidas e gravadas e resultado. Nos datasets por item, a captura também aponta para cada resposta (`metadata.capture_items`: status HTTP e hash do corpo), e `dado-publico verify` confere os hashes de todo o landing. O passo a passo de como provar a origem de um dado está em [auditoria](../02-fazer/05-auditar.md); mais detalhes em [camadas](03-camadas.md).
+Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta para a execução que a trouxe. Toda execução registra versão do código, linhas lidas e gravadas e resultado. Nos datasets por item, a captura também aponta para cada resposta (`metadata.capturas_itens`: status HTTP e hash do corpo), e `dado-publico verify` confere os hashes de todo o landing. O passo a passo de como provar a origem de um dado está em [auditoria](../02-fazer/05-auditar.md); mais detalhes em [camadas](03-camadas.md).
 
 ## 6. Segurança
 

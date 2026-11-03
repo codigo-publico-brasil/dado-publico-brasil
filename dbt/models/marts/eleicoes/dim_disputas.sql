@@ -11,7 +11,8 @@ select
     v.ue_nome,
     v.qtd_vagas,
     v.dt_posse,
-    v.id_captura
+    v.id_captura,
+    cast(v.dt_captura as date) as dt_captura
 
 from {{ ref('stg_tse__vagas') }} as v
 

@@ -10,19 +10,19 @@ sources:
       sensitivity: publico-agente-publico
       owner: fundador do projeto
     tables:
-      - name: pessoa
+      - name: pessoas
         description: Pessoa do projeto, com chave própria, independente da fonte.
         columns:
           - name: id_pessoa
             tests: [unique, not_null]
-      - name: pessoa_identificador
+      - name: pessoas_identificadores
         description: Ponte entre a chave da pessoa e o identificador em cada fonte, com método e confirmação.
         columns:
           - name: id_pessoa
             tests:
               - not_null
               - relationships:
-                  to: source('identity', 'pessoa')
+                  to: source('identity', 'pessoas')
                   field: id_pessoa
-      - name: pessoa_fusao
+      - name: pessoas_fusoes
         description: Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa.

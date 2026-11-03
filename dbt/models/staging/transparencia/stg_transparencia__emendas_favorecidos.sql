@@ -1,4 +1,6 @@
--- Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica. Inclui pessoa física, com o CPF mascarado.
+-- Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica. Inclui pessoa física, com o CPF mascarado (pela fonte ou pelo projeto, macro mascarar_dado_pessoal).
+with base as (
+
 select
     nullif(nullif(c_digo_da_emenda, 'Sem informação'), 'S/I') as cd_emenda,
     nullif(nullif(c_digo_do_autor_da_emenda, 'Sem informação'), 'S/I') as cd_autor,
@@ -7,8 +9,8 @@ select
     tipo_de_emenda as tipo,
     try_cast(substr(ano_m_s, 1, 4) as integer) as ano,
     try_cast(substr(ano_m_s, 5, 2) as integer) as mes,
-    c_digo_do_favorecido as cd_favorecido,
-    favorecido,
+    mascarar_dado_pessoal(c_digo_do_favorecido, 'favorecido') as cd_favorecido,
+    mascarar_dado_pessoal(favorecido, 'favorecido') as favorecido,
     natureza_jur_dica as natureza_juridica,
     tipo_favorecido,
     uf_favorecido as uf,
@@ -17,3 +19,7 @@ select
     _source_file_id as id_captura
 
 from {{ source('transparencia', 'emendas_favorecidos') }}
+
+)
+
+{{ colunas_auditoria('base') }}

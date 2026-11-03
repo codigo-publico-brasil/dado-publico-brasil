@@ -3,6 +3,8 @@ select
     id_partido,
     sigla,
     sigla_original,
-    nome
+    nome,
+    id_captura,
+    cast(dt_captura as date) as dt_captura
 
 from {{ ref('stg_camara__partidos') }}

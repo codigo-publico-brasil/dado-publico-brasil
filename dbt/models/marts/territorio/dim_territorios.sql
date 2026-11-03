@@ -16,7 +16,8 @@ ufs as (
         'BR' as id_territorio_pai,
         any_value(regiao_sigla) as regiao_sigla,
         cast(null as varchar) as cd_municipio_tse,
-        max(id_captura) as id_captura
+        max(id_captura) as id_captura,
+        cast(max(dt_captura) as date) as dt_captura
 
     from municipios
 
@@ -34,7 +35,8 @@ cidades as (
         cast(m.id_municipio // 100000 as varchar) as id_territorio_pai,
         m.regiao_sigla,
         t.cd_municipio_tse,
-        m.id_captura
+        m.id_captura,
+        cast(m.dt_captura as date) as dt_captura
 
     from municipios as m
 
@@ -52,7 +54,8 @@ pais as (
         cast(null as varchar) as id_territorio_pai,
         cast(null as varchar) as regiao_sigla,
         cast(null as varchar) as cd_municipio_tse,
-        max(id_captura) as id_captura
+        max(id_captura) as id_captura,
+        cast(max(dt_captura) as date) as dt_captura
 
     from municipios
 

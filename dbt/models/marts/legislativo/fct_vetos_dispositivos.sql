@@ -13,10 +13,11 @@ select
     d.fl_possui_votos,
     d.tipo_votacao,
     d.dt_sessao,
+    d.id_captura,
     cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_senado__vetos_dispositivos') }} as d
 
 left join {{ ref('stg_senado__vetos') }} as v on v.id_materia_veto = d.id_materia_veto
 
-left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = d.id_captura
+left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = d.id_captura

@@ -15,6 +15,7 @@ select
     dt_instalacao,
     dt_fim,
     fonte_url,
-    id_captura
+    id_captura,
+    cast(dt_captura as date) as dt_captura
 
 from {{ ref('stg_camara__orgaos') }}

@@ -2,6 +2,8 @@
 -- Nos arquivos de 2002 e 2010 a unidade eleitoral (`SG_UE`) vem como o código do município até para presidente,
 -- governador e deputados: a unidade do cargo é BR para presidente, a UF para os cargos estaduais e federais e o
 -- município para prefeito e vereador, igual à das candidaturas.
+with base as (
+
 with source as (
 
     select
@@ -45,8 +47,14 @@ select
     coalesce(try_cast(qt_votos_nominais_validos as bigint), try_cast(qt_votos_nominais as bigint)) as votos_validos,
     -- os arquivos de 1998 a 2010 chamam de `Média` o eleito por média, que depois vira `Eleito por média`
     case when lower(trim(ds_sit_tot_turno)) = 'média' then 'Eleito por média' else sentence_case(ds_sit_tot_turno) end as resultado,
+    try_cast(cd_eleicao as integer) as cd_eleicao,
+    ds_eleicao as eleicao,
     _source_file_id as id_captura
 
 from source
 
 where coalesce(ds_eleicao, '') not ilike '%suplementar%'  -- as suplementares repetem o sequencial das ordinárias e ficam só no raw
+
+)
+
+{{ colunas_auditoria('base') }}

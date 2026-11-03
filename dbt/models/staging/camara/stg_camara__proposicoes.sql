@@ -12,7 +12,7 @@ renamed as (
         try_cast(numero as integer) as numero,
         try_cast(ano as integer) as ano,
         descricao_tipo,
-        ementa,
+        mascarar_dado_pessoal(ementa, 'cpf') as ementa,
         try_cast(data_apresentacao as timestamp) as dt_apresentacao,
         url_inteiro_teor,
         sentence_case(ultimo_status_descricao_situacao) as situacao,
@@ -27,4 +27,4 @@ renamed as (
 
 )
 
-select * from renamed
+{{ colunas_auditoria('renamed') }}

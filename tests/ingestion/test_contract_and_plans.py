@@ -126,7 +126,7 @@ def test_an_invalid_schedule_is_refused(tmp_path: Path) -> None:
 
 
 def test_unchanged_uses_etag_or_last_modified_with_size() -> None:
-    previous = {"etag": '"a"', "last_modified": "ontem", "size_bytes": 10}
+    previous = {"etag": '"a"', "ultima_modificacao": "ontem", "qtd_bytes": 10}
     assert landing.unchanged(previous, {"etag": '"a"'})
     assert landing.unchanged(previous, {"last_modified": "ontem", "size": "10"})
     assert not landing.unchanged(previous, {"last_modified": "ontem", "size": "11"})

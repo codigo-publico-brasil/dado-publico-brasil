@@ -97,9 +97,12 @@ select
     p.dt_inicio,
     p.dt_fim,
     p.causa_fim,
-    p.id_captura
+    p.id_captura,
+    cast(k.dt_captura as date) as dt_captura
 
 from periodos as p
 
-left join {{ ref('stg_identity__pessoa_identificadores') }} as i
+left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = p.id_captura
+
+left join {{ ref('stg_identity__pessoas_identificadores') }} as i
     on i.fonte = p.fonte and i.id_tipo = p.id_tipo and i.id_na_fonte = p.id_na_fonte

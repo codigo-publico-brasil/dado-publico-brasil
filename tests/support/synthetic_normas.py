@@ -52,6 +52,10 @@ def _vide(posterior: str, nome: str, comentario: str) -> dict[str, str]:
         "nomeNormaPosterior": nome,
         "datapub": "16/02/2024",
         "nomePub": f"Publicação de {nome}",
+        "pagina": "1",
+        "coluna": "2",
+        "edicao": "10",
+        "tipoEdicao": "Ordinária",
         "comentario": comentario,
     }
 

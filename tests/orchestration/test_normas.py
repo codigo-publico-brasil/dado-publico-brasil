@@ -190,14 +190,14 @@ def test_the_cross_check_against_the_senate_reports_amendments_the_text_cites_an
     con, _ = full
     unknown = scalar(
         con,
-        "SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%emendas_do_texto_desconhecidas_do_senado%'",
+        "SELECT qtd_falhas FROM metadata.testes_resultados WHERE id_no LIKE '%emendas_do_texto_desconhecidas_do_senado%'",
     )
     assert (
         unknown == 2
     )  # 20 e 41 não constam como alteração permanente no Senado; a 97 (só no Senado) é esperada
     beyond = scalar(
         con,
-        "SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%constituicao_cita_emenda_posterior%'",
+        "SELECT qtd_falhas FROM metadata.testes_resultados WHERE id_no LIKE '%constituicao_cita_emenda_posterior%'",
     )
     assert beyond == 0
 
@@ -206,6 +206,6 @@ def test_the_catalog_gap_is_measured_when_the_year_of_a_detailed_norm_is_not_loa
     con, _ = full
     missing = scalar(
         con,
-        "SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%relacoes_de_norma_fora_do_catalogo%'",
+        "SELECT qtd_falhas FROM metadata.testes_resultados WHERE id_no LIKE '%relacoes_de_norma_fora_do_catalogo%'",
     )
     assert missing == 1  # a Constituição (1988) não está nos anos carregados

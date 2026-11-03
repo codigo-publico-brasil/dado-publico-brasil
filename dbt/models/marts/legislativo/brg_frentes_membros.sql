@@ -5,6 +5,8 @@ select
     titulo,
     id_legislatura,
     dt_inicio,
-    dt_fim
+    dt_fim,
+    id_captura,
+    cast(dt_captura as date) as dt_captura
 
 from {{ ref('int_frentes_membros_ligados') }}

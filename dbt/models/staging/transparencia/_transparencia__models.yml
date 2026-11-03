@@ -30,7 +30,13 @@ models:
       - {name: valor_restos_a_pagar_inscritos, description: "Restos a pagar inscritos em reais."}
       - {name: valor_restos_a_pagar_cancelados, description: "Restos a pagar cancelados em reais."}
       - {name: valor_restos_a_pagar_pagos, description: "Restos a pagar pagos em reais."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: cd_uf_ibge, description: "Código da UF no IBGE, como a fonte informa."}
+      - {name: cd_plano_orcamentario, description: "Código do plano orçamentário, como a fonte informa."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_transparencia__emendas_convenios
     description: Convênios firmados com recursos de emendas parlamentares.
     columns:
@@ -46,7 +52,11 @@ models:
       - {name: objeto, description: "O que foi pactuado entre o concedente federal e o convenente."}
       - {name: convenio_numero, description: "Número do convênio."}
       - {name: valor, description: "Valor declarado em reais, sem correção."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_transparencia__emendas_favorecidos
     description: Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica (inclui pessoa física, com CPF mascarado).
     columns:
@@ -57,11 +67,15 @@ models:
       - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
       - {name: ano, description: "Ano do evento."}
       - {name: mes, description: "Mês do pagamento."}
-      - {name: cd_favorecido, description: "CNPJ, código da unidade gestora ou CPF mascarado do favorecido, como a fonte informa."}
-      - {name: favorecido, description: "Nome do favorecido (pessoa física inclusive)."}
+      - {name: cd_favorecido, description: "CNPJ, código da unidade gestora ou CPF mascarado do favorecido. A fonte já mascara o CPF; quando vem com 11 dígitos, o projeto mascara (***.nnn.nnn-**); o original fica no landing."}
+      - {name: favorecido, description: "Nome do favorecido (pessoa física inclusive). Número de CPF de 11 dígitos no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing."}
       - {name: natureza_juridica, description: "Natureza jurídica do favorecido."}
       - {name: tipo_favorecido, description: "Tipo do favorecido como a fonte informa: Pessoa Jurídica, Pessoa Fisica, Unidade Gestora, Inscrição Genérica, Sem informação ou Inválido (o dicionário do portal cita só pessoa física e jurídica; em parte das linhas a fonte grafa Inscrição Genéric, truncado)."}
       - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
       - {name: municipio, description: "Município de aplicação."}
       - {name: valor, description: "Valor declarado em reais, sem correção."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}

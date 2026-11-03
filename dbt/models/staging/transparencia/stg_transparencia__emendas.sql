@@ -1,4 +1,6 @@
 -- Emendas parlamentares: uma linha por emenda, localidade, função, programa e ação. "Sem informação" vira vazio.
+with base as (
+
 select
     nullif(nullif(c_digo_da_emenda, 'Sem informação'), 'S/I') as cd_emenda,
     try_cast(ano_da_emenda as integer) as ano,
@@ -26,6 +28,12 @@ select
     try_cast(replace(valor_restos_a_pagar_inscritos, ',', '.') as decimal(18, 2)) as valor_restos_a_pagar_inscritos,
     try_cast(replace(valor_restos_a_pagar_cancelados, ',', '.') as decimal(18, 2)) as valor_restos_a_pagar_cancelados,
     try_cast(replace(valor_restos_a_pagar_pagos, ',', '.') as decimal(18, 2)) as valor_restos_a_pagar_pagos,
+    c_digo_uf_ibge as cd_uf_ibge,
+    c_digo_plano_or_ament_rio as cd_plano_orcamentario,
     _source_file_id as id_captura
 
 from {{ source('transparencia', 'emendas') }}
+
+)
+
+{{ colunas_auditoria('base') }}

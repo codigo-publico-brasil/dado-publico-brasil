@@ -8,11 +8,12 @@ select
     a.partido_sigla,
     a.uf_sigla,
     a.proponente,
-    a.id_captura
+    a.id_captura,
+    a.dt_captura
 
 from {{ ref('stg_camara__proposicoes_autores') }} as a
 
-left join {{ ref('stg_identity__pessoa_identificadores') }} as i
+left join {{ ref('stg_identity__pessoas_identificadores') }} as i
     on i.fonte = '{{ var("source_camara") }}'
     and i.id_tipo = '{{ var("id_type_camara") }}'
     and i.id_na_fonte = cast(a.id_deputado as varchar)

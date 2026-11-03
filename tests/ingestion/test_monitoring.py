@@ -13,7 +13,8 @@ from dado_publico_brasil.ingestion.contract import SourceContract
 
 def checks(con: Connection, name: str) -> list[tuple[str, str]]:
     return con.execute(
-        "SELECT status, detail FROM metadata.source_checks WHERE check_name = ? ORDER BY id", (name,)
+        "SELECT resultado, detalhe FROM metadata.fontes_verificacoes WHERE verificacao = ? ORDER BY id_verificacao",
+        (name,),
     ).fetchall()
 
 

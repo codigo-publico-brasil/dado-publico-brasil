@@ -149,23 +149,31 @@ def load_capture(
 ) -> int:
     """Carrega uma captura e a marca como carregada. Devolve as linhas carregadas."""
     dataset = contract.datasets[capture["dataset"]]
-    with runs.track(con, "load", contract.source, dataset.name, capture["year"]) as run:
+    with runs.track(con, "load", contract.source, dataset.name, capture["particao"]) as run:
         stats = load_file(
-            settings, contract, dataset, settings.storage_root / capture["path"], capture["id"], con
+            settings,
+            contract,
+            dataset,
+            settings.storage_root / capture["caminho"],
+            capture["id_captura"],
+            con,
         )
-        monitoring.check_load(con, contract.source, dataset.name, capture["year"], stats)
+        monitoring.check_load(con, contract.source, dataset.name, capture["particao"], stats)
         if not dataset.foreach:  # lotes têm tamanhos diferentes por natureza
-            monitoring.check_volume(con, contract.source, dataset.name, capture["year"], stats["read"])
+            monitoring.check_volume(con, contract.source, dataset.name, capture["particao"], stats["read"])
             table = f"{contract.schema}.{normalize(dataset.name)}"
-            monitoring.check_removed(con, contract.source, dataset.name, capture["year"], table, capture)
+            monitoring.check_removed(con, contract.source, dataset.name, capture["particao"], table, capture)
         run.rows_in, run.rows_out = stats["read"], stats["loaded"]
-        con.execute("UPDATE metadata.captures SET loaded_at = ? WHERE id = ?", (runs.now(), capture["id"]))
+        con.execute(
+            "UPDATE metadata.capturas SET dt_carga = ? WHERE id_captura = ?",
+            (runs.now(), capture["id_captura"]),
+        )
         return stats["loaded"]
 
 
 def backfill_ingested_at(con: Connection, contract: SourceContract) -> int:
     """Cria `_ingested_at` nas tabelas do raw que ainda não a têm e preenche as linhas antigas com a data da
-    carga do arquivo de origem (`metadata.captures.loaded_at`). Devolve as linhas preenchidas."""
+    carga do arquivo de origem (`metadata.capturas.dt_carga`). Devolve as linhas preenchidas."""
     filled = 0
     for dataset in contract.datasets.values():
         table = f"{contract.schema}.{normalize(dataset.name)}"
@@ -180,8 +188,9 @@ def backfill_ingested_at(con: Connection, contract: SourceContract) -> int:
         con.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS _ingested_at TIMESTAMP WITH TIME ZONE")
         n = con.execute(f"SELECT count(*) FROM {table} WHERE _ingested_at IS NULL").fetchone()
         con.execute(
-            f"UPDATE {table} AS t SET _ingested_at = c.loaded_at::TIMESTAMPTZ FROM metadata.captures AS c "
-            "WHERE c.id = t._source_file_id AND t._ingested_at IS NULL"
+            f"UPDATE {table} AS t SET _ingested_at = (c.dt_carga AT TIME ZONE 'UTC') FROM metadata.capturas "
+            f"AS c "
+            "WHERE c.id_captura = t._source_file_id AND t._ingested_at IS NULL"
         )
         filled += int(n[0]) if n else 0
     return filled
@@ -195,7 +204,7 @@ def recheck_headers(con: Connection, settings: Settings, contract: SourceContrac
         dataset = contract.datasets[capture["dataset"]]
         if dataset.raw and not dataset.foreach:
             monitoring.check_header(
-                con, contract, dataset, capture["year"], settings.storage_root / capture["path"]
+                con, contract, dataset, capture["particao"], settings.storage_root / capture["caminho"]
             )
             n += 1
     return n
@@ -217,7 +226,7 @@ def load_pending(
     for capture in landing.current_captures(con, contract.source):
         if only_dataset not in (None, capture["dataset"]) or not contract.datasets[capture["dataset"]].raw:
             continue
-        if capture["loaded_at"] is not None and not rebuild:
+        if capture["dt_carga"] is not None and not rebuild:
             continue
         if rebuild and capture["dataset"] not in reset:
             reset.add(capture["dataset"])

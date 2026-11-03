@@ -46,4 +46,6 @@ def test_votes_are_summed_per_candidacy_and_the_annulled_ones_stay_out_of_the_va
 def test_the_votes_total_reconciles_between_staging_and_marts(full: Env) -> None:
     con, _ = full
     for name in ("bens_perdidos_do_staging_aos_marts", "votos_de_candidatos_perdidos_do_staging_aos_marts"):
-        assert scalar(con, f"SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%{name}%'") == 0
+        assert (
+            scalar(con, f"SELECT qtd_falhas FROM metadata.testes_resultados WHERE id_no LIKE '%{name}%'") == 0
+        )

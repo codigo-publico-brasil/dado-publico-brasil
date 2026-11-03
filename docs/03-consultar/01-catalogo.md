@@ -139,10 +139,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_camara__votos` | Voto de cada deputado em cada votação nominal. Voto vazio fica como texto vazio. | publico-agente-publico |  |
 | `stg_constituicao__linhas` | Uma linha por parágrafo de texto do arquivo da Constituição e do ADCT, como publicado. | publico-agente-publico |  |
 | `stg_ibge__municipios` | Municípios do IBGE, uma linha por município. | publico-agente-publico |  |
-| `stg_identity__pessoa_fusoes` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa, uma linha por chave absorvida. | publico-agente-publico |  |
-| `stg_identity__pessoa_identificadores` | Identificadores de cada pessoa em cada fonte. | publico-agente-publico |  |
 | `stg_identity__pessoas` | Pessoas do projeto (chave própria). | publico-agente-publico |  |
-| `stg_metadata__captures` | Capturas dos arquivos da fonte (um arquivo, uma linha). `source_file_id` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
+| `stg_identity__pessoas_fusoes` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa, uma linha por chave absorvida. | publico-agente-publico |  |
+| `stg_identity__pessoas_identificadores` | Identificadores de cada pessoa em cada fonte. | publico-agente-publico |  |
+| `stg_metadata__capturas` | Capturas dos arquivos da fonte (um arquivo, uma linha). `id_captura` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
 | `stg_senado__exercicios` | Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento. | publico-agente-publico |  |
 | `stg_senado__normas` | Catálogo das normas federais, uma linha por norma, só metadados, com a ementa padronizada e a original. | publico-agente-publico |  |
 | `stg_senado__normas_publicacoes` | Publicações de cada norma detalhada (e da Constituição) no Diário Oficial, uma linha por norma e publicação. | publico-agente-publico |  |
@@ -255,17 +255,17 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
-| `pessoa` | Pessoa do projeto, com chave própria, independente da fonte. | publico-agente-publico |  |
-| `pessoa_fusao` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa. | publico-agente-publico |  |
-| `pessoa_identificador` | Ponte entre a chave da pessoa e o identificador em cada fonte, com método e confirmação. | publico-agente-publico |  |
+| `pessoas` | Pessoa do projeto, com chave própria, independente da fonte. | publico-agente-publico |  |
+| `pessoas_fusoes` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa. | publico-agente-publico |  |
+| `pessoas_identificadores` | Ponte entre a chave da pessoa e o identificador em cada fonte, com método e confirmação. | publico-agente-publico |  |
 
 ## metadata
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
-| `captures` | Cada arquivo recebido da fonte, com URL, hash, caminho no landing e datas. | controle |  |
-| `dbt_results` | Resultado de cada modelo e teste do dbt na última execução de cada comando. | controle |  |
-| `runs` | Cada execução de etapa do pipeline, com início, fim, versão do código e resultado. | controle |  |
+| `capturas` | Cada arquivo recebido da fonte, com URL, hash, caminho no landing e datas. | controle |  |
+| `execucoes` | Cada execução de etapa do pipeline, com início, fim, versão do código e resultado. | controle |  |
+| `testes_resultados` | Resultado de cada modelo e teste do dbt na última execução de cada comando. | controle |  |
 
 ## Dicionário de colunas dos marts
 
@@ -448,6 +448,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_legislatura` | integer | Legislatura do registro. |  |
 | `dt_inicio` | date | Início da participação, quando a fonte informa. |  |
 | `dt_fim` | date | Fim da participação, quando a fonte informa. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.brg_normas_relacoes
 
@@ -462,6 +464,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_publicacao` | date | Data de publicação do ato posterior. |  |
 | `publicacao` | varchar | Publicação do ato posterior no Diário Oficial. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.brg_orgaos_membros
 
@@ -476,6 +479,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `uf` | varchar | UF informada no registro. |  |
 | `dt_inicio` | date | Início da participação. |  |
 | `dt_fim` | date | Fim da participação; vazio se a fonte não informa. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.brg_pessoas_ocupacoes
 
@@ -489,6 +494,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `ano_inicio_original` | varchar | Ano de início exatamente como a fonte escreve. |  |
 | `ano_fim` | integer | Ano de fim; vazio quando a fonte escreve outra coisa que um ano. |  |
 | `ano_fim_original` | varchar | Ano de fim exatamente como a fonte escreve. |  |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.brg_proposicoes_autorias
 
@@ -503,6 +511,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `tipo_autor` | varchar | Tipo do autor na fonte (deputado, órgão, outro). |  |
 | `proponente` | integer | 1 quando consta como proponente; 0 caso contrário. |  |
 | `proposicao_fonte_url` | varchar | Endereço da proposição na fonte oficial. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.brg_votacoes_proposicoes
 
@@ -512,6 +522,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_votacao` | varchar | Identificador da votação na fonte. |  |
 | `id_proposicao` | varchar | Identificador da proposição (Câmara) ou da matéria (Senado) na fonte; liga a fct_proposicoes (fonte e id_proposicao). O teste de aviso mede as que não estão carregadas lá. |  |
 | `papel` | varchar | Papel da proposição na votação: afetada, objeto (Câmara) ou materia (Senado). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.dim_constituicao_dispositivos
 
@@ -532,6 +544,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `atualizada_ate_emenda` | integer | Número da emenda constitucional até a qual o arquivo está atualizado. |  |
 | `fonte_url` | varchar | Página oficial da Câmara com o texto atualizado. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.dim_disputas
 
@@ -546,7 +560,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `ue_nome` | varchar | Nome da unidade eleitoral, com caixa padronizada. |  |
 | `qtd_vagas` | integer | Número de vagas da disputa, como o TSE informa. |  |
 | `dt_posse` | date | Data de posse como o arquivo de vagas do TSE informa; o campo não é confiável em todos os anos (issue 71) e não substitui a regra legal do cargo. |  |
-| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.dim_eleicoes
 
@@ -558,7 +573,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `cd_eleicao` | integer | Código da eleição no TSE. |  |
 | `nome` | varchar | Descrição da eleição, como o TSE informa. |  |
 | `fl_ordinaria` | boolean | DERIVADO: verdadeiro quando o código cobre mais unidades eleitorais que os demais do ano em algum cargo (as suplementares e renovadas cobrem poucas). Regra do projeto, não informação do TSE. |  |
-| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de vagas de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.dim_frentes
 
@@ -571,6 +587,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_legislatura` | integer | Legislatura em que foi criada. |  |
 | `situacao` | varchar | Situação informada pela fonte. |  |
 | `id_pessoa_coordenador` | bigint | Pessoa coordenadora (dim_pessoas_cadastro); vazia se a fonte não informa ou não é deputado. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.dim_legislaturas
 
@@ -581,6 +599,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_inicio` | date | Início oficial da legislatura. |  |
 | `dt_fim` | date | Fim oficial da legislatura. |  |
 | `ano_eleicao` | integer | Ano da eleição que a formou. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.dim_municipios
 
@@ -597,6 +617,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `regiao_intermediaria` | varchar | Nome da região geográfica intermediária do município. |  |
 | `nome_busca` | varchar | Nome sem acento e em minúsculas, para buscar. |  |
 | `dt_captura` | date | Data da captura da lista de municípios. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.dim_municipios_codigos_tse
 
@@ -626,7 +647,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_instalacao` | date | Data de instalação, quando a fonte informa. |  |
 | `dt_fim` | date | Fim do órgão, quando a fonte informa. |  |
 | `fonte_url` | varchar | Endereço do órgão na fonte oficial. |  |
-| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.dim_partidos_camara
 
@@ -637,6 +659,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `sigla` | varchar | Sigla do partido sem os asteriscos que a Câmara põe depois dela; mais de um registro pode ter a mesma sigla (veja sigla_original). |  |
 | `sigla_original` | varchar | Sigla exatamente como a Câmara publica, com os asteriscos (por exemplo, a mesma sigla com um, dois ou três asteriscos, registros diferentes). O significado dos asteriscos não consta nas fontes que consultamos. |  |
 | `nome` | varchar | Nome do partido, com caixa padronizada. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.dim_partidos_linhagem
 
@@ -700,6 +724,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `qtd_propostas` | bigint | Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado). |  |
 | `qtd_votos` | bigint | Quantidade de votos nominais registrados. |  |
 | `dt_captura` | date | Data da captura do cadastro de deputados. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.dim_territorios
 
@@ -713,7 +738,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_territorio_pai` | varchar | Território que contém este: a UF para o município e o país para a UF; vazio no país. |  |
 | `regiao_sigla` | varchar | Sigla da grande região (N, NE, SE, S, CO); vazia no país. |  |
 | `cd_municipio_tse` | varchar | Código do município no TSE (unidade eleitoral das eleições municipais); vazio quando nome e UF não ligam a um só município e fora dos municípios. |  |
-| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.fct_campanhas
 
@@ -764,7 +790,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `foto_arquivo` | varchar | Nome do arquivo da foto oficial no pacote do TSE; vazio quando o pacote não traz foto do candidato. |  |
 | `foto_caminho` | varchar | Caminho da foto na pasta de fotos extraída pelo comando fotos (ano, UF do pacote e sequencial); vazio sem foto. |  |
 | `foto_pacote_url` | varchar | Endereço oficial do pacote de fotos do TSE que contém a foto. |  |
-| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.fct_candidaturas_bens
 
@@ -776,10 +803,11 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `ano_eleicao` | integer | Ano da eleição. |  |
 | `ordem` | integer | Número do bem na declaração do candidato. |  |
 | `tipo` | varchar | Tipo do bem (imóvel, veículo, aplicação financeira etc.). |  |
-| `descricao` | varchar | Descrição do bem, como o candidato declarou. |  |
+| `descricao` | varchar | Descrição do bem, como o candidato declarou. CPF (***.nnn.nnn-**) e número de agência e de conta bancária (após rótulo como agência, ag, conta, c/c, cc: 5 dígitos ou mais, ou com dígito verificador; 4 dígitos sem ano só em texto de banco) são mascarados (*****) pelo projeto; ano, cilindrada, placa e outros números não são tocados, e conta escrita fora desses padrões pode ficar visível; o original fica no landing. |  |
 | `valor` | decimal(18,2) | Valor declarado em reais, sem correção. |  |
 | `dt_atualizacao` | date | Data da última atualização do bem na declaração. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_candidaturas_votos
 
@@ -796,6 +824,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `votos_validos` | bigint | Votos nominais válidos. |  |
 | `municipios` | bigint | Em quantos municípios o candidato teve votos. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_constituicao_alteracoes
 
@@ -809,6 +838,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `emenda_numero` | integer | Número da emenda citada na nota. |  |
 | `emenda_ano` | integer | Ano da emenda; só quando a nota cita uma emenda. |  |
 | `nota` | varchar | A nota como o texto publica, sem os parênteses. |  |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.fct_emendas
 
@@ -840,6 +872,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `valor_restos_a_pagar_cancelados` | decimal(18,2) | Restos a pagar cancelados em reais. |  |
 | `valor_restos_a_pagar_pagos` | decimal(18,2) | Restos a pagar pagos em reais. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_emendas_convenios
 
@@ -857,6 +890,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `convenio_numero` | varchar | Número do convênio. |  |
 | `valor` | decimal(18,2) | Valor do convênio em reais: a participação do concedente, somada à parcela de rendimento de aplicação financeira (código 999), quando houver. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_emendas_favorecidos
 
@@ -870,8 +904,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `tipo` | varchar | Tipo da emenda. |  |
 | `ano` | integer | Ano do pagamento. |  |
 | `mes` | integer | Mês do pagamento. |  |
-| `cd_favorecido` | varchar | CNPJ, código da unidade gestora ou CPF mascarado do favorecido, como a fonte informa. | sim |
-| `favorecido` | varchar | Nome do favorecido (pessoa física inclusive). | sim |
+| `cd_favorecido` | varchar | CNPJ, código da unidade gestora ou CPF mascarado do favorecido. A fonte já mascara o CPF; quando vem com 11 dígitos, o projeto mascara (***.nnn.nnn-**); o original fica no landing. | sim |
+| `favorecido` | varchar | Nome do favorecido (pessoa física inclusive). Número de CPF de 11 dígitos no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing. | sim |
 | `natureza_juridica` | varchar | Natureza jurídica do favorecido. |  |
 | `tipo_favorecido` | varchar | Tipo do favorecido como a fonte informa: Pessoa Jurídica, Pessoa Fisica, Unidade Gestora, Inscrição Genérica, Sem informação ou Inválido (o dicionário do portal cita só pessoa física e jurídica; em parte das linhas a fonte grafa Inscrição Genéric, truncado). |  |
 | `uf` | varchar | UF do favorecido. |  |
@@ -879,6 +913,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `valor` | decimal(18,2) | Valor recebido pelo favorecido em reais. |  |
 | `fl_contem_dado_pessoal` | boolean | Verdadeiro quando a linha identifica uma pessoa física (CPF mascarado, tipo pessoa física ou inscrição genérica). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_eventos
 
@@ -896,7 +931,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_territorio` | varchar | Território do evento (dim_territorios), quando o tipo exige. |  |
 | `id_partido` | integer | Partido do evento (dim_partidos), quando o tipo exige. |  |
 | `base` | varchar | Como o evento é obtido: informado pela fonte ou derivado de regra do projeto. |  |
-| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures); vazia quando o evento vem de outra tabela do projeto. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto. |  |
 
 ### marts.fct_exercicios
 
@@ -912,7 +947,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_inicio` | date | Início do período, como a fonte informa. |  |
 | `dt_fim` | date | Fim do período; vazio enquanto está em exercício. |  |
 | `causa_fim` | varchar | Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso. |  |
-| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.fct_mandatos
 
@@ -932,7 +968,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_inicio` | date | Início do mandato. Derivado da Constituição com a vigência por ano de eleição (dim_cargos_posse) onde ela fixa a data; sem regra (vereador, deputado estadual), a data de posse do TSE quando cai no ano seguinte ao da eleição e a eleição não é a do ano corrente. Vazio nos demais casos. |  |
 | `base_dt_inicio` | varchar | Como dt_inicio foi obtida: derivado (regra da Constituição, com artigo e vigência em dim_cargos_posse) ou informado (data do TSE, só onde a Constituição não fixa a data). Vazio quando dt_inicio é vazio. |  |
 | `dt_fim_prevista` | date | DERIVADO: dt_inicio mais a duração do cargo na Constituição, menos um dia. É o fim previsto, não o fim real (cassação, renúncia e morte não entram). |  |
-| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.fct_normas
 
@@ -952,6 +989,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `apelido` | varchar | Apelido popular quando a fonte informa (por exemplo, Lei de Diretrizes Orçamentárias - LDO 2021). |  |
 | `fonte_url` | varchar | Página oficial da norma no Senado. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_normas_geradas
 
@@ -968,6 +1006,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `descricao` | varchar | Descrição oficial da norma. |  |
 | `veiculo_publicacao` | varchar | Veículo de publicação (por exemplo, DOU). |  |
 | `dt_captura` | date | Data da captura do lote de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_normas_publicacoes
 
@@ -983,6 +1022,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `coluna` | varchar | Coluna da página. |  |
 | `fl_tem_texto` | boolean | A fonte informa que há o texto da publicação. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_pessoas_fusoes
 
@@ -1008,7 +1048,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_ultimo_registro` | date | Só na Câmara: data do último registro com este partido; não é o fim da filiação. |  |
 | `id_candidatura` | varchar | Só no TSE: candidatura pela qual a pessoa concorreu por este partido. |  |
 | `fl_mais_recente` | boolean | Verdadeiro na linha mais recente da pessoa (maior ano de referência; na Câmara, o último registro). É o partido mais recente que as fontes mostram, não necessariamente o de hoje. |  |
-| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.fct_proposicoes
 
@@ -1017,14 +1058,15 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fonte` | varchar | Fonte oficial do registro (por exemplo, camara). |  |
 | `id_proposicao` | varchar | Identificador da proposição na fonte. |  |
 | `sigla` | varchar | Sigla do tipo da proposição, número e ano. |  |
-| `ementa` | varchar | Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista. |  |
-| `ementa_oficial` | varchar | Texto oficial, exatamente como veio. |  |
+| `ementa` | varchar | Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing. |  |
+| `ementa_oficial` | varchar | Texto oficial da fonte, sem outra alteração além da máscara do CPF que vier após o rótulo CPF (***.nnn.nnn-**, feita pelo projeto); o original fica no landing. |  |
 | `dt_apresentacao` | date | Data de apresentação. |  |
 | `situacao` | varchar | Situação atual segundo a fonte. |  |
 | `orgao_ultimo_status` | varchar | Órgão do último andamento. |  |
 | `dt_ultimo_status` | date | Data do último andamento. |  |
 | `fonte_url` | varchar | Endereço da proposição na fonte oficial. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_proposicoes_tramitacoes
 
@@ -1040,6 +1082,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `situacao` | varchar | Situação da proposição após o andamento. |  |
 | `despacho` | varchar | Texto do despacho, como a fonte informa. |  |
 | `dt_captura` | date | Data da captura do lote de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_resultados
 
@@ -1055,7 +1098,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `qtd_votos_nominais` | bigint | Votos nominais do candidato no turno, somados de todos os municípios e zonas. |  |
 | `percentual_votos_validos` | decimal(5,2) | Percentual dos votos válidos do candidato sobre os votos válidos de todos os candidatos da mesma disputa e turno, sem votos de legenda; vazio sem votos carregados. |  |
 | `fl_mais_votado_no_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no turno; vazio sem votos carregados ou em cargo de várias vagas. |  |
-| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.fct_vetos
 
@@ -1086,6 +1130,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fl_em_tramitacao` | boolean | O veto ainda tramita. |  |
 | `fonte_url` | varchar | Página oficial da matéria do veto no Senado. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_vetos_dispositivos
 
@@ -1104,6 +1149,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `tipo_votacao` | varchar | Forma da votação (painel ou cédula); vazia quando não foi apreciado. |  |
 | `dt_sessao` | date | Data da sessão do Congresso que apreciou o dispositivo. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_vetos_votos
 
@@ -1118,6 +1164,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `voto` | varchar | Voto como a fonte informa (Sim, Não, Branco, Abstenção...). |  |
 | `sessao` | varchar | Sessão do Congresso, como a fonte informa. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_votacoes
 
@@ -1127,7 +1174,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_votacao` | varchar | Identificador da votação na fonte. |  |
 | `dt_votacao` | date | Data da votação. |  |
 | `orgao_sigla` | varchar | Sigla do órgão em que ocorreu. |  |
-| `descricao` | varchar | Descrição oficial da votação, com caixa padronizada. |  |
+| `descricao` | varchar | Descrição oficial da votação, com caixa padronizada. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing. |  |
 | `aprovada` | integer | 1 se a fonte registra aprovação; 0 se não; vazio se não informa. |  |
 | `votos_sim` | integer | Total de votos Sim informado pela fonte. |  |
 | `votos_nao` | integer | Total de votos Não informado pela fonte. |  |
@@ -1135,6 +1182,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `proposicoes` | varchar | Proposições ligadas à votação, separadas por ponto e vírgula. |  |
 | `fl_votacao_secreta` | boolean | Verdadeiro se a votação foi secreta; vazio onde a fonte não informa (Câmara). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
 ### marts.fct_votos
 
@@ -1148,4 +1196,5 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_partido` | integer | Partido na data do voto (dim_partidos). Vazio para voto sem partido e para sigla não curada. |  |
 | `partido_na_fonte` | varchar | Sigla do partido como a fonte informa no voto. |  |
 | `uf` | varchar | UF do parlamentar no voto, como a fonte informa. |  |
-| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.captures). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
