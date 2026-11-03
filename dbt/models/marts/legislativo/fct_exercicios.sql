@@ -1,9 +1,13 @@
--- Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica (nada derivado de regra):
+-- Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica:
 --  - Câmara: o histórico do deputado é uma sequência de entradas e saídas; o período vai de uma entrada em exercício
 --    (posse, reassunção, suplente que assume) até a primeira saída seguinte (licença, vacância, fim de mandato).
 --  - Senado: os períodos de exercício já vêm prontos, de titular e de suplentes.
 -- Sem fim quando o período está em curso. Vereador, prefeito, governador e presidente não entram: não há fonte oficial
 -- de exercício carregada para eles (o mandato deles está em fct_mandatos).
+-- Três colunas ligam o período ao resto e são DERIVADAS, marcadas: `id_candidatura` (o mandato que o período cumpre: o
+-- início cai dentro da janela do mandato, com 31 dias de folga para registro antes da posse; vazio para o suplente que não
+-- foi eleito), `id_territorio` (a UF da fonte em dim_territorios) e `id_partido` com `base_partido` (informado: o partido do
+-- histórico da Câmara no início do período; derivado: o último registrado até o ano do início, em fct_pessoas_partidos).
 with marcos as (
 
     -- um marco por deputado, legislatura e instante: entrada em exercício ou saída dele. A convocação de suplente não é
@@ -88,26 +92,96 @@ periodos as (
 
     from {{ ref('stg_senado__exercicios') }}
 
+),
+
+exercicios as (
+
+    select
+        p.fonte,
+        p.id_exercicio,
+        i.id_pessoa,
+        p.id_cargo,
+        t.id_territorio,
+        p.condicao_na_fonte,
+        p.id_legislatura,
+        p.uf,
+        p.dt_inicio,
+        p.dt_fim,
+        p.dt_mandato_fim,
+        p.causa_fim,
+        p.id_captura,
+        cast(k.dt_captura as date) as dt_captura
+
+    from periodos as p
+
+    left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = p.id_captura
+
+    left join {{ ref('stg_identity__pessoas_identificadores') }} as i
+        on i.fonte = p.fonte and i.id_tipo = p.id_tipo and i.id_na_fonte = p.id_na_fonte
+
+    left join {{ ref('dim_territorios') }} as t on t.tipo = 'uf' and t.sigla = p.uf
+
+),
+
+mandato_cumprido as (
+
+    select e.id_exercicio, m.id_candidatura
+
+    from exercicios as e
+
+    inner join {{ ref('fct_mandatos') }} as m
+        on m.id_pessoa = e.id_pessoa
+        and m.id_cargo = e.id_cargo
+        and e.dt_inicio between m.dt_inicio - interval 31 day and m.dt_fim_prevista
+
+    qualify row_number() over (partition by e.id_exercicio order by m.dt_inicio desc) = 1
+
+),
+
+partido_informado as (
+
+    -- o período do histórico da Câmara que contém o início do exercício
+    select e.id_exercicio, arg_max(pp.id_partido, pp.dt_inicio) as id_partido
+
+    from exercicios as e
+
+    inner join {{ ref('fct_pessoas_partidos') }} as pp
+        on pp.id_pessoa = e.id_pessoa
+        and pp.base = 'historico_de_deputados'
+        and pp.id_partido is not null
+        and e.dt_inicio between pp.dt_inicio and pp.dt_ultimo_registro
+
+    group by e.id_exercicio
+
+),
+
+partido_derivado as (
+
+    -- o partido que a pessoa tinha no ano do início (o último registrado até lá)
+    select e.id_exercicio, arg_max(pp.id_partido, pp.ano_referencia) as id_partido
+
+    from exercicios as e
+
+    inner join {{ ref('fct_pessoas_partidos') }} as pp
+        on pp.id_pessoa = e.id_pessoa and pp.ano_referencia <= year(e.dt_inicio)
+
+    group by e.id_exercicio
+
 )
 
 select
-    p.fonte,
-    p.id_exercicio,
-    i.id_pessoa,
-    p.id_cargo,
-    p.condicao_na_fonte,
-    p.id_legislatura,
-    p.uf,
-    p.dt_inicio,
-    p.dt_fim,
-    p.dt_mandato_fim,
-    p.causa_fim,
-    p.id_captura,
-    cast(k.dt_captura as date) as dt_captura
+    e.*,
+    mc.id_candidatura,
+    coalesce(pinf.id_partido, pd.id_partido) as id_partido,
+    case
+        when pinf.id_partido is not null then 'informado'
+        when pd.id_partido is not null then 'derivado'
+    end as base_partido
 
-from periodos as p
+from exercicios as e
 
-left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = p.id_captura
+left join mandato_cumprido as mc on mc.id_exercicio = e.id_exercicio
 
-left join {{ ref('stg_identity__pessoas_identificadores') }} as i
-    on i.fonte = p.fonte and i.id_tipo = p.id_tipo and i.id_na_fonte = p.id_na_fonte
+left join partido_informado as pinf on pinf.id_exercicio = e.id_exercicio
+
+left join partido_derivado as pd on pd.id_exercicio = e.id_exercicio

@@ -18,6 +18,12 @@ models:
           - relationships: {to: ref('dim_disputas'), field: id_disputa}
           - not_null: {config: {severity: warn}}
         description: "Disputa da candidatura (dim_disputas); vazio quando o arquivo de vagas do TSE não traz a unidade do candidato. O teste de aviso mede quantas ficam assim."
+      - name: id_eleicao
+        data_type: varchar
+        tests:
+          - relationships: {to: ref('dim_eleicoes'), field: id_eleicao}
+          - not_null: {config: {severity: warn}}
+        description: "Eleição da candidatura (dim_eleicoes), achada pelo ano e pelo código da eleição do arquivo de candidaturas, sem depender da disputa. Vazia quando o arquivo de vagas não traz essa eleição; o teste de aviso mede quantas."
       - {name: sq_candidato, data_type: bigint, description: "Número sequencial do candidato na eleição, como o TSE informa; liga ao nome do arquivo de foto."}
       - {name: numero, data_type: varchar, description: "Número do candidato na urna."}
       - {name: numero_partido, data_type: varchar, description: "Número do partido na urna, como o TSE informa. Não identifica o partido ao longo do tempo: o mesmo número já foi usado por partidos diferentes (por exemplo, um número foi de um partido e depois de outro)."}
@@ -44,6 +50,7 @@ models:
       - {name: qtd_turnos, data_type: integer, description: "Número do último turno em que a candidatura consta (2 quando foi ao segundo turno)."}
       - {name: resultado, data_type: varchar, description: "Resultado do último turno como o arquivo de candidaturas do TSE informa (eleito, suplente, não eleito, 2º turno); vazio quando o TSE não informa, como o 2º turno de presidente de 2006."}
       - {name: fl_eleito, data_type: boolean, description: "Verdadeiro quando o TSE marca a candidatura como eleita em algum turno. Falso não quer dizer derrota quando o resultado está vazio."}
+      - {name: base_eleicao, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como se sabe que a candidatura foi eleita: informado pelo TSE ou DERIVADO dos votos pela Constituição (int_tse_eleitos). Vazia para quem não foi eleito. Não muda o significado de fl_eleito, que segue só o resultado informado pelo TSE."}
       - {name: fl_mais_votado_no_ultimo_turno, data_type: boolean, description: "DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no último turno com votos. Vazio sem votos carregados ou em cargo de várias vagas."}
       - {name: id_pessoa_tse, data_type: varchar, description: "Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato."}
       - {name: id_pessoa, data_type: bigint, tests: [{relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa do projeto (dim_pessoas) quando a candidatura é de alguém eleito alguma vez ou que foi deputado ou senador (ligada pelo nome e o nascimento); vazio para quem nunca foi eleito, por regra (ADR 0031)."}
@@ -106,6 +113,7 @@ models:
       - {name: id_captura_bens, data_type: bigint, description: "Captura do arquivo de bens de origem; vazia sem bens."}
       - {name: id_captura_receitas, data_type: bigint, description: "Captura do arquivo de receitas de origem; vazia sem receitas."}
       - {name: id_captura_despesas, data_type: bigint, description: "Captura do arquivo de despesas de origem; vazia sem despesas."}
+      - {name: dt_captura, data_type: date, description: "Data da captura mais recente entre os arquivos de bens, receitas e despesas de origem; as capturas de cada arquivo estão em id_captura_bens, id_captura_receitas e id_captura_despesas."}
 
   - name: fct_mandatos
     description: >
@@ -139,18 +147,35 @@ models:
       - {name: dt_fim_prevista, data_type: date, description: "DERIVADO: dt_inicio mais a duração do cargo na Constituição, menos um dia. É o fim previsto, não o fim real (cassação, renúncia e morte não entram)."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.capturas)."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+      - {name: ano_inicio, data_type: integer, tests: [{not_null: {config: {severity: warn}}}], description: "DERIVADO: ano da eleição (dim_eleicoes) mais um, o ano em que o mandato começa pela Constituição e pelas eleições ordinárias; preenchido mesmo sem data de posse. Vazio só quando a disputa não tem eleição (o teste de aviso mede)."}
+      - {name: tipo_mandato, data_type: varchar, tests: [{accepted_values: {arguments: {values: [novato, reeleito, retorno]}}}], description: "DERIVADO, comparando com o mandato anterior da mesma pessoa no mesmo cargo (e na mesma unidade, abaixo do nível federal): reeleito (o anterior é da eleição de um mandato atrás), retorno (houve intervalo) ou novato (não há anterior e a base de eleições já cobria o ciclo anterior). Vazio quando não há prova: sem prova nada é afirmado."}
 
   - name: fct_exercicios
     description: >
       Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais
-      (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Nada é derivado de
-      regra. Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois
-      não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos). O nome do modelo
-      leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fct_exercicios.
+      (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Os campos da fonte
+      não são derivados; as colunas que ligam o período ao resto (id_candidatura, id_partido) são derivadas e marcadas
+      (base_partido). Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não
+      entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos; a
+      ocupação dos dois juntos, em fct_cargos_ocupacoes). O nome do modelo leva o prefixo fatos_ só porque pode haver
+      colisão futura com marts; a tabela é fct_exercicios.
     meta: {sensitivity: publico-agente-publico, grain: período de exercício, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara ou senado)."}
       - {name: id_exercicio, data_type: varchar, tests: [unique, not_null], description: "Identificador do período: fonte e identificador da fonte (Câmara: deputado, legislatura e momento da entrada)."}
+      - name: id_territorio
+        data_type: varchar
+        tests: [{relationships: {to: ref('dim_territorios'), field: id_territorio}}, {not_null: {config: {severity: warn}}}]
+        description: "Território representado (dim_territorios): a UF que a fonte informa, ligada pela sigla. Vazio quando a fonte não informa a UF (o teste de aviso mede)."
+      - name: id_candidatura
+        data_type: varchar
+        tests: [{relationships: {to: ref('fct_mandatos'), field: id_candidatura}}]
+        description: "DERIVADO: o mandato (fct_mandatos) que o período cumpre, o da mesma pessoa e cargo cuja janela contém o início do período, com 31 dias de folga antes da posse para o registro. Vazio para o suplente e para o eleito em eleição suplementar, que não têm mandato eleito."
+      - name: id_partido
+        data_type: integer
+        tests: [{relationships: {to: ref('dim_partidos'), field: id_partido}}, {not_null: {config: {severity: warn}}}]
+        description: "Partido da pessoa no início do período (dim_partidos); base_partido diz se é informado ou derivado. Vazio quando nenhum registro de partido da pessoa vale até o ano do início (o teste de aviso mede)."
+      - {name: base_partido, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "informado: o partido do histórico da Câmara que cobre o início do período. derivado: o último partido registrado da pessoa até o ano do início (fct_pessoas_partidos); vale para o Senado, que não publica o partido do exercício. Vazia quando id_partido é vazio."}
       - name: id_pessoa
         data_type: bigint
         tests: [{not_null: {config: {severity: warn}}}]
@@ -164,6 +189,40 @@ models:
       - {name: dt_mandato_fim, data_type: date, description: "Fim do mandato a que o período pertence, como a fonte publica: no Senado, o do mandato do titular (inclusive de quem assume como suplente); na Câmara, o fim da legislatura. Diferente de dt_fim, que é o fim do período de exercício."}
       - {name: causa_fim, data_type: varchar, description: "Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: fct_cargos_ocupacoes
+    description: >
+      Cada período em que uma pessoa ocupa um cargo num território: a camada semântica da ocupação, que junta o
+      exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu, eleito em eleição suplementar) e o
+      mandato da eleição (fct_mandatos), que cobre quem foi eleito e ainda não assumiu e os cargos sem fonte de exercício
+      (vereador, prefeito, governador, presidente, deputado estadual), com o fim previsto pela duração do cargo. O
+      exercício vence: o mandato que ele cumpre não gera outra linha. Cassação e renúncia dos cargos sem exercício não
+      aparecem (issue 162). Quem filtra a data usa dt_inicio e dt_fim.
+    meta: {sensitivity: publico-agente-publico, grain: período de ocupação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral"}
+    columns:
+      - {name: id_ocupacao, data_type: varchar, tests: [unique, not_null], description: "Identificador do período: a base (exercicio ou mandato) e o identificador do exercício ou da candidatura de origem."}
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro de origem (camara e senado para o exercício; tse para o mandato)."}
+      - {name: id_pessoa, data_type: bigint, tests: [not_null, {relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa que ocupa o cargo (dim_pessoas)."}
+      - {name: id_cargo, data_type: varchar, tests: [{not_null: {config: {severity: warn}}}, {relationships: {to: ref('dim_cargos'), field: id_cargo}}], description: "Cargo ocupado (dim_cargos); vazio no mandato de candidatura sem disputa (o teste de aviso mede)."}
+      - name: id_territorio
+        data_type: varchar
+        tests: [{relationships: {to: ref('dim_territorios'), field: id_territorio}}, {not_null: {config: {severity: warn}}}]
+        description: "Território do cargo (dim_territorios); vazio onde a fonte não liga a um território (o teste de aviso mede)."
+      - name: id_partido
+        data_type: integer
+        tests: [{relationships: {to: ref('dim_partidos'), field: id_partido}}, {not_null: {config: {severity: warn}}}]
+        description: "Partido da pessoa na ocupação (dim_partidos). Por ordem: o da candidatura do TSE (o mandato), o informado pelo histórico da Câmara e o derivado do último registro (fct_exercicios); base_partido diz qual. Vazio sem registro de partido (o teste de aviso mede)."
+      - {name: base_partido, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "informado (candidatura do TSE ou histórico da Câmara) ou derivado (último partido registrado da pessoa até o ano do início). Vazia quando id_partido é vazio."}
+      - {name: id_candidatura, data_type: varchar, tests: [{relationships: {to: ref('fct_mandatos'), field: id_candidatura}}], description: "Mandato eleito (fct_mandatos) a que a ocupação pertence; vazio para o suplente que assumiu e para o eleito em eleição suplementar."}
+      - {name: id_exercicio, data_type: varchar, tests: [{relationships: {to: ref('fct_exercicios'), field: id_exercicio}}], description: "Exercício publicado (fct_exercicios) que originou a ocupação; vazio quando a ocupação vem só do mandato."}
+      - {name: ano_inicio, data_type: integer, tests: [{not_null: {config: {severity: warn}}}], description: "Ano em que a ocupação começa: o do exercício, ou o ano seguinte ao da eleição no mandato. Preenchido mesmo sem dt_inicio."}
+      - {name: dt_inicio, data_type: date, description: "Dia do início; vazio quando o dia não está numa fonte nem numa regra (por exemplo, deputado estadual de 2026, que depende da constituição de cada estado)."}
+      - {name: base_dt_inicio, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "informado (a fonte do exercício, ou a data de posse do TSE onde a Constituição não fixa a data) ou derivado (regra da Constituição para o cargo). Vazia quando dt_inicio é vazio."}
+      - {name: dt_fim, data_type: date, description: "Fim da ocupação: o fim real do exercício quando a fonte o registra, senão o fim do mandato, previsto pela duração do cargo. Vazio quando o início é vazio. Com dt_inicio, diz quem ocupa o cargo em uma data."}
+      - {name: base_dt_fim, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, previsto]}}}], description: "informado (a Câmara ou o Senado registra o fim do exercício) ou previsto (fim do mandato pela duração do cargo, sem cassação, renúncia nem morte). Vazia quando dt_fim é vazio."}
+      - {name: base_ocupacao, data_type: varchar, tests: [not_null, {accepted_values: {arguments: {values: [exercicio, mandato]}}}], description: "exercicio (período em que a Câmara ou o Senado registra a pessoa em exercício) ou mandato (período da eleição, sem exercício publicado)."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: fct_pessoas_partidos
@@ -243,6 +302,8 @@ models:
       - {name: id_partido, data_type: integer, description: "Partido do evento (dim_partidos), quando o tipo exige."}
       - {name: base, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como o evento é obtido: informado pela fonte ou derivado de regra do projeto."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto."}
+      - {name: fonte, data_type: varchar, tests: [{not_null: {config: {severity: warn}}}], description: "Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento, a fonte do cadastro. Vazia no falecimento, que junta fontes sem captura própria (o teste de aviso mede)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem do fato; vazia quando o evento não tem id_captura."}
 
   - name: fct_votos
     description: >

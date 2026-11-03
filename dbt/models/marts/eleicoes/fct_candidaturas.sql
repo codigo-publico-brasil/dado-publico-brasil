@@ -77,6 +77,7 @@ select
     '{{ var("source_tse") }}' as fonte,
     c.id_candidatura,
     v.id_disputa,
+    el.id_eleicao,
     c.sq_candidato,
     c.numero,
     c.numero_partido,
@@ -103,6 +104,7 @@ select
     greatest(t.qtd_turnos, coalesce(tv.ultimo_turno_votado, 0)) as qtd_turnos,
     t.resultado,
     t.fl_eleito,
+    te.base_eleicao,
     u.fl_mais_votado_no_turno as fl_mais_votado_no_ultimo_turno,
     p.id_pessoa_tse,
     coalesce(pe.id_pessoa, pc.id_pessoa) as id_pessoa,
@@ -134,6 +136,10 @@ left join {{ ref('partidos_siglas') }} as ps
     on ps.sigla_na_fonte = c.partido_sigla
     and ps.nr_partido = try_cast(c.numero_partido as integer)
     and try_cast(c.ano_eleicao as integer) between ps.ano_inicio and ps.ano_fim
+
+left join {{ ref('dim_eleicoes') }} as el on el.ano_eleicao = c.ano_eleicao and el.cd_eleicao = c.cd_eleicao
+
+left join {{ ref('int_tse_eleitos') }} as te on te.id_candidatura = c.id_candidatura
 
 left join turnos_votados as tv on tv.id_candidatura = c.id_candidatura
 
