@@ -5,6 +5,7 @@ name: dado-publico-brasil
 
 x-pipeline: &pipeline
   profiles: [pipeline]
+  image: ghcr.io/codigo-publico-brasil/dado-publico-brasil:${DADO_PUBLICO_IMAGE_TAG:-latest}
   build: .
   restart: unless-stopped
   env_file: [.env]
@@ -18,11 +19,10 @@ x-pipeline: &pipeline
     driver: json-file
     options: {max-size: 10m, max-file: "3"}
   volumes:
-    - ./data_store:/data
+    - ${DADO_PUBLICO_DATA_DIR:-./data_store}:/data
     # temporários do DuckDB (spill) num volume do Docker: no bind mount do Windows a releitura falha
     - duckdb_tmp:/data/warehouse.duckdb.tmp
     - dagster_home:/dagster_home
-    - ./dagster.yaml:/dagster_home/dagster.yaml:ro
 
 services:
   postgres:
@@ -43,7 +43,8 @@ services:
       retries: 10
 
   # Dagster como serviço (ADR 0027): `webserver` (interface) e `daemon` (agendamentos e sensores) dividem a imagem e o
-  # estado. Sem o banco de serviço: `docker compose up -d --build webserver daemon`. Para ligar o `publish`, defina
+  # estado. A imagem sai do CI (GHCR); o servidor só faz `pull` (docs/02-fazer/04-operar-e-publicar.md). Local, com
+  # build: `docker compose up -d --build webserver daemon`. Para ligar o `publish`, defina
   # DADO_PUBLICO_POSTGRES_DSN no `.env` (o host `postgres` vale quando o banco sobe junto, com `--profile pipeline`).
   # A interface não tem login: só escuta em ${DADO_PUBLICO_BIND:-127.0.0.1}; acesso remoto por túnel SSH ou VPN
   # (docs/02-fazer/04-operar-e-publicar.md). Memória: ajuste as duas variáveis ao tamanho da máquina.

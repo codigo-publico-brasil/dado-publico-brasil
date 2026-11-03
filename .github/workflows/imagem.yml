@@ -1,0 +1,32 @@
+name: Imagem
+
+# Constrói a imagem do pipeline em todo PR (pega erro do Dockerfile) e a publica no GHCR quando o código entra na main.
+# O servidor só faz `pull` (docs/02-fazer/04-operar-e-publicar.md). Não leva segredo: `.env` e `data_store` ficam fora.
+on:
+  pull_request:
+    paths: [Dockerfile, pyproject.toml, uv.lock, dagster.yaml, ".github/workflows/imagem.yml"]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  imagem:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/login-action@v3
+        if: github.event_name == 'push'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ghcr.io/codigo-publico-brasil/dado-publico-brasil:latest
+            ghcr.io/codigo-publico-brasil/dado-publico-brasil:${{ github.sha }}

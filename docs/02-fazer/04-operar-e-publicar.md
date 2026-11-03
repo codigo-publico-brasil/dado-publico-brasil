@@ -92,20 +92,30 @@ O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md))
 
 **Limites:** o Dagster só propaga a partir do que ele mesmo materializou, então na primeira vez rode `atualizar_tudo`. A interface **não tem login** no Dagster de código aberto: o serviço do `compose.yaml` escuta só em `127.0.0.1`; não o exponha à rede sem uma camada de autenticação na frente (ainda em aberto).
 
-## Implantar numa máquina (homelab ou VPS)
+## Implantar num servidor
 
-Para quem vai deixar o pipeline rodando sozinho. Nada aqui depende da máquina: só variáveis do `.env` (modelo em `.env.example`), então trocar de servidor é copiar o `.env` e repetir os passos. O Dagster sobe como dois serviços (`webserver`: interface; `daemon`: agendamentos e sensores) e, a cada atualização, publica o lake, as docs e (se houver `DADO_PUBLICO_POSTGRES_DSN`) o PostgreSQL.
+Para quem vai deixar o pipeline rodando sozinho num servidor (uma máquina local ou um VPS). **Você não entra no servidor para atualizar**: o CI constrói a imagem e a publica no GHCR quando o código entra na `main` (`.github/workflows/imagem.yml`, com o `sha` do commit como etiqueta), e da sua máquina um comando manda o servidor baixá-la e reiniciar. O compose e o `.env` ficam na sua máquina e falam com o Docker do servidor por SSH, então o servidor não tem clone nem `.env`. O Dagster sobe como dois serviços (`webserver`: interface; `daemon`: agendamentos e sensores) e, a cada atualização, publica o lake, as docs e (se houver `DADO_PUBLICO_POSTGRES_DSN`) o PostgreSQL.
 
-1. **Máquina:** Linux com Docker e compose. Com 8 GB de RAM compartilhados, crie swap (8 GB) e deixe `DADO_PUBLICO_MEM_LIMIT=6g` e `DADO_PUBLICO_DUCKDB_MEMORY=4GB` (padrões do compose; acima do limite o DuckDB usa o disco, mais lento e sem estourar). Em máquina maior, suba os dois valores.
-2. **Código e segredos:** `git clone`, copie `.env.example` para `.env` e preencha R2 (público e privado), SMTP e `DADO_PUBLICO_DAGSTER_URL`. Sem `DADO_PUBLICO_POSTGRES_DSN` o `publish` fica desligado.
-3. **Landing e fotos** só existem na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing data_store/fotos servidor:<repo>/data_store/`.
-4. **Subir:** `docker compose up -d --build webserver daemon`. Warehouse vazio restaura sozinho a identidade e o metadata do R2 privado (seção abaixo).
-5. **Primeira carga:** `docker compose exec webserver uv run --no-sync dado-publico rebuild`, depois o job `atualizar_tudo` na interface (a propagação automática só vale depois da primeira materialização).
-6. **Conferir:** `docker compose exec webserver uv run --no-sync dado-publico export --verificar`, `observe --email` (testa o SMTP) e a data do `manifesto.json` público.
+**Uma vez só:**
 
-**Acesso à interface:** o compose publica a porta só em `127.0.0.1` (o Dagster aberto não tem login). Use túnel SSH (`ssh -L 3000:127.0.0.1:3000 servidor`, funciona igual em qualquer servidor). VPN (Tailscale) ou Cloudflare Access são escolha da infraestrutura: nesse caso defina `DADO_PUBLICO_BIND` com o IP da VPN, nunca `0.0.0.0`.
+1. **Servidor:** Linux com Docker, um usuário seu com acesso por chave SSH e uma pasta de dados (por exemplo `/srv/dado-publico`). Com 8 GB de RAM compartilhados, crie swap (8 GB); `DADO_PUBLICO_MEM_LIMIT=6g` e `DADO_PUBLICO_DUCKDB_MEMORY=4GB` (padrões; acima disso o DuckDB usa o disco, mais lento e sem estourar). Em máquina maior, suba os dois.
+2. **Sua máquina:** `docker context create servidor --docker host=ssh://usuario@servidor`. No `.env` local preencha R2 (público e privado), SMTP, `DADO_PUBLICO_DAGSTER_URL` e `DADO_PUBLICO_DATA_DIR=/srv/dado-publico` (caminho **do servidor**). Sem `DADO_PUBLICO_POSTGRES_DSN` o `publish` fica desligado.
+3. **Landing e fotos** só existem na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing data_store/fotos usuario@servidor:/srv/dado-publico/`.
+4. **Subir** (warehouse vazio restaura sozinho a identidade e o metadata do R2 privado, seção abaixo), depois a primeira carga: `docker --context servidor compose exec webserver uv run --no-sync dado-publico rebuild` e o job `atualizar_tudo` na interface (a propagação automática só vale depois da primeira materialização).
 
-**Manutenção:** o serviço reinicia sozinho (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Landing e fotos são o único dado sem cópia: faça backup periódico do `data_store/landing` e `fotos` em outro disco até haver cópia no bucket privado.
+**Toda atualização** (depois do merge na `main` e do fim do workflow *Imagem*), da pasta do repositório:
+
+```bash
+docker --context servidor compose pull && docker --context servidor compose up -d webserver daemon
+```
+
+Para voltar a uma versão anterior, `DADO_PUBLICO_IMAGE_TAG=<sha do commit>` nos mesmos comandos. No VPS esse par de comandos pode virar um passo do workflow, com a chave SSH num segredo do GitHub.
+
+**Conferir:** `docker --context servidor compose exec webserver uv run --no-sync dado-publico export --verificar`, `observe --email` (testa o SMTP) e a data do `manifesto.json` público.
+
+**Acesso à interface:** o compose publica a porta só em `127.0.0.1` do servidor (o Dagster aberto não tem login). Use túnel SSH (`ssh -L 3000:127.0.0.1:3000 usuario@servidor`). VPN ou Cloudflare Access são escolha da infraestrutura: nesse caso defina `DADO_PUBLICO_BIND` com o IP da VPN, nunca `0.0.0.0`.
+
+**Manutenção:** o serviço reinicia sozinho (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Landing e fotos são o único dado sem cópia: faça backup periódico de `landing` e `fotos` em outro disco até haver cópia no bucket privado.
 
 ## Restaurar numa máquina vazia (bucket privado)
 
