@@ -100,8 +100,8 @@ def env(base: str, tmp_path: Path) -> Env:
 
 
 def latest(con: Connection) -> dict[str, int]:
-    found = rows(con, "SELECT item, status FROM metadata.capture_items ORDER BY id")
-    return {r["item"]: r["status"] for r in found}
+    found = rows(con, "SELECT item, status_http FROM metadata.capturas_itens ORDER BY id_captura_item")
+    return {r["item"]: r["status_http"] for r in found}
 
 
 def test_most_recent_items_first_within_the_filter_and_limit(env: Env) -> None:
@@ -110,7 +110,7 @@ def test_most_recent_items_first_within_the_filter_and_limit(env: Env) -> None:
     assert done == 2
     # 2024 e 2023 primeiro (o 503 do 3 é tentado 3 vezes); o REQ de 2025 está fora do `where`
     assert Handler.calls == ["3", "3", "3", "5"]
-    assert scalar(con, "SELECT COUNT(*) FROM metadata.captures WHERE dataset = 'filhos'") == 1  # um lote
+    assert scalar(con, "SELECT COUNT(*) FROM metadata.capturas WHERE dataset = 'filhos'") == 1  # um lote
 
 
 def test_resuming_continues_with_what_is_missing_and_never_repeats_what_is_done(env: Env) -> None:
@@ -139,16 +139,16 @@ def test_a_changed_version_fetches_the_item_again(env: Env) -> None:
 def test_each_answer_is_kept_byte_for_byte_and_indexed(env: Env) -> None:
     con, settings, contract = env
     foreach.capture(con, settings, contract, "filhos", limit=1)
-    path = rows(con, "SELECT path FROM metadata.captures WHERE dataset = 'filhos'")[0]["path"]
+    path = rows(con, "SELECT caminho FROM metadata.capturas WHERE dataset = 'filhos'")[0]["caminho"]
     [envelope] = list(batch.read(settings.storage_root / path))
     assert envelope["item"] == "3" and envelope["status"] == 503 and envelope["corpo"] == ""
     assert gzip.open(settings.storage_root / path).read().count(b"\n") == 1
     Handler.broken.clear()
     foreach.capture(con, settings, contract, "filhos", limit=1)
-    ok = rows(con, "SELECT sha256 FROM metadata.capture_items WHERE status = 200")[0]["sha256"]
-    path = rows(con, "SELECT path FROM metadata.captures WHERE dataset = 'filhos' ORDER BY id DESC")[0][
-        "path"
-    ]
+    ok = rows(con, "SELECT sha256 FROM metadata.capturas_itens WHERE status_http = 200")[0]["sha256"]
+    path = rows(
+        con, "SELECT caminho FROM metadata.capturas WHERE dataset = 'filhos' ORDER BY id_captura DESC"
+    )[0]["caminho"]
     [envelope] = list(batch.read(settings.storage_root / path))
     assert envelope["sha256"] == ok and json.loads(envelope["corpo"])["dados"][0]["texto"] == "t3"
 
@@ -172,7 +172,10 @@ def test_verify_finds_a_changed_file_and_a_changed_answer(env: Env) -> None:
     Handler.broken.clear()
     foreach.capture(con, settings, contract, "filhos", limit=2)
     assert foreach.verify(con, settings) == []
-    path = settings.storage_root / rows(con, "SELECT path FROM metadata.captures ORDER BY id")[0]["path"]
+    path = (
+        settings.storage_root
+        / rows(con, "SELECT caminho FROM metadata.capturas ORDER BY id_captura")[0]["caminho"]
+    )
     envelopes = list(batch.read(path))
     envelopes[0]["corpo"] = envelopes[0]["corpo"].replace("t3", "XX")
     batch.write(path, envelopes)  # adultera o corpo e refaz o arquivo
@@ -190,8 +193,10 @@ def test_coverage_counts_obtained_missing_and_failed_items(env: Env) -> None:
         "falhas": 1,
         "faltam": 2,
     }
-    check = rows(con, "SELECT status, detail FROM metadata.source_checks WHERE check_name = 'coverage'")[0]
-    assert check["status"] == "warn" and "falhas 1" in check["detail"]
+    check = rows(
+        con, "SELECT resultado, detalhe FROM metadata.fontes_verificacoes WHERE verificacao = 'coverage'"
+    )[0]
+    assert check["resultado"] == "warn" and "falhas 1" in check["detalhe"]
 
 
 def test_foreach_needs_item_in_the_url_and_the_item_column_in_the_key(tmp_path: Path) -> None:

@@ -22,7 +22,7 @@ uv run dado-publico extract --source <fonte> --years 2024     # baixa para o lan
 uv run dado-publico load --source <fonte>                     # carrega no raw (dlt)
 ```
 
-Confira: o arquivo está em `data_store/landing/<fonte>/...`, a captura em `metadata.captures`, e a tabela `raw_<esfera>_<fonte>.<dataset>` existe (`dado-publico query`). O raw é fiel à fonte: nada renomeado nem limpo.
+Confira: o arquivo está em `data_store/landing/<fonte>/...`, a captura em `metadata.capturas`, e a tabela `raw_<esfera>_<fonte>.<dataset>` existe (`dado-publico query`). O raw é fiel à fonte: nada renomeado nem limpo.
 
 ## 3. Declarar o raw no dbt
 

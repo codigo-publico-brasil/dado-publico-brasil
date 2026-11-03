@@ -371,4 +371,33 @@ O staging e o intermediate seguem a mesma regra de colunas (por exemplo, `partid
 - **Códigos da fonte** (`emenda_codigo`, `autor_codigo`, `programa_codigo`, `acao_codigo`, `favorecido_codigo`) levam o prefixo `cd_` (`cd_emenda`, `cd_autor`...): são códigos que a fonte usa, e não chaves nossas.
 - **`emendas`, `orgaos` e `normas_geradas`** mantêm o nome: o tema já está na frente, e a descrição diz o que são (emendas parlamentares orçamentárias; órgãos legislativos; normas geradas por matérias do Senado).
 - **`fonte`, `fonte_url` e `fontes`** não levam prefixo de tipo e continuam como estão, por serem o contrato de proveniência do projeto.
-- **`identity` e `metadata`** (tabelas de controle criadas em `ddl/`) ainda têm nomes em inglês (`created_at`, `source`...) e foram só descritas; renomeá-las fica para outra etapa.
+- **`identity` e `metadata`** foram renomeadas pela migração `ddl/0007_nomes_em_portugues.sql` (ver abaixo).
+
+## `metadata` e `identity`
+
+Aplicada pela migração `ddl/0007`, que renomeia sem perder linha e converte os instantes de texto para `TIMESTAMP` (UTC). As sequências de chave seguem o novo nome da tabela (`seq_execucoes`, `seq_capturas`, `seq_capturas_itens`, `seq_fontes_verificacoes`, `seq_pessoas`). O modelo de staging `stg_metadata__captures` virou `stg_metadata__capturas`; `stg_identity__pessoa_identificadores` e `stg_identity__pessoa_fusoes` viraram `..._pessoas_identificadores` e `..._pessoas_fusoes`. Os Parquet do snapshot da identidade seguem o nome novo das tabelas.
+
+| Antes | Depois |
+| --- | --- |
+| `metadata.migrations` (`version`, `applied_at`) | `metadata.migracoes` (`versao`, `dt_aplicacao`) |
+| `metadata.runs` | `metadata.execucoes` |
+| `metadata.captures` | `metadata.capturas` |
+| `metadata.capture_items` | `metadata.capturas_itens` |
+| `metadata.source_checks` | `metadata.fontes_verificacoes` |
+| `metadata.dbt_results` | `metadata.testes_resultados` |
+| `identity.pessoa` | `identity.pessoas` |
+| `identity.pessoa_identificador` | `identity.pessoas_identificadores` |
+| `identity.pessoa_fusao` | `identity.pessoas_fusoes` |
+
+Colunas (as não citadas só mudam de tabela):
+
+| Tabela | Antes | Depois |
+| --- | --- | --- |
+| `execucoes` | `id`, `stage`, `source`, `year`, `started_at`, `finished_at`, `code_version`, `rows_in`, `rows_out`, `status`, `message` | `id_execucao`, `etapa`, `fonte`, `particao`, `dt_inicio`, `dt_fim`, `versao_commit`, `qtd_linhas_entrada`, `qtd_linhas_saida`, `resultado`, `mensagem` |
+| `capturas` | `id`, `source`, `year`, `size_bytes`, `path`, `captured_at`, `last_checked_at`, `run_id`, `last_modified`, `loaded_at` | `id_captura`, `fonte`, `particao`, `qtd_bytes`, `caminho`, `dt_captura`, `dt_verificacao`, `id_execucao`, `ultima_modificacao`, `dt_carga` |
+| `capturas_itens` | `id`, `capture_id`, `source`, `status`, `fetched_at`, `version` | `id_captura_item`, `id_captura`, `fonte`, `status_http`, `dt_busca`, `versao` |
+| `fontes_verificacoes` | `id`, `checked_at`, `source`, `partition`, `check_name`, `status`, `detail` | `id_verificacao`, `dt_verificacao`, `fonte`, `particao`, `verificacao`, `resultado`, `detalhe` |
+| `testes_resultados` | `run_id`, `unique_id`, `kind`, `status`, `failures`, `message`, `recorded_at` | `id_execucao`, `id_no`, `tipo`, `resultado`, `qtd_falhas`, `mensagem`, `dt_registro` |
+| `pessoas` | `created_at` | `dt_criacao` |
+| `pessoas_identificadores` | `source`, `id_type`, `source_id`, `method`, `confirmed_by`, `linked_at` | `fonte`, `id_tipo`, `id_na_fonte`, `metodo`, `confirmado_por`, `dt_ligacao` |
+| `pessoas_fusoes` | `fundida_em` | `dt_fusao` |

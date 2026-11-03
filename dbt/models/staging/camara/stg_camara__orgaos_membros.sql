@@ -15,10 +15,11 @@ renamed as (
         sigla_uf as uf_sigla,
         try_cast(data_inicio as date) as dt_inicio,
         try_cast(data_fim as date) as dt_fim,
+        proper_name(nome_deputado) as deputado_nome,
         _source_file_id as id_captura
 
     from source
 
 )
 
-select * from renamed
+{{ colunas_auditoria('renamed') }}

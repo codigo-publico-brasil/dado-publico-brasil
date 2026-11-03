@@ -1,3 +1,5 @@
+with base as (
+
 with source as (
 
     select * from {{ source('senado', 'processos') }}
@@ -22,6 +24,14 @@ select
     try_cast(norma_gerada_data_publicacao as date) as dt_norma_publicacao,
     norma_gerada_descricao as norma_descricao,
     norma_gerada_sigla_veiculo_publicacao as norma_veiculo,
+    sigla as materia_sigla_tipo,
+    try_cast(numero as integer) as materia_numero,
+    try_cast(ano as integer) as materia_ano,
+    sigla_situacao_atual as situacao_sigla,
     _source_file_id as id_captura
 
 from source
+
+)
+
+{{ colunas_auditoria('base') }}

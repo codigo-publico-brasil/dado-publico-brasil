@@ -79,9 +79,12 @@ select
         d.posicao = 1 and d.qtd_votos_validos > 0,
         null
     ) as fl_mais_votado_no_turno,
-    c.id_captura
+    c.id_captura,
+    cast(k.dt_captura as date) as dt_captura
 
 from turnos as c
+
+left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = c.id_captura
 
 left join votos as v on v.id_candidatura = c.id_candidatura and v.turno = c.turno
 

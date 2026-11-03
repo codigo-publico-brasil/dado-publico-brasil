@@ -1,4 +1,4 @@
-"""Qualidade dos dados: o resultado dos testes do dbt e do frescor, guardado em `metadata.dbt_results`.
+"""Qualidade dos dados: o resultado dos testes do dbt e do frescor, guardado em `metadata.testes_resultados`.
 
 Os testes em si são do dbt (genéricos, singulares e de contrato, em `transformation/`); aqui só se
 registra o resultado de cada execução para a aplicação poder mostrá-lo.
@@ -22,7 +22,7 @@ def record(con: Connection, run_id: int, results: list[dict[str, Any]]) -> None:
         return
     moment = runs.now()
     con.executemany(
-        "INSERT INTO metadata.dbt_results VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO metadata.testes_resultados VALUES (?, ?, ?, ?, ?, ?, ?)",
         [
             (
                 run_id,

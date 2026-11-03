@@ -2,7 +2,7 @@
 
 Os itens saem do raw do dataset de origem (`foreach.from`, com `where` opcional). Cada execução busca os
 itens que faltam ou mudaram, em lotes: cada lote vira um arquivo do landing (ver `batch.py`) com a resposta
-byte a byte de cada item, e `metadata.capture_items` registra status, hash e versão de cada um. Um lote
+byte a byte de cada item, e `metadata.capturas_itens` registra status, hash e versão de cada um. Um lote
 pronto já está registrado, então uma execução interrompida continua de onde parou. A taxa é a da fonte
 (`access.rate_limit`). Item novo, item cuja `version` mudou, item com falha e item antigo
 (`refresh_after_days`) são buscados de novo; resposta 404 não é repetida.
@@ -47,8 +47,9 @@ def _latest(con: Connection, contract: SourceContract, name: str) -> dict[str, d
     """A busca mais recente de cada item."""
     found = rows(
         con,
-        "SELECT item, status, version, fetched_at FROM metadata.capture_items "
-        "WHERE source = ? AND dataset = ? QUALIFY ROW_NUMBER() OVER (PARTITION BY item ORDER BY id DESC) = 1",
+        "SELECT item, status_http, versao, dt_busca FROM metadata.capturas_itens "
+        "WHERE fonte = ? AND dataset = ? QUALIFY ROW_NUMBER() OVER (PARTITION BY item ORDER BY "
+        "id_captura_item DESC) = 1",
         (contract.source, name),
     )
     return {r["item"]: r for r in found}
@@ -61,16 +62,16 @@ def _is_pending(
     assert f
     if last is None:
         return True
-    changed = f.version is not None and last["version"] != version
-    if last["status"] == 404:
+    changed = f.version is not None and last["versao"] != version
+    if last["status_http"] == 404:
         return changed  # a fonte não tem o item; só tenta de novo se ele mudou
-    if last["status"] != 200:
+    if last["status_http"] != 200:
         return True  # falha: tenta de novo
     if changed:
         return True
     if f.refresh_after_days is not None:
-        age = datetime.now(UTC) - datetime.fromisoformat(last["fetched_at"])
-        return age.days >= f.refresh_after_days
+        age = datetime.now(UTC).replace(tzinfo=None) - last["dt_busca"]
+        return bool(age.days >= f.refresh_after_days)
     return False
 
 
@@ -83,7 +84,7 @@ def coverage(con: Connection, contract: SourceContract, name: str) -> dict[str, 
     """Quantos itens esperados já foram buscados, não existem na fonte (404), falharam ou ainda faltam."""
     items = _items(con, contract, name)
     latest = _latest(con, contract, name)
-    status = [latest[i]["status"] if i in latest else None for i, _ in items]
+    status = [latest[i]["status_http"] if i in latest else None for i, _ in items]
     return {
         "esperados": len(items),
         "obtidos": status.count(200),
@@ -161,8 +162,8 @@ def _register(
         run_id,
     )
     con.executemany(
-        "INSERT INTO metadata.capture_items (capture_id, source, dataset, item, url, status, sha256, "
-        "fetched_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO metadata.capturas_itens (id_captura, fonte, dataset, item, url, status_http, sha256, "
+        "dt_busca, versao) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
             (
                 capture_id,
@@ -183,27 +184,35 @@ def _register(
 
 def verify(con: Connection, settings: Settings, source: str | None = None) -> list[str]:
     """Confere o landing: o hash de cada arquivo, o de cada resposta dentro dos lotes e o índice
-    `capture_items`. Devolve os problemas encontrados (lista vazia = tudo íntegro)."""
+    `capturas_itens`. Devolve os problemas encontrados (lista vazia = tudo íntegro)."""
     problems: list[str] = []
-    where, args = ("WHERE source = ?", (source,)) if source else ("", ())
-    for c in rows(con, f"SELECT id, path, sha256, url FROM metadata.captures {where} ORDER BY id", args):
-        file = settings.storage_root / c["path"]
+    where, args = ("WHERE fonte = ?", (source,)) if source else ("", ())
+    for c in rows(
+        con,
+        f"SELECT id_captura, caminho, sha256, url FROM metadata.capturas {where} ORDER BY id_captura",
+        args,
+    ):
+        file = settings.storage_root / c["caminho"]
         if not file.exists():
-            problems.append(f"captura {c['id']}: arquivo ausente ({c['path']})")
+            problems.append(f"captura {c['id_captura']}: arquivo ausente ({c['caminho']})")
         elif hashlib.sha256(file.read_bytes()).hexdigest() != c["sha256"]:
-            problems.append(f"captura {c['id']}: o arquivo mudou depois da captura ({c['path']})")
+            problems.append(f"captura {c['id_captura']}: o arquivo mudou depois da captura ({c['caminho']})")
         elif c["url"].startswith("foreach:"):
             indexed = {
                 (r["item"], r["sha256"])
                 for r in rows(
-                    con, "SELECT item, sha256 FROM metadata.capture_items WHERE capture_id = ?", (c["id"],)
+                    con,
+                    "SELECT item, sha256 FROM metadata.capturas_itens WHERE id_captura = ?",
+                    (c["id_captura"],),
                 )
             }
             seen = set()
             for e in batch.read(file):
                 if hashlib.sha256(batch.body(e)).hexdigest() != e["sha256"]:
-                    problems.append(f"captura {c['id']}, item {e['item']}: a resposta não bate com o hash")
+                    problems.append(
+                        f"captura {c['id_captura']}, item {e['item']}: a resposta não bate com o hash"
+                    )
                 seen.add((e["item"], e["sha256"]))
             if seen != indexed:
-                problems.append(f"captura {c['id']}: o lote e metadata.capture_items divergem")
+                problems.append(f"captura {c['id_captura']}: o lote e metadata.capturas_itens divergem")
     return problems

@@ -126,8 +126,14 @@ def test_the_html_report_runs_edr_through_uvx_in_the_state_folder_and_needs_uv(
         observability.html_report(settings)
     called: dict[str, Any] = {}
 
+    page = (
+        '<head><title>Elementary Data</title><link rel="icon" href="f.svg"/></head><body>'
+        '{key:"c",path:"p",label:"Catalog",description:"d",icon:A.jsx(a,{}),isSaasPage:!0,tooltip:"t"}</body>'
+    )
+
     def fake_run(command: list[str], **kwargs: Any) -> None:
         called.update(command=command, **kwargs)
+        Path(command[command.index("--file-path") + 1]).write_text(page, encoding="utf-8")
 
     monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/uvx")
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -140,7 +146,22 @@ def test_the_html_report_runs_edr_through_uvx_in_the_state_folder_and_needs_uv(
         "edr",
         "report",
     ]
-    assert called["command"][5:] == ["--profiles-dir", str(DBT_DIR), "--file-path", str(file)]
+    assert called["command"][5:] == [
+        "--profiles-dir",
+        str(DBT_DIR),
+        "--file-path",
+        str(file),
+        "--project-name",
+        "Dado Público Brasil",
+        "--disable-samples",
+        "true",
+        "--exclude-elementary-models",
+        "true",
+        "--config-dir",
+        str(DBT_DIR / "edr"),
+    ]
+    html = file.read_text(encoding="utf-8")
+    assert "isSaasPage" not in html and "Qualidade dos dados</title>" in html
     assert called["cwd"] == file.parent  # o edr cria `edr_target` na pasta de trabalho
     assert called["env"]["DADO_PUBLICO_WAREHOUSE_FILE"] == str(settings.warehouse.resolve())
 
@@ -201,8 +222,8 @@ def test_a_failed_run_sends_one_email_with_the_steps_and_the_link_and_a_broken_s
 
 def capture(con: Connection, dataset: str, checked_at: str) -> None:
     con.execute(
-        "INSERT INTO metadata.captures (source, dataset, year, url, sha256, size_bytes, path, captured_at, "
-        "last_checked_at) VALUES ('camara', ?, 2024, 'https://x/' || ?, 'abc', 1, 'p', ?, ?)",
+        "INSERT INTO metadata.capturas (fonte, dataset, particao, url, sha256, qtd_bytes, caminho, dt_captura, "
+        "dt_verificacao) VALUES ('camara', ?, 2024, 'https://x/' || ?, 'abc', 1, 'p', ?, ?)",
         (dataset, dataset, checked_at, checked_at),
     )
 

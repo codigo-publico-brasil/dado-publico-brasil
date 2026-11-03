@@ -27,13 +27,14 @@ camara as (
         v.votos_outros,
         x.proposicoes,
         cast(null as boolean) as fl_votacao_secreta,
+        v.id_captura,
         cast(c.dt_captura as date) as dt_captura
 
     from {{ ref('stg_camara__votacoes') }} as v
 
     left join proposicoes_da_votacao as x on x.id_votacao = v.id_votacao
 
-    left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = v.id_captura
+    left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = v.id_captura
 
 ),
 
@@ -51,11 +52,12 @@ senado as (
         v.votos_abstencao as votos_outros,
         v.materia_sigla as proposicoes,
         v.fl_secreta as fl_votacao_secreta,
+        v.id_captura,
         cast(c.dt_captura as date) as dt_captura
 
     from {{ ref('stg_senado__votacoes') }} as v
 
-    left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = v.id_captura
+    left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = v.id_captura
 
 )
 

@@ -14,8 +14,9 @@ select
     n.ementa_oficial,
     n.apelido,
     'https://legis.senado.leg.br/norma/' || n.id_norma as fonte_url,
+    n.id_captura,
     cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_senado__normas') }} as n
 
-left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = n.id_captura
+left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = n.id_captura

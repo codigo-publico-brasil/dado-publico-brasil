@@ -3,7 +3,7 @@ with cadastro as (
     select
         id_pessoa, fonte, nome, nome_civil, sexo, dt_nascimento, dt_falecimento, municipio_nascimento,
         uf_nascimento, foto_url, rede_social_url, site_url, escolaridade, situacao_atual, condicao_eleitoral,
-        email_institucional, telefone_institucional, gabinete_endereco, pagina_url
+        email_institucional, telefone_institucional, gabinete_endereco, pagina_url, id_captura, dt_captura
     from {{ ref('int_pessoas_unidas_cadastro') }}
 
     union all
@@ -11,7 +11,7 @@ with cadastro as (
     select
         id_pessoa, fonte, nome, nome_civil, sexo, dt_nascimento, dt_falecimento, municipio_nascimento,
         uf_nascimento, foto_url, rede_social_url, site_url, escolaridade, situacao_atual, condicao_eleitoral,
-        email_institucional, telefone_institucional, gabinete_endereco, pagina_url
+        email_institucional, telefone_institucional, gabinete_endereco, pagina_url, id_captura, dt_captura
     from {{ ref('int_pessoas_senado_unidas') }}
 
 ),
@@ -26,18 +26,6 @@ uma_por_pessoa as (
     from cadastro
 
     qualify row_number() over (partition by id_pessoa order by if(fonte = '{{ var("source_camara") }}', 0, 1)) = 1
-
-),
-
-capturas as (
-
-    select fonte, cast(max(dt_captura) as date) as dt_captura
-
-    from {{ ref('stg_metadata__captures') }}
-
-    where dataset in ('deputados', 'senadores')
-
-    group by fonte
 
 )
 
@@ -73,12 +61,11 @@ select
     -- autoria só existe para a Câmara: nas demais fontes é desconhecida (vazio), não zero
     if(p.fonte = '{{ var("source_camara") }}', coalesce(a.qtd_propostas, 0), null) as qtd_propostas,
     coalesce(a.qtd_votos, 0) as qtd_votos,
-    c.dt_captura
+    p.id_captura,
+    cast(p.dt_captura as date) as dt_captura
 
 from uma_por_pessoa as p
 
 left join {{ ref('int_pessoas_atividade_agregada') }} as a on a.id_pessoa = p.id_pessoa
 
 left join {{ ref('int_pessoas_profissoes_agregadas') }} as pr on pr.id_pessoa = p.id_pessoa
-
-left join capturas as c on c.fonte = p.fonte

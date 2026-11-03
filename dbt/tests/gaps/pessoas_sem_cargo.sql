@@ -4,12 +4,12 @@
 select p.id_pessoa
 from {{ ref('dim_pessoas') }} as p
 where not exists (
-        select 1 from {{ ref('stg_identity__pessoa_identificadores') }} as i
+        select 1 from {{ ref('stg_identity__pessoas_identificadores') }} as i
         where i.id_pessoa = p.id_pessoa and i.fonte in ('{{ var("source_camara") }}', '{{ var("source_senado") }}')
     )
     and not exists (
         select 1
-        from {{ ref('stg_identity__pessoa_identificadores') }} as i
+        from {{ ref('stg_identity__pessoas_identificadores') }} as i
         inner join {{ ref('fct_mandatos') }} as m on m.id_candidatura = i.id_na_fonte
         where i.id_pessoa = p.id_pessoa and i.fonte = '{{ var("source_tse") }}'
     )

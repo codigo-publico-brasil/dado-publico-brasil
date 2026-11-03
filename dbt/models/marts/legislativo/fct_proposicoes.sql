@@ -20,13 +20,14 @@ camara as (
     p.ultimo_status_orgao_sigla as orgao_ultimo_status,
     cast(p.dt_ultimo_status as date) as dt_ultimo_status,
     '{{ var("url_proposicao_camara") }}' || cast(p.id_proposicao as varchar) as fonte_url,
+    p.id_captura,
     cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_camara__proposicoes') }} as p
 
 cross join siglas as s
 
-left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = p.id_captura
+left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = p.id_captura
 
 ),
 
@@ -43,6 +44,7 @@ senado as (
         cast(null as varchar) as orgao_ultimo_status,
         pr.dt_situacao as dt_ultimo_status,
         '{{ var("url_materia_senado") }}' || cast(m.id_materia as varchar) as fonte_url,
+        m.id_captura,
         cast(c.dt_captura as date) as dt_captura
 
     from {{ ref('int_senado_materias_unicas') }} as m
@@ -51,7 +53,7 @@ senado as (
 
     left join {{ ref('stg_senado__processos') }} as pr on pr.id_materia = m.id_materia
 
-    left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = m.id_captura
+    left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = m.id_captura
 
 )
 

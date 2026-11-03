@@ -8,8 +8,8 @@ from dado_publico_brasil.transformation import build, identity
 
 def bridge(con: Connection) -> list[tuple[object, ...]]:
     return con.execute(
-        "SELECT source, id_type, source_id, method FROM identity.pessoa_identificador "
-        f"WHERE id_type <> '{identity.ELECTED_TYPE}' ORDER BY source_id"
+        "SELECT fonte, id_tipo, id_na_fonte, metodo FROM identity.pessoas_identificadores "
+        f"WHERE id_tipo <> '{identity.ELECTED_TYPE}' ORDER BY id_na_fonte"
     ).fetchall()
 
 
@@ -34,8 +34,8 @@ def test_each_deputy_gets_a_person_with_its_own_key_and_a_traceable_method(
     assert (
         scalar(
             con,
-            "SELECT COUNT(DISTINCT id_pessoa) FROM identity.pessoa_identificador "
-            f"WHERE id_type <> '{identity.ELECTED_TYPE}'",
+            "SELECT COUNT(DISTINCT id_pessoa) FROM identity.pessoas_identificadores "
+            f"WHERE id_tipo <> '{identity.ELECTED_TYPE}'",
         )
         == 6
     )
@@ -45,19 +45,19 @@ def test_person_keys_do_not_change_when_the_pipeline_runs_again(
     full: tuple[Connection, Settings],
 ) -> None:
     con, settings = full
-    people_before = scalar(con, "SELECT COUNT(*) FROM identity.pessoa")
+    people_before = scalar(con, "SELECT COUNT(*) FROM identity.pessoas")
     before = con.execute(
-        "SELECT source_id, id_pessoa FROM identity.pessoa_identificador ORDER BY 1"
+        "SELECT id_na_fonte, id_pessoa FROM identity.pessoas_identificadores ORDER BY 1"
     ).fetchall()
     con.close()
     build.transform(settings, "transform_pre", *build.PRE_IDENTITY)
     con = warehouse.connect(settings)
     assert identity.resolve(con) == (7, 0)  # 7 vistos, nenhuma pessoa nova e nenhuma fusão a repetir
     after = con.execute(
-        "SELECT source_id, id_pessoa FROM identity.pessoa_identificador ORDER BY 1"
+        "SELECT id_na_fonte, id_pessoa FROM identity.pessoas_identificadores ORDER BY 1"
     ).fetchall()
     assert before == after
-    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa") == people_before
+    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoas") == people_before
 
 
 def test_a_deputy_seen_only_in_the_votes_also_becomes_a_person(
@@ -66,7 +66,7 @@ def test_a_deputy_seen_only_in_the_votes_also_becomes_a_person(
     con, _ = full
     assert con.execute(
         "SELECT p.nome, p.dt_nascimento, p.foto_url FROM marts.dim_pessoas_cadastro p "
-        "JOIN identity.pessoa_identificador i USING (id_pessoa) WHERE i.source_id = '12'"
+        "JOIN identity.pessoas_identificadores i USING (id_pessoa) WHERE i.id_na_fonte = '12'"
     ).fetchone() == ("Caio", None, None)
 
 
@@ -97,8 +97,8 @@ def test_every_elected_candidacy_has_a_person_and_those_who_never_won_have_none(
     assert without_person == 0
     never_elected = con.execute(
         "SELECT COUNT(*) FROM staging.stg_tse__candidaturas c WHERE nome_urna IN ('BETO', 'BETO B') "
-        "AND id_candidatura IN (SELECT source_id FROM identity.pessoa_identificador "
-        f"WHERE id_type = '{identity.ELECTED_TYPE}')"
+        "AND id_candidatura IN (SELECT id_na_fonte FROM identity.pessoas_identificadores "
+        f"WHERE id_tipo = '{identity.ELECTED_TYPE}')"
     ).fetchone()
     assert never_elected == (0,)
 
@@ -107,18 +107,18 @@ def test_an_elected_deputy_keeps_the_person_the_chamber_gave_them(full: tuple[Co
     con, _ = full
     deputy = scalar(
         con,
-        "SELECT id_pessoa FROM identity.pessoa_identificador WHERE source = 'tse' AND id_type = 'candidato'"
-        " AND source_id = '2022:RJ:1001'",
+        "SELECT id_pessoa FROM identity.pessoas_identificadores WHERE fonte = 'tse' AND id_tipo = 'candidato'"
+        " AND id_na_fonte = '2022:RJ:1001'",
     )
     assert deputy == scalar(
         con,
-        "SELECT id_pessoa FROM identity.pessoa_identificador WHERE source = 'tse' "
-        f"AND id_type = '{identity.ELECTED_TYPE}' AND source_id = '2022:RJ:1001'",
+        "SELECT id_pessoa FROM identity.pessoas_identificadores WHERE fonte = 'tse' "
+        f"AND id_tipo = '{identity.ELECTED_TYPE}' AND id_na_fonte = '2022:RJ:1001'",
     )
     assert (
         scalar(
             con,
-            "SELECT COUNT(*) FROM identity.pessoa_identificador WHERE id_pessoa = ? AND source IN ('camara', 'senado')",
+            "SELECT COUNT(*) FROM identity.pessoas_identificadores WHERE id_pessoa = ? AND fonte IN ('camara', 'senado')",
             (deputy,),
         )
         >= 1
@@ -142,10 +142,10 @@ def test_core_people_have_the_source_of_each_attribute_and_only_published_data(
         "dt_entrada",
     ]
     assert scalar(con, "SELECT COUNT(*) FROM marts.dim_pessoas") == scalar(
-        con, "SELECT COUNT(*) FROM identity.pessoa"
+        con, "SELECT COUNT(*) FROM identity.pessoas"
     )
     # o prefeito eleito só existe no TSE: tudo vem de lá, e o gênero só aparece quando a fonte diz masculino ou feminino
     assert con.execute(
         "SELECT fonte_nome_civil, fonte_dt_nascimento, genero FROM marts.dim_pessoas p "
-        "JOIN identity.pessoa_identificador i USING (id_pessoa) WHERE i.source_id LIKE '%:1010'"
+        "JOIN identity.pessoas_identificadores i USING (id_pessoa) WHERE i.id_na_fonte LIKE '%:1010'"
     ).fetchone() == ("tse", "tse", "masculino")

@@ -10,12 +10,12 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 
 | Camada | O que pega | Onde fica |
 | --- | --- | --- |
-| Monitor da fonte | Fonte fora do ar, coluna que sumiu ou apareceu (`schema`, `schema_mudou`), queda de volume | `metadata.source_checks` |
-| Integridade do download | Antes de virar captura, o arquivo não pode ser uma página HTML no lugar do esperado, o tamanho tem de bater com o `Content-Length` informado e, nos `.zip`, o pacote abre sem erro e tem o membro esperado (`member`, como `*.xml` no DOU). Reprovado vira `integridade` com erro, o arquivo fica no landing como evidência, não vira captura e a próxima execução tenta de novo | `metadata.source_checks` |
-| Partições que faltam | Por dataset anual, mensal ou por legislatura, as partições esperadas contra as capturadas (`particoes`). A execução incremental recupera sozinha as que faltam (as mais recentes primeiro, até 3 por dataset e por execução); a que a fonte não publica (404) vira "indisponível" e não é tentada de novo. `dado-publico coverage` lista as lacunas | `metadata.source_checks` |
-| Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`); linhas de capturas anteriores que a atual não traz (`linhas_removidas`) | `metadata.source_checks` |
-| Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.dbt_results` |
-| Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam; nas marts com data de evento (`votacoes`, `votacoes_votos`, `proposicoes`, `normas`, `emendas_convenios`), volume por dia com sazonalidade de dia da semana e frescor (a fonte parou de atualizar) | `metadata.dbt_results` e esquema `elementary` |
+| Monitor da fonte | Fonte fora do ar, coluna que sumiu ou apareceu (`schema`, `schema_mudou`), queda de volume | `metadata.fontes_verificacoes` |
+| Integridade do download | Antes de virar captura, o arquivo não pode ser uma página HTML no lugar do esperado, o tamanho tem de bater com o `Content-Length` informado e, nos `.zip`, o pacote abre sem erro e tem o membro esperado (`member`, como `*.xml` no DOU). Reprovado vira `integridade` com erro, o arquivo fica no landing como evidência, não vira captura e a próxima execução tenta de novo | `metadata.fontes_verificacoes` |
+| Partições que faltam | Por dataset anual, mensal ou por legislatura, as partições esperadas contra as capturadas (`particoes`). A execução incremental recupera sozinha as que faltam (as mais recentes primeiro, até 3 por dataset e por execução); a que a fonte não publica (404) vira "indisponível" e não é tentada de novo. `dado-publico coverage` lista as lacunas | `metadata.fontes_verificacoes` |
+| Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`); linhas de capturas anteriores que a atual não traz (`linhas_removidas`) | `metadata.fontes_verificacoes` |
+| Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.testes_resultados` |
+| Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam; nas marts com data de evento (`votacoes`, `votacoes_votos`, `proposicoes`, `normas`, `emendas_convenios`), volume por dia com sazonalidade de dia da semana e frescor (a fonte parou de atualizar) | `metadata.testes_resultados` e esquema `elementary` |
 | Relatório e alerta | Junta tudo, falha se houver problema e envia por e-mail | `dado-publico observe` |
 | Dagster | A saúde de cada fonte e da carga aparece como a verificação `saude_da_fonte` de cada tabela do raw (erro vira falha, aviso vira aviso); o sensor `falha_de_execucao` manda e-mail quando qualquer execução falha | interface do Dagster |
 
@@ -59,12 +59,19 @@ A máquina não prova que o dado está certo. A cada fonte nova: comparar a cont
 
 | Resultado | Onde está hoje | Como acessar |
 | --- | --- | --- |
+| `staging`, `intermediate`, `marts` e `metadata.capturas` em Parquet, com `catalogo.duckdb` e `manifesto.json` | Lake público no R2 (`datalake.codigopublicobrasil.com.br`) | `dado-publico export` (só depois dos testes do dbt; sobe apenas o que mudou, por hash); consumo em [`06-consumir-o-lake.md`](../03-consultar/06-consumir-o-lake.md) ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)) |
 | Esquema `marts` (as views `app_` viram tabelas) | PostgreSQL de serviço | `dado-publico publish` ([`01-rodar-localmente.md`](01-rodar-localmente.md)) |
+| Cópias da identidade e `metadata` (ADR 0036) | Bucket privado do R2 (**nunca público**: sem domínio nem `r2.dev`) | `DADO_PUBLICO_R2_BUCKET_PRIVADO`, só na máquina de produção; sem a variável, tudo local |
+| Landing e fotos | **Só no disco local** (risco aceito, ADR 0036) | nenhuma cópia; veja "Restaurar numa máquina vazia" |
 | Catálogo e dicionário de colunas | Arquivo no repositório | [`03-consultar/01-catalogo.md`](../03-consultar/01-catalogo.md), gerado por `dado-publico catalog` |
 | Site do dbt (linhagem, descrições, links das fontes) | **Só local** | `dado-publico docs`, em http://127.0.0.1:8080, com o pipeline parado |
 | Relatório de observabilidade | Local ou e-mail | `dado-publico observe [--html] [--email]` |
 
-O site do dbt ainda não é publicado na internet. O caminho usual é `dbt docs generate --static` (gera um único HTML) numa etapa do CI e hospedagem em página estática (por exemplo GitHub Pages); a decisão está em aberto numa issue.
+O `export` **recusa** (nada é apagado nem publicado) se faltar no warehouse alguma tabela do manifesto publicado: protege o lake de um warehouse errado ou incompleto. Para retirar de propósito uma tabela que deixou de existir, rode `dado-publico export --prune`.
+
+O comando `dado-publico publish-docs` (o `run` o chama sozinho depois do `export`) sobe ao R2, como arquivos únicos, o site do dbt (`docs/dbt.html`), o relatório do Elementary (`docs/qualidade.html`) e a página inicial do lake (`docs/index.html`, a partir de `site/index.html`, no estilo do site da organização, com a ficha preenchida pelo `manifesto.json`). O warehouse precisa estar livre; sem as variáveis do R2, nada é publicado. Esses arquivos ficam fora dos prefixos das tabelas, então o `export` não os apaga. O Elementary não grava amostras de linhas de testes (`test_sample_row_count: 0`), porque o relatório é público. Nenhuma das duas ferramentas aceita tema próprio, então o HTML gerado é ajustado em `transformation/branding.py` (título, ícone da aba e atalho de volta à página inicial; o logo de cada ferramenta continua na interface), `prune_static` (sem pacotes nem exposures no site do dbt) e `prune_report` (sem as páginas do Elementary Cloud e com política de segurança que bloqueia terceiros). O relatório sai sem rastreamento (`dbt/edr/config.yml`), sem amostras de dados e com o nome do projeto. A apresentação do site do dbt é o bloco `__overview__` de `dbt/models/overview.md`. Se uma versão nova de uma ferramenta mudar o formato, o `publish-docs` falha com erro claro.
+
+**Uma vez, no painel da Cloudflare** (o R2 não serve `index.html` sozinho): em *Rules → Transform Rules → Rewrite URL*, regra para `datalake.codigopublicobrasil.com.br` com `URI Path` igual a `/` que reescreve o caminho (estático) para `/docs/index.html`.
 
 ## Dagster: o pipeline sozinho
 
@@ -85,9 +92,17 @@ O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md))
 
 **Limites:** o Dagster só propaga a partir do que ele mesmo materializou, então na primeira vez rode `atualizar_tudo`. A interface **não tem login** no Dagster de código aberto: o serviço do `compose.yaml` escuta só em `127.0.0.1`; não o exponha à rede sem uma camada de autenticação na frente (ainda em aberto).
 
+## Restaurar numa máquina vazia (bucket privado)
+
+Com `DADO_PUBLICO_R2_BUCKET_PRIVADO` e as credenciais do R2 (`.env.example`), um warehouse novo (arquivo inexistente) restaura sozinho o `metadata` e a cópia mais recente e concluída da identidade, **com as mesmas chaves `id_pessoa`**, e avança as sequências. Depois: `uv run dado-publico rebuild` (sem `--old-warehouse`) e `run --historical` recapturam o raw das fontes.
+
+- **Volta:** `id_pessoa` e suas ligações, o registro das capturas (URL, hash, data), execuções e testes.
+- **Não volta sem o landing:** os arquivos. Eles são baixados de novo; o que a fonte mudou ou tirou do ar fica no `metadata` com o hash, e `verify` o aponta como ausente. Os lotes dos datasets por item (`foreach`) não se refazem iguais, e o acumulado dos datasets `merge` não volta (issue 155). As fotos se extraem de novo dos pacotes.
+- **Um escritor:** só a produção tem a variável e o token com escrita. O envio do `metadata` recusa sobrescrever um bucket com mais capturas que a máquina (restaure antes).
+
 ## Reconstruir o warehouse do zero, a partir do landing
 
-Quando o warehouse precisa ser refeito (mudança incompatível, arquivo corrompido, limpeza geral). O raw, o dbt e as consultas se refazem do landing; a **identidade é criada de novo, com chaves `id_pessoa` novas** (a cópia da anterior fica em `snapshots/identity`), então só faça isso se nenhuma aplicação guarda as chaves antigas. O que **não** se refaz do landing é o registro das capturas (URL, data, hash, ETag e itens de cada lote), que mora em `metadata` (issue 153): por isso o comando leva o `metadata` do warehouse antigo e descarta o resto.
+Quando o warehouse precisa ser refeito (mudança incompatível, arquivo corrompido, limpeza geral). O raw, o dbt e as consultas se refazem do landing; a identidade e o registro das capturas (URL, data, hash, ETag e itens de cada lote, em `metadata`, issue 153) não se refazem dele. Com o bucket privado configurado, vêm de lá (mesmas chaves; ignore o passo 2). Sem ele, o comando leva o `metadata` do warehouse antigo (`--old-warehouse`) e a **identidade é criada de novo, com chaves `id_pessoa` novas**; só faça isso se nenhuma aplicação guarda as chaves antigas.
 
 1. **Pare tudo que escreve no warehouse**, em especial o Dagster (`docker stop dado-publico-brasil-dagster-1`): uma imagem com código antigo apagaria as ligações novas da identidade.
 2. Mova o warehouse antigo para fora do caminho, **sem apagá-lo** (ele é a fonte do `metadata`):
@@ -109,12 +124,12 @@ Se parar no meio, `uv run dado-publico load --rebuild` e `uv run dado-publico tr
 
 | Conferência | Como |
 | --- | --- |
-| Todas as capturas carregaram | `uv run dado-publico query --sql "select count(*), count(loaded_at) from metadata.captures"` (as duas contagens iguais) |
+| Todas as capturas carregaram | `uv run dado-publico query --sql "select count(*), count(dt_carga) from metadata.capturas"` (as duas contagens iguais) |
 | O raw tem as mesmas linhas do antigo | compare `select count(*)` de cada tabela `raw_*` com o warehouse antigo (abra o antigo somente leitura com `duckdb`) |
 | O landing está íntegro e a identidade tem cópia | `uv run dado-publico verify` |
 | Nenhum teste do dbt reprova | `uv run dado-publico observe` (0 reprovados; a seção "Saúde por dimensão" mostra o resto) |
 | Os modelos novos têm o tamanho esperado | `select count(*)` em `dim_pessoas`, `fct_mandatos`, `fct_eventos`, `agg_composicoes`, `fct_votos` e `app_*` contra o warehouse antigo |
-| A identidade está sã | `dim_pessoas` e `identity.pessoa` com o mesmo número; nenhum mandato sem `id_pessoa` |
+| A identidade está sã | `dim_pessoas` e `identity.pessoas` com o mesmo número; nenhum mandato sem `id_pessoa` |
 | O raw bate com o antigo | As diferenças esperadas são só de versões: o `load --rebuild` carrega a **versão mais recente** de cada arquivo, e a carga diária **soma** as versões nos datasets `merge` (issue 155). Fora disso, as contagens devem ser iguais; uma diferença de dobro é duplicação no antigo (foi o caso da votação de 2022) |
 | Reconstruiu igual | rode `transform` de novo: nenhuma pessoa nova, nenhum snapshot novo |
 
@@ -122,16 +137,16 @@ Se parar no meio, `uv run dado-publico load --rebuild` e `uv run dado-publico tr
 
 ## Como saber o que está desatualizado
 
-Dois tempos diferentes, os dois em `metadata.captures`: `captured_at` (quando **chegou conteúdo novo** da fonte) e `last_checked_at` (quando o pipeline **perguntou** à fonte pela última vez). Dataset com `last_checked_at` antigo está sem rodar; com `captured_at` antigo mas verificação recente, a fonte é que não publicou nada.
+Dois tempos diferentes, os dois em `metadata.capturas`: `dt_captura` (quando **chegou conteúdo novo** da fonte) e `dt_verificacao` (quando o pipeline **perguntou** à fonte pela última vez). Dataset com `dt_verificacao` antigo está sem rodar; com `dt_captura` antigo mas verificação recente, a fonte é que não publicou nada.
 
 ```bash
-uv run dado-publico query --sql "SELECT source, dataset, max(captured_at) AS ultimo_dado_novo, max(last_checked_at) AS ultima_verificacao FROM metadata.captures GROUP BY 1, 2 ORDER BY 4"
+uv run dado-publico query --sql "SELECT fonte, dataset, max(dt_captura) AS ultimo_dado_novo, max(dt_verificacao) AS ultima_verificacao FROM metadata.capturas GROUP BY 1, 2 ORDER BY 4"
 ```
 
 Outras visões:
 
 - **Dagster:** *Assets* mostra a última atualização de cada ativo e o atraso da captura (veja acima); a verificação `saude_da_fonte` mostra o último monitor da fonte (fora do ar, coluna que mudou, queda de volume).
 - `dado-publico observe`: resumo da saúde das fontes, da carga e dos testes (falha se houver problema).
-- **Frescor do dbt:** cada fonte declara `freshness` (`warn_after`, `error_after`) e o `dbt source freshness` roda no `transform`, gravando em `metadata.dbt_results`. Ele mede a idade da **última carga nossa**, não se a origem publicou algo novo.
+- **Frescor do dbt:** cada fonte declara `freshness` (`warn_after`, `error_after`) e o `dbt source freshness` roda no `transform`, gravando em `metadata.testes_resultados`. Ele mede a idade da **última carga nossa**, não se a origem publicou algo novo.
 
 **O que ainda não existe:** um comando que pergunte às origens "há dado novo?" sem baixar. Hoje a pergunta é feita dentro da captura agendada (o pedido leve de `ETag`/`Last-Modified` antes de baixar), que roda no `schedule` de cada fonte. O alerta de atraso aparece na interface; o aviso por e-mail só cobre execuções que falham.

@@ -1,4 +1,6 @@
 -- Convênios firmados com recursos de emendas: uma linha por convênio e emenda.
+with base as (
+
 select
     nullif(nullif(c_digo_da_emenda, 'Sem informação'), 'S/I') as cd_emenda,
     c_digo_fun_o as cd_funcao,
@@ -15,3 +17,7 @@ select
     _source_file_id as id_captura
 
 from {{ source('transparencia', 'emendas_convenios') }}
+
+)
+
+{{ colunas_auditoria('base') }}

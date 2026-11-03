@@ -10,8 +10,9 @@ select
     r.dt_norma_posterior_assinatura,
     r.dt_publicacao,
     r.publicacao,
+    r.id_captura,
     cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_senado__normas_relacoes') }} as r
 
-left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = r.id_captura
+left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = r.id_captura

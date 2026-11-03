@@ -8,6 +8,9 @@ with notas as (
         parte,
         ordem,
         identificador,
+        fonte,
+        id_captura,
+        dt_captura,
         unnest(regexp_extract_all(texto, '(?i)\(([^()]*emenda[^()]*)(?:\)|$)', 1)) as nota
 
     from {{ ref('dim_constituicao_dispositivos') }}
@@ -44,9 +47,12 @@ classificadas as (
 )
 
 select
+    fonte,
     parte,
     ordem,
     identificador,
+    id_captura,
+    dt_captura,
     tipo_alteracao,
     emenda_tipo,
     try_cast(unnest(if(len(numeros) = 0, [cast(null as varchar)], numeros)) as integer) as emenda_numero,

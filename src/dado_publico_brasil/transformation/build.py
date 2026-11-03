@@ -5,11 +5,11 @@
       -> transform_post (dbt: o resto do intermediate e os marts)
 
 Os testes do dbt rodam junto com cada fase; teste com erro interrompe a execução. O resultado de
-cada nó (modelo, teste, frescor) é gravado em `metadata.dbt_results`. Não importa a ingestão: parte
-dos schemas `raw_*` e de `metadata.captures`.
+cada nó (modelo, teste, frescor) é gravado em `metadata.testes_resultados`. Não importa a ingestão: parte
+dos schemas `raw_*` e de `metadata.capturas`.
 """
 
-from dado_publico_brasil.core import runs, warehouse
+from dado_publico_brasil.core import migrations, privado, runs, warehouse
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection
 from dado_publico_brasil.transformation import dbt, describe, identity, observability, snapshot
@@ -29,6 +29,9 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
 
     O chamador precisa ter fechado a sua conexão com o warehouse antes de chamar.
     """
+    migrations.open_warehouse(
+        settings
+    ).close()  # o dbt lê `metadata.capturas`: o esquema precisa estar migrado
     outcome = dbt.invoke(settings, "build", *selection)
     con = warehouse.connect(settings)
     try:
@@ -78,6 +81,11 @@ def run(settings: Settings) -> int:
     check_freshness(settings)
     created = resolve_identity(settings)
     transform(settings, "transform_post", *POST_IDENTITY)
+    con = warehouse.connect(settings)
+    try:
+        privado.push_metadata(con, settings)
+    finally:
+        con.close()
     return created
 
 

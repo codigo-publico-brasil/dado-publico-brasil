@@ -48,7 +48,8 @@ select
     m.id_partido,
     v.partido_sigla as partido_na_fonte,
     v.uf_sigla as uf,
-    v.id_captura
+    v.id_captura,
+    cast(v.dt_captura as date) as dt_captura
 
 from {{ ref('int_votacoes_votos_ligados') }} as v
 

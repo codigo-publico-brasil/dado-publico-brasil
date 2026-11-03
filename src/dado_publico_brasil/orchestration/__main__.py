@@ -11,6 +11,8 @@ A pasta de armazenamento e o warehouse vêm de DADO_PUBLICO_STORAGE_ROOT e DADO_
 Reparos sem baixar nada: backfill (cria `_ingested_at` no raw e preenche as linhas antigas) e recheck
 (refaz a checagem de cabeçalho dos arquivos do landing).
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
+Lake público: export grava Parquet, manifesto e catálogo no R2 (DADO_PUBLICO_R2_*) ou em <storage_root>/lake;
+export --verificar confere cada arquivo do manifesto.
 Publicação: publish copia os marts para o PostgreSQL de serviço (DADO_PUBLICO_POSTGRES_DSN).
 Auditoria: verify (hashes do landing e cópia da identidade) e coverage (itens obtidos nos datasets por item).
 Reconstrução do zero: `rebuild --old-warehouse ARQUIVO` (docs/02-fazer/04-operar-e-publicar.md).
@@ -31,7 +33,7 @@ from dado_publico_brasil.core import settings as settings_module
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.ingestion import contract, foreach, landing, loader, photos
 from dado_publico_brasil.orchestration import pipeline
-from dado_publico_brasil.transformation import build, catalog, dbt, observability, publish, snapshot
+from dado_publico_brasil.transformation import build, catalog, dbt, export, observability, publish, snapshot
 
 COMMANDS = (
     "run",
@@ -41,7 +43,9 @@ COMMANDS = (
     "recheck",
     "transform",
     "identity",
+    "export",
     "publish",
+    "publish-docs",
     "catalog",
     "docs",
     "query",
@@ -147,10 +151,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--force", action="store_true", help="baixa mesmo que a fonte diga que não mudou")
     p.add_argument("--rebuild", action="store_true", help="carrega tudo de novo no raw")
-    p.add_argument("--old-warehouse", help="rebuild: o warehouse antigo, do qual só o metadata é levado")
+    p.add_argument(
+        "--old-warehouse",
+        help="rebuild: o warehouse antigo, do qual só o metadata é levado (sem ele, o bucket privado)",
+    )
     p.add_argument("--email", action="store_true", help="envia o relatório do comando observe por e-mail")
     p.add_argument("--html", action="store_true", help="gera o relatório HTML do Elementary (observe)")
     p.add_argument("--sql", help="consulta para o comando query (somente leitura)")
+    p.add_argument(
+        "--verificar", action="store_true", help="export: confere cada arquivo do manifesto publicado"
+    )
+    p.add_argument(
+        "--prune", action="store_true", help="export: retira do lake as tabelas que sumiram do warehouse"
+    )
     p.add_argument("--output", type=Path, help="arquivo de saída do comando catalog")
     p.add_argument("--port", type=int, default=8080, help="porta do comando docs")
     p.add_argument("--storage-root", type=Path, help="pasta de armazenamento (padrão: settings.yml)")
@@ -186,14 +199,17 @@ def main(argv: list[str] | None = None) -> int:
                     dataset_name=args.dataset,
                 )
             )
+            print(
+                "lake:", export.export(settings)
+            )  # depois dos testes do dbt (build.run falha antes se algum quebrar)
+            print("docs:", export.publish_docs(settings))  # warehouse livre: dbt docs e edr abrem o arquivo
         case "rebuild":
-            if not args.old_warehouse:
-                p.error("rebuild exige --old-warehouse (o warehouse antigo; só o metadata é levado)")
-            print("metadata levado do antigo:", rebuild.start_from(settings, Path(args.old_warehouse)))
+            old = Path(args.old_warehouse) if args.old_warehouse else None
+            print("metadata levado:", rebuild.start_from(settings, old))
             args.command, args.rebuild = "load", True
             _ingest(settings, args)
             build.run(settings)
-            print("warehouse reconstruído do landing (raw, dbt, identidade com chaves novas e dbt)")
+            print("warehouse reconstruído do landing (raw, dbt, identidade e dbt)")
         case "transform":
             build.run(settings)
             print("dbt concluído (staging, intermediate, identidade e marts)")
@@ -224,6 +240,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{n} fotos extraídas para {settings.storage_root / 'fotos'}")
         case "identity":
             print(f"{build.resolve_identity(settings)} pessoas novas")
+        case "export":
+            if args.verificar:
+                found = export.verify(settings)
+                print(chr(10).join(found) or "lake íntegro: todos os arquivos do manifesto conferem")
+                return 1 if found else 0
+            print(export.export(settings, prune=args.prune))
+        case "publish-docs":
+            pages = export.publish_docs(settings)
+            print(pages or "R2 não configurado: nada publicado")
         case "publish":
             published = publish.publish(settings)
             print(f"{len(published)} marts publicados ({sum(published.values())} linhas)")

@@ -19,9 +19,11 @@ select
     d.gabinete_email as email_institucional,
     d.gabinete_telefone as telefone_institucional,
     d.gabinete_endereco,
-    d.pagina_url
+    d.pagina_url,
+    s.id_captura,
+    s.dt_captura
 
-from {{ ref('stg_identity__pessoa_identificadores') }} as i
+from {{ ref('stg_identity__pessoas_identificadores') }} as i
 
 inner join {{ ref('int_senadores_unidos') }} as s
     on i.fonte = '{{ var("source_senado") }}'

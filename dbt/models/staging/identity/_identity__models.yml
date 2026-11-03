@@ -6,7 +6,7 @@ models:
     columns:
       - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
       - {name: dt_criacao, description: "Data de criação."}
-  - name: stg_identity__pessoa_identificadores
+  - name: stg_identity__pessoas_identificadores
     description: Identificadores de cada pessoa em cada fonte.
     columns:
       - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["not_null"]}
@@ -16,7 +16,7 @@ models:
       - {name: metodo, description: "Regra que ligou as duas chaves."}
       - {name: confirmado_por, description: "Quem confirmou o registro."}
       - {name: dt_ligacao, description: "Data em que o vínculo foi feito."}
-  - name: stg_identity__pessoa_fusoes
+  - name: stg_identity__pessoas_fusoes
     description: Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa, uma linha por chave absorvida.
     columns:
       - {name: id_pessoa_absorvida, description: "Chave que deixou de existir.", tests: ["unique", "not_null"]}

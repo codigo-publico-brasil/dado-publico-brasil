@@ -24,9 +24,12 @@ def extract_all(con: Connection, settings: Settings) -> int:
         if not dataset.startswith("fotos_"):
             continue
         folder = (
-            settings.storage_root / "fotos" / str(capture["year"]) / dataset.removeprefix("fotos_").upper()
+            settings.storage_root
+            / "fotos"
+            / str(capture["particao"])
+            / dataset.removeprefix("fotos_").upper()
         )
-        with zipfile.ZipFile(settings.storage_root / capture["path"]) as package:
+        with zipfile.ZipFile(settings.storage_root / capture["caminho"]) as package:
             for info in package.infolist():
                 found = MEMBER.match(info.filename)
                 if not found:

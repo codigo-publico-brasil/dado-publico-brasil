@@ -1,4 +1,5 @@
 # Projeto dbt da camada de dados (ADR 0006). Segue o guia de estrutura da dbt Labs:
+#   Toda tabela leva em meta: owner, sensitivity e fonte_oficial; sem fonte e captura próprias, auditoria_excecao diz por quê.
 #   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
 #   marts         entidades e consultas prontas, com contrato de colunas, nomeadas pelo tipo (ADR 0033):
@@ -15,6 +16,7 @@ on-run-start:
   - "{{ create_text_functions() }}"
 
 vars:
+  test_sample_row_count: 0  # o relatório do Elementary é público: sem amostras de linhas dos testes
   source_camara: camara
   id_type_camara: deputado
   source_senado: senado
@@ -28,6 +30,7 @@ vars:
 models:
   elementary:
     +schema: elementary
+    +docs: {show: false}  # modelos do pacote ficam fora do site público
   dado_publico_brasil:
     +persist_docs:
       relation: true
@@ -40,14 +43,25 @@ models:
         owner: fundador do projeto
       camara:
         +tags: [pre_identity]
+        +meta: {fonte_oficial: Câmara dos Deputados}
       senado:
         +tags: [pre_identity]
+        +meta: {fonte_oficial: Senado Federal}
       tse:
         +tags: [pre_identity]
+        +meta: {fonte_oficial: Tribunal Superior Eleitoral}
+      ibge:
+        +meta: {fonte_oficial: IBGE}
+      transparencia:
+        +meta: {fonte_oficial: Portal da Transparência (CGU)}
       constituicao:
         +tags: [pre_identity]
+        +meta: {fonte_oficial: Câmara dos Deputados (texto da Constituição)}
       metadata:
         +tags: [pre_identity]
+        +meta: {fonte_oficial: Projeto (registro das capturas), auditoria_excecao: Tabela do projeto que descreve as capturas; não vem de arquivo de fonte.}
+      identity:
+        +meta: {fonte_oficial: Projeto (identidade interna), auditoria_excecao: Tabela interna do projeto (schema identity); não vem de arquivo de fonte.}
     intermediate:
       +schema: intermediate
       +materialized: table

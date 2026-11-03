@@ -2,10 +2,12 @@
 
 import re
 
+from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, rows
+from dado_publico_brasil.transformation import catalog
 
 CONVENTION = "docs/03-consultar/02-convencao-de-nomes.md"
-OWN_LAYERS = ("staging", "intermediate", "marts")
+OWN_LAYERS = ("staging", "intermediate", "marts", "identity", "metadata")
 CONNECTIVES = {
     "a",
     "ao",
@@ -81,7 +83,7 @@ def test_table_names_have_the_theme_first_and_no_connectives(full: tuple[Connect
     names = rows(
         full[0],
         "SELECT DISTINCT schema_name, table_name FROM duckdb_columns() WHERE schema_name IN ('staging', "
-        "'intermediate', 'marts')",
+        "'intermediate', 'marts', 'identity', 'metadata')",
     )
     wrong = []
     for r in names:
@@ -89,3 +91,36 @@ def test_table_names_have_the_theme_first_and_no_connectives(full: tuple[Connect
         if CONNECTIVES & set(theme.split("_")):
             wrong.append(f"{r['schema_name']}.{r['table_name']}")
     assert wrong == [], f"nomes de tabela com conectivo ({CONVENTION}): {wrong}"
+
+
+def test_source_staging_and_marts_carry_the_audit_columns_and_the_standard_meta(
+    full: tuple[Connection, Settings],
+) -> None:
+    """ADR 0035: staging de fonte (5 colunas) e dim_/fct_/brg_ (3) rastreáveis até a captura; toda tabela com meta padrão."""
+    nodes = [
+        n
+        for n in catalog.manifest(full[1])["nodes"].values()
+        if n["resource_type"] in ("model", "seed") and n["package_name"] == "dado_publico_brasil"
+    ]
+    have: dict[str, set[str]] = {}
+    for c in columns(full[0], OWN_LAYERS):
+        have.setdefault(f"{c['schema_name']}.{c['table_name']}", set()).add(c["column_name"])
+    missing: list[str] = []
+    bad_meta: list[str] = []
+    for n in nodes:
+        meta, name, layer = n["meta"], n["name"], n["fqn"][1]
+        bad_meta += [f"{name}.{k}" for k in ("owner", "sensitivity", "fonte_oficial") if not meta.get(k)]
+        if meta.get("auditoria_excecao"):
+            continue
+        need = (
+            ("fonte", "id_captura", "dt_captura", "url_fonte", "sha256_captura")
+            if layer == "staging"
+            else ("fonte", "id_captura", "dt_captura")
+            if layer == "marts" and name.startswith(("dim_", "fct_", "brg_"))
+            else ()
+        )
+        missing += [
+            f"{name}.{c}" for c in need if c not in have.get(f"{n['schema']}.{n.get('alias') or name}", set())
+        ]
+    assert missing == [], f"sem colunas de auditoria (ADR 0035; ou declare meta.auditoria_excecao): {missing}"
+    assert bad_meta == [], f"meta fora do padrão (owner, sensitivity, fonte_oficial): {bad_meta}"

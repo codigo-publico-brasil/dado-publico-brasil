@@ -26,7 +26,7 @@ def test_catalog_covers_every_table_the_pipeline_builds() -> None:
     assert ("marts", "dim_pessoas_cadastro") in names
     assert ("staging", "stg_camara__votos") in names
     assert ("raw_federal_camara", "votacoes_votos") in names
-    assert ("identity", "pessoa") in names
+    assert ("identity", "pessoas") in names
     assert all(t["description"] for t in catalog.tables(Settings()))
 
 
@@ -54,7 +54,7 @@ def test_every_mart_column_has_a_description() -> None:
 
 
 # Quem pode importar quem: ingestão e transformação só conhecem o núcleo (a fronteira entre elas é o schema
-# raw e metadata.captures); só a orquestração conhece os dois motores; nada daqui conhece as aplicações.
+# raw e metadata.capturas); só a orquestração conhece os dois motores; nada daqui conhece as aplicações.
 ALLOWED = {
     "core": set(),
     "ingestion": {"core"},
@@ -97,12 +97,12 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
         "graph = defs.resolve_asset_graph();"
         "keys = {k.to_user_string() for k in graph.get_all_asset_keys()};"
         "scheduled = sorted(s.source for s in contract.find_all() if s.schedule);"
-        "print(len(keys), 'marts/dim_pessoas_cadastro' in keys, 'identity/pessoa' in keys, {'landing/camara', 'landing/senado'} <= keys,"
+        "print(len(keys), 'marts/dim_pessoas_cadastro' in keys, 'identity/pessoas' in keys, {'landing/camara', 'landing/senado'} <= keys,"
         " sorted(s.name for s in defs.schedules or []) == [f'captura_{n}' for n in scheduled],"
         " sorted(j.name for j in defs.jobs or []) ==  sorted(['atualizar_tudo', 'capturar_tudo', 'processar_tudo'] + [f'{p}_{c.source}' for c in contract.find_all() for p in ('atualizar', 'captura')]),"
         " sorted(s.name for s in defs.sensors or []),"
         " graph.get(AssetKey(['marts', 'dim_pessoas_cadastro'])).automation_condition is not None,"
-        " graph.get(AssetKey(['identity', 'pessoa'])).automation_condition is not None,"
+        " graph.get(AssetKey(['identity', 'pessoas'])).automation_condition is not None,"
         " graph.get(AssetKey(['tse', 'candidaturas'])).automation_condition is None,"
         " len([c for c in graph.asset_check_keys if c.name == 'saude_da_fonte']) > 0,"
         " defs.resolve_job_def('atualizar_tudo').tags.get('dado_publico/refazer') == 'true'"

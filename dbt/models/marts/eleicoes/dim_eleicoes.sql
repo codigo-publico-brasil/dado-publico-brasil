@@ -35,7 +35,8 @@ select
     v.cd_eleicao,
     any_value(v.eleicao) as nome,
     o.cd_eleicao is not null as fl_ordinaria,
-    max(v.id_captura) as id_captura
+    max(v.id_captura) as id_captura,
+    cast(max(v.dt_captura) as date) as dt_captura
 
 from vagas as v
 

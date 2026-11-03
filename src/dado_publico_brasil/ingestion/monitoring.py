@@ -1,6 +1,6 @@
 """Monitoramento das fontes: a fonte respondeu? as colunas mudaram? o volume despencou?
 
-Cada verificação grava uma linha em `metadata.source_checks` (status `ok`, `warn` ou `error`), que a
+Cada verificação grava uma linha em `metadata.fontes_verificacoes` (status `ok`, `warn` ou `error`), que a
 orquestração e a página de qualidade leem. Nada aqui interrompe a captura: o objetivo é saber que algo
 quebrou, não parar o que ainda funciona. O frescor (idade do dado carregado) é medido pelo dbt.
 """
@@ -30,8 +30,9 @@ def record(
     detail: str = "",
 ) -> None:
     con.execute(
-        "INSERT INTO metadata.source_checks "
-        "(checked_at, source, dataset, partition, check_name, status, detail) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO metadata.fontes_verificacoes "
+        "(dt_verificacao, fonte, dataset, particao, verificacao, resultado, detalhe) VALUES (?, ?, ?, "
+        "?, ?, ?, ?)",
         (runs.now(), source, dataset, partition, check, status, detail),
     )
 
@@ -55,8 +56,8 @@ def check_header(
     present = set(header) | {new for old, new in dataset.aliases.items() if old in header}
     missing = [c for c in dataset.columns if c not in present and c not in dataset.optional]
     previous = con.execute(
-        "SELECT detail FROM metadata.source_checks WHERE source = ? AND dataset = ? "
-        "AND partition IS NOT DISTINCT FROM ? AND check_name = 'header' ORDER BY id DESC LIMIT 1",
+        "SELECT detalhe FROM metadata.fontes_verificacoes WHERE fonte = ? AND dataset = ? "
+        "AND particao IS NOT DISTINCT FROM ? AND verificacao = 'header' ORDER BY id_verificacao DESC LIMIT 1",
         (source, name, partition),
     ).fetchone()
     old = json.loads(previous[0]) if previous else None
@@ -121,8 +122,9 @@ def check_integrity(
 def check_volume(con: Connection, source: str, dataset: str, partition: int | None, rows: int) -> None:
     """Avisa se a carga trouxe muito menos linhas que a anterior do mesmo dataset e partição."""
     previous = con.execute(
-        "SELECT rows_in FROM metadata.runs WHERE stage = 'load' AND source = ? AND dataset = ? "
-        "AND year IS NOT DISTINCT FROM ? AND status = 'ok' ORDER BY id DESC LIMIT 1",
+        "SELECT qtd_linhas_entrada FROM metadata.execucoes WHERE etapa = 'load' AND fonte = ? AND "
+        "dataset = ? "
+        "AND particao IS NOT DISTINCT FROM ? AND resultado = 'ok' ORDER BY id_execucao DESC LIMIT 1",
         (source, dataset, partition),
     ).fetchone()
     if previous and previous[0] and rows < VOLUME_DROP * previous[0]:
@@ -137,10 +139,10 @@ def latest_status(con: Connection, source: str, dataset: str) -> tuple[str, list
     Cada verificação (por partição e nome) vale pelo registro mais recente: erro já corrigido não conta.
     """
     found = con.execute(
-        "SELECT status, check_name, partition, detail FROM metadata.source_checks "
-        "WHERE source = ? AND dataset = ? AND status <> 'ok' AND id IN ("
-        "SELECT max(id) FROM metadata.source_checks WHERE source = ? AND dataset = ? "
-        "GROUP BY partition, check_name) ORDER BY status DESC, check_name, partition",
+        "SELECT resultado, verificacao, particao, detalhe FROM metadata.fontes_verificacoes "
+        "WHERE fonte = ? AND dataset = ? AND resultado <> 'ok' AND id_verificacao IN ("
+        "SELECT max(id_verificacao) FROM metadata.fontes_verificacoes WHERE fonte = ? AND dataset = ? "
+        "GROUP BY particao, verificacao) ORDER BY resultado DESC, verificacao, particao",
         (source, dataset, source, dataset),
     ).fetchall()
     details = [f"[{s}] {name}{f' ({p})' if p is not None else ''}: {d}" for s, name, p, d in found]
@@ -155,8 +157,8 @@ def check_removed(
     O `merge` do dlt não apaga: uma linha que a fonte removeu (ou, em dataset de chave por conteúdo, alterou)
     continua no raw com o id da captura antiga. Só se mede quando o arquivo já foi capturado antes.
     """
-    older = "SELECT id FROM metadata.captures WHERE url = ? AND id <> ?"
-    args = (capture["url"], capture["id"])
+    older = "SELECT id_captura FROM metadata.capturas WHERE url = ? AND id_captura <> ?"
+    args = (capture["url"], capture["id_captura"])
     if not con.execute(older, args).fetchone():
         return
     n = con.execute(f"SELECT count(*) FROM {table} WHERE _source_file_id IN ({older})", args).fetchone()
@@ -185,7 +187,7 @@ def check_load(
 def errors_since(con: Connection, moment: datetime) -> int:
     """Quantas verificações com erro foram gravadas desde o momento dado."""
     row = con.execute(
-        "SELECT COUNT(*) FROM metadata.source_checks WHERE status = 'error' AND checked_at >= ?",
+        "SELECT COUNT(*) FROM metadata.fontes_verificacoes WHERE resultado = 'error' AND dt_verificacao >= ?",
         (moment.isoformat(timespec="seconds"),),
     ).fetchone()
     return int(row[0]) if row else 0

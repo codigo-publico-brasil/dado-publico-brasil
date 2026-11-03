@@ -37,8 +37,10 @@ RULES = (
 SINGULAR = {"gaps": "completeness", "reconciliation": "consistency"}  # pasta em dbt/tests -> dimensão
 SCORE = {"pass": 100, "warn": 50}  # qualquer outro estado (fail, error) vale 0
 LATEST = (
-    "SELECT unique_id, status, failures FROM metadata.dbt_results WHERE kind = 'test' AND run_id IN "
-    "(SELECT max(id) FROM metadata.runs WHERE source = 'dbt' AND stage LIKE 'transform%' GROUP BY stage)"
+    "SELECT id_no, resultado, qtd_falhas FROM metadata.testes_resultados WHERE tipo = 'test' AND "
+    "id_execucao IN "
+    "(SELECT max(id_execucao) FROM metadata.execucoes WHERE fonte = 'dbt' AND etapa LIKE "
+    "'transform%' GROUP BY etapa)"
 )
 
 

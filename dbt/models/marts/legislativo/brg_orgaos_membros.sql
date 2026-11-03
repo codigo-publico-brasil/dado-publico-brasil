@@ -7,6 +7,8 @@ select
     partido_sigla as partido,
     uf_sigla as uf,
     dt_inicio,
-    dt_fim
+    dt_fim,
+    id_captura,
+    cast(dt_captura as date) as dt_captura
 
 from {{ ref('int_orgaos_membros_ligados') }}

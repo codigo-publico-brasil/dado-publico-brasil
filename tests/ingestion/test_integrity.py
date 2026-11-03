@@ -46,7 +46,7 @@ def extract(
 
     found = landing.extract(con, settings, contracts.find("dou"), "secao1", 202608, serving(content), head)
     checks = con.execute(
-        "SELECT status, detail FROM metadata.source_checks WHERE check_name = 'integridade' ORDER BY id"
+        "SELECT resultado, detalhe FROM metadata.fontes_verificacoes WHERE verificacao = 'integridade' ORDER BY id_verificacao"
     ).fetchall()
     return found, [(str(status), str(detail)) for status, detail in checks]
 
@@ -62,7 +62,7 @@ def test_a_broken_zip_is_an_integrity_error_and_is_not_a_capture_but_the_file_st
     found, checks = extract(con, settings, zip_with("a.xml")[:-30])
     assert found == -1
     assert checks[0][0] == "error" and "zip inválido" in checks[0][1] and "secao=1" in checks[0][1]
-    assert scalar(con, "SELECT COUNT(*) FROM metadata.captures") == 0
+    assert scalar(con, "SELECT COUNT(*) FROM metadata.capturas") == 0
     assert len(list(settings.landing_dir.rglob("*.zip"))) == 1  # evidência para auditoria
 
 

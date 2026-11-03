@@ -15,6 +15,7 @@ DEFAULT_WAREHOUSE = "{root}/warehouse.duckdb"
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SOURCES_DIR = REPO_ROOT / "sources"
 DBT_DIR = REPO_ROOT / "dbt"
+SITE_DIR = REPO_ROOT / "site"
 DDL_DIR = REPO_ROOT / "ddl"
 
 

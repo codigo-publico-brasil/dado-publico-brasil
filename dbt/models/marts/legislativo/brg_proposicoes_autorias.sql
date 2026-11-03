@@ -18,7 +18,9 @@ select
     a.nome_autor,
     a.tipo_autor,
     a.proponente,
-    '{{ var("url_proposicao_camara") }}' || cast(a.id_proposicao as varchar) as proposicao_fonte_url
+    '{{ var("url_proposicao_camara") }}' || cast(a.id_proposicao as varchar) as proposicao_fonte_url,
+    a.id_captura,
+    cast(a.dt_captura as date) as dt_captura
 
 from {{ ref('int_proposicoes_autorias_ligadas') }} as a
 

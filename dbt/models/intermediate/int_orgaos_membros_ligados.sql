@@ -7,7 +7,7 @@ select
 
 from {{ ref('stg_camara__orgaos_membros') }} as s
 
-inner join {{ ref('stg_identity__pessoa_identificadores') }} as i
+inner join {{ ref('stg_identity__pessoas_identificadores') }} as i
     on i.fonte = '{{ var("source_camara") }}'
     and i.id_tipo = '{{ var("id_type_camara") }}'
     and i.id_na_fonte = cast(s.id_deputado as varchar)
