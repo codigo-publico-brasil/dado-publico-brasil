@@ -99,10 +99,11 @@ SELECT c.url, c.dt_captura
 FROM dim_pessoas AS p JOIN capturas AS c ON c.id_captura = p.id_captura_tse
 ```
 
-Mesmo caminho para os demais: `fct_candidaturas.id_captura` e `fct_campanhas.id_captura_receitas|despesas|bens` (arquivos do TSE), `dim_pessoas_cadastro.id_captura` (Câmara ou Senado). Um aplicativo que lê o lake lê a ficha de `dim_pessoas` (atributos já resolvidos, com `fonte_*` ao lado; todas as pessoas do projeto) e junta `dim_pessoas_cadastro` (só Câmara e Senado) para contato, gabinete, redes, situação e falecimento. As campanhas saem de `fct_candidaturas` (inclui `base_eleicao`, o eleito informado ou derivado), `dim_eleicoes`, `dim_disputas`, `dim_cargos`, `dim_partidos`, `fct_campanhas` e `metadata/capturas`.
+Mesmo caminho para os demais: `fct_candidaturas.id_captura` e `fct_campanhas.id_captura_receitas|despesas|bens` (arquivos do TSE), `dim_pessoas_cadastro.id_captura` (Câmara ou Senado). Um aplicativo que lê o lake lê a ficha de `dim_pessoas` (atributos já resolvidos, com `fonte_*` ao lado; todas as pessoas do projeto) e junta `dim_pessoas_cadastro` (só Câmara e Senado) para contato, gabinete, redes, situação e falecimento. As campanhas saem de `fct_candidaturas` (`fl_eleito` é o eleito informado ou derivado; `base_eleicao` diz qual), `dim_eleicoes`, `dim_disputas`, `dim_cargos`, `dim_partidos`, `fct_campanhas` e `metadata/capturas`.
 
 ## Cuidados
 
 - O caminho é sempre o dado **atual**: não há pasta por versão. Para citar um número, anote o `id_execucao` de `metadata.exportacao` (ou do `manifesto.json`) e guarde o resultado.
 - Nas tabelas particionadas por ano, durante o envio pode haver uma janela curta com anos de execuções diferentes; confira o `id_execucao` do manifesto.
 - Sem ranking nem nota: as tabelas trazem o que as fontes publicam, com a origem rastreável.
+- **Mudança de significado em `fct_candidaturas.fl_eleito` (novembro de 2026):** antes valia só o eleito que o TSE informa (533.912 candidaturas); agora vale o eleito completo, informado **ou derivado** pela regra da Constituição quando o TSE não informa (por exemplo, o 2º turno de presidente de 2006), 534.032 candidaturas, o mesmo conjunto de `fct_mandatos`. `base_eleicao` (`informado` ou `derivado`) diz a origem e `resultado` segue como o TSE informa. Para o antigo, use `fl_eleito_informado`. Quem lia `fl_eleito` esperando só o informado passa a ver 120 eleitos a mais.
