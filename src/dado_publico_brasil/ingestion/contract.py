@@ -5,6 +5,7 @@ O código que só aquela fonte precisa (ver `fetch.py` e `read.py`) fica em
 
 import importlib
 import re
+import string
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -52,6 +53,20 @@ class ForEach:
 
 
 @dataclass(frozen=True)
+class Arquivos:
+    """Como materializar os arquivos de um dataset e se vão ao lake público (ADR 0037).
+
+    Sem `membro`, o arquivo da captura é copiado como está; com `membro`, cada membro do zip que casa com o
+    padrão (grupos nomeados viram campos de `caminho`) é extraído. Campos de `caminho`: `dataset`, `particao`
+    e `nome`."""
+
+    colecao: str  # a pasta é `arq_<colecao>`
+    caminho: str  # modelo do caminho relativo à pasta da coleção
+    membro: str | None = None  # regex do nome do membro dentro do zip
+    publicar: bool = False  # true: vai ao lake público; false: fica só no disco local
+
+
+@dataclass(frozen=True)
 class Dataset:
     name: str
     url: str
@@ -70,6 +85,7 @@ class Dataset:
     archive: str | None = None  # "zip": o arquivo guardado é um pacote; `member` diz qual membro ler
     member: str = "*"  # padrão (glob) do nome do membro dentro do pacote
     raw: bool = True  # false: só o landing (arquivos guardados para uso futuro), sem tabela no raw
+    arquivos: Arquivos | None = None  # arquivos servidos ao público, em coleção `arq_` (ADR 0037)
     first_month: int | None = None  # (partition: month) primeiro mês pedido, como AAAAMM
     step: int = 1  # (yearly) só os anos a cada N a partir de first_year (eleições gerais: 4)
     only: dict[str, tuple[str, ...]] = field(default_factory=dict)  # minimização: só linhas com estes valores
@@ -186,6 +202,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         archive=data.get("archive"),
         member=str(data.get("member", "*")),
         raw=raw,
+        arquivos=_arquivos(where, data),
         first_month=int(data["first_month"]) if data.get("first_month") else None,
         step=int(data.get("step", 1)),
         only={k: tuple(v) for k, v in data.get("only", {}).items()},
@@ -193,6 +210,38 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         optional=tuple(data.get("optional", ())),
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
         max_age_days=_max_age(where, data.get("max_age_days")),
+    )
+
+
+def _arquivos(where: str, data: dict[str, Any]) -> Arquivos | None:
+    block = data.get("arquivos")
+    if block is None:
+        return None
+    unknown = set(block) - {"colecao", "caminho", "membro", "publicar"}
+    if unknown or not {"colecao", "caminho"} <= set(block):
+        raise InvalidContract(f"{where}: arquivos exige colecao e caminho e aceita só membro e publicar")
+    if not re.fullmatch(r"[a-z][a-z0-9]*", str(block["colecao"])):
+        raise InvalidContract(f"{where}: arquivos.colecao deve ser minúscula, sem separadores")
+    if not isinstance(block.get("publicar", False), bool):
+        raise InvalidContract(f"{where}: arquivos.publicar deve ser true ou false")
+    fields = {"dataset", "particao", "nome"}
+    if block.get("membro"):
+        if data.get("archive") != "zip":
+            raise InvalidContract(f"{where}: arquivos.membro exige archive: zip")
+        try:
+            fields |= set(re.compile(block["membro"]).groupindex)
+        except re.error as error:
+            raise InvalidContract(f"{where}: arquivos.membro inválido ({error})") from error
+    used = {name for _, name, _, _ in string.Formatter().parse(block["caminho"]) if name}
+    if used - fields or ".." in block["caminho"] or block["caminho"].startswith("/"):
+        raise InvalidContract(
+            f"{where}: arquivos.caminho usa campo desconhecido {sorted(used - fields)} ou sobe pastas"
+        )
+    return Arquivos(
+        colecao=block["colecao"],
+        caminho=block["caminho"],
+        membro=block.get("membro"),
+        publicar=block.get("publicar", False),
     )
 
 

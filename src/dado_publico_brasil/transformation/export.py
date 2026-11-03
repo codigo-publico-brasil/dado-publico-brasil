@@ -18,13 +18,22 @@ Idempotente e barato de repetir: cada tabela leva uma impressão digital do cont
 varredura (contagem, XOR dos hashes das linhas, que não depende da ordem, esquema e caminho). Se for igual à
 do manifesto anterior (lido da raiz), a tabela é ignorada. Catálogo e manifesto são trocados por último; só
 então se apagam os objetos órfãos sob os caminhos das tabelas (mudança de arquivo único para partição, tabela
-removida). Nunca exporta `raw`, `identity` nem colunas de documento pessoal. O catálogo é um DuckDB, que o
-DuckDB não escreve no R2: sobe, e os órfãos saem, por requisições assinadas (SigV4) da biblioteca padrão.
+removida). Nunca exporta `raw`, `identity` nem colunas de documento pessoal.
+
+Arquivos (ADR 0037): dataset com `arquivos.publicar: true` no YAML da fonte vira uma coleção `arq_<nome>`
+ao lado das tabelas da fonte (`staging/<poder>/<esfera>/<fonte>/arq_<nome>/...`), lida de
+`<pasta de dados>/arquivos/` (a carga materializa), com a tabela de controle `arq_<nome>.parquet` (um arquivo
+por linha, com hash). Só sobe o que falta ou mudou; o que saiu da fonte só é apagado com `prune`.
+
+O catálogo é um DuckDB, que o DuckDB não escreve no R2: sobe, e os órfãos saem, por requisições assinadas
+(SigV4) da biblioteca padrão.
 """
 
+import base64
 import hashlib
 import hmac
 import json
+import mimetypes
 import os
 import re
 import shutil
@@ -37,6 +46,7 @@ from typing import Any
 from urllib.parse import quote
 
 import duckdb
+import yaml
 
 from dado_publico_brasil.core import privado, runs, warehouse
 from dado_publico_brasil.core.settings import DBT_DIR, SITE_DIR, SOURCES_DIR, Settings
@@ -55,6 +65,24 @@ MAX_KV_BYTES = 64 << 10  # teto prático do JSON de descrições no rodapé do P
 ROW_GROUP = 500_000  # entre 122.880 e 1 milhão de linhas por grupo
 MEMORY_LIMIT = "4GB"  # a máquina do mantenedor tem 8 GB
 ENV_URL = "DADO_PUBLICO_LAKE_URL"
+CACHE_CONTROL = "public, max-age=86400, must-revalidate"  # caminho estável, conteúdo pode mudar
+CONTROL_DESCRIPTION = "Arquivos da coleção %s, um por linha, com hash e a captura de origem (ADR 0037)."
+CONTROL_COLUMNS = (
+    ("caminho", "VARCHAR", "Caminho do arquivo relativo à pasta da coleção."),
+    ("sha256_arquivo", "VARCHAR", "SHA-256 do arquivo publicado."),
+    ("qtd_bytes", "BIGINT", "Tamanho do arquivo publicado, em bytes."),
+    ("content_type", "VARCHAR", "Tipo de mídia do arquivo (Content-Type)."),
+    (
+        "fl_original",
+        "BOOLEAN",
+        "Verdadeiro se os bytes são idênticos ao arquivo capturado da fonte; falso se foram extraídos.",
+    ),
+    ("fonte", "VARCHAR", "Fonte oficial do arquivo."),
+    ("id_captura", "BIGINT", "Captura do landing de onde o arquivo veio (o pacote, se foi extraído)."),
+    ("dt_captura", "TIMESTAMP", "Instante da captura do arquivo ou do pacote de origem."),
+    ("url_fonte", "VARCHAR", "URL oficial de onde o arquivo ou o pacote de origem foi capturado."),
+    ("sha256_captura", "VARCHAR", "SHA-256 do arquivo capturado na fonte (o pacote, se foi extraído)."),
+)
 
 
 def _q(text: str) -> str:
@@ -273,37 +301,64 @@ def _catalog(entries: list[dict[str, Any]], file: Path, base: str, meta: dict[st
     cat.close()
 
 
-def r2_request(method: str, key: str, path: Path | None = None, content_type: str | None = None) -> None:
-    """PUT (de um arquivo) ou DELETE assinado (SigV4) no R2: o que o COPY e o `glob` do DuckDB não fazem."""
+def r2_request(
+    method: str,
+    key: str,
+    path: Path | None = None,
+    content_type: str | None = None,
+    headers: dict[str, str] | None = None,
+) -> None:
+    """PUT (de um arquivo) ou DELETE assinado (SigV4) no R2: o que o COPY e o `glob` do DuckDB não fazem.
+
+    `headers` somam-se aos assinados (Cache-Control...); num PUT segue o `x-amz-checksum-sha256` do arquivo.
+    """
     cfg = _r2()
     host = f"{cfg['ACCOUNT_ID']}.r2.cloudflarestorage.com"
     now = datetime.now(UTC)
     stamp, day = now.strftime("%Y%m%dT%H%M%SZ"), now.strftime("%Y%m%d")
     uri = f"/{cfg['BUCKET']}/{quote(key)}"
-    signed = "host;x-amz-content-sha256;x-amz-date"
-    canonical = (
-        f"{method}\n{uri}\n\nhost:{host}\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:{stamp}\n\n"
-        f"{signed}\nUNSIGNED-PAYLOAD"
+    signed_headers = {
+        "host": host,
+        "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+        "x-amz-date": stamp,
+        **{k.lower(): v for k, v in (headers or {}).items()},
+    }
+    if content_type:
+        signed_headers["content-type"] = content_type
+    if path:
+        digest = hashlib.sha256()
+        with path.open("rb") as f:
+            while chunk := f.read(1 << 20):
+                digest.update(chunk)
+        signed_headers["x-amz-checksum-sha256"] = base64.b64encode(digest.digest()).decode()
+    nl = chr(10)
+    names = ";".join(sorted(signed_headers))
+    canonical = nl.join(
+        [
+            method,
+            uri,
+            "",
+            *(f"{k}:{signed_headers[k]}" for k in sorted(signed_headers)),
+            "",
+            names,
+            "UNSIGNED-PAYLOAD",
+        ]
     )
     scope = f"{day}/auto/s3/aws4_request"
-    to_sign = f"AWS4-HMAC-SHA256\n{stamp}\n{scope}\n{hashlib.sha256(canonical.encode()).hexdigest()}"
+    to_sign = nl.join(["AWS4-HMAC-SHA256", stamp, scope, hashlib.sha256(canonical.encode()).hexdigest()])
     secret = ("AWS4" + cfg["SECRET_ACCESS_KEY"]).encode()
     for part in (day, "auto", "s3", "aws4_request"):
         secret = hmac.new(secret, part.encode(), hashlib.sha256).digest()
     signature = hmac.new(secret, to_sign.encode(), hashlib.sha256).hexdigest()
-    headers = {
-        "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
-        "x-amz-date": stamp,
+    sent = {k: v for k, v in signed_headers.items() if k != "host"} | {
         "Authorization": f"AWS4-HMAC-SHA256 Credential={cfg['ACCESS_KEY_ID']}/{scope}, "
-        f"SignedHeaders={signed}, Signature={signature}",
+        f"SignedHeaders={names}, Signature={signature}"
     }
     if path:
-        headers["Content-Length"] = str(path.stat().st_size)
-    if content_type:
-        headers["Content-Type"] = content_type
+        sent["Content-Length"] = str(path.stat().st_size)
     with path.open("rb") if path else nullcontext() as body:
         request = urllib.request.Request(  # noqa: S310
-            f"https://{host}{uri}", data=body, method=method, headers=headers
+            f"https://{host}{uri}", data=body, method=method, headers=sent
         )
         urllib.request.urlopen(request, timeout=3600).close()  # noqa: S310
 
@@ -390,6 +445,113 @@ def _table(
     return _files(con, root, f"{key}.parquet")
 
 
+def _collections(
+    con: warehouse.Connection, settings: Settings, prune: bool = False
+) -> dict[str, list[dict[str, Any]]]:
+    """Arquivos a publicar por coleção (caminho no lake): datasets com `arquivos.publicar: true` no YAML.
+
+    Os arquivos já foram materializados na carga (`ingestion/arquivos.py`) em `<pasta de dados>/arquivos/...`;
+    aqui só se lê essa pasta e `metadata.arquivos` (hash e captura de origem). Arquivo registrado que não está
+    no disco é erro (não encolhe o controle em silêncio), salvo `prune`.
+    """
+    found: dict[str, list[dict[str, Any]]] = {}
+    for file in sorted(SOURCES_DIR.glob("*/*/*.yml")):
+        data = yaml.safe_load(file.read_text(encoding="utf-8"))
+        power, level, source = file.parent.parent.name, file.parent.name, data["source"]
+        for colecao in sorted({d["arquivos"]["colecao"] for d in data["datasets"].values() if _published(d)}):
+            wanted = [
+                n
+                for n, d in data["datasets"].items()
+                if _published(d) and d["arquivos"]["colecao"] == colecao
+            ]
+            key = f"staging/{power}/{level}/{source}/arq_{colecao}"
+            folder = settings.storage_root / "arquivos" / power / level / source / f"arq_{colecao}"
+            found[key] = []
+            for name, sha, size, original, capture, moment, url, sha_capture in con.execute(
+                "SELECT a.caminho, a.sha256_arquivo, a.qtd_bytes, a.fl_original, c.id_captura, c.dt_captura, "
+                "c.url, c.sha256 FROM metadata.arquivos a JOIN metadata.capturas c USING (id_captura) "
+                f"WHERE a.fonte = ? AND a.colecao = ? AND a.dataset IN ({','.join('?' * len(wanted))}) "
+                "ORDER BY a.caminho",
+                (source, colecao, *wanted),
+            ).fetchall():
+                if not (folder / name).exists():
+                    if prune:
+                        continue
+                    raise ValueError(
+                        f"{key}/{name} está em metadata.arquivos mas falta em {folder} (pasta arquivos/ "
+                        "incompleta?); nada foi publicado. Use --prune para retirá-lo do lake"
+                    )
+                found[key].append(
+                    {
+                        "caminho": name,
+                        "sha256_arquivo": sha,
+                        "qtd_bytes": size,
+                        "content_type": mimetypes.guess_type(name)[0] or "application/octet-stream",
+                        "fl_original": original,
+                        "fonte": source,
+                        "id_captura": capture,
+                        "dt_captura": moment,
+                        "url_fonte": url,
+                        "sha256_captura": sha_capture,
+                        "local": folder / name,
+                    }
+                )
+    return found
+
+
+def _published(dataset: dict[str, Any]) -> bool:
+    return (dataset.get("arquivos") or {}).get("publicar") is True
+
+
+def _send(root: str, key: str, files: list[dict[str, Any]], known: dict[str, str]) -> int:
+    """Grava no destino (R2 ou pasta local) só os arquivos que faltam ou mudaram em relação ao controle."""
+    sent = 0
+    for f in files:
+        if known.get(f["caminho"]) == f["sha256_arquivo"]:
+            continue
+        target = f"{key}/{f['caminho']}"
+        if root.startswith("r2://"):
+            r2_request("PUT", target, f["local"], f["content_type"], {"Cache-Control": CACHE_CONTROL})
+        else:
+            Path(root, target).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(f["local"], Path(root, target))
+        sent += 1
+    return sent
+
+
+def _control(
+    con: warehouse.Connection,
+    settings: Settings,
+    root: str,
+    meta: dict[str, str],
+    key: str,
+    files: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], str]:
+    """Grava `arq_<nome>.parquet` (a lista dos arquivos) e devolve os arquivos do Parquet e a descrição."""
+    description = CONTROL_DESCRIPTION % key.rsplit("/", 1)[1]
+    columns = [{"nome": n, "tipo": t, "descricao": d} for n, t, d in CONTROL_COLUMNS]
+    nl = chr(10)
+    ndjson = settings.state_dir / "duckdb_tmp" / "controle.ndjson"
+    ndjson.parent.mkdir(parents=True, exist_ok=True)
+    ndjson.write_text(
+        nl.join(json.dumps({k: v for k, v in f.items() if k != "local"}, default=str) for f in files),
+        encoding="utf-8",
+    )
+    ddl = ", ".join(f"{n} {t}" for n, t, _ in CONTROL_COLUMNS)
+    types = ", ".join(f"{n}: '{t}'" for n, t, _ in CONTROL_COLUMNS)
+    con.execute(f"CREATE OR REPLACE TEMP TABLE controle ({ddl})")
+    if files:
+        con.execute(
+            f"INSERT INTO controle SELECT * FROM read_json('{_q(ndjson.as_posix())}', "
+            f"format = 'newline_delimited', columns = {{{types}}})"
+        )
+    ndjson.unlink()
+    select = "SELECT * FROM controle ORDER BY caminho"
+    return _table(
+        con, settings, root, meta, key, select, None, description, columns, len(files), MAX_BYTES
+    ), description
+
+
 def export(
     settings: Settings, base_url: str | None = None, max_bytes: int = MAX_BYTES, prune: bool = False
 ) -> dict[str, int]:
@@ -414,9 +576,11 @@ def export(
     con = _connect(settings, warehouse_file=True)
     try:
         old_entries = _manifest(con, root).get("tabelas", [])
-        before = {(e["camada"], e["tabela"]): e for e in old_entries}
+        before = {(e["camada"], e["tabela"]): e for e in old_entries if not e["tabela"].startswith("arq_")}
+        old_files = {e["caminho"]: e for e in old_entries if e["tabela"].startswith("arq_")}
         touched = {e.get("caminho", f"{e['camada']}/{e['tabela']}") for e in old_entries}
         relations = _relations(con)
+        keep: set[str] = set()
         missing = sorted(f"{c}.{t}" for c, t in before if (c, t) not in set(relations))
         if missing and not prune:
             raise ValueError(
@@ -424,6 +588,14 @@ def export(
                 f"({', '.join(missing[:5])}{'...' if len(missing) > 5 else ''}); "
                 "nada foi apagado nem publicado. "
                 "Confira o warehouse ou use --prune para retirá-las do lake"
+            )
+        collections = _collections(con, settings, prune)
+        gone = sorted(k for k in old_files if not collections.get(k))
+        if gone and not prune:
+            raise ValueError(
+                f"a coleção {', '.join(gone)} está no manifesto publicado mas saiu do YAML da fonte ou não "
+                "tem arquivo no disco; nada foi apagado nem publicado. Confira `arquivos/` e o contrato "
+                "ou use --prune"
             )
         for schema, table in relations:
             _key(models, schema, table)  # falha cedo, antes de gravar qualquer arquivo
@@ -470,6 +642,46 @@ def export(
                     "arquivos": files,
                 }
             )
+        for key, files in collections.items():
+            if not files and key not in old_files:
+                continue  # coleção que nunca teve arquivo não vira tabela vazia
+            known: dict[str, str] = {}
+            if key in old_files:
+                known = dict(
+                    con.execute(
+                        f"SELECT caminho, sha256_arquivo FROM read_parquet('{_q(root)}/{key}.parquet')"
+                    ).fetchall()
+                )
+            size += sum(f["qtd_bytes"] for f in files if known.get(f["caminho"]) != f["sha256_arquivo"])
+            _send(root, key, files, known)
+            touched.add(key)
+            clean = [{k: v for k, v in f.items() if k != "local"} for f in files]
+            fingerprint = hashlib.sha256(f"{key}:{clean}".encode()).hexdigest()
+            old = old_files.get(key)
+            description = CONTROL_DESCRIPTION % key.rsplit("/", 1)[1]
+            if old and old["impressao"] == fingerprint:
+                parquet, columns = old["arquivos"], old["colunas"]
+                ignored += 1
+            else:
+                parquet, description = _control(con, settings, root, meta, key, files)
+                columns = [{"nome": n, "tipo": t, "descricao": d} for n, t, d in CONTROL_COLUMNS]
+                written += 1
+            entries.append(
+                {
+                    "camada": "staging",
+                    "camada_medalhao": MEDALLION["staging"],
+                    "tabela": key.rsplit("/", 1)[1],
+                    "caminho": key,
+                    "descricao": description,
+                    "linhas": len(files),
+                    "impressao": fingerprint,
+                    "particao": None,
+                    "ano": None,
+                    "colunas": columns,
+                    "arquivos": parquet,
+                }
+            )
+            keep |= {f"{key}/{f['caminho']}" for f in files}
         catalog = settings.state_dir / "catalogo.duckdb"
         _catalog(entries, catalog, base or root, meta)
         if _r2():
@@ -485,7 +697,9 @@ def export(
             "(FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER '\\x01')",
             (text,),
         )  # por último
-        keep = {f["arquivo"] for e in entries for f in e["arquivos"]}
+        keep |= {f["arquivo"] for e in entries for f in e["arquivos"]}
+        if not prune:  # arquivo que saiu da fonte só se apaga com --prune
+            touched -= set(collections)
         orphans = _delete_orphans(con, root, touched, keep)  # só depois do manifesto novo
     finally:
         con.close()
@@ -496,6 +710,33 @@ def export(
         "orfaos": orphans,
         "bytes": size,
     }
+
+
+def _verify_collection(con: warehouse.Connection, base: str, table: dict[str, Any]) -> list[str]:
+    """Coleção `arq_`: todo arquivo do controle existe com o mesmo hash e nada da pasta fica fora dele."""
+    key = table["caminho"]
+    listed = con.execute(
+        f"SELECT caminho, sha256_arquivo FROM read_parquet('{_q(base)}/{table['arquivos'][0]['arquivo']}')"
+    ).fetchall()
+    found = []
+    for name, sha in listed:
+        try:
+            row = con.execute(
+                f"SELECT sha256(content) FROM read_blob('{_q(base)}/{key}/{_q(name)}')"
+            ).fetchone()
+        except duckdb.Error:
+            row = None
+        if not row:
+            found.append(f"falta {key}/{name}")
+        elif row[0] != sha:
+            found.append(f"{key}/{name} difere do controle")
+    try:  # bucket público não lista: objetos soltos só se conferem com pasta local ou segredo do R2
+        stray = {f[len(base) + 1 :] for f in _glob(con, f"{base}/{key}/**")} - {
+            f"{key}/{n}" for n, _ in listed
+        }
+    except duckdb.Error:
+        stray = set()
+    return found + [f"{name} fora do controle" for name in sorted(stray)]
 
 
 def verify(settings: Settings, base_url: str | None = None) -> list[str]:
@@ -518,6 +759,8 @@ def verify(settings: Settings, base_url: str | None = None) -> list[str]:
                 found.append(f"falta {f['arquivo']}")
             elif row != (f["bytes"], f["sha256"]):
                 found.append(f"{f['arquivo']} difere do manifesto")
+        for t in (t for t in manifest["tabelas"] if t["tabela"].startswith("arq_")):
+            found += _verify_collection(con, base, t)
         return found
     finally:
         con.close()

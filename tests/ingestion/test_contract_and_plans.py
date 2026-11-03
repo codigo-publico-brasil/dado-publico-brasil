@@ -174,3 +174,35 @@ def test_contract_without_a_valid_power_or_level_is_refused(tmp_path: Path) -> N
 
 def test_raw_schema_carries_the_level_and_the_source(tmp_path: Path) -> None:
     assert contract_from(tmp_path).schema == "raw_municipal_teste"
+
+
+@pytest.mark.parametrize(
+    "block, message",
+    [
+        ("{colecao: x}", "colecao e caminho"),
+        ("{colecao: x, caminho: a, outro: 1}", "colecao e caminho"),
+        ("{colecao: Fotos_1, caminho: a}", "colecao"),
+        ("{colecao: x, caminho: a, publicar: sim}", "publicar"),
+        ("{colecao: x, caminho: '{inexistente}'}", "campo desconhecido"),
+        ("{colecao: x, caminho: '../{nome}'}", "sobe pastas"),
+        ("{colecao: x, caminho: '{nome}', membro: 'a'}", "archive: zip"),
+    ],
+)
+def test_contract_with_a_bad_arquivos_block_is_refused(tmp_path: Path, block: str, message: str) -> None:
+    text = TEMPLATE.format(extra="") + f"    arquivos: {block}" + chr(10)
+    with pytest.raises(InvalidContract, match=message):
+        contract_from(tmp_path, text=text)
+
+
+def test_arquivos_block_is_read_and_the_member_groups_become_path_fields(tmp_path: Path) -> None:
+    block = "{colecao: x, caminho: '{particao}/{uf}/{nome}', membro: '^(?P<uf>[A-Z]{2})', publicar: true}"
+    text = TEMPLATE.format(extra="") + f"    archive: zip\n    arquivos: {block}" + chr(10)
+    spec = contract_from(tmp_path, text=text).datasets["pessoas"].arquivos
+    assert spec is not None and spec.publicar and spec.colecao == "x"
+    published = {
+        (c.source, n): d.arquivos.colecao
+        for c in contracts.find_all()
+        for n, d in c.datasets.items()
+        if d.arquivos and d.arquivos.publicar
+    }
+    assert published[("dou", "secao1")] == "secoes" and published[("tse", "fotos_rj")] == "fotos"

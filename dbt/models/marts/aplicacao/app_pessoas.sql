@@ -2,7 +2,7 @@
 -- Regra: todo atributo que alguma fonte oficial carregada tem, a ficha tem. O cadastro da Câmara e do Senado vale primeiro
 -- (mais completo); o que ele não traz, ou quem nunca passou por ele, vem da candidatura mais recente do TSE que o informa.
 -- Contato institucional, redes, site e falecimento só existem no cadastro das casas e ficam vazios para os demais.
--- `foto_caminho` é a foto oficial do TSE (arquivo local); `foto_url` é a da Câmara ou do Senado.
+-- `foto_caminho` é a foto oficial do TSE (coleção arq_fotos do lake); `foto_url` é a da Câmara ou do Senado.
 with tse as (
 
     -- de cada atributo, o valor da candidatura mais recente que o informa

@@ -27,6 +27,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0034](0034-manter-duckdb-e-postgres.md) | Manter DuckDB e PostgreSQL; sem DuckLake nem arquivos separados por ora, com gatilhos para reabrir | proposto (decisão do fundador) |
 | [0035](0035-lakehouse-publico-no-r2.md) | Lakehouse público no R2: Parquet em caminho estável, staging a marts, catálogo e manifesto; DuckDB só calcula | proposto; altera 0014 (item 1 e gatilho 6a) e 0033; item 7 detalhado no 0036 |
 | [0036](0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md) | R2 privado é a fonte da verdade da identidade e do metadata; disco local descartável; landing só local por ora (risco aceito) | proposto; complementa 0014 (item 4) e 0035 (item 7) |
+| [0037](0037-arquivos-no-lake-com-prefixo-arq.md) | Arquivos (DOU, fotos) no lake público: pasta `arq_` na camada da fonte, com tabela de controle `arq_<nome>.parquet`; publicar é opt-in por dataset | proposto (decisão do fundador); altera 0035 (item 7) e 0036 (fotos) |
 
 ### Estrutura do repositório e das camadas
 

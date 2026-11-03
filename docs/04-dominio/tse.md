@@ -18,7 +18,7 @@ Em cada eleição, quem quer disputar um cargo registra uma **candidatura**, com
 | `situacao_candidatura` | situação do registro (por exemplo, deferido) |
 | `dt_eleicao` | dia da votação do último turno que a candidatura disputou (`DT_ELEICAO` do arquivo; o 2º turno de 2006 de presidente vem do arquivo de votação) |
 | `uf_nascimento`, `grau_instrucao`, `estado_civil`, `ocupacao`, `nome_social`, `coligacao`, `federacao` | o que o candidato **declara** no registro; `app_pessoas` usa isso para quem não está no cadastro da Câmara ou do Senado (ADR 0029) |
-| `foto_caminho` | foto oficial do candidato, extraída do pacote do TSE pelo comando `fotos` |
+| `foto_caminho` | foto oficial do candidato, extraída do pacote do TSE na carga (bloco `arquivos` do dataset) e publicada na coleção `arq_fotos` do lake |
 | `resultado` | eleito por quociente partidário (QP), eleito por média, suplente, não eleito; vazio quando a fonte marca `#NULO#` |
 
 ## Marcadores de "sem valor"

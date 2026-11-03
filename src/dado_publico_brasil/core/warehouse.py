@@ -20,13 +20,12 @@ CONFIG: dict[str, str | bool | int | float | list[str]] = {"memory_limit": "5GB"
 
 def connect(settings: Settings, read_only: bool = False) -> Connection:
     path = settings.warehouse
-    config: dict[str, Any] = {
-        "memory_limit": os.environ.get("DADO_PUBLICO_DUCKDB_MEMORY", "80%")
-    }  # padrão do DuckDB
-    if read_only:
-        return duckdb.connect(str(path), read_only=True, config=config)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return duckdb.connect(str(path), config=config)
+    if not read_only:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    con = duckdb.connect(str(path), read_only=read_only)
+    # `SET`, não `config=`: outra conexão ao mesmo arquivo (o dlt) com configuração diferente é recusada
+    con.execute(f"SET memory_limit = '{os.environ.get('DADO_PUBLICO_DUCKDB_MEMORY', '80%')}'")
+    return con
 
 
 def scalar(con: Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:

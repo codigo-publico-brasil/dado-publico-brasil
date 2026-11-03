@@ -23,6 +23,7 @@ datasets:
     archive: zip
     member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
+    arquivos: {colecao: secoes, caminho: "{dataset}/{particao}/{nome}", publicar: true}  # zip original, CC BY-ND
 
   secao2:
     # Seção 2: atos de pessoal (nomeações, exonerações, aposentadorias).
@@ -33,6 +34,7 @@ datasets:
     archive: zip
     member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
+    arquivos: {colecao: secoes, caminho: "{dataset}/{particao}/{nome}", publicar: true}  # zip original, CC BY-ND
 
   secao3:
     # Seção 3: contratos, licitações, editais e outros avisos.
@@ -43,3 +45,4 @@ datasets:
     archive: zip
     member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
+    arquivos: {colecao: secoes, caminho: "{dataset}/{particao}/{nome}", publicar: true}  # zip original, CC BY-ND

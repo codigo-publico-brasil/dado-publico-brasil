@@ -6,6 +6,8 @@ Regras para agentes de IA neste repositório. `CLAUDE.md` aponta para cá. Quem 
 
 **Quanto menos código e menos estrutura, melhor.** Prefira declaração (YAML, SQL do dbt) e o que dlt, dbt e DuckDB já fazem a código próprio. Seja sucinto, mas resolva o problema da melhor forma: estrutura simples reduz a manutenção e os tokens gastos por agentes.
 
+**Propósito e generalidade:** este repositório é uma plataforma de dados públicos **genérica e agnóstica a fonte**: qualquer aplicação consome o lake, e ele não depende de nenhuma. Por isso o núcleo (`core`, comandos do CLI, ativos e passos do Dagster, `export`) nunca nomeia uma fonte, um tipo de arquivo ou um dataset (nada de comando `fotos`, `dou`, `tse`...). O que é próprio de uma fonte mora **só na declaração dela** (`sources/<poder>/<esfera>/<fonte>.yml`) e, quando o YAML não basta, em `ingestion/custom/<poder>/<esfera>/<fonte>.py` (ADR 0011). Fonte nova, ou um novo tipo de arquivo (imagem, PDF, zip), deve funcionar escrevendo YAML, sem tocar no núcleo. Se o seu código precisar de um `if fonte == ...`, o desenho está errado: generalize ou mova para o custom da fonte.
+
 **Seja sucinto para economizar tokens (vale para todos os agentes):** respostas e relatórios diretos, sem repetir o pedido nem o que o código já mostra; leia só o trecho necessário (busque antes de abrir arquivo inteiro); não copie documentação, linke; entregue conclusão e evidência, não o passo a passo.
 
 ## Antes de começar
@@ -35,12 +37,13 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 4. No PR, preencha "autoria da IA": o que a IA escreveu, o que uma pessoa revisou, o que ficou incerto. Commits levam o trailer `Co-Authored-By` do agente.
 5. **Documentação no mesmo PR:** quem muda comportamento, camada, comando, tabela ou estrutura de pastas atualiza o documento correspondente (e o `README.md` se a estrutura mudar). Doc desatualizada é bug.
 6. Erro recorrente de agente vira regra aqui ou teste.
+7. **Núcleo agnóstico:** antes de dar nome de fonte a comando, função, ativo ou tabela do núcleo, pergunte se outra fonte faria o mesmo; se sim, é configuração do YAML da fonte.
 
 ## Onde mexer
 
 | Para... | Edite |
 | --- | --- |
-| fonte (URL, colunas, chaves, credenciais por `${VARIAVEL}`) | `sources/<poder>/<esfera>/<fonte>.yml` |
+| fonte (URL, colunas, chaves, arquivos a extrair e publicar, credenciais por `${VARIAVEL}`) | `sources/<poder>/<esfera>/<fonte>.yml` |
 | jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/dado_publico_brasil/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
 | regra de transformação, teste de dado, descrição de coluna | `dbt/` (modelos e YAML ao lado; tabelas de apoio em `dbt/seeds/`) |
 | tabela própria (metadata, identity) | `ddl/` |
@@ -50,7 +53,7 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 | ambiente (pasta de dados, warehouse) | variáveis `DADO_PUBLICO_STORAGE_ROOT`, `DADO_PUBLICO_WAREHOUSE` |
 | papel dos agentes (`engenheiro`, `arquiteto`, `qa`, `auditor`) | `.claude/agents/<nome>.md` (só o que é específico do papel; as regras comuns ficam neste arquivo) |
 
-`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português; nos marts o prefixo diz o tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `fotos`, `backfill`, `recheck`, `rebuild`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
+`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português; nos marts o prefixo diz o tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `backfill`, `recheck`, `rebuild`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
 
 O fundador usa o projeto para aprender arquitetura de dados e de sistemas: explique decisões e alternativas em poucas linhas e aponte o que merece ADR.
 

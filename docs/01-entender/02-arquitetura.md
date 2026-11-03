@@ -19,7 +19,7 @@ O **DuckDB é só o motor de cálculo**, um arquivo descartável que se refaz do
 | --- | --- | --- |
 | Servidor de processamento (1 nó, disco local) | Dagster, ingestão, dbt e o arquivo DuckDB (`raw`, `identity`, `metadata`); fila serial, um escritor | privado; só ele sai à rede para baixar as fontes |
 | **Bucket público** (R2, `datalake.codigopublicobrasil.com.br`) | Parquet de `staging`, `intermediate`, `marts` e `metadata.capturas`; `catalogo.duckdb` e `manifesto.json` | leitura anônima, sem listagem; o catálogo enumera os arquivos |
-| **Bucket privado** | landing (guarda campos que o raw descarta, como CPF: **nunca público**), fotos, cópias da identidade, metadados de execução | só o pipeline; com teste de restauração |
+| **Bucket privado** | landing (guarda campos que o raw descarta, como CPF: **nunca público**; só os arquivos que o contrato manda publicar saem, em `arq_`, no lake público), cópias da identidade, metadados de execução | só o pipeline; com teste de restauração |
 | PostgreSQL de serviço | só os `marts`, trocados de forma atômica | aplicações, com papel somente leitura |
 
 Caminhos: `staging/<poder>/<esfera>/<fonte>/<modelo>`, `intermediate/<modelo>`, `marts/<domínio>/<tabela>`, cada um `.parquet` ou, nas tabelas grandes com `meta.particao`, uma pasta `ano=AAAA/part-0.parquet`. Como consumir: [`06-consumir-o-lake.md`](../03-consultar/06-consumir-o-lake.md). Em produção, o provedor é trocável (o código fala S3 e SQL padrão); rede privada, segredos fora do Git, alertas de dados e backup são requisitos, não escolhas fechadas.

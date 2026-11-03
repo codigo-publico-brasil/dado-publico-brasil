@@ -46,6 +46,7 @@ Pela página de comparação do Elementary (consultada em 24/10/2026), a versão
 | --- | --- |
 | Catalog | `docs/03-consultar/01-catalogo.md`, gerado do dbt (`dado-publico catalog`) |
 | Data health | `dado-publico observe` |
+| Arquivos servidos (DOU, fotos) | a carga materializa, em `<pasta de dados>/arquivos/<poder>/<esfera>/<fonte>/arq_<coleção>/`, o que o bloco `arquivos` do dataset declara (cópia ou extração do pacote do landing, só o que falta ou mudou); o `export` publica o que tem `publicar: true`. `fct_candidaturas.foto_caminho` é o caminho no lake. Veja [especificação de fonte](03-especificacao-de-fonte.md) e [ADR 0037](../05-decisoes/0037-arquivos-no-lake-com-prefixo-arq.md) |
 | Alert rules | alerta por e-mail do `observe` (o Elementary aberto só alerta por Slack e Teams) |
 | Environment | não se aplica: há um ambiente |
 | Pull requests | o próprio GitHub |
@@ -61,11 +62,10 @@ A máquina não prova que o dado está certo. A cada fonte nova: comparar a cont
 | `staging`, `intermediate`, `marts` e `metadata.capturas` em Parquet, com `catalogo.duckdb` e `manifesto.json` | Lake público no R2 (`datalake.codigopublicobrasil.com.br`) | `dado-publico export` (só depois dos testes do dbt; sobe apenas o que mudou, por hash); consumo em [`06-consumir-o-lake.md`](../03-consultar/06-consumir-o-lake.md) ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)) |
 | Esquema `marts` (as views `app_` viram tabelas) | PostgreSQL de serviço | `dado-publico publish` ([`01-rodar-localmente.md`](01-rodar-localmente.md)) |
 | Cópias da identidade e `metadata` (ADR 0036) | Bucket privado do R2 (**nunca público**: sem domínio nem `r2.dev`) | `DADO_PUBLICO_R2_BUCKET_PRIVADO`, só na máquina de produção; sem a variável, tudo local |
-| Landing e fotos | **Só no disco local** (risco aceito, ADR 0036) | nenhuma cópia; veja "Restaurar numa máquina vazia" |
+| Landing e `arquivos/` local | **Só no disco local** (risco aceito, ADR 0036); o que é publicável também está no lake público (`arq_`) | nenhuma cópia; veja "Restaurar numa máquina vazia" |
 | Catálogo e dicionário de colunas | Arquivo no repositório | [`03-consultar/01-catalogo.md`](../03-consultar/01-catalogo.md), gerado por `dado-publico catalog` |
 | Site do dbt (linhagem, descrições, links das fontes) | **Só local** | `dado-publico docs`, em http://127.0.0.1:8080, com o pipeline parado |
 | Relatório de observabilidade | Local ou e-mail | `dado-publico observe [--html] [--email]` |
-| Fotos dos candidatos | Pasta de dados local (`fotos/<ano>/<UF>/<sq>.jpg`); a hospedagem pública depende da decisão do VPS (#30) | `uv run dado-publico fotos` extrai as imagens dos pacotes do TSE (já no landing), só o que falta ou mudou; o caminho está em `fct_candidaturas.foto_caminho` |
 
 O `export` **recusa** (nada é apagado nem publicado) se faltar no warehouse alguma tabela do manifesto publicado: protege o lake de um warehouse errado ou incompleto. Para retirar de propósito uma tabela que deixou de existir, rode `dado-publico export --prune`.
 
@@ -100,7 +100,7 @@ Para quem vai deixar o pipeline rodando sozinho num servidor (uma máquina local
 
 1. **Servidor:** Linux com Docker, um usuário seu com acesso por chave SSH e uma pasta de dados (por exemplo `/srv/dado-publico`). Com 8 GB de RAM compartilhados, crie swap (8 GB); `DADO_PUBLICO_MEM_LIMIT=6g` e `DADO_PUBLICO_DUCKDB_MEMORY=4GB` (padrões; acima disso o DuckDB usa o disco, mais lento e sem estourar). Em máquina maior, suba os dois.
 2. **Sua máquina:** `docker context create servidor --docker host=ssh://usuario@servidor`. No `.env` local preencha R2 (público e privado), SMTP, `DADO_PUBLICO_DAGSTER_URL` e `DADO_PUBLICO_DATA_DIR=/srv/dado-publico` (caminho **do servidor**). Sem `DADO_PUBLICO_POSTGRES_DSN` o `publish` fica desligado.
-3. **Landing e fotos** só existem na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing data_store/fotos usuario@servidor:/srv/dado-publico/`.
+3. **Landing** (e a pasta `arquivos`, que se refaz dele) só existe na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing usuario@servidor:/srv/dado-publico/`.
 4. **Subir** (warehouse vazio restaura sozinho a identidade e o metadata do R2 privado, seção abaixo), depois a primeira carga: `docker --context servidor compose exec webserver uv run --no-sync dado-publico rebuild` e o job `atualizar_tudo` na interface (a propagação automática só vale depois da primeira materialização).
 
 **Toda atualização** (depois do merge na `main` e do fim do workflow *Imagem*), da pasta do repositório:
@@ -115,14 +115,14 @@ Para voltar a uma versão anterior, `DADO_PUBLICO_IMAGE_TAG=<sha do commit>` nos
 
 **Acesso à interface:** o compose publica a porta só em `127.0.0.1` do servidor (o Dagster aberto não tem login). Use túnel SSH (`ssh -L 3000:127.0.0.1:3000 usuario@servidor`). VPN ou Cloudflare Access são escolha da infraestrutura: nesse caso defina `DADO_PUBLICO_BIND` com o IP da VPN, nunca `0.0.0.0`.
 
-**Manutenção:** o serviço reinicia sozinho (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Landing e fotos são o único dado sem cópia: faça backup periódico de `landing` e `fotos` em outro disco até haver cópia no bucket privado.
+**Manutenção:** o serviço reinicia sozinho (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
 
 ## Restaurar numa máquina vazia (bucket privado)
 
 Com `DADO_PUBLICO_R2_BUCKET_PRIVADO` e as credenciais do R2 (`.env.example`), um warehouse novo (arquivo inexistente) restaura sozinho o `metadata` e a cópia mais recente e concluída da identidade, **com as mesmas chaves `id_pessoa`**, e avança as sequências. Depois: `uv run dado-publico rebuild` (sem `--old-warehouse`) e `run --historical` recapturam o raw das fontes.
 
 - **Volta:** `id_pessoa` e suas ligações, o registro das capturas (URL, hash, data), execuções e testes.
-- **Não volta sem o landing:** os arquivos. Eles são baixados de novo; o que a fonte mudou ou tirou do ar fica no `metadata` com o hash, e `verify` o aponta como ausente. Os lotes dos datasets por item (`foreach`) não se refazem iguais, e o acumulado dos datasets `merge` não volta (issue 155). As fotos se extraem de novo dos pacotes.
+- **Não volta sem o landing:** os arquivos. Eles são baixados de novo; o que a fonte mudou ou tirou do ar fica no `metadata` com o hash, e `verify` o aponta como ausente. Os lotes dos datasets por item (`foreach`) não se refazem iguais, e o acumulado dos datasets `merge` não volta (issue 155). Os arquivos de `arquivos/` se materializam de novo do landing.
 - **Um escritor:** só a produção tem a variável e o token com escrita. O envio do `metadata` recusa sobrescrever um bucket com mais capturas que a máquina (restaure antes).
 
 ## Rodar por partes no container

@@ -109,7 +109,7 @@ select
     f.arquivo as foto_arquivo,
     if(
         f.arquivo is not null,
-        c.ano_eleicao || '/' || f.pacote_uf || '/' || c.sq_candidato || '.' || regexp_extract(f.arquivo, '[.](jpe?g|png)$', 1),
+        '{{ var("colecao_fotos_tse") }}/' || c.ano_eleicao || '/' || regexp_extract(f.arquivo, '^F?([A-Z]{2})', 1) || '/' || c.sq_candidato || '.' || regexp_extract(f.arquivo, '[.](jpe?g|png)$', 1),
         null
     ) as foto_caminho,
     if(
