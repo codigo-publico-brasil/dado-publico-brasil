@@ -6,12 +6,12 @@ Para quem quer entender como o sistema é construído e por quê. Responde: quai
 
 ```text
 fonte oficial ─► landing ─► raw ─► staging ─► intermediate ─► marts ─► export ─► lake público (R2, Parquet)
-                (arquivos   (dlt)   └────────── dbt ──────────┘    └─► publish ─► PostgreSQL ─► aplicações
+                (arquivos   (dlt)   └────────── dbt ──────────┘
                  + hash)
                           identity (Python, entre as duas passadas do dbt)
 ```
 
-O **DuckDB é só o motor de cálculo**, um arquivo descartável que se refaz do landing. O dado público é o **Parquet no lake**, de caminho estável ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)); o PostgreSQL recebe só os marts, para as aplicações.
+O **DuckDB é só o motor de cálculo**, um arquivo descartável que se refaz do landing. O dado público é o **Parquet no lake**, de caminho estável ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)); as aplicações leem os marts dali e montam as suas próprias consultas ([ADR 0038](../05-decisoes/0038-lake-como-unica-publicacao.md)).
 
 ## Onde cada coisa fica
 
@@ -20,7 +20,6 @@ O **DuckDB é só o motor de cálculo**, um arquivo descartável que se refaz do
 | Servidor de processamento (1 nó, disco local) | Dagster, ingestão, dbt e o arquivo DuckDB (`raw`, `identity`, `metadata`); fila serial, um escritor | privado; só ele sai à rede para baixar as fontes |
 | **Bucket público** (R2, `datalake.codigopublicobrasil.com.br`) | Parquet de `staging`, `intermediate`, `marts` e `metadata.capturas`; `catalogo.duckdb` e `manifesto.json` | leitura anônima, sem listagem; o catálogo enumera os arquivos |
 | **Bucket privado** | landing (guarda campos que o raw descarta, como CPF: **nunca público**; só os arquivos que o contrato manda publicar saem, em `arq_`, no lake público), cópias da identidade, metadados de execução | só o pipeline; com teste de restauração |
-| PostgreSQL de serviço | só os `marts`, trocados de forma atômica | aplicações, com papel somente leitura |
 
 Caminhos: `staging/<poder>/<esfera>/<fonte>/<modelo>`, `intermediate/<modelo>`, `marts/<domínio>/<tabela>`, cada um `.parquet` ou, nas tabelas grandes com `meta.particao`, uma pasta `ano=AAAA/part-0.parquet`. Como consumir: [`06-consumir-o-lake.md`](../03-consultar/06-consumir-o-lake.md). Em produção, o provedor é trocável (o código fala S3 e SQL padrão); rede privada, segredos fora do Git, alertas de dados e backup são requisitos, não escolhas fechadas.
 
@@ -33,7 +32,6 @@ Caminhos: `staging/<poder>/<esfera>/<fonte>/<modelo>`, `intermediate/<modelo>`, 
 | **dbt-core** | transforma o raw em staging, intermediate e marts, em SQL, com testes e documentação | SQL declarativo, testes e linhagem prontos |
 | **DuckDB** | calcula as transformações e grava o Parquet no R2 (`httpfs`) | um arquivo, sem servidor, rápido para análise ([ADR 0014](../05-decisoes/0014-warehouse-lake-duckdb-e-postgres-de-servico.md), [0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)) |
 | **Cloudflare R2** | guarda o lake público (Parquet) e o bucket privado | S3 compatível, sem custo de saída, cache e domínio próprio |
-| **PostgreSQL** | serve os marts às aplicações | consulta concorrente, papel somente leitura, índices |
 | **Dagster** | ordem, agendamento e linhagem entre etapas | os ativos saem de `sources/`, sem código por fonte |
 | **Código próprio** | landing (hash, imutabilidade), identidade de pessoas, auditoria | o que nenhuma ferramenta faz, e é onde mora a garantia do projeto |
 
@@ -45,7 +43,7 @@ Ferramentas e seus comandos: [`04-ferramentas.md`](04-ferramentas.md).
 - **Fontes declarativas.** Uma fonte é um YAML em `sources/<poder>/<esfera>/<fonte>.yml`; só o que o padrão não cobre (SOAP, robô, zip) vira Python em `ingestion/custom/`. Alternativa: um módulo Python por fonte (mais flexível, mais código a manter) ([ADR 0005](../05-decisoes/0005-fontes-declarativas-e-portabilidade.md), [0011](../05-decisoes/0011-buscar-ler-custom-e-chave-por-fonte.md)).
 - **Dois motores que só se encontram nos dados.** `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). A fronteira é o schema `raw_<esfera>_<fonte>` e a tabela `metadata.capturas`. Alternativa: um pacote por motor ou um repositório por motor (custo de versionar junto) ([ADR 0009](../05-decisoes/0009-repositorio-de-dados-pacote-unico.md)).
 - **Um repositório, um pacote Python com extras.** `uv sync --all-extras` instala tudo; cada motor traz só o que precisa.
-- **DuckDB calcula, Parquet público informa, PostgreSQL serve.** O DuckDB aceita um escritor por vez, então o pipeline é serializado; ninguém lê o arquivo dele em produção. Alternativas ao Parquet simples: Iceberg no R2 Data Catalog (exige token até para ler) e DuckLake (sem chave primária; dbt não confirmado), ver ADR 0035. Alternativas descartadas: só PostgreSQL, ClickHouse, BigQuery e Snowflake (motivos no ADR 0014).
+- **DuckDB calcula, Parquet público informa.** O DuckDB aceita um escritor por vez, então o pipeline é serializado; ninguém lê o arquivo dele em produção. Alternativas ao Parquet simples: Iceberg no R2 Data Catalog (exige token até para ler) e DuckLake (sem chave primária; dbt não confirmado), ver ADR 0035. Alternativas descartadas: só PostgreSQL, ClickHouse, BigQuery e Snowflake (motivos no ADR 0014).
 - **Identidade fora do dbt.** A chave `id_pessoa` não pode mudar depois de entregue; reconstruir do landing não garante as mesmas chaves. Por isso é código com migração e cópia imutável a cada execução.
 
 ## Onde ficam os pipelines
@@ -68,7 +66,7 @@ Para acrescentar ou mudar um pipeline, edita-se `sources/` (e, se for entidade n
 ## Regras que valem em todo o sistema
 
 - O landing nunca é sobrescrito; o resto é reproduzível dele.
-- Contratos de dados e testes em cada tabela publicada; teste de erro bloqueia a publicação (`export` e `publish` só rodam depois dos testes do dbt).
+- Contratos de dados e testes em cada tabela publicada; teste de erro bloqueia a publicação (o `export` só roda depois dos testes do dbt).
 - O landing nunca é público.
 - Pipelines idempotentes: rodar duas vezes dá o mesmo resultado.
 - Linhagem: toda linha do raw aponta para a captura de origem (URL, hash, data).

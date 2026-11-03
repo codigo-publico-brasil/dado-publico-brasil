@@ -198,14 +198,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `agg_composicoes` | Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje), por território e partido. A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes. | publico | corte |
 | `app_cargo_ocupantes` | Quem ocupa cada cargo, uma linha por período de ocupação; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. Deputado federal e senador vêm do exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu e eleito em eleição suplementar); quem foi eleito e ainda não assumiu e os demais cargos vêm do mandato da eleição, com o fim previsto pela duração do cargo (cassação e renúncia desses cargos não aparecem, issue 162). Sem data de posse, entra com dt_inicio vazio e ano_inicio preenchido. | publico-agente-publico | período de ocupação |
-| `app_composicao_comparada` | A composição por corte, tipo, cargo, território e partido, com nomes legíveis; o aplicativo escolhe dois cortes e compara. A eleita e a em exercício aparecem separadas. | publico | corte |
-| `app_decisao` | Uma linha por votação e proposição, com o resultado e os totais, para consumo pelas aplicações. | publico | votação e proposição |
-| `app_decisao_partidos` | O voto por partido em cada votação, com o partido como chave (id_partido) e a sigla do voto ao lado, para a página Quem Decidiu. | publico | votação |
-| `app_municipio_governo` | Prefeito, vice e vereadores eleitos de cada município por eleição, com partido. | publico-agente-publico | mandato municipal |
 | `app_pessoa_campanhas` | Todas as candidaturas da pessoa, com foto, resultado e campanha, tenha ela vencido ou não. Só candidaturas de quem tem pessoa no projeto (quem já foi eleito). | publico-agente-publico | candidatura |
-| `app_pessoa_eventos` | A ficha da pessoa com a linha do tempo, um evento por linha, com o nome do tipo, do cargo e do território e o endereço do arquivo original da fonte. | publico-agente-publico | evento da pessoa |
-| `app_pessoa_partidos` | Os partidos da pessoa ao longo do tempo, de fontes oficiais (histórico da Câmara, votos, início da legislatura e candidaturas do TSE), com a base de cada período. Uma linha por pessoa e período. Não afirma a data de filiação; o partido da candidatura é o da eleição. | publico-agente-publico | pessoa e período |
-| `app_pessoa_votos` | O voto de cada pessoa em cada votação nominal da Câmara e do Senado, com a data, a descrição e o resultado da votação como a fonte publica. Uma linha por pessoa e votação; as proposições votadas estão em app_decisao. | publico-agente-publico | pessoa e votação |
 | `app_pessoas` | A ficha cadastral de cada pessoa do projeto (quem já foi eleito), com a foto. O cadastro de contato, escolaridade e profissões só existe para quem passou pela Câmara ou pelo Senado e fica vazio para os demais. | publico-agente-publico | pessoa |
 | `brg_frentes_membros` | Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título. | publico-agente-publico | pessoa |
 | `brg_normas_relacoes` | Ligações de cada norma com atos posteriores, como o Senado declara (alteração, regulamentação, veto, declaração de constitucionalidade). Só das normas detalhadas (leis, leis complementares, emendas, medidas provisórias e a Constituição). Uma linha por norma, ato posterior e tipo de relação. | publico | norma |
@@ -302,58 +295,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fonte_url` |  | Arquivo oficial de onde saiu o registro (o do TSE para o mandato; o da Câmara ou do Senado para o exercício), na captura registrada. |  |
 | `dt_captura` |  | Data da captura desse arquivo. |  |
 
-### marts.app_composicao_comparada
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `dt_corte` |  | Data do corte: 1º de janeiro ou 1º de julho. |  |
-| `tipo_composicao` |  | eleita ou exercicio. |  |
-| `cargo` |  | Nome do cargo. |  |
-| `territorio` |  | Nome do território; vazio onde a fonte não liga a um território. |  |
-| `partido` |  | Sigla do partido; vazia quando não se conhece. |  |
-| `cadeiras` |  | Quantas pessoas ocupam o cargo naquele corte, território e partido. |  |
-
-### marts.app_decisao
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `fonte` |  | Fonte da votação (camara ou senado). |  |
-| `id_votacao` |  | Identificador da votação na fonte. |  |
-| `dt_votacao` |  | Data da votação. |  |
-| `papel` |  | Papel da proposição na votação: afetada, objeto ou materia. |  |
-| `proposicao` |  | Sigla da proposição; vazia quando ela não está carregada. |  |
-| `ementa` |  | Ementa da proposição; vazia quando ela não está carregada. |  |
-| `url_proposicao` |  | Endereço da proposição na fonte. |  |
-| `descricao` |  | Descrição da votação como a fonte informa. |  |
-| `aprovada` |  | Resultado da votação segundo a fonte. |  |
-| `votos_sim` |  | Votos sim. |  |
-| `votos_nao` |  | Votos não. |  |
-| `votos_outros` |  | Demais votos (abstenção, obstrução). |  |
-
-### marts.app_decisao_partidos
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `fonte` |  | Fonte da votação. |  |
-| `id_votacao` |  | Identificador da votação. |  |
-| `id_partido` |  | Partido (dim_partidos) na data do voto; vazio para voto sem partido ou sigla não curada. |  |
-| `partido` |  | Sigla atual do partido; sem id_partido, a sigla do voto. |  |
-| `partido_no_voto` |  | Sigla do partido na data do voto, como a fonte informa. |  |
-| `voto` |  | Voto registrado. |  |
-| `qtd_votos` |  | Quantos votos. |  |
-
-### marts.app_municipio_governo
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `id_territorio` |  | Município (dim_territorios). |  |
-| `municipio` |  | Nome do município. |  |
-| `ano_eleicao` |  | Ano da eleição. |  |
-| `cargo` |  | Nome do cargo. |  |
-| `nome` |  | Nome público da pessoa; vazio quando o eleito não tem pessoa. |  |
-| `partido` |  | Sigla do partido pelo qual foi eleito. |  |
-| `id_pessoa` |  | Pessoa do projeto. |  |
-
 ### marts.app_pessoa_campanhas
 
 | Coluna | Tipo | Descrição | Dado pessoal |
@@ -378,52 +319,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fonte_url_despesas` |  | Arquivo oficial do TSE das despesas da campanha; vazio sem prestação de contas carregada. |  |
 | `fonte_url_bens` |  | Arquivo oficial do TSE dos bens declarados; vazio quando o arquivo da eleição não foi carregado. |  |
 | `dt_captura_campanha` |  | Data da captura mais recente entre os arquivos de receitas, despesas e bens. |  |
-
-### marts.app_pessoa_eventos
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `id_evento` |  | Identificador do evento. |  |
-| `id_pessoa` |  | Pessoa do evento. |  |
-| `ano_evento` |  | Ano do evento. |  |
-| `dt_evento` |  | Dia do evento, só quando a fonte dá o dia. |  |
-| `id_tipo_evento` |  | Tipo do evento, do catálogo. |  |
-| `evento` |  | Descrição do tipo do evento. |  |
-| `cargo` |  | Nome do cargo do evento, quando há. |  |
-| `territorio` |  | Nome do território do evento, quando há. |  |
-| `partido` |  | Sigla do partido do evento, quando há. |  |
-| `base` |  | Como o evento é obtido: informado pela fonte ou derivado de regra do projeto. |  |
-| `url_original` |  | Endereço do arquivo oficial de onde o evento veio; vazio quando o evento nasce de outra tabela do projeto. |  |
-
-### marts.app_pessoa_partidos
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `id_pessoa_partido` |  | Identificador da linha: fonte e registro de origem. |  |
-| `id_pessoa` |  | Pessoa do projeto. |  |
-| `partido` |  | Sigla do partido, do cadastro de partidos; vazia quando a sigla da fonte não casa. |  |
-| `partido_na_fonte` |  | Sigla do partido como a fonte informa. |  |
-| `ano_referencia` |  | Ano do momento: o do primeiro registro da Câmara ou o da eleição da candidatura. |  |
-| `dt_inicio` |  | Data do primeiro registro com este partido, quando a fonte dá o dia. |  |
-| `dt_ultimo_registro` |  | Só na Câmara: data do último registro com este partido; não é o fim da filiação. |  |
-| `base` |  | De onde sai o partido: historico_de_deputados, inicio_da_legislatura, votos ou candidatura. |  |
-| `fl_mais_recente` |  | Verdadeiro na linha mais recente da pessoa; não é necessariamente o partido de hoje. |  |
-
-### marts.app_pessoa_votos
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `fonte` |  | Fonte da votação (camara ou senado). |  |
-| `id_votacao` |  | Identificador da votação na fonte. |  |
-| `id_pessoa` |  | Pessoa que votou. |  |
-| `voto` |  | Voto registrado, como a fonte informa (sim, não, abstenção, obstrução...). |  |
-| `dt_voto` |  | Data e hora do voto, como a fonte informa. |  |
-| `partido` |  | Sigla do partido do parlamentar no voto, do cadastro de partidos; vazia quando a sigla da fonte não casa. |  |
-| `partido_na_fonte` |  | Sigla do partido como a fonte informa no voto. |  |
-| `uf` |  | UF do parlamentar no voto, como a fonte informa. |  |
-| `dt_votacao` |  | Data da votação. |  |
-| `descricao` |  | Descrição da votação como a fonte informa. |  |
-| `aprovada` |  | Resultado da votação segundo a fonte. |  |
 
 ### marts.app_pessoas
 

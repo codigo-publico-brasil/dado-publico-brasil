@@ -11,7 +11,6 @@ Para quem vai rodar ou mexer no código. Responde: o que cada ferramenta faz aqu
 | **dbt** | modelos SQL (staging, intermediate, marts), testes e documentação das colunas | [ADR 0006](../05-decisoes/0006-adotar-dlt-dbt-e-dagster.md) |
 | **DuckDB** | o motor de cálculo: um arquivo, sem servidor; também grava o Parquet público no R2 | [ADR 0014](../05-decisoes/0014-warehouse-lake-duckdb-e-postgres-de-servico.md), [ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md) |
 | **Dagster** | ordem das etapas, agendamento diário e grafo de linhagem | [ADR 0006](../05-decisoes/0006-adotar-dlt-dbt-e-dagster.md) |
-| **PostgreSQL** (Docker) | banco de consumo que as aplicações leem; `docker compose up -d` sobe o de desenvolvimento | [ADR 0014](../05-decisoes/0014-warehouse-lake-duckdb-e-postgres-de-servico.md) |
 
 ## Verificação antes de um PR
 

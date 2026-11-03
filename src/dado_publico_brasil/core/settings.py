@@ -9,7 +9,6 @@ from pathlib import Path
 
 ENV_ROOT = "DADO_PUBLICO_STORAGE_ROOT"
 ENV_WAREHOUSE = "DADO_PUBLICO_WAREHOUSE"
-ENV_SERVICE = "DADO_PUBLICO_POSTGRES_DSN"
 DEFAULT_WAREHOUSE = "{root}/warehouse.duckdb"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -23,7 +22,6 @@ DDL_DIR = REPO_ROOT / "ddl"
 class Settings:
     storage_root: Path = Path("data_store")
     warehouse_template: str = DEFAULT_WAREHOUSE
-    service_dsn: str | None = None  # PostgreSQL de serviço (ADR 0014); só o comando publish usa
 
     @property
     def warehouse(self) -> Path:
@@ -44,5 +42,4 @@ def load_settings(storage_root: Path | None = None, warehouse: str | None = None
     return Settings(
         storage_root=storage_root or Path(os.environ.get(ENV_ROOT, "data_store")),
         warehouse_template=warehouse or os.environ.get(ENV_WAREHOUSE, DEFAULT_WAREHOUSE),
-        service_dsn=os.environ.get(ENV_SERVICE) or None,
     )
