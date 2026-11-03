@@ -49,11 +49,11 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 | tabela própria (metadata, identity) | `ddl/` |
 | página inicial do lake público (texto, layout, logos) | `site/index.html` (depois `dado-publico publish-docs`) |
 | ordem das etapas, agendamento | `src/dado_publico_brasil/orchestration/` |
-| serviços locais (Dagster, PostgreSQL), limite de memória | `compose.yaml`, `dagster.yaml` |
+| serviços locais (Dagster), limite de memória | `compose.yaml`, `dagster.yaml` |
 | ambiente (pasta de dados, warehouse) | variáveis `DADO_PUBLICO_STORAGE_ROOT`, `DADO_PUBLICO_WAREHOUSE` |
 | papel dos agentes (`engenheiro`, `arquiteto`, `qa`, `auditor`) | `.claude/agents/<nome>.md` (só o que é específico do papel; as regras comuns ficam neste arquivo) |
 
-`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português; nos marts o prefixo diz o tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `backfill`, `recheck`, `rebuild`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
+`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português; nos marts o prefixo diz o tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `backfill`, `recheck`, `rebuild`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
 
 O fundador usa o projeto para aprender arquitetura de dados e de sistemas: explique decisões e alternativas em poucas linhas e aponte o que merece ADR.
 
@@ -74,7 +74,7 @@ Mapa em [`docs/README.md`](docs/README.md): `01-entender` (explica), `02-fazer` 
 
 ## Lições de experiência
 
-- **Um escritor por vez no DuckDB:** pare o Dagster e container órfão antes de rodar etapas; `publish` trava se uma consulta pesada segura o Postgres. Detalhes e receitas em [Operar e publicar](docs/02-fazer/04-operar-e-publicar.md).
+- **Um escritor por vez no DuckDB:** pare o Dagster e container órfão antes de rodar etapas; o `export` e o `transform` falham se algo segura o arquivo. Detalhes e receitas em [Operar e publicar](docs/02-fazer/04-operar-e-publicar.md).
 - **Coluna nova em dataset com `primary_key: [_row_hash]` duplica o raw** (o hash muda); recarregue o dataset ou limpe as duplicatas antes de seguir (issue 156).
 - No Windows o `dado-publico.exe` pode ser bloqueado: use `uv run python -m dado_publico_brasil.orchestration <comando>`.
 - **Confira antes de afirmar:** leia o arquivo, rode o comando ou busque no código antes de dizer que algo existe, falta ou está desatualizado.

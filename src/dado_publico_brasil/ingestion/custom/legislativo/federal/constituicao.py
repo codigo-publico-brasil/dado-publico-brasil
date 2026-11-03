@@ -57,7 +57,7 @@ def download(url: str, folder: Path) -> tuple[Path, str, int]:
 
 
 def head(url: str) -> dict[str, str | None]:
-    return fetch.head(_resolve(url)[0])
+    return fetch.head(_resolve(url)[0], suffix="html")
 
 
 def records(file: Path, dataset: Dataset) -> Iterator[dict[str, Any]]:

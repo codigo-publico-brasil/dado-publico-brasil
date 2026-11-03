@@ -175,3 +175,10 @@ def test_rebuild_refuses_to_overwrite_a_warehouse_or_start_from_a_missing_one(tm
         rebuild.start_from(existing, existing.warehouse)
     with pytest.raises(FileNotFoundError):
         rebuild.start_from(Settings(storage_root=tmp_path / "y"), tmp_path / "nao-existe.duckdb")
+
+
+def test_code_version_prefers_the_image_variable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DADO_PUBLICO_GIT_SHA", "abc1234")
+    runs.code_version.cache_clear()
+    assert runs.code_version() == "abc1234"
+    runs.code_version.cache_clear()

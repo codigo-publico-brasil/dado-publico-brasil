@@ -55,7 +55,7 @@ from dado_publico_brasil.core import alert, migrations, runs, warehouse
 from dado_publico_brasil.core.settings import DBT_DIR, load_settings
 from dado_publico_brasil.ingestion import contract, landing, loader, monitoring
 from dado_publico_brasil.orchestration import pipeline
-from dado_publico_brasil.transformation import build, describe, export, observability, publish, quality
+from dado_publico_brasil.transformation import build, describe, export, observability, quality
 from dado_publico_brasil.transformation import dbt as dbt_runner
 
 SETTINGS = load_settings()
@@ -255,7 +255,7 @@ def failure_email(context: RunFailureSensorContext) -> None:
 
 
 def _marts() -> list[AssetKey]:
-    """Os modelos da camada marts, que o `publish` copia para o PostgreSQL."""
+    """Os modelos da camada marts, que o `export` grava no lake."""
     nodes = json.loads(PROJECT.manifest_path.read_text(encoding="utf-8"))["nodes"].values()
     return [
         AssetKey([n["schema"], n["name"]])
@@ -286,23 +286,8 @@ def docs_asset() -> MaterializeResult[Any]:
     return MaterializeResult(metadata={"paginas": len(export.publish_docs(SETTINGS))})
 
 
-@asset(
-    key=AssetKey(["publicacao", "marts"]),
-    deps=[AssetKey(["publicacao", "lake"])],
-    group_name="marts",
-    automation_condition=EAGER,
-)
-def publish_asset() -> MaterializeResult[Any]:
-    """Copia os marts para o PostgreSQL de serviço, numa troca atômica (ADR 0014)."""
-    tables = publish.publish(SETTINGS)
-    return MaterializeResult(metadata={"tabelas": len(tables), "linhas": sum(tables.values())})
-
-
 SOURCES = contract.find_all()
 SCHEDULED = [s for s in SOURCES if s.schedule]
-EXTRA = (
-    [publish_asset] if SETTINGS.service_dsn else []
-)  # sem o banco de serviço configurado, não há o que publicar
 INGESTED = [key for s in SOURCES for key in _keys(s)]  # landing e raw de todas as fontes
 jobs = [
     define_asset_job("atualizar_tudo", selection="*", tags=REFRESH),
@@ -356,7 +341,6 @@ defs = Definitions(
         dbt_post_identity,
         export_asset,
         docs_asset,
-        *EXTRA,
     ],
     asset_checks=freshness,
     jobs=jobs,

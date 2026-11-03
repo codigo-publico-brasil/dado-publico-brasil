@@ -111,8 +111,9 @@ def test_each_source_declares_its_schedule_and_the_plan_has_only_the_current_par
         "secao3",
     }
     assert {part for _, part in landing.plan_incremental(contracts.find("dou"), today)} == {
-        202610
-    }  # só o mês em curso
+        202609,
+        202610,
+    }  # o mês em curso e o anterior
     senate = dict(landing.plan_incremental(contracts.find("senado"), today))
     assert senate["senadores"] == landing.legislature_of(2026) and senate["votacoes"] == 2026
 
@@ -206,3 +207,9 @@ def test_arquivos_block_is_read_and_the_member_groups_become_path_fields(tmp_pat
         if d.arquivos and d.arquivos.publicar
     }
     assert published[("dou", "secao1")] == "secoes" and published[("tse", "fotos_rj")] == "fotos"
+
+
+def test_rate_limit_must_be_positive(tmp_path: Path) -> None:
+    text = TEMPLATE.format(extra="").replace("encoding: utf-8}", "encoding: utf-8, rate_limit: 0}")
+    with pytest.raises(InvalidContract, match="rate_limit"):
+        contract_from(tmp_path, text=text)

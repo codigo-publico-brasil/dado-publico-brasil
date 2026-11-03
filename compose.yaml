@@ -1,63 +1,54 @@
-# PostgreSQL de serviço (ADR 0014) e pipeline com Dagster (ADR 0027).
-# Só o banco: `docker compose up -d` (lê o `.env` desta pasta). Banco e pipeline: `docker compose --profile pipeline up -d --build`; só o pipeline: `docker compose up -d --build webserver daemon`.
-# Senhas vêm do `.env`; nenhuma fica neste arquivo.
+# Pipeline com Dagster (ADR 0027). Sobe com `docker compose --profile pipeline up -d --build` (lê o `.env` desta pasta).
 name: dado-publico-brasil
 
 x-pipeline: &pipeline
   profiles: [pipeline]
   image: ghcr.io/codigo-publico-brasil/dado-publico-brasil:${DADO_PUBLICO_IMAGE_TAG:-latest}
-  build: .
+  build:
+    context: .
+    args: {GIT_SHA: "${GIT_SHA:-unknown}"}
   restart: unless-stopped
-  env_file: [.env]
+  stop_grace_period: 2m
+  # Só as variáveis deste arquivo vão ao container. No servidor use um `.env.servidor` sem o DSN e as senhas do Postgres.
+  env_file: ["${DADO_PUBLICO_ENV_FILE:-.env}"]
   environment:
     DADO_PUBLICO_STORAGE_ROOT: /data
     DADO_PUBLICO_WAREHOUSE: "{root}/warehouse.duckdb"
     DAGSTER_HOME: /dagster_home
     DADO_PUBLICO_DUCKDB_MEMORY: ${DADO_PUBLICO_DUCKDB_MEMORY:-4GB}
-  mem_limit: ${DADO_PUBLICO_MEM_LIMIT:-6g}
+    UV_CACHE_DIR: /data/.state/uv_cache  # o `edr` (uvx) baixa o Elementary: o cache sobrevive ao container
   logging:
     driver: json-file
     options: {max-size: 10m, max-file: "3"}
   volumes:
-    - ${DADO_PUBLICO_DATA_DIR:-./data_store}:/data
-    # temporários do DuckDB (spill) num volume do Docker: no bind mount do Windows a releitura falha
-    - duckdb_tmp:/data/warehouse.duckdb.tmp
+    - "${DADO_PUBLICO_DATA_DIR:-./data_store}:/data"
+    # temporários do DuckDB (spill): sob a pasta de dados (Linux). No Docker Desktop do Windows a releitura em bind
+    # mount falha: defina DADO_PUBLICO_SPILL=duckdb_tmp (volume do Docker).
+    - "${DADO_PUBLICO_SPILL:-${DADO_PUBLICO_DATA_DIR:-./data_store}/warehouse.duckdb.tmp}:/data/warehouse.duckdb.tmp"
+    # volume nomeado: o SQLite do Dagster trava em bind mount no Windows e o histórico persiste
     - dagster_home:/dagster_home
 
 services:
-  postgres:
-    image: pgvector/pgvector:pg17
-    environment:
-      POSTGRES_USER: dado_publico
-      POSTGRES_PASSWORD: ${DADO_PUBLICO_PG_PASSWORD:?defina DADO_PUBLICO_PG_PASSWORD no .env}
-      POSTGRES_DB: dado_publico
-      LEITOR_PASSWORD: ${DADO_PUBLICO_PG_LEITOR_PASSWORD:?defina DADO_PUBLICO_PG_LEITOR_PASSWORD no .env}
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dado_publico -d dado_publico"]
-      interval: 5s
-      retries: 10
-
   # Dagster como serviço (ADR 0027): `webserver` (interface) e `daemon` (agendamentos e sensores) dividem a imagem e o
   # estado. A imagem sai do CI (GHCR); o servidor só faz `pull` (docs/02-fazer/04-operar-e-publicar.md). Local, com
-  # build: `docker compose up -d --build webserver daemon`. Para ligar o `publish`, defina
-  # DADO_PUBLICO_POSTGRES_DSN no `.env` (o host `postgres` vale quando o banco sobe junto, com `--profile pipeline`).
+  # build: `docker compose up -d --build webserver daemon`.
   # A interface não tem login: só escuta em ${DADO_PUBLICO_BIND:-127.0.0.1}; acesso remoto por túnel SSH ou VPN
   # (docs/02-fazer/04-operar-e-publicar.md). Memória: ajuste as duas variáveis ao tamanho da máquina.
   webserver:
     <<: *pipeline
+    mem_limit: ${DADO_PUBLICO_WEB_MEM_LIMIT:-1g}
+    depends_on:
+      init: {condition: service_completed_successfully}
     ports:
       - "${DADO_PUBLICO_BIND:-127.0.0.1}:3000:3000"
 
   daemon:
     <<: *pipeline
+    mem_limit: ${DADO_PUBLICO_MEM_LIMIT:-6g}
+    depends_on:
+      init: {condition: service_completed_successfully}
     command: ["uv", "run", "--no-sync", "dagster-daemon", "run", "-m", "dado_publico_brasil.orchestration.definitions"]
 
 volumes:
-  pgdata:
   dagster_home:
   duckdb_tmp:

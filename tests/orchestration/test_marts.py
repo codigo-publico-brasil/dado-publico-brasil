@@ -178,18 +178,12 @@ def test_party_lineage_comes_from_the_curated_table_and_every_event_cites_the_of
     )
 
 
-def test_servico_views_for_the_person_page_keep_every_row_of_their_facts(
+def test_the_person_page_view_keeps_every_person(
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
     assert scalar(con, "SELECT count(*) FROM marts.app_pessoas") == scalar(
         con, "SELECT count(*) FROM marts.dim_pessoas"
-    )
-    assert scalar(con, "SELECT count(*) FROM marts.app_pessoa_votos") == scalar(
-        con, "SELECT count(*) FROM marts.fct_votos"
-    )
-    assert scalar(con, "SELECT count(*) FROM marts.app_pessoa_partidos") == scalar(
-        con, "SELECT count(*) FROM marts.fct_pessoas_partidos"
     )
     ana = con.execute(
         "SELECT nome, profissoes, foto_url FROM marts.app_pessoas WHERE nome = 'Ana Árvore'"

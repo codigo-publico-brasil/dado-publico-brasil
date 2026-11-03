@@ -1,0 +1,15 @@
+# Acrescenta ao `compose.yaml` as exigências do servidor: sem R2 completo o export e o publish-docs gravariam só no disco.
+# Ativado por `COMPOSE_FILE=compose.yaml:compose.servidor.yaml` no `.env.servidor` (docs/02-fazer/04-operar-e-publicar.md).
+x-r2: &r2
+  environment:
+    DADO_PUBLICO_DATA_DIR: ${DADO_PUBLICO_DATA_DIR:?defina DADO_PUBLICO_DATA_DIR (caminho absoluto do servidor) no .env.servidor}
+    DADO_PUBLICO_LAKE_URL: ${DADO_PUBLICO_LAKE_URL:?defina DADO_PUBLICO_LAKE_URL no .env.servidor}
+    DADO_PUBLICO_R2_ACCOUNT_ID: ${DADO_PUBLICO_R2_ACCOUNT_ID:?defina DADO_PUBLICO_R2_ACCOUNT_ID no .env.servidor}
+    DADO_PUBLICO_R2_ACCESS_KEY_ID: ${DADO_PUBLICO_R2_ACCESS_KEY_ID:?defina DADO_PUBLICO_R2_ACCESS_KEY_ID no .env.servidor}
+    DADO_PUBLICO_R2_SECRET_ACCESS_KEY: ${DADO_PUBLICO_R2_SECRET_ACCESS_KEY:?defina DADO_PUBLICO_R2_SECRET_ACCESS_KEY no .env.servidor}
+    DADO_PUBLICO_R2_BUCKET: ${DADO_PUBLICO_R2_BUCKET:?defina DADO_PUBLICO_R2_BUCKET no .env.servidor}
+    DADO_PUBLICO_R2_BUCKET_PRIVADO: ${DADO_PUBLICO_R2_BUCKET_PRIVADO:?defina DADO_PUBLICO_R2_BUCKET_PRIVADO no .env.servidor}
+
+services:
+  webserver: *r2
+  daemon: *r2

@@ -21,7 +21,7 @@ PAGE = f"""<a href="{LINK}">S01</a>
 URL = "https://www.in.gov.br/acesso-a-informacao/dados-abertos/base-de-dados?ano={}&secao={}"
 
 
-def test_the_plan_is_one_zip_per_section_and_month_from_the_first_month_and_the_daily_plan_has_only_the_current_month() -> (
+def test_the_plan_is_one_zip_per_section_and_month_from_the_first_month_and_the_daily_plan_has_only_the_current_and_the_previous_month() -> (
     None
 ):
     source = contracts.find("dou")
@@ -33,8 +33,9 @@ def test_the_plan_is_one_zip_per_section_and_month_from_the_first_month_and_the_
     )  # mês corrente incluso, sem pular
     daily = landing.plan_incremental(source, today=date(2026, 10, 24))
     assert {part for _, part in daily} == {
-        202610
-    }  # o diário confere só o mês em curso; os anteriores, sob pedido
+        202609,
+        202610,
+    }  # o diário confere o mês em curso e o anterior; os mais antigos, sob pedido
 
 
 def test_the_link_is_the_zip_of_the_requested_section_and_month(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -27,6 +27,7 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name == 'push' }}
+          build-args: GIT_SHA=${{ github.sha }}
           tags: |
             ghcr.io/codigo-publico-brasil/dado-publico-brasil:latest
             ghcr.io/codigo-publico-brasil/dado-publico-brasil:${{ github.sha }}

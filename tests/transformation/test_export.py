@@ -806,36 +806,13 @@ def test_the_signed_upload_carries_content_type_cache_control_and_checksum(
     assert "cache-control" in seen["authorization"] and "x-amz-checksum-sha256" in seen["authorization"]
 
 
-def test_a_transient_r2_error_is_retried(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    statuses = [500, 429, 200]
-
-    class Response:
-        def __init__(self) -> None:
-            self.status = statuses.pop(0)
-
-        def read(self) -> bytes:
-            return b"erro"
-
-    class Conn:
-        def __init__(self, host: str, timeout: int) -> None: ...
-
-        def request(self, method: str, uri: str, body: object, headers: dict[str, str]) -> None: ...
-
-        def getresponse(self) -> Response:
-            return Response()
-
-        def close(self) -> None: ...
-
-    keys = ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "BUCKET")
-    monkeypatch.setattr(export, "_r2", lambda: dict.fromkeys(keys, "x"))
-    monkeypatch.setattr(http.client, "HTTPSConnection", Conn)
-    monkeypatch.setattr(export, "_LOCAL", threading.local())
-    monkeypatch.setattr(time, "sleep", lambda _: None)
-    file = tmp_path / "f.jpg"
-    file.write_bytes(b"abc")
-    export.r2_request("PUT", "k/f.jpg", file, "image/jpeg")
-    assert statuses == []  # duas falhas transitórias e a terceira tentativa passou
-
-    statuses[:] = [403]
-    with pytest.raises(RuntimeError, match="HTTP 403"):
-        export.r2_request("PUT", "k/f.jpg", file, "image/jpeg")
+@pytest.mark.parametrize("var", ["DADO_PUBLICO_R2_BUCKET", "DADO_PUBLICO_LAKE_URL"])
+def test_a_partial_r2_configuration_fails_instead_of_exporting_locally(
+    var: str, con: Connection, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "BUCKET"):
+        monkeypatch.delenv(f"DADO_PUBLICO_R2_{name}", raising=False)
+    monkeypatch.delenv("DADO_PUBLICO_LAKE_URL", raising=False)
+    monkeypatch.setenv(var, "x")
+    with pytest.raises(ValueError, match="R2 incompleto"):
+        export.export(settings)

@@ -214,3 +214,78 @@ def test_a_response_compressed_in_transport_is_kept_as_the_document_it_carries(t
     assert json.loads(file.read_text(encoding="utf-8")) == PAYLOAD and size == file.stat().st_size
     assert digest == hashlib.sha256(file.read_bytes()).hexdigest()  # o hash é do documento, não do transporte
     assert status == 200 and json.loads(body) == PAYLOAD
+
+
+class Hostile(http.server.BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        if self.path == "/403":
+            self.send_response(403)
+            self.end_headers()
+        elif self.path == "/moved":
+            self.send_response(302)
+            self.send_header(
+                "Location",
+                "http://" + str(self.headers["Host"]).replace("127.0.0.1", "localhost") + "/ok.csv",
+            )
+            self.end_headers()
+        else:
+            body = (
+                b"<html>Acesso negado</html>" if self.path in ("/html.zip", "/page.html") else b"a,b\n1,2\n"
+            )
+            self.send_response(200)
+            self.send_header(
+                "Content-Type", "text/html" if self.path in ("/html.zip", "/page.html") else "text/csv"
+            )
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    do_HEAD = do_GET
+
+    def log_message(self, *args: object) -> None:
+        pass
+
+
+@pytest.fixture
+def hostile() -> Iterator[str]:
+    httpd = http.server.HTTPServer(("127.0.0.1", 0), Hostile)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{httpd.server_port}"
+    httpd.shutdown()
+
+
+@pytest.mark.parametrize("path", ["/html.zip", "/403", "/moved"])
+def test_a_block_is_raised_before_anything_is_written_to_the_landing(
+    hostile: str, path: str, tmp_path: Path
+) -> None:
+    folder = tmp_path / "landing" / "fonte"
+    with pytest.raises(fetch.SourceBlocked):
+        fetch.download(hostile + path, folder)
+    with pytest.raises(fetch.SourceBlocked):
+        fetch.head(hostile + path)
+    assert not folder.exists() and not folder.parent.exists()
+
+
+def test_a_source_that_serves_html_as_its_format_is_not_blocked(hostile: str, tmp_path: Path) -> None:
+    file, _, _ = fetch.download(hostile + "/page.html", tmp_path, suffix="html")
+    assert file.suffix == ".html" and fetch.head(hostile + "/page.html", suffix="html")["size"]
+
+
+def test_a_subdomain_of_the_same_site_is_not_a_redirect_to_another_host() -> None:
+    assert fetch._site("https://www.in.gov.br/x") == fetch._site("https://in.gov.br/y") == "in.gov.br"
+    assert fetch._site("https://dadosabertos.camara.leg.br/") == "camara.leg.br"
+    assert fetch._site("https://a.example.com/") != fetch._site("https://b.example.org/")
+
+
+def test_the_courtesy_interval_applies_to_every_request_with_an_injected_clock(
+    hostile: str, tmp_path: Path
+) -> None:
+    now = [0.0]
+    pauses: list[float] = []
+    pace = fetch.Pace(2, clock=lambda: now[0], sleep=pauses.append)  # 2 por segundo: 0,5 s
+    fetch.head(hostile + "/ok.csv", pace=pace)
+    now[0] = 0.2
+    fetch.download(hostile + "/ok.csv", tmp_path, pace=pace)
+    now[0] = 5.0
+    fetch.head(hostile + "/ok.csv", pace=pace)
+    assert pauses == [pytest.approx(0.3)]

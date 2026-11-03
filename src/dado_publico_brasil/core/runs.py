@@ -3,6 +3,7 @@
 É a base do frescor, da auditoria e do agendamento.
 """
 
+import os
 import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -19,7 +20,11 @@ def now() -> str:
 
 @cache
 def code_version() -> str:
-    """Commit atual (com sufixo se houver alteração não commitada), para a linhagem."""
+    """Commit atual (com sufixo se houver alteração não commitada), para a linhagem.
+
+    Na imagem não há `.git`: o build grava o commit em `DADO_PUBLICO_GIT_SHA`, que vale antes do git."""
+    if sha := os.environ.get("DADO_PUBLICO_GIT_SHA"):
+        return sha
 
     def git(*args: str) -> str:
         r = subprocess.run(["git", *args], capture_output=True, text=True, timeout=10, check=False)

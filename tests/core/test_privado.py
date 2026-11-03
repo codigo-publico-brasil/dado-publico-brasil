@@ -121,3 +121,15 @@ def test_extract_brings_back_a_file_that_vanished_to_the_same_path(
     )
     assert again == first and path.exists()
     assert scalar(con, "SELECT count(*) FROM metadata.capturas") == 1
+
+
+def test_a_failed_restore_on_a_new_warehouse_removes_the_file(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(con: Connection, settings: Settings) -> None:
+        raise RuntimeError("R2 fora do ar")
+
+    monkeypatch.setattr(privado, "restore", boom)
+    with pytest.raises(RuntimeError, match="R2 fora do ar"):
+        migrations.open_warehouse(settings)
+    assert not settings.warehouse.exists()  # senão a próxima subida pularia a restauração
