@@ -43,6 +43,7 @@ import shutil
 import threading
 import time
 import warnings
+import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, nullcontext
@@ -130,6 +131,7 @@ def _connect(settings: Settings, warehouse_file: bool) -> warehouse.Connection:
     """Conexão com limites de memória e, havendo segredo, acesso ao R2; o warehouse só para leitura."""
     con = warehouse.connect(settings, read_only=True) if warehouse_file else duckdb.connect()
     con.execute(f"SET memory_limit = '{MEMORY_LIMIT}'")
+    con.execute("SET preserve_insertion_order = false")  # COPY e varredura sem reter a ordem em memória
     con.execute(f"SET temp_directory = '{_q((settings.state_dir / 'duckdb_tmp').as_posix())}'")
     privado.secret(con)
     return con
@@ -333,16 +335,19 @@ def r2_request(
     path: Path | None = None,
     content_type: str | None = None,
     headers: dict[str, str] | None = None,
-) -> None:
-    """PUT (de um arquivo) ou DELETE assinado (SigV4) no R2: o que o COPY e o `glob` do DuckDB não fazem.
+    query: dict[str, str] | None = None,
+) -> bytes:
+    """PUT (de um arquivo), DELETE ou GET assinado (SigV4) no R2: o que o COPY e o `glob` do DuckDB não fazem.
 
     `headers` somam-se aos assinados (Cache-Control...); num PUT segue o `x-amz-checksum-sha256` do arquivo.
+    `query` são os parâmetros da URL (listagem). Devolve o corpo da resposta.
     """
     cfg = _r2()
     host = f"{cfg['ACCOUNT_ID']}.r2.cloudflarestorage.com"
     now = datetime.now(UTC)
     stamp, day = now.strftime("%Y%m%dT%H%M%SZ"), now.strftime("%Y%m%d")
     uri = f"/{cfg['BUCKET']}/{quote(key)}"
+    params = "&".join(f"{quote(k, safe='')}={quote(v, safe='')}" for k, v in sorted((query or {}).items()))
     signed_headers = {
         "host": host,
         "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
@@ -363,7 +368,7 @@ def r2_request(
         [
             method,
             uri,
-            "",
+            params,
             *(f"{k}:{signed_headers[k]}" for k in sorted(signed_headers)),
             "",
             names,
@@ -391,7 +396,7 @@ def r2_request(
             try:
                 if body:
                     body.seek(0)
-                conn.request(method, uri, body=body, headers=sent)
+                conn.request(method, f"{uri}?{params}" if params else uri, body=body, headers=sent)
                 response = conn.getresponse()
                 detail = response.read()
                 failure = None if response.status < 300 else f"HTTP {response.status} {detail[:200]!r}"
@@ -401,10 +406,28 @@ def r2_request(
                 _LOCAL.conn = None
                 failure, retry = repr(error), True
             if failure is None:
-                return
+                return detail
             if not retry or attempt == ATTEMPTS:
                 raise RuntimeError(f"R2 {method} {key}: {failure}")
             time.sleep(min(2**attempt, 30))
+    raise AssertionError("ATTEMPTS deve ser positivo")  # pragma: no cover
+
+
+def r2_list(prefix: str) -> dict[str, int]:
+    """Chave e tamanho dos objetos sob `prefix` (ListObjectsV2 assinado, paginado por continuation-token)."""
+    found: dict[str, int] = {}
+    token = ""
+    while True:
+        query = {"list-type": "2", "prefix": prefix} | ({"continuation-token": token} if token else {})
+        tree = ET.fromstring(r2_request("GET", "", query=query))
+        for item in tree.iter():
+            if item.tag.endswith("Contents"):
+                fields = {c.tag.rsplit("}", 1)[-1]: (c.text or "") for c in item}
+                found[fields["Key"]] = int(fields["Size"])
+        fields = {c.tag.rsplit("}", 1)[-1]: (c.text or "") for c in tree}
+        token = fields.get("NextContinuationToken", "")
+        if fields.get("IsTruncated") != "true" or not token:
+            return found
 
 
 def _index(settings: Settings) -> Path:
@@ -580,24 +603,39 @@ def _published(dataset: dict[str, Any]) -> bool:
     return (dataset.get("arquivos") or {}).get("publicar") is True
 
 
-def _send(root: str, key: str, files: list[dict[str, Any]], known: dict[str, str]) -> int:
+def _send(root: str, key: str, files: list[dict[str, Any]], known: dict[str, str]) -> tuple[int, int]:
     """Grava no destino (R2 ou pasta local) só os arquivos que faltam ou mudaram em relação ao controle.
 
-    No R2 o envio é paralelo (`UPLOADS` conexões persistentes): um PUT por vez levaria horas.
+    Devolve (enviados, já no destino). Retomável: o arquivo novo (fora do controle) cuja chave já existe no
+    destino com o mesmo tamanho veio de um envio interrompido e não é reenviado: o PUT leva o SHA-256 e o R2
+    recusa corpo que não confere. O arquivo que mudou (já no controle) sempre é reenviado: o tamanho não
+    prova o conteúdo. Só lista o destino se houver pendentes. O envio no R2 é paralelo (`UPLOADS` conexões).
     """
     pending = [f for f in files if known.get(f["caminho"]) != f["sha256_arquivo"]]
+    if not pending:
+        return 0, 0
+    r2 = root.startswith("r2://")
+    if r2:
+        have = {k[len(key) + 1 :]: n for k, n in r2_list(f"{key}/").items()}
+    else:
+        have = {
+            p.relative_to(Path(root, key)).as_posix(): p.stat().st_size
+            for p in Path(root, key).rglob("*")
+            if p.is_file()
+        }
+    todo = [f for f in pending if f["caminho"] in known or have.get(f["caminho"]) != f["qtd_bytes"]]
 
     def put(f: dict[str, Any]) -> None:
         target = f"{key}/{f['caminho']}"
-        if root.startswith("r2://"):
+        if r2:
             r2_request("PUT", target, f["local"], f["content_type"], {"Cache-Control": CACHE_CONTROL})
         else:
             Path(root, target).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(f["local"], Path(root, target))
 
-    with ThreadPoolExecutor(UPLOADS if root.startswith("r2://") else 1) as pool:
-        list(pool.map(put, pending))  # `list` propaga a primeira falha
-    return len(pending)
+    with ThreadPoolExecutor(UPLOADS if r2 else 1) as pool:
+        list(pool.map(put, todo))  # `list` propaga a primeira falha
+    return len(todo), len(pending) - len(todo)
 
 
 def _control(
@@ -683,6 +721,28 @@ def export(
         exprs = {r: models.get(r[1], {}).get("config", {}).get("meta", {}).get("particao") for r in relations}
         with _phase("impressões digitais"), ThreadPoolExecutor(FINGERPRINTS) as pool:
             prints = list(pool.map(lambda r: _fingerprint(con, r[0], r[1], keys[r], exprs[r]), relations))
+        state = {"entries": old_entries, "base": published.get("base")}
+
+        def commit(current: list[dict[str, Any]]) -> None:
+            """Troca catálogo e manifesto (por último, depois dos arquivos) se diferirem do publicado."""
+            if json.loads(json.dumps(current)) == state["entries"] and state["base"] == (base or root):
+                return  # nada mudou: o publicado já é este
+            catalog = settings.state_dir / "catalogo.duckdb"
+            _catalog(current, catalog, base or root, meta)
+            if _r2():
+                r2_request("PUT", "catalogo.duckdb", catalog)
+            else:
+                shutil.copyfile(catalog, f"{root}/catalogo.duckdb")
+            catalog.unlink()
+            text = json.dumps({**meta, "base": base or root, "tabelas": current}, ensure_ascii=True)
+            con.execute(  # compacto: uma linha, sem aspas soltas
+                f"COPY (SELECT ?) TO '{_q(root)}/manifesto.json' "
+                "(FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER '\x01')",
+                (text,),
+            )
+            state.update(entries=json.loads(json.dumps(current)), base=base or root)
+            _say("  catálogo e manifesto trocados")
+
         written_keys: set[str] = set()  # caminhos de tabela a varrer atrás de órfãos
         changed: set[str] = set()  # tudo o que foi gravado, para as linhas de progresso
         with _phase("escrita"):
@@ -735,11 +795,17 @@ def export(
                         "arquivos": files,
                     }
                 )
+        table_entries = list(entries)
+        coll_entries = {e["caminho"]: e for e in old_entries if e["tabela"].startswith("arq_")}
+        with _phase("catálogo e manifesto (tabelas)"):
+            commit(table_entries + list(coll_entries.values()))  # queda nos arquivos não perde as tabelas
+        con.close()  # a fase de arquivos não lê o warehouse: instância nova, sem a memória das tabelas
+        con = _connect(settings, warehouse_file=False)
         with _phase("arquivos"):
             for key, files in collections.items():
                 if not files and key not in old_files:
                     continue  # coleção que nunca teve arquivo não vira tabela vazia
-                start, sent = time.monotonic(), 0
+                start, sent, resumed = time.monotonic(), 0, 0
                 clean = [{k: v for k, v in f.items() if k != "local"} for f in files]
                 fingerprint = hashlib.sha256(f"{key}:{clean}".encode()).hexdigest()
                 old = old_files.get(key)
@@ -755,17 +821,18 @@ def export(
                                 f"SELECT caminho, sha256_arquivo FROM read_parquet('{_q(root)}/{key}.parquet')"  # noqa: E501
                             ).fetchall()
                         )
+                    sent, resumed = _send(root, key, files, known)
                     size += sum(
                         f["qtd_bytes"] for f in files if known.get(f["caminho"]) != f["sha256_arquivo"]
                     )
-                    sent = _send(root, key, files, known)
                     parquet, description = _control(con, settings, root, meta, key, files)
                     columns = [{"nome": n, "tipo": t, "descricao": d} for n, t, d in CONTROL_COLUMNS]
                     changed.add(key)  # coleção: objeto fora do controle só sai com --prune
                     written += 1
                 _say(
                     f"  {key}: {'gravada' if key in changed else 'ignorada'} "
-                    f"({len(files)} arquivos, {sent} enviados, {time.monotonic() - start:.1f}s)"
+                    f"({len(files)} arquivos, {sent} enviados, {resumed} já no destino, "
+                    f"{time.monotonic() - start:.1f}s)"
                 )
                 entries.append(
                     {
@@ -783,27 +850,12 @@ def export(
                     }
                 )
                 keep |= {f"{key}/{f['caminho']}" for f in files}
+                coll_entries[key] = entries[-1]
+                if key in changed:
+                    commit(table_entries + list(coll_entries.values()))  # coleção concluída: registrada
+        entries = table_entries + [coll_entries[k] for k in collections if k in coll_entries]
         with _phase("catálogo e manifesto"):
-            if json.loads(json.dumps(entries)) == old_entries and published.get("base") == (
-                base or root
-            ):  # nada mudou: o publicado já é este
-                _say("  sem mudança: catálogo e manifesto mantidos")
-            else:
-                catalog = settings.state_dir / "catalogo.duckdb"
-                _catalog(entries, catalog, base or root, meta)
-                if _r2():
-                    r2_request("PUT", "catalogo.duckdb", catalog)
-                else:
-                    shutil.copyfile(catalog, f"{root}/catalogo.duckdb")
-                catalog.unlink()
-                text = json.dumps(
-                    {**meta, "base": base or root, "tabelas": entries}, ensure_ascii=True
-                )  # compacto: uma linha, sem aspas soltas
-                con.execute(
-                    f"COPY (SELECT ?) TO '{_q(root)}/manifesto.json' "
-                    "(FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER '\\x01')",
-                    (text,),
-                )  # por último
+            commit(entries)
         keep |= {f["arquivo"] for e in entries for f in e["arquivos"]}
         # órfãos só sob o que foi gravado; `prune` varre tudo (tabela removida, arquivo que saiu da fonte)
         swept = written_keys | (touched | set(collections) if prune else set())
