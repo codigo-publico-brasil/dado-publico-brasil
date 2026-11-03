@@ -92,6 +92,21 @@ O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md))
 
 **Limites:** o Dagster só propaga a partir do que ele mesmo materializou, então na primeira vez rode `atualizar_tudo`. A interface **não tem login** no Dagster de código aberto: o serviço do `compose.yaml` escuta só em `127.0.0.1`; não o exponha à rede sem uma camada de autenticação na frente (ainda em aberto).
 
+## Implantar numa máquina (homelab ou VPS)
+
+Para quem vai deixar o pipeline rodando sozinho. Nada aqui depende da máquina: só variáveis do `.env` (modelo em `.env.example`), então trocar de servidor é copiar o `.env` e repetir os passos. O Dagster sobe como dois serviços (`webserver`: interface; `daemon`: agendamentos e sensores) e, a cada atualização, publica o lake, as docs e (se houver `DADO_PUBLICO_POSTGRES_DSN`) o PostgreSQL.
+
+1. **Máquina:** Linux com Docker e compose. Com 8 GB de RAM compartilhados, crie swap (8 GB) e deixe `DADO_PUBLICO_MEM_LIMIT=6g` e `DADO_PUBLICO_DUCKDB_MEMORY=4GB` (padrões do compose; acima do limite o DuckDB usa o disco, mais lento e sem estourar). Em máquina maior, suba os dois valores.
+2. **Código e segredos:** `git clone`, copie `.env.example` para `.env` e preencha R2 (público e privado), SMTP e `DADO_PUBLICO_DAGSTER_URL`. Sem `DADO_PUBLICO_POSTGRES_DSN` o `publish` fica desligado.
+3. **Landing e fotos** só existem na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing data_store/fotos servidor:<repo>/data_store/`.
+4. **Subir:** `docker compose up -d --build webserver daemon`. Warehouse vazio restaura sozinho a identidade e o metadata do R2 privado (seção abaixo).
+5. **Primeira carga:** `docker compose exec webserver uv run --no-sync dado-publico rebuild`, depois o job `atualizar_tudo` na interface (a propagação automática só vale depois da primeira materialização).
+6. **Conferir:** `docker compose exec webserver uv run --no-sync dado-publico export --verificar`, `observe --email` (testa o SMTP) e a data do `manifesto.json` público.
+
+**Acesso à interface:** o compose publica a porta só em `127.0.0.1` (o Dagster aberto não tem login). Use túnel SSH (`ssh -L 3000:127.0.0.1:3000 servidor`, funciona igual em qualquer servidor). VPN (Tailscale) ou Cloudflare Access são escolha da infraestrutura: nesse caso defina `DADO_PUBLICO_BIND` com o IP da VPN, nunca `0.0.0.0`.
+
+**Manutenção:** o serviço reinicia sozinho (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Landing e fotos são o único dado sem cópia: faça backup periódico do `data_store/landing` e `fotos` em outro disco até haver cópia no bucket privado.
+
 ## Restaurar numa máquina vazia (bucket privado)
 
 Com `DADO_PUBLICO_R2_BUCKET_PRIVADO` e as credenciais do R2 (`.env.example`), um warehouse novo (arquivo inexistente) restaura sozinho o `metadata` e a cópia mais recente e concluída da identidade, **com as mesmas chaves `id_pessoa`**, e avança as sequências. Depois: `uv run dado-publico rebuild` (sem `--old-warehouse`) e `run --historical` recapturam o raw das fontes.
@@ -104,7 +119,7 @@ Com `DADO_PUBLICO_R2_BUCKET_PRIVADO` e as credenciais do R2 (`.env.example`), um
 
 Quando o warehouse precisa ser refeito (mudança incompatível, arquivo corrompido, limpeza geral). O raw, o dbt e as consultas se refazem do landing; a identidade e o registro das capturas (URL, data, hash, ETag e itens de cada lote, em `metadata`, issue 153) não se refazem dele. Com o bucket privado configurado, vêm de lá (mesmas chaves; ignore o passo 2). Sem ele, o comando leva o `metadata` do warehouse antigo (`--old-warehouse`) e a **identidade é criada de novo, com chaves `id_pessoa` novas**; só faça isso se nenhuma aplicação guarda as chaves antigas.
 
-1. **Pare tudo que escreve no warehouse**, em especial o Dagster (`docker stop dado-publico-brasil-dagster-1`): uma imagem com código antigo apagaria as ligações novas da identidade.
+1. **Pare tudo que escreve no warehouse**, em especial o Dagster (`docker compose stop webserver daemon`): uma imagem com código antigo apagaria as ligações novas da identidade.
 2. Mova o warehouse antigo para fora do caminho, **sem apagá-lo** (ele é a fonte do `metadata`):
 
 ```bash

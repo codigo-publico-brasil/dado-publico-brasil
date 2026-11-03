@@ -271,6 +271,17 @@ def export_asset() -> MaterializeResult[Any]:
 
 
 @asset(
+    key=AssetKey(["publicacao", "docs"]),
+    deps=[AssetKey(["publicacao", "lake"])],
+    group_name="marts",
+    automation_condition=EAGER,
+)
+def docs_asset() -> MaterializeResult[Any]:
+    """Sobe ao R2 o dbt docs, o relatório do Elementary e a página inicial do lake (sem R2, não faz nada)."""
+    return MaterializeResult(metadata={"paginas": len(export.publish_docs(SETTINGS))})
+
+
+@asset(
     key=AssetKey(["publicacao", "marts"]),
     deps=[AssetKey(["publicacao", "lake"])],
     group_name="marts",
@@ -339,6 +350,7 @@ defs = Definitions(
         identity_asset,
         dbt_post_identity,
         export_asset,
+        docs_asset,
         *EXTRA,
     ],
     asset_checks=freshness,

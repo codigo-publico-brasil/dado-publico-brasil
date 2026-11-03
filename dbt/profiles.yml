@@ -7,6 +7,8 @@ dado_publico_brasil:
       type: duckdb
       path: "{{ env_var('DADO_PUBLICO_WAREHOUSE_FILE', '../data_store/warehouse.duckdb') }}"
       schema: main
+      settings:
+        memory_limit: "{{ env_var('DADO_PUBLICO_DUCKDB_MEMORY', '80%') }}"  # acima disso o DuckDB usa o disco
 
 # O `edr` (relatório do Elementary) lê o esquema do perfil como o esquema do Elementary.
 elementary:

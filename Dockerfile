@@ -9,4 +9,5 @@ RUN uv sync --frozen --all-extras --no-dev && uv run dbt deps --project-dir dbt 
 
 ENV DAGSTER_HOME=/dagster_home
 EXPOSE 3000
-CMD ["uv", "run", "--no-sync", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-m", "dado_publico_brasil.orchestration.definitions"]
+# Serviço, não `dagster dev`: o compose sobe o `dagster-webserver` e o `dagster-daemon` (agendamentos e sensores).
+CMD ["uv", "run", "--no-sync", "dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-m", "dado_publico_brasil.orchestration.definitions"]

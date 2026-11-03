@@ -1,7 +1,28 @@
 # PostgreSQL de serviço (ADR 0014) e pipeline com Dagster (ADR 0027).
-# Só o banco: `docker compose up -d` (lê o `.env` desta pasta). Banco e pipeline: `docker compose --profile pipeline up -d --build`.
+# Só o banco: `docker compose up -d` (lê o `.env` desta pasta). Banco e pipeline: `docker compose --profile pipeline up -d --build`; só o pipeline: `docker compose up -d --build webserver daemon`.
 # Senhas vêm do `.env`; nenhuma fica neste arquivo.
 name: dado-publico-brasil
+
+x-pipeline: &pipeline
+  profiles: [pipeline]
+  build: .
+  restart: unless-stopped
+  env_file: [.env]
+  environment:
+    DADO_PUBLICO_STORAGE_ROOT: /data
+    DADO_PUBLICO_WAREHOUSE: "{root}/warehouse.duckdb"
+    DAGSTER_HOME: /dagster_home
+    DADO_PUBLICO_DUCKDB_MEMORY: ${DADO_PUBLICO_DUCKDB_MEMORY:-4GB}
+  mem_limit: ${DADO_PUBLICO_MEM_LIMIT:-6g}
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: "3"}
+  volumes:
+    - ./data_store:/data
+    # temporários do DuckDB (spill) num volume do Docker: no bind mount do Windows a releitura falha
+    - duckdb_tmp:/data/warehouse.duckdb.tmp
+    - dagster_home:/dagster_home
+    - ./dagster.yaml:/dagster_home/dagster.yaml:ro
 
 services:
   postgres:
@@ -21,29 +42,19 @@ services:
       interval: 5s
       retries: 10
 
-  # Dagster: interface em http://127.0.0.1:3000, agendamentos por fonte, propagação automática e publicação.
-  # Só escuta em 127.0.0.1: sem login, não deve ser exposto à rede (ver docs/02-fazer/04-operar-e-publicar.md).
-  dagster:
-    profiles: [pipeline]
-    build: .
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file: [.env]
-    environment:
-      DADO_PUBLICO_STORAGE_ROOT: /data
-      DADO_PUBLICO_WAREHOUSE: "{root}/warehouse.duckdb"
-      DADO_PUBLICO_POSTGRES_DSN: postgresql://dado_publico:${DADO_PUBLICO_PG_PASSWORD}@postgres:5432/dado_publico
-      DAGSTER_HOME: /dagster_home
+  # Dagster como serviço (ADR 0027): `webserver` (interface) e `daemon` (agendamentos e sensores) dividem a imagem e o
+  # estado. Sem o banco de serviço: `docker compose up -d --build webserver daemon`. Para ligar o `publish`, defina
+  # DADO_PUBLICO_POSTGRES_DSN no `.env` (o host `postgres` vale quando o banco sobe junto, com `--profile pipeline`).
+  # A interface não tem login: só escuta em ${DADO_PUBLICO_BIND:-127.0.0.1}; acesso remoto por túnel SSH ou VPN
+  # (docs/02-fazer/04-operar-e-publicar.md). Memória: ajuste as duas variáveis ao tamanho da máquina.
+  webserver:
+    <<: *pipeline
     ports:
-      - "127.0.0.1:3000:3000"
-    volumes:
-      - ./data_store:/data
-      # temporários do DuckDB (spill) num volume do Docker: no bind mount do Windows a releitura falha
-      - duckdb_tmp:/data/warehouse.duckdb.tmp
-      - dagster_home:/dagster_home
-      - ./dagster.yaml:/dagster_home/dagster.yaml:ro
+      - "${DADO_PUBLICO_BIND:-127.0.0.1}:3000:3000"
+
+  daemon:
+    <<: *pipeline
+    command: ["uv", "run", "--no-sync", "dagster-daemon", "run", "-m", "dado_publico_brasil.orchestration.definitions"]
 
 volumes:
   pgdata:
