@@ -24,11 +24,12 @@ x-pipeline: &pipeline
     driver: json-file
     options: {max-size: 10m, max-file: "3"}
   volumes:
-    - "${DADO_PUBLICO_DATA_DIR:?defina DADO_PUBLICO_DATA_DIR no .env (servidor /srv/dado-publico, local ./data_store)}:/data"
+    - "${DADO_PUBLICO_DATA_DIR:-./data_store}:/data"
     # temporários do DuckDB (spill): sob a pasta de dados (Linux). No Docker Desktop do Windows a releitura em bind
     # mount falha: defina DADO_PUBLICO_SPILL=duckdb_tmp (volume do Docker).
-    - "${DADO_PUBLICO_SPILL:-${DADO_PUBLICO_DATA_DIR}/warehouse.duckdb.tmp}:/data/warehouse.duckdb.tmp"
-    - "${DADO_PUBLICO_DATA_DIR}/dagster_home:/dagster_home"
+    - "${DADO_PUBLICO_SPILL:-${DADO_PUBLICO_DATA_DIR:-./data_store}/warehouse.duckdb.tmp}:/data/warehouse.duckdb.tmp"
+    # volume nomeado: o SQLite do Dagster trava em bind mount no Windows e o histórico persiste
+    - dagster_home:/dagster_home
 
 services:
   postgres:
@@ -76,7 +77,7 @@ services:
   # Memória: as execuções rodam no daemon, que leva o limite; a interface é leve.
   webserver:
     <<: *pipeline
-    mem_limit: 512m
+    mem_limit: ${DADO_PUBLICO_WEB_MEM_LIMIT:-1g}
     depends_on:
       init: {condition: service_completed_successfully}
     ports:
@@ -91,4 +92,5 @@ services:
 
 volumes:
   pgdata:
+  dagster_home:
   duckdb_tmp:

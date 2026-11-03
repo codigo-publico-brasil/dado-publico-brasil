@@ -6,11 +6,11 @@ run_coordinator:
   config:
     max_concurrent_runs: 1
 
-# Execução que não inicia em 5 min ou passa de 12 h é marcada como falha (o sensor avisa) e libera a fila.
+# Execução que não inicia em 5 min ou passa de 24 h é marcada como falha (o sensor avisa) e libera a fila.
 run_monitoring:
   enabled: true
   start_timeout_seconds: 300
-  max_runtime_seconds: 43200
+  max_runtime_seconds: 86400
 
 telemetry:
   enabled: false

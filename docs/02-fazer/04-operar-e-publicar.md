@@ -94,11 +94,11 @@ O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md))
 
 ## Implantar num servidor
 
-Para quem vai deixar o pipeline rodando sozinho num servidor (uma máquina local ou um VPS). **Você não entra no servidor para atualizar**: o CI constrói a imagem e a publica no GHCR quando o código entra na `main` (`.github/workflows/imagem.yml`, com o `sha` do commit como etiqueta e em `versao_commit`), e da sua máquina um comando manda o servidor baixá-la e reiniciar. O compose e o `.env.servidor` ficam na sua máquina e falam com o Docker do servidor por SSH, então o servidor não tem clone nem `.env`. O Dagster sobe como três serviços: `init` (uso único a cada subida: copia o `dagster.yaml` e regera o manifesto do dbt com `dbt parse`, que não precisa do warehouse), `webserver` (interface, 512 MB) e `daemon` (agendamentos, sensores e as execuções, 6 GB). A cada atualização o pipeline publica o lake e as docs.
+Para quem vai deixar o pipeline rodando sozinho num servidor (uma máquina local ou um VPS). **Você não entra no servidor para atualizar**: o CI constrói a imagem e a publica no GHCR quando o código entra na `main` (`.github/workflows/imagem.yml`, com o `sha` do commit como etiqueta e em `versao_commit`), e da sua máquina um comando manda o servidor baixá-la e reiniciar. O compose e o `.env.servidor` ficam na sua máquina e falam com o Docker do servidor por SSH, então o servidor não tem clone nem `.env`. O Dagster sobe como três serviços: `init` (uso único a cada subida: copia o `dagster.yaml` e regera o manifesto do dbt com `dbt parse`, que não precisa do warehouse), `webserver` (interface, 1 GB) e `daemon` (agendamentos, sensores e as execuções, 6 GB). A cada atualização o pipeline publica o lake e as docs.
 
 **Uma vez só:**
 
-1. **Servidor:** Linux com Docker, um usuário seu com acesso por chave SSH e uma pasta de dados (por exemplo `/srv/dado-publico`). Com 8 GB de RAM compartilhados, crie swap (8 GB); `DADO_PUBLICO_MEM_LIMIT=6g` (só o `daemon`) e `DADO_PUBLICO_DUCKDB_MEMORY=4GB` são os padrões; acima disso o DuckDB usa o disco, mais lento e sem estourar. Em máquina maior, suba os dois. Os temporários do DuckDB e o estado do Dagster ficam sob a pasta de dados (`warehouse.duckdb.tmp`, `dagster_home`, `.state/uv_cache`).
+1. **Servidor:** Linux com Docker, um usuário seu com acesso por chave SSH e uma pasta de dados (por exemplo `/srv/dado-publico`). Com 8 GB de RAM compartilhados, crie swap (8 GB); `DADO_PUBLICO_MEM_LIMIT=6g` (só o `daemon`) e `DADO_PUBLICO_DUCKDB_MEMORY=4GB` são os padrões; acima disso o DuckDB usa o disco, mais lento e sem estourar. Em máquina maior, suba os dois. Os temporários do DuckDB e o estado do Dagster ficam sob a pasta de dados (`warehouse.duckdb.tmp`, `.state/uv_cache`; o estado do Dagster fica no volume nomeado `dagster_home`).
 2. **Imagem privada:** se o pacote do GHCR for privado, no servidor `docker login ghcr.io -u <usuario>` com um token (PAT) com o escopo `read:packages`; se for público, nada.
 3. **Sua máquina:** `docker context create servidor --docker host=ssh://usuario@servidor` e um `.env.servidor` (fora do git, **sem** o DSN nem as senhas do Postgres: o `.env` de desenvolvimento religaria o `publish` no servidor). Ele vai inteiro aos containers, e o `compose.servidor.yaml` recusa subir sem o R2 completo, para o `export` nunca gravar só no disco:
 
@@ -113,10 +113,14 @@ Para quem vai deixar o pipeline rodando sozinho num servidor (uma máquina local
    Valores com `$` (senhas) vão entre aspas simples (`SENHA='a$b'`); sem aspas o compose os interpreta como variável. Use sempre `docker --context servidor compose --env-file .env.servidor ...`.
 4. **Landing** (e a pasta `arquivos`, que se refaz dele) só existe na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing data_store/arquivos usuario@servidor:/srv/dado-publico/`. Termine o rsync antes do passo seguinte.
 
+> **Atenção:** com `--context servidor`, **todo** comando compose precisa de `--env-file .env.servidor`; sem ele o compose lê o `.env` de desenvolvimento (com DSN do Postgres e `DATA_DIR` relativo) e age sobre o lugar errado. Para não esquecer, na sessão: `export COMPOSE_PATH_SEPARATOR=, COMPOSE_FILE=compose.yaml,compose.servidor.yaml DADO_PUBLICO_ENV_FILE=.env.servidor DADO_PUBLICO_DATA_DIR=/srv/dado-publico DOCKER_CONTEXT=servidor` (ou um alias `dc='docker --context servidor compose --env-file .env.servidor'`).
+>
+> `DADO_PUBLICO_LAKE_URL` só vale junto com as quatro chaves do R2: a validação do `export` falha de propósito se faltar alguma. O `init` roda só em `up`: se o host reiniciar, os serviços voltam com o manifesto da subida anterior (rode `up -d` depois de qualquer atualização de imagem). Builds locais (sem `--build-arg GIT_SHA`) gravam `versao_commit` `unknown`.
+
 **Primeira subida, nesta ordem** (abreviando `docker --context servidor compose --env-file .env.servidor` como `dc`):
 
 1. `dc pull webserver daemon` e `dc up -d webserver`: sobe o `init` e a interface, sem o `daemon` (nada roda sozinho ainda).
-2. `dc run --rm daemon uv run --no-sync dado-publico rebuild`: como o warehouse não existe, restaura sozinho a identidade e o metadata do bucket privado (seção abaixo) e recarrega o raw do landing, roda o dbt, a identidade e o dbt de novo (cerca de seis horas; se parar, `load --rebuild` e `transform` retomam). Roda no `daemon` por causa do limite de memória (o `webserver` tem 512 MB). Se a restauração falhar, o warehouse recém-criado é apagado e o erro aparece: corrija e rode de novo.
+2. `dc run --rm daemon uv run --no-sync dado-publico rebuild`: como o warehouse não existe, restaura sozinho a identidade e o metadata do bucket privado (seção abaixo) e recarrega o raw do landing, roda o dbt, a identidade e o dbt de novo (cerca de seis horas; se parar, `load --rebuild` e `transform` retomam). Roda no `daemon` por causa do limite de memória (o `webserver` tem 1 GB). Se a restauração falhar, o warehouse recém-criado é apagado e o erro aparece: corrija e rode de novo.
 3. Na interface (túnel SSH), rode o job `atualizar_tudo`: a propagação automática só vale depois da primeira materialização. Sem o `daemon` a execução fica na fila (*Queued*).
 4. `dc up -d daemon`: ele assume a fila e liga os agendamentos.
 
@@ -132,7 +136,7 @@ docker --context servidor compose --env-file .env.servidor pull webserver daemon
 
 **Acesso à interface:** o compose publica a porta só em `127.0.0.1` do servidor (o Dagster aberto não tem login). Use túnel SSH (`ssh -L 3000:127.0.0.1:3000 usuario@servidor`). VPN ou Cloudflare Access são escolha da infraestrutura: nesse caso defina `DADO_PUBLICO_BIND` com o IP da VPN, nunca `0.0.0.0`.
 
-**Manutenção:** os serviços reiniciam sozinhos (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Uma execução que passa de 12 h, ou que não inicia em 5 min, é marcada como falha (`run_monitoring` do `dagster.yaml`). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
+**Manutenção:** os serviços reiniciam sozinhos (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Uma execução que passa de 24 h, ou que não inicia em 5 min, é marcada como falha (`run_monitoring` do `dagster.yaml`). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
 
 ## Restaurar numa máquina vazia (bucket privado)
 

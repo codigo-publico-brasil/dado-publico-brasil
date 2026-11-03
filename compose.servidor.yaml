@@ -2,6 +2,7 @@
 # Ativado por `COMPOSE_FILE=compose.yaml:compose.servidor.yaml` no `.env.servidor` (docs/02-fazer/04-operar-e-publicar.md).
 x-r2: &r2
   environment:
+    DADO_PUBLICO_DATA_DIR: ${DADO_PUBLICO_DATA_DIR:?defina DADO_PUBLICO_DATA_DIR (caminho absoluto do servidor) no .env.servidor}
     DADO_PUBLICO_LAKE_URL: ${DADO_PUBLICO_LAKE_URL:?defina DADO_PUBLICO_LAKE_URL no .env.servidor}
     DADO_PUBLICO_R2_ACCOUNT_ID: ${DADO_PUBLICO_R2_ACCOUNT_ID:?defina DADO_PUBLICO_R2_ACCOUNT_ID no .env.servidor}
     DADO_PUBLICO_R2_ACCESS_KEY_ID: ${DADO_PUBLICO_R2_ACCESS_KEY_ID:?defina DADO_PUBLICO_R2_ACCESS_KEY_ID no .env.servidor}
