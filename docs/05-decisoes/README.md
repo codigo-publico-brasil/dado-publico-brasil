@@ -32,6 +32,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0038](0038-lake-como-unica-publicacao.md) | O lake é a única publicação: sem PostgreSQL de serviço, cada aplicação monta as suas consultas sobre os marts | proposto (decisão do fundador); substitui 0034 e altera 0014 e 0033 |
 | [0039](0039-marts-como-camada-semantica.md) | Os marts são a camada semântica: regra de negócio nos marts (não nas `app_*`), mudança só aditiva, derivado sempre marcado | proposto (desenho aprovado pelo fundador); altera 0038 (itens 3 e 4) |
 | [0040](0040-ocupacao-de-cargo.md) | Ocupação de cargo como fato (`fct_cargos_ocupacoes`): exercício publicado vence, mandato cobre o resto | proposto (desenho aprovado pelo fundador); complementa 0039 e 0030 |
+| [0041](0041-eleito-completo-e-fim-das-views-app.md) | `fl_eleito` passa a ser o eleito completo (informado ou derivado) e as views `app_*` deixam de existir | aceito; altera 0039 (item sobre `fl_eleito`) e 0038 (item 4) |
 
 ### Estrutura do repositório e das camadas
 

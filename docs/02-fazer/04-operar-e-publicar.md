@@ -217,7 +217,7 @@ Se parar no meio, `uv run dado-publico load --rebuild` e `uv run dado-publico tr
 | O raw tem as mesmas linhas do antigo | compare `select count(*)` de cada tabela `raw_*` com o warehouse antigo (abra o antigo somente leitura com `duckdb`) |
 | O landing está íntegro e a identidade tem cópia | `uv run dado-publico verify` |
 | Nenhum teste do dbt reprova | `uv run dado-publico observe` (0 reprovados; a seção "Saúde por dimensão" mostra o resto) |
-| Os modelos novos têm o tamanho esperado | `select count(*)` em `dim_pessoas`, `fct_mandatos`, `fct_eventos`, `agg_composicoes`, `fct_votos` e `app_*` contra o warehouse antigo |
+| Os modelos novos têm o tamanho esperado | `select count(*)` em `dim_pessoas`, `fct_mandatos`, `fct_eventos`, `agg_composicoes`, `fct_votos` contra o warehouse antigo |
 | A identidade está sã | `dim_pessoas` e `identity.pessoas` com o mesmo número; nenhum mandato sem `id_pessoa` |
 | O raw bate com o antigo | As diferenças esperadas são só de versões: o `load --rebuild` carrega a **versão mais recente** de cada arquivo, e a carga diária **soma** as versões nos datasets `merge` (issue 155). Fora disso, as contagens devem ser iguais; uma diferença de dobro é duplicação no antigo (foi o caso da votação de 2022) |
 | Reconstruiu igual | rode `transform` de novo: nenhuma pessoa nova, nenhum snapshot novo |

@@ -2,7 +2,6 @@
 
 import ast
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -52,14 +51,6 @@ def test_every_mart_column_has_a_description() -> None:
     assert cols
     missing = [f"{c['table']}.{c['name']}" for c in cols if not c["description"]]
     assert not missing, f"colunas dos marts sem descrição: {missing}"
-
-
-def test_app_queries_read_only_marts_and_the_captures_contract() -> None:
-    """As consultas `app_*` são join puro sobre marts (ADR 0039); a URL da fonte vem de metadata.capturas, nunca de staging."""
-    files = sorted((ROOT / "dbt" / "models" / "marts" / "aplicacao").glob("app_*.sql"))
-    assert files
-    wrong = [f.name for f in files if re.search(r"ref\(\s*'(stg|int)_", f.read_text(encoding="utf-8"))]
-    assert not wrong, f"consultas app_* que leem staging ou intermediate: {wrong}"
 
 
 # Quem pode importar quem: ingestão e transformação só conhecem o núcleo (a fronteira entre elas é o schema

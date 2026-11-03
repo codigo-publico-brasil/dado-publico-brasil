@@ -16,7 +16,6 @@ Para quem cria ou altera tabelas e colunas (pessoas e agentes de IA): como nomea
   | `fct_` | fato: algo que aconteceu, datado e com a fonte (voto, mandato, candidatura, proposição) | `fct_votos`, `fct_mandatos` |
   | `brg_` | ponte entre duas entidades, quando a relação é muitos-para-muitos | `brg_proposicoes_autorias`, `brg_frentes_membros` |
   | `agg_` | agregado por período, derivado dos fatos | `agg_composicoes` |
-  | `app_` | consulta pronta do aplicativo, larga e sem regra de negócio; pode ser view | `app_pessoas`, `app_cargo_ocupantes` |
 
   Tabela de entrada curada à mão (seed) que é dimensão leva `dim_` e fica em `marts`; a que só alimenta o dbt (`vinculos_aprovados`, `partidos_eventos`) fica em `intermediate`, sem prefixo. Snapshots do dbt, se vierem, levam `snp_`.
 - Tabelas do raw espelham o nome da fonte (ver abaixo).

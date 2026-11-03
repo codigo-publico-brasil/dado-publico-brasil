@@ -3,7 +3,7 @@
 #   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
 #   marts         entidades e consultas prontas, com contrato de colunas, nomeadas pelo tipo (ADR 0033):
-#                 dim_ (dimensão), fct_ (fato), brg_ (ponte), agg_ (agregado) e app_ (consulta do aplicativo).
+#                 dim_ (dimensão), fct_ (fato), brg_ (ponte) e agg_ (agregado).
 name: dado_publico_brasil
 version: "0.1.0"
 profile: dado_publico_brasil
@@ -76,10 +76,6 @@ models:
         enforced: true
       +meta:
         owner: fundador do projeto
-      aplicacao:
-        +materialized: view
-        +contract:
-          enforced: false
 
 seeds:
   dado_publico_brasil:

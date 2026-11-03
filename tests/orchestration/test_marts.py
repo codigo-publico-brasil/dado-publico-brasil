@@ -112,7 +112,7 @@ def test_every_table_of_the_marts_is_declared_and_named_by_its_type(
     declared = {t["name"] for t in catalog.tables(settings) if t["schema"] == "marts"}
     found = tables(con, "marts")
     assert declared <= set(found)  # as sementes (dim_cargos...) estão no warehouse e descritas no YAML delas
-    assert all(name.startswith(("dim_", "fct_", "brg_", "agg_", "app_")) for name in found)
+    assert all(name.startswith(("dim_", "fct_", "brg_", "agg_")) for name in found)
 
 
 def test_descriptions_are_persisted_in_the_warehouse_for_tables_and_columns(
@@ -178,51 +178,19 @@ def test_party_lineage_comes_from_the_curated_table_and_every_event_cites_the_of
     )
 
 
-def test_the_person_page_view_keeps_every_person(
+def test_the_person_card_comes_from_dim_pessoas_with_the_birth_state_from_the_tse_when_the_houses_lack_it(
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
-    assert scalar(con, "SELECT count(*) FROM marts.app_pessoas") == scalar(
-        con, "SELECT count(*) FROM marts.dim_pessoas"
-    )
-    ana = con.execute(
-        "SELECT nome, profissoes, foto_url FROM marts.app_pessoas WHERE nome = 'Ana Árvore'"
-    ).fetchone()
-    assert ana is not None and ana[0] == "Ana Árvore" and ana[1]  # o cadastro da Câmara chega à ficha
-
-
-def test_app_views_carry_the_source_and_capture_date_and_the_birth_state_from_the_tse(
-    full: tuple[Connection, Settings],
-) -> None:
-    con, _ = full
-    for view in ("app_cargo_ocupantes", "app_pessoa_campanhas", "app_pessoas"):
-        total, with_source = con.execute(
-            f"SELECT count(*), count(fonte_url) FILTER (WHERE dt_captura IS NOT NULL) FROM marts.{view}"
-        ).fetchone()  # type: ignore[misc]
-        assert total > 0 and with_source == total, view
-    assert not scalar(
-        con, "SELECT count(*) FROM marts.app_cargo_ocupantes WHERE ano_inicio IS NULL OR fonte_url IS NULL"
-    )
-    # deputado federal e senador com exercício registrado entram pelo exercício, com o fim real quando a fonte o dá
-    kinds = {
-        r[0] for r in con.execute("SELECT DISTINCT tipo_registro FROM marts.app_cargo_ocupantes").fetchall()
-    }
-    assert kinds <= {"exercicio", "mandato"} and "exercicio" in kinds
-    assert not scalar(
+    # o cadastro da Câmara chega à ficha (há mais de uma pessoa de mesmo nome na amostra; basta uma com profissões)
+    assert scalar(
         con,
-        "SELECT count(*) FROM marts.app_cargo_ocupantes WHERE tipo_registro = 'exercicio' AND dt_fim_prevista IS NULL "
-        "AND dt_inicio IS NOT NULL AND cargo IN ('Senador', 'Deputado federal') AND base_do_fim = 'informado'",
+        "SELECT count(*) FROM marts.dim_pessoas WHERE nome_publico = 'Ana Árvore' AND profissoes IS NOT NULL",
     )
-    allowed = {"novato", "reeleito", "retorno", None}
-    found = {
-        r[0] for r in con.execute("SELECT DISTINCT tipo_mandato FROM marts.app_cargo_ocupantes").fetchall()
-    }
-    assert found <= allowed
-    # a UF de nascimento da ficha vem do cadastro da Câmara ou do Senado e, sem ele, da candidatura do TSE
     assert (
         scalar(
             con,
-            "SELECT count(*) FROM marts.app_pessoas a JOIN marts.fct_candidaturas c USING (id_pessoa) "
+            "SELECT count(*) FROM marts.dim_pessoas a JOIN marts.fct_candidaturas c USING (id_pessoa) "
             "WHERE a.uf_nascimento IS NULL AND c.uf_nascimento IS NOT NULL",
         )
         == 0
@@ -242,4 +210,10 @@ def test_election_results_carry_the_voting_day_and_the_election_has_the_date_of_
         con, "SELECT dt_primeiro_turno FROM marts.dim_eleicoes WHERE id_eleicao = '2022-544'"
     )
     assert first_round is not None  # a data do 1º turno do ano vem dos arquivos de candidaturas
-    assert scalar(con, "SELECT count(*) FROM marts.app_pessoa_campanhas WHERE dt_eleicao IS NULL") == 0
+    assert (
+        scalar(
+            con,
+            "SELECT count(*) FROM marts.fct_candidaturas WHERE id_pessoa IS NOT NULL AND dt_eleicao IS NULL",
+        )
+        == 0
+    )

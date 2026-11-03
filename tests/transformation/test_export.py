@@ -45,7 +45,6 @@ def build(con: Connection, settings: Settings) -> None:
     )
     con.execute("COMMENT ON TABLE marts.fct_votos IS 'Votos de teste.'")
     con.execute("COMMENT ON COLUMN marts.fct_votos.qtd IS 'Quantidade de teste.'")
-    con.execute("CREATE VIEW marts.app_visao AS SELECT 1 AS a")
     con.execute("CREATE TABLE intermediate.int_x AS SELECT 1 AS a")
     con.execute(
         "CREATE TABLE staging.stg_camara__base AS SELECT i AS id, 'n' || i AS nome FROM range(50) t(i)"
@@ -242,7 +241,7 @@ def test_no_personal_column_and_no_private_layer_is_exported(con: Connection, se
     names = [c["nome"] for t in tables for c in t["colunas"]]  # type: ignore[attr-defined]
     assert "cpf_votante" not in names and "id_voto" in names
     assert {t["camada"] for t in tables}.isdisjoint({"raw_x", "identity", "elementary", "main"})
-    assert not [t for t in tables if str(t["tabela"]).startswith(("app_", "stg_identity", "stg_metadata"))]
+    assert not [t for t in tables if str(t["tabela"]).startswith(("stg_identity", "stg_metadata"))]
 
 
 def test_a_big_table_with_a_partition_is_split_by_year_and_filters_by_it(
