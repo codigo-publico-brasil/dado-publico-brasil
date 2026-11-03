@@ -7,6 +7,10 @@ dado_publico_brasil:
       type: duckdb
       path: "{{ env_var('DADO_PUBLICO_WAREHOUSE_FILE', '../data_store/warehouse.duckdb') }}"
       schema: main
+      settings:
+        # teto de memória do DuckDB menor que o do container (80% da RAM é pouco para o sistema e a escrita do arquivo:
+        # "Could not write file warehouse.duckdb: Cannot allocate memory", issue 160); o que passa disso vai para o disco
+        memory_limit: 5GB
 
 # O `edr` (relatório do Elementary) lê o esquema do perfil como o esquema do Elementary.
 elementary:

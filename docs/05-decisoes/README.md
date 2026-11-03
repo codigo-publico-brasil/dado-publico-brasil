@@ -11,7 +11,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 
 ## Situação e índice por assunto
 
-**Vigente:** vale como escrito. **Em parte:** só o que o ADR seguinte não substituiu. **Proposto:** ainda não aceito.
+**Vigente:** vale como escrito. **Em parte:** só o que o ADR seguinte não substituiu. **Proposto:** o ADR ainda não foi marcado como aceito. **Proposto (aprovado pelo fundador):** o fundador já aprovou e o ADR está implementado; vale como escrito, só falta a marcação formal de aceito (decisão do fundador).
 
 **Nomes antigos:** os ADRs anteriores a 2026-11-02 citam os nomes antigos de `metadata` e `identity` (`runs`, `captures`, `source_checks`, `pessoa_identificador`...). O de/para está em [`../99-historico/renomeacao-dos-marts.md`](../99-historico/renomeacao-dos-marts.md).
 

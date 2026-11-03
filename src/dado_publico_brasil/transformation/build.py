@@ -32,7 +32,8 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
     migrations.open_warehouse(
         settings
     ).close()  # o dbt lê `metadata.capturas`: o esquema precisa estar migrado
-    outcome = dbt.invoke(settings, "build", *selection)
+    print(f"== {stage}: dbt build iniciado", flush=True)
+    outcome = dbt.invoke(settings, "build", *selection, stream=True)
     con = warehouse.connect(settings)
     try:
         with runs.track(con, stage, "dbt") as run:
@@ -91,4 +92,4 @@ def run(settings: Settings) -> int:
 
 def is_built(con: Connection) -> bool:
     """Os marts já existem neste warehouse?"""
-    return "pessoas" in warehouse.tables(con, "marts")
+    return "dim_pessoas" in warehouse.tables(con, "marts")
