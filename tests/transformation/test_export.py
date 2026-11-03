@@ -6,9 +6,11 @@ segredo. O que depende de credencial real (COPY, LIST e DELETE em `r2://` e o PU
 
 import base64
 import hashlib
+import http.client
 import json
 import mimetypes
 import shutil
+import threading
 import zipfile
 from pathlib import Path
 
@@ -542,16 +544,27 @@ def test_the_signed_upload_carries_content_type_cache_control_and_checksum(
 ) -> None:
     seen: dict[str, str] = {}
 
-    class Done:
-        def close(self) -> None: ...
+    class Response:
+        status = 200
 
-    def fake_open(request: object, timeout: int) -> Done:
-        seen.update({k.lower(): v for k, v in request.headers.items()})  # type: ignore[attr-defined]
-        return Done()
+        def read(self) -> bytes:
+            return b""
+
+    class Conn:
+        def __init__(self, host: str, timeout: int) -> None: ...
+
+        def request(self, method: str, uri: str, body: object, headers: dict[str, str]) -> None:
+            seen.update({k.lower(): v for k, v in headers.items()})
+
+        def getresponse(self) -> Response:
+            return Response()
+
+        def close(self) -> None: ...
 
     keys = ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "BUCKET")
     monkeypatch.setattr(export, "_r2", lambda: dict.fromkeys(keys, "x"))
-    monkeypatch.setattr(export.urllib.request, "urlopen", fake_open)  # type: ignore[attr-defined]
+    monkeypatch.setattr(http.client, "HTTPSConnection", Conn)
+    monkeypatch.setattr(export, "_LOCAL", threading.local())
     file = tmp_path / "f.jpg"
     file.write_bytes(b"abc")
     export.r2_request("PUT", "k/f.jpg", file, "image/jpeg", {"Cache-Control": export.CACHE_CONTROL})

@@ -32,13 +32,15 @@ O catálogo é um DuckDB, que o DuckDB não escreve no R2: sobe, e os órfãos s
 import base64
 import hashlib
 import hmac
+import http.client
 import json
 import mimetypes
 import os
 import re
 import shutil
-import urllib.request
+import threading
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
@@ -65,6 +67,8 @@ MAX_KV_BYTES = 64 << 10  # teto prático do JSON de descrições no rodapé do P
 ROW_GROUP = 500_000  # entre 122.880 e 1 milhão de linhas por grupo
 MEMORY_LIMIT = "4GB"  # a máquina do mantenedor tem 8 GB
 ENV_URL = "DADO_PUBLICO_LAKE_URL"
+_LOCAL = threading.local()  # uma conexão HTTPS persistente por thread de envio
+UPLOADS = 16  # envios simultâneos ao R2
 CACHE_CONTROL = "public, max-age=86400, must-revalidate"  # caminho estável, conteúdo pode mudar
 CONTROL_DESCRIPTION = "Arquivos da coleção %s, um por linha, com hash e a captura de origem (ADR 0037)."
 CONTROL_COLUMNS = (
@@ -357,10 +361,24 @@ def r2_request(
     if path:
         sent["Content-Length"] = str(path.stat().st_size)
     with path.open("rb") if path else nullcontext() as body:
-        request = urllib.request.Request(  # noqa: S310
-            f"https://{host}{uri}", data=body, method=method, headers=sent
-        )
-        urllib.request.urlopen(request, timeout=3600).close()  # noqa: S310
+        for attempt in (1, 2):  # a conexão persistente pode ter sido fechada pelo servidor: reabre uma vez
+            conn = getattr(_LOCAL, "conn", None) or http.client.HTTPSConnection(host, timeout=3600)
+            _LOCAL.conn = conn
+            try:
+                if body:
+                    body.seek(0)
+                conn.request(method, uri, body=body, headers=sent)
+                response = conn.getresponse()
+                detail = response.read()
+            except (http.client.HTTPException, OSError):
+                conn.close()
+                _LOCAL.conn = None
+                if attempt == 2:
+                    raise
+                continue
+            if response.status >= 300:
+                raise RuntimeError(f"R2 {method} {key}: HTTP {response.status} {detail[:200]!r}")
+            return
 
 
 def _index(settings: Settings) -> Path:
@@ -504,19 +522,23 @@ def _published(dataset: dict[str, Any]) -> bool:
 
 
 def _send(root: str, key: str, files: list[dict[str, Any]], known: dict[str, str]) -> int:
-    """Grava no destino (R2 ou pasta local) só os arquivos que faltam ou mudaram em relação ao controle."""
-    sent = 0
-    for f in files:
-        if known.get(f["caminho"]) == f["sha256_arquivo"]:
-            continue
+    """Grava no destino (R2 ou pasta local) só os arquivos que faltam ou mudaram em relação ao controle.
+
+    No R2 o envio é paralelo (`UPLOADS` conexões persistentes): um PUT por vez levaria horas.
+    """
+    pending = [f for f in files if known.get(f["caminho"]) != f["sha256_arquivo"]]
+
+    def put(f: dict[str, Any]) -> None:
         target = f"{key}/{f['caminho']}"
         if root.startswith("r2://"):
             r2_request("PUT", target, f["local"], f["content_type"], {"Cache-Control": CACHE_CONTROL})
         else:
             Path(root, target).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(f["local"], Path(root, target))
-        sent += 1
-    return sent
+
+    with ThreadPoolExecutor(UPLOADS if root.startswith("r2://") else 1) as pool:
+        list(pool.map(put, pending))  # `list` propaga a primeira falha
+    return len(pending)
 
 
 def _control(
