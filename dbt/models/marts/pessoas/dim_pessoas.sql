@@ -55,6 +55,30 @@ tse_atual as (
 
     group by id_pessoa
 
+),
+
+ficha_tse as (
+
+    -- da ficha: de cada atributo, o valor da candidatura mais recente que o informa (inclui candidatura sem eleição)
+    select
+        ca.id_pessoa,
+        arg_max(ca.nome_social, e.ano_eleicao) filter (where ca.nome_social is not null) as nome_social,
+        arg_max(ca.uf_nascimento, e.ano_eleicao) filter (where ca.uf_nascimento is not null) as uf_nascimento,
+        arg_max(ca.grau_instrucao, e.ano_eleicao) filter (where ca.grau_instrucao is not null) as grau_instrucao,
+        arg_max(ca.ocupacao, e.ano_eleicao) filter (where ca.ocupacao is not null) as ocupacao,
+        arg_max(ca.estado_civil, e.ano_eleicao) filter (where ca.estado_civil is not null) as estado_civil,
+        arg_max(ca.foto_caminho, e.ano_eleicao) filter (where ca.foto_caminho is not null) as foto_caminho,
+        arg_max(ca.id_captura, e.ano_eleicao) as id_captura,
+        arg_max(ca.dt_captura, e.ano_eleicao) as dt_captura
+
+    from {{ ref('fct_candidaturas') }} as ca
+
+    inner join {{ ref('dim_eleicoes') }} as e on e.id_eleicao = ca.id_eleicao
+
+    where ca.id_pessoa is not null
+
+    group by ca.id_pessoa
+
 )
 
 select
@@ -73,6 +97,18 @@ select
         o.fonte,
         if(t.genero is not null, '{{ var("source_tse") }}', null)
     ) as fonte_genero,
+    -- ficha: o cadastro da Câmara ou do Senado vale primeiro; o que falta vem da candidatura mais recente do TSE que informa
+    coalesce(c.uf_nascimento, f.uf_nascimento) as uf_nascimento,
+    if(c.uf_nascimento is not null, c.fonte, if(f.uf_nascimento is not null, '{{ var("source_tse") }}', null)) as fonte_uf_nascimento,
+    coalesce(c.escolaridade, f.grau_instrucao) as escolaridade,
+    if(c.escolaridade is not null, c.fonte, if(f.grau_instrucao is not null, '{{ var("source_tse") }}', null)) as fonte_escolaridade,
+    coalesce(c.profissoes, f.ocupacao) as profissoes,
+    if(c.profissoes is not null, c.fonte, if(f.ocupacao is not null, '{{ var("source_tse") }}', null)) as fonte_profissoes,
+    f.estado_civil,
+    f.nome_social,
+    f.foto_caminho,
+    f.id_captura as id_captura_tse,
+    f.dt_captura as dt_captura_tse,
     cast(p.dt_criacao as date) as dt_entrada
 
 from {{ ref('stg_identity__pessoas') }} as p
@@ -80,3 +116,7 @@ from {{ ref('stg_identity__pessoas') }} as p
 left join oficial as o on o.id_pessoa = p.id_pessoa
 
 left join tse_atual as t on t.id_pessoa = p.id_pessoa
+
+left join {{ ref('dim_pessoas_cadastro') }} as c on c.id_pessoa = p.id_pessoa
+
+left join ficha_tse as f on f.id_pessoa = p.id_pessoa

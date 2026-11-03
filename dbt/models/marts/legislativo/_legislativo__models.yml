@@ -4,7 +4,8 @@ version: 2
 
 models:
   - name: dim_pessoas_cadastro
-    description: Pessoas (agentes públicos) com perfil, contagens e último partido. Uma linha por pessoa.
+    description: >
+      Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação, falecimento e atividade legislativa (contagens e último partido). Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas).
     meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     data_tests: &monitoramento
       - elementary.volume_anomalies: {config: {severity: warn}}

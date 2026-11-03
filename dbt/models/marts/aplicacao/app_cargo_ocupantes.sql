@@ -35,4 +35,4 @@ left join {{ ref('fct_mandatos') }} as m on m.id_candidatura = o.id_candidatura
 
 left join {{ ref('fct_candidaturas') }} as fc on fc.id_candidatura = o.id_candidatura
 
-left join {{ ref('stg_metadata__capturas') }} as cap on cap.id_captura = o.id_captura
+left join {{ source('metadata', 'capturas') }} as cap on cap.id_captura = o.id_captura

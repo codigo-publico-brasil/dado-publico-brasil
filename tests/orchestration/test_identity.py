@@ -139,6 +139,17 @@ def test_core_people_have_the_source_of_each_attribute_and_only_published_data(
         "fonte_dt_nascimento",
         "genero",
         "fonte_genero",
+        "uf_nascimento",
+        "fonte_uf_nascimento",
+        "escolaridade",
+        "fonte_escolaridade",
+        "profissoes",
+        "fonte_profissoes",
+        "estado_civil",
+        "nome_social",
+        "foto_caminho",
+        "id_captura_tse",
+        "dt_captura_tse",
         "dt_entrada",
     ]
     assert scalar(con, "SELECT COUNT(*) FROM marts.dim_pessoas") == scalar(

@@ -90,6 +90,17 @@ curl -s https://datalake.codigopublicobrasil.com.br/marts/pessoas/dim_pessoas.pa
 
 E para ir do dado à fonte oficial: toda linha leva `id_captura`, que aponta para `metadata/capturas` (URL oficial, SHA-256 do arquivo original e data da captura). O arquivo original fica no landing privado; com o hash, a fonte confirma que é o mesmo.
 
+## Proveniência: `metadata/capturas` faz parte do contrato
+
+Os marts não trazem `fonte_url`; trazem `id_captura` (e `dt_captura`), e `metadata/capturas` é a dimensão de proveniência que o consumidor junta para chegar à fonte. As colunas `url`, `sha256` e `dt_captura` dela são contrato, com a mesma estabilidade dos marts. Para exibir a fonte de um dado:
+
+```sql
+SELECT c.url, c.dt_captura
+FROM dim_pessoas AS p JOIN capturas AS c ON c.id_captura = p.id_captura_tse
+```
+
+Mesmo caminho para os demais: `fct_candidaturas.id_captura` e `fct_campanhas.id_captura_receitas|despesas|bens` (arquivos do TSE), `dim_pessoas_cadastro.id_captura` (Câmara ou Senado). Um aplicativo que lê o lake lê a ficha de `dim_pessoas` (atributos já resolvidos, com `fonte_*` ao lado; todas as pessoas do projeto) e junta `dim_pessoas_cadastro` (só Câmara e Senado) para contato, gabinete, redes, situação e falecimento. As campanhas saem de `fct_candidaturas` (inclui `base_eleicao`, o eleito informado ou derivado), `dim_eleicoes`, `dim_disputas`, `dim_cargos`, `dim_partidos`, `fct_campanhas` e `metadata/capturas`.
+
 ## Cuidados
 
 - O caminho é sempre o dado **atual**: não há pasta por versão. Para citar um número, anote o `id_execucao` de `metadata.exportacao` (ou do `manifesto.json`) e guarde o resultado.

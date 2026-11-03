@@ -81,6 +81,17 @@ models:
       - {name: fonte_dt_nascimento, data_type: varchar, description: "Fonte da data de nascimento."}
       - {name: genero, data_type: varchar, description: "Masculino ou feminino, só quando a fonte diz; vazio nos demais casos (inclusive dado protegido)."}
       - {name: fonte_genero, data_type: varchar, description: "Fonte do gênero."}
+      - {name: uf_nascimento, data_type: varchar, description: "UF de nascimento: a do cadastro da Câmara ou do Senado quando existe; senão, a declarada na candidatura mais recente do TSE que a informa (ZZ para nascido no exterior)."}
+      - {name: fonte_uf_nascimento, data_type: varchar, description: "Fonte da UF de nascimento (camara, senado ou tse)."}
+      - {name: escolaridade, data_type: varchar, description: "Escolaridade: a do cadastro da Câmara ou do Senado quando existe; senão, o grau de instrução declarado na candidatura mais recente do TSE que o informa (Não divulgável quando o TSE protege o dado)."}
+      - {name: fonte_escolaridade, data_type: varchar, description: "Fonte da escolaridade (camara, senado ou tse)."}
+      - {name: profissoes, data_type: varchar, description: "Profissões: as do cadastro da Câmara (separadas por ponto e vírgula) quando existem; senão, a ocupação declarada na candidatura mais recente do TSE que a informa."}
+      - {name: fonte_profissoes, data_type: varchar, description: "Fonte das profissões (camara, senado ou tse)."}
+      - {name: estado_civil, data_type: varchar, description: "Estado civil declarado na candidatura mais recente do TSE que o informa; só o TSE tem (Não divulgável quando protege o dado)."}
+      - {name: nome_social, data_type: varchar, description: "Nome social declarado na candidatura mais recente do TSE que o informa; vazio para quase todos (poucos declaram)."}
+      - {name: foto_caminho, data_type: varchar, description: "Foto oficial do TSE da candidatura mais recente que a tem (caminho no lake público, coleção arq_fotos); vazia sem foto."}
+      - {name: id_captura_tse, data_type: bigint, description: "Captura do arquivo de candidaturas do TSE da candidatura mais recente da pessoa (URL, data e hash em metadata.capturas); vazia sem candidatura."}
+      - {name: dt_captura_tse, data_type: date, description: "Data dessa captura."}
       - {name: dt_entrada, data_type: date, description: "Dia em que a pessoa entrou na identidade do projeto (para o eleito do TSE, a primeira execução depois da eleição)."}
 
   - name: dim_orgaos
