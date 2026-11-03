@@ -129,24 +129,47 @@ def test_a_404_of_the_previous_month_at_the_turn_of_the_month_is_not_unavailable
     assert gaps["indisponiveis"] == [202609] and 202610 in gaps["faltam"]
 
 
+def ok_downloader(url: str, folder: Path) -> tuple[Path, str, int]:
+    folder.mkdir(parents=True, exist_ok=True)
+    file = folder / url.rsplit("/", 1)[-1]
+    file.write_text("codigo\n1\n", encoding="utf-8")
+    return file, f"h{url}", file.stat().st_size
+
+
+def no_head(url: str) -> dict[str, str | None]:
+    return {}
+
+
 def test_a_blocked_source_records_the_block_and_stops_the_rest_of_the_plan(
     con: Connection, tmp_path: Path, settings: Settings
 ) -> None:
     asked: list[str] = []
 
-    def blocked(url: str, folder: Path) -> tuple[Path, str, int]:
+    def second_is_blocked(url: str, folder: Path) -> tuple[Path, str, int]:
         asked.append(url)
+        if url.endswith("2025.csv"):
+            raise fetch.SourceBlocked(f"{url}: HTTP 429")
+        return ok_downloader(url, folder)
+
+    source = contract(tmp_path)
+    items: list[landing.Item] = [("votos", 2024), ("votos", 2025), ("votos", 2026)]
+    done = landing.extract_plan(con, settings, source, items, second_is_blocked, no_head)
+    assert done == 1 and len(asked) == 2  # o terceiro nem é pedido
+    assert monitoring.latest_status(con, "teste", "votos")[0] == "error"
+    # a fonte volta a responder: o bloqueio deixa de contar
+    assert landing.extract_plan(con, settings, source, items[1:2], ok_downloader, no_head) == 1
+    assert not [d for d in monitoring.latest_status(con, "teste", "votos")[1] if "bloqueio" in d]
+
+
+def test_a_head_that_the_source_refuses_does_not_block_the_download(
+    con: Connection, tmp_path: Path, settings: Settings
+) -> None:
+    def head_403(url: str) -> dict[str, str | None]:
         raise fetch.SourceBlocked(f"{url}: HTTP 403")
 
-    count = landing.extract_plan(
-        con,
-        settings,
-        contract(tmp_path),
-        [("votos", 2024), ("votos", 2025)],
-        downloader=blocked,
-        head_request=lambda url: {},
-    )
-    assert asked == ["http://exemplo/votos-2024.csv"] and count == 2
+    done = landing.extract_plan(con, settings, contract(tmp_path), [("votos", 2024)], ok_downloader, head_403)
+    assert done == 1
+    assert con.execute("SELECT count(*) FROM metadata.capturas").fetchone() == (1,)
     assert con.execute(
-        "SELECT resultado FROM metadata.fontes_verificacoes WHERE verificacao = 'bloqueio'"
-    ).fetchall() == [("error",)]
+        "SELECT count(*) FROM metadata.fontes_verificacoes WHERE verificacao = 'bloqueio'"
+    ).fetchone() == (0,)

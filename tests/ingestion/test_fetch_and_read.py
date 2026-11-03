@@ -229,9 +229,13 @@ class Hostile(http.server.BaseHTTPRequestHandler):
             )
             self.end_headers()
         else:
-            body = b"<html>Acesso negado</html>" if self.path == "/html.zip" else b"a,b\n1,2\n"
+            body = (
+                b"<html>Acesso negado</html>" if self.path in ("/html.zip", "/page.html") else b"a,b\n1,2\n"
+            )
             self.send_response(200)
-            self.send_header("Content-Type", "text/html" if self.path == "/html.zip" else "text/csv")
+            self.send_header(
+                "Content-Type", "text/html" if self.path in ("/html.zip", "/page.html") else "text/csv"
+            )
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -254,11 +258,23 @@ def hostile() -> Iterator[str]:
 def test_a_block_is_raised_before_anything_is_written_to_the_landing(
     hostile: str, path: str, tmp_path: Path
 ) -> None:
+    folder = tmp_path / "landing" / "fonte"
     with pytest.raises(fetch.SourceBlocked):
-        fetch.download(hostile + path, tmp_path)
+        fetch.download(hostile + path, folder)
     with pytest.raises(fetch.SourceBlocked):
         fetch.head(hostile + path)
-    assert list(tmp_path.iterdir()) == []
+    assert not folder.exists() and not folder.parent.exists()
+
+
+def test_a_source_that_serves_html_as_its_format_is_not_blocked(hostile: str, tmp_path: Path) -> None:
+    file, _, _ = fetch.download(hostile + "/page.html", tmp_path, suffix="html")
+    assert file.suffix == ".html" and fetch.head(hostile + "/page.html", suffix="html")["size"]
+
+
+def test_a_subdomain_of_the_same_site_is_not_a_redirect_to_another_host() -> None:
+    assert fetch._site("https://www.in.gov.br/x") == fetch._site("https://in.gov.br/y") == "in.gov.br"
+    assert fetch._site("https://dadosabertos.camara.leg.br/") == "camara.leg.br"
+    assert fetch._site("https://a.example.com/") != fetch._site("https://b.example.org/")
 
 
 def test_the_courtesy_interval_applies_to_every_request_with_an_injected_clock(

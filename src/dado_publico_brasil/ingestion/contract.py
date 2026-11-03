@@ -284,6 +284,12 @@ def _custom(power: str, level: str, source: str) -> ModuleType | None:
         raise
 
 
+def _rate_limit(value: Any, where: str) -> float:
+    if float(value) <= 0:
+        raise InvalidContract(f"{where}: access.rate_limit deve ser maior que zero")
+    return float(value)
+
+
 def load_contract(path: Path) -> SourceContract:
     """Lê e valida o contrato de uma fonte."""
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -320,7 +326,7 @@ def load_contract(path: Path) -> SourceContract:
         delimiter=access.get("delimiter", ";"),
         encoding=access.get("encoding", "utf-8-sig"),
         format=access.get("format", "csv"),
-        rate_limit=float(access.get("rate_limit", 4)),
+        rate_limit=_rate_limit(access.get("rate_limit", 4), source),
         schedule=schedule,
         headers=dict(access.get("headers", {})),
         custom=custom,

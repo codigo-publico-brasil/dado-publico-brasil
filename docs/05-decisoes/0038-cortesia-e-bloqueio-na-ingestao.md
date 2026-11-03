@@ -10,8 +10,8 @@ O 0012 limitou a taxa só dos datasets por item. As fontes mensais de transparê
 
 ## Decisão
 
-1. **`access.rate_limit` vale para toda requisição da fonte** (HEAD, GET e arquivo), com relógio injetável nos testes.
-2. **Bloqueio é erro, não retentativa:** HTTP 403 ou 429, `Content-Type: text/html` onde se espera arquivo ou redirecionamento para outro host levantam `SourceBlocked` antes de gravar no landing. O plano registra a verificação `bloqueio` (erro) e interrompe o resto da fonte naquela execução; a próxima tentativa é a do agendamento seguinte. Não se contorna bloqueio.
+1. **`access.rate_limit` (maior que zero) é o intervalo entre as requisições do download padrão** (HEAD e GET do arquivo), com relógio injetável nos testes. Não alcança `fetch.get` (datasets `foreach`, com intervalo próprio) nem módulos `custom/`.
+2. **Bloqueio é erro, não retentativa:** no GET do download padrão, HTTP 403 ou 429, `Content-Type: text/html` (exceto quando o formato esperado é `html`) ou redirecionamento para fora do domínio registrável levantam `SourceBlocked` antes de gravar no landing. O plano registra a verificação `bloqueio` (erro, zerada com `ok` quando a fonte volta a responder) e interrompe o resto da fonte naquela execução; a próxima tentativa é a do agendamento seguinte. O **HEAD é brando**: sua falha só vira "sem informação". Não se contorna bloqueio.
 3. **`partition: month` com `{month}` (AAAAMM) na URL.** O plano incremental pede o mês em curso e o anterior; um 404 do mês anterior não o marca como indisponível.
 
 ## Alternativas
@@ -21,4 +21,4 @@ O 0012 limitou a taxa só dos datasets por item. As fontes mensais de transparê
 
 ## Consequências
 
-Uma fonte bloqueada fica visível em `fontes_verificacoes` e no `observe`, sem dado errado no landing. Requisições a fontes custom (módulo `custom/`) seguem a regra do próprio módulo. Respostas 403 e 429 dos datasets por item continuam registradas como status do item (não interrompem o lote).
+Uma fonte bloqueada fica visível em `fontes_verificacoes` e no `observe`, sem dado errado no landing. Requisições a fontes custom (módulo `custom/`) seguem a regra do próprio módulo. O intervalo é por fonte e taxa, em memória, e **não é thread-safe** (um extrator por vez, como o resto do DuckDB). O domínio registrável usa uma lista curta de sufixos (`gov.br`, `leg.br`, `jus.br`...), sem dependência nova. Respostas 403 e 429 dos datasets por item continuam registradas como status do item (não interrompem o lote).

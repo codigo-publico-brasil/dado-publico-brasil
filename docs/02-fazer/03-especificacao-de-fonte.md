@@ -126,7 +126,15 @@ O plano incremental pede o mês em curso **e o anterior**: o mês fechado sem mu
 
 ## Cortesia e bloqueio
 
-`access.rate_limit` (requisições por segundo, padrão 4) vale para **toda** requisição ao arquivo da fonte (HEAD e GET), não só para os datasets por item. Se a fonte barra o acesso (HTTP 403 ou 429, página HTML no lugar do arquivo, redirecionamento para outro host), nada é gravado no landing: a verificação `bloqueio` entra em `metadata.fontes_verificacoes` como erro e o resto da fonte é interrompido naquela execução, sem nova tentativa até o próximo agendamento ([ADR 0037](../05-decisoes/0037-cortesia-e-bloqueio-na-ingestao.md)). Quem for contornar o bloqueio (proxy, troca de IP) está fora do projeto: abra uma issue.
+`access.rate_limit` (requisições por segundo, padrão 4; deve ser maior que zero) é o intervalo mínimo entre as requisições do **download padrão** (HEAD e GET do arquivo) da fonte. **Não vale** para `fetch.get` (datasets `foreach`, que têm o próprio intervalo) nem para módulos `custom/` que fazem a própria requisição.
+
+No download padrão, nada é gravado no landing e o resto da fonte é interrompido naquela execução (sem nova tentativa até o próximo agendamento; a verificação `bloqueio` fica como erro em `metadata.fontes_verificacoes` e é zerada quando a fonte volta a responder) se o **GET** devolve HTTP 403 ou 429, página HTML no lugar do arquivo ou redirecionamento para outro site. Detalhes:
+
+- **HEAD é brando:** qualquer falha do HEAD (403, 405, 429...) vira "sem informação" e o GET decide; só o GET bloqueia.
+- **HTML legítimo:** a regra do HTML não vale quando o formato esperado é `html` (`format: html`).
+- **Mesmo site:** o redirecionamento só bloqueia se sair do domínio registrável (`www.in.gov.br` para `in.gov.br` passa).
+
+[ADR 0037](../05-decisoes/0037-cortesia-e-bloqueio-na-ingestao.md). Contornar bloqueio (proxy, troca de IP) está fora do projeto: abra uma issue.
 
 ## Credenciais, arquivo compactado, SOAP, robô
 

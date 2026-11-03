@@ -55,10 +55,23 @@ class Pace:
         self.last = self.clock()
 
 
-_PACES: dict[str, Pace] = {}
+_PACES: dict[tuple[str, float], Pace] = {}  # por fonte e taxa; não é thread-safe (um extrator por vez)
+SECOND_LEVEL = {"gov", "leg", "jus", "mp", "com", "org", "net", "edu", "mil"}  # ex.: camara.leg.br
 
 
-def _open(url: str, headers: dict[str, str], method: str, timeout: int, pace: Pace | None) -> Any:
+def _site(url: str) -> str:
+    """O domínio registrável do endereço (`www.in.gov.br` e `in.gov.br` são o mesmo site)."""
+    labels = (urlparse(url).hostname or "").split(".")
+    return ".".join(labels[-3:] if len(labels) > 2 and labels[-2] in SECOND_LEVEL else labels[-2:])
+
+
+def pace_of(contract: SourceContract) -> Pace:
+    return _PACES.setdefault((contract.source, contract.rate_limit), Pace(contract.rate_limit))
+
+
+def _open(
+    url: str, headers: dict[str, str], method: str, timeout: int, pace: Pace | None, suffix: str = "csv"
+) -> Any:
     """Abre a requisição respeitando a cortesia; levanta `SourceBlocked` antes de qualquer gravação."""
     if pace:
         pace.wait()
@@ -68,10 +81,10 @@ def _open(url: str, headers: dict[str, str], method: str, timeout: int, pace: Pa
         if error.code in (403, 429):
             raise SourceBlocked(f"{url}: HTTP {error.code}") from error
         raise
-    if urlparse(response.url).hostname != urlparse(url).hostname:
+    if _site(response.url) != _site(url):
         response.close()
         raise SourceBlocked(f"{url}: redirecionou para {response.url}")
-    if "text/html" in (response.headers.get("Content-Type") or "").lower():
+    if suffix != "html" and "text/html" in (response.headers.get("Content-Type") or "").lower():
         response.close()
         raise SourceBlocked(f"{url}: HTML no lugar do arquivo")
     return response
@@ -118,17 +131,18 @@ def download(
     """Baixa sem alterar. Devolve o caminho (com o hash no nome), o SHA-256 e o tamanho em bytes.
 
     O nome do arquivo vem do fim da URL, ou de `name` quando a URL não termina no nome do arquivo."""
-    folder.mkdir(parents=True, exist_ok=True)
     temporary = folder / "download.tmp"
 
     def attempt() -> tuple[str, int]:
         sha, size = hashlib.sha256(), 0
-        with _open(url, headers or {}, "GET", 120, pace) as r, temporary.open("wb") as f:
-            body = _body(r)
-            while chunk := body.read(CHUNK):
-                f.write(chunk)
-                sha.update(chunk)
-                size += len(chunk)
+        with _open(url, headers or {}, "GET", 120, pace, suffix) as r:
+            folder.mkdir(parents=True, exist_ok=True)  # só depois de aberta: bloqueio não deixa pasta vazia
+            with temporary.open("wb") as f:
+                body = _body(r)
+                while chunk := body.read(CHUNK):
+                    f.write(chunk)
+                    sha.update(chunk)
+                    size += len(chunk)
         return sha.hexdigest(), size
 
     digest, size = _retrying(attempt)
@@ -166,9 +180,11 @@ def get(url: str, headers: dict[str, str] | None = None) -> tuple[int, bytes]:
         return 0, b""
 
 
-def head(url: str, headers: dict[str, str] | None = None, pace: Pace | None = None) -> dict[str, str | None]:
+def head(
+    url: str, headers: dict[str, str] | None = None, pace: Pace | None = None, suffix: str = "csv"
+) -> dict[str, str | None]:
     """Pergunta à fonte (HEAD) se o arquivo mudou, sem baixá-lo. Valores ausentes ficam `None`."""
-    with _open(url, headers or {}, "HEAD", 60, pace) as response:
+    with _open(url, headers or {}, "HEAD", 60, pace, suffix) as response:
         return {
             "etag": response.headers.get("ETag"),
             "last_modified": response.headers.get("Last-Modified"),
@@ -180,11 +196,14 @@ def downloader(contract: SourceContract, dataset: str) -> Downloader:
     """O `download` do módulo `custom` da fonte, se houver, ou o padrão com os cabeçalhos do YAML."""
     custom = getattr(contract.custom, "download", None)
     suffix = "zip" if contract.datasets[dataset].archive == "zip" else contract.format_of(dataset)
-    pace = _PACES.setdefault(contract.source, Pace(contract.rate_limit))
-    return custom or partial(download, headers=contract.headers_of(dataset), suffix=suffix, pace=pace)
+    return custom or partial(
+        download, headers=contract.headers_of(dataset), suffix=suffix, pace=pace_of(contract)
+    )
 
 
 def head_request(contract: SourceContract, dataset: str) -> HeadRequest:
     custom = getattr(contract.custom, "head", None)
-    pace = _PACES.setdefault(contract.source, Pace(contract.rate_limit))
-    return custom or partial(head, headers=contract.headers_of(dataset), pace=pace)
+    suffix = contract.format_of(dataset)
+    return custom or partial(
+        head, headers=contract.headers_of(dataset), pace=pace_of(contract), suffix=suffix
+    )

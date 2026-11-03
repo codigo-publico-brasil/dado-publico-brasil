@@ -318,7 +318,7 @@ def extract(
         previous = last_capture(con, url)
         try:
             headers = {} if force else head_request(url)
-        except OSError:
+        except (OSError, fetch.SourceBlocked):  # HEAD brando: 403/405 não aborta; só o GET bloqueia
             headers = {}
         lost = previous is not None and not (settings.storage_root / previous["caminho"]).exists()
         if not force and previous is not None and not lost and unchanged(previous, headers):
@@ -374,17 +374,25 @@ def extract_plan(
     force: bool = False,
     recover: bool = False,
 ) -> int:
-    """Executa um plano, item a item. Devolve quantos itens foram processados.
+    """Executa um plano, item a item. Devolve quantos itens foram processados (para no bloqueio).
 
     Com `recover` (a execução incremental), soma ao plano as partições passadas que faltam (`plan_recovery`).
     Se a fonte bloqueia (`SourceBlocked`), registra `bloqueio` e interrompe o resto dela.
     Ao fim, registra por dataset o estado das partições (`particoes` em `fontes_verificacoes`)."""
     if recover:
         items = [*items, *(i for i in plan_recovery(con, contract) if i not in items)]
+    done = 0
     for dataset, year in items:
         print(f"Extraindo {dataset} {year or ''}".strip(), flush=True)
         try:
             extract(con, settings, contract, dataset, year, downloader, head_request, force)
+            done += 1
+            if con.execute(  # um bloqueio antigo deixa de contar quando a fonte volta a responder
+                "SELECT count(*) FROM metadata.fontes_verificacoes WHERE fonte = ? AND dataset = ? AND "
+                "particao IS NOT DISTINCT FROM ? AND verificacao = 'bloqueio' AND resultado = 'error'",
+                (contract.source, dataset, year),
+            ).fetchone() == (1,):
+                monitoring.record(con, contract.source, dataset, year, "bloqueio", "ok")
         except fetch.SourceBlocked as error:  # sem retry: o próximo agendamento tenta de novo
             monitoring.record(con, contract.source, dataset, year, "bloqueio", "error", str(error))
             print(
@@ -394,4 +402,4 @@ def extract_plan(
     record_gaps(con, contract)
     arquivos.materialize(con, settings, contract)  # coleções `arq_` do contrato (ADR 0037)
     privado.push_metadata(con, settings)
-    return len(items)
+    return done

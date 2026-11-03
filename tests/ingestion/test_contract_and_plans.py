@@ -207,3 +207,9 @@ def test_arquivos_block_is_read_and_the_member_groups_become_path_fields(tmp_pat
         if d.arquivos and d.arquivos.publicar
     }
     assert published[("dou", "secao1")] == "secoes" and published[("tse", "fotos_rj")] == "fotos"
+
+
+def test_rate_limit_must_be_positive(tmp_path: Path) -> None:
+    text = TEMPLATE.format(extra="").replace("encoding: utf-8}", "encoding: utf-8, rate_limit: 0}")
+    with pytest.raises(InvalidContract, match="rate_limit"):
+        contract_from(tmp_path, text=text)
