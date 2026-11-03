@@ -217,7 +217,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dim_partidos_camara` | Partidos com sigla e nome oficiais. Uma linha por partido. | publico | partido |
 | `dim_partidos_linhagem` | Mudanças de nome, fusões e incorporações de partidos, conforme o TSE, com a página oficial de cada evento. Curada à mão; só o que foi conferido. Uma linha por partido de origem e evento. | publico | partido de origem e evento |
 | `dim_pessoas` | Quem já teve pelo menos um cargo (ADR 0030 e 0031): parlamentar da Câmara ou do Senado e todo eleito do TSE, a partir do momento da eleição. Quem só se candidatou e nunca foi eleito não está aqui. Uma linha por pessoa do projeto, com a chave de identidade que nunca muda nem é reaproveitada. Cada atributo diz de qual fonte veio (a Câmara e o Senado valem mais que o TSE; o TSE vale a candidatura mais recente que o traz). Só o que a fonte publica; nada é inferido. | publico-agente-publico | pessoa |
-| `dim_pessoas_cadastro` | Pessoas (agentes públicos) com perfil, contagens e último partido. Uma linha por pessoa. | publico-agente-publico | pessoa |
+| `dim_pessoas_cadastro` | Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação, falecimento e atividade legislativa (contagens e último partido). Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas). | publico-agente-publico | pessoa |
 | `dim_territorios` | Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato que fala de lugar (ADR 0030). | publico | território |
 | `fct_campanhas` | A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o arquivo daquele dado não foi carregado ou não traz o candidato. | publico-agente-publico | candidatura |
 | `fct_candidaturas` | Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era, por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer novato. | publico-agente-publico | candidatura |
@@ -602,6 +602,17 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fonte_dt_nascimento` | varchar | Fonte da data de nascimento. |  |
 | `genero` | varchar | Masculino ou feminino, só quando a fonte diz; vazio nos demais casos (inclusive dado protegido). |  |
 | `fonte_genero` | varchar | Fonte do gênero. |  |
+| `uf_nascimento` | varchar | UF de nascimento: a do cadastro da Câmara ou do Senado quando existe; senão, a declarada na candidatura mais recente do TSE que a informa (ZZ para nascido no exterior). |  |
+| `fonte_uf_nascimento` | varchar | Fonte da UF de nascimento (camara, senado ou tse). |  |
+| `escolaridade` | varchar | Escolaridade: a do cadastro da Câmara ou do Senado quando existe; senão, o grau de instrução declarado na candidatura mais recente do TSE que o informa (Não divulgável quando o TSE protege o dado). |  |
+| `fonte_escolaridade` | varchar | Fonte da escolaridade (camara, senado ou tse). |  |
+| `profissoes` | varchar | Profissões: as do cadastro da Câmara (separadas por ponto e vírgula) quando existem; senão, a ocupação declarada na candidatura mais recente do TSE que a informa. |  |
+| `fonte_profissoes` | varchar | Fonte das profissões (camara, senado ou tse). |  |
+| `estado_civil` | varchar | Estado civil declarado na candidatura mais recente do TSE que o informa; só o TSE tem (Não divulgável quando protege o dado). |  |
+| `nome_social` | varchar | Nome social declarado na candidatura mais recente do TSE que o informa; vazio para quase todos (poucos declaram). |  |
+| `foto_caminho` | varchar | Foto oficial do TSE da candidatura mais recente que a tem (caminho no lake público, coleção arq_fotos); vazia sem foto. |  |
+| `id_captura_tse` | bigint | Captura do arquivo de candidaturas do TSE da candidatura mais recente da pessoa (URL, data e hash em metadata.capturas); vazia sem candidatura. |  |
+| `dt_captura_tse` | date | Data dessa captura. |  |
 | `dt_entrada` | date | Dia em que a pessoa entrou na identidade do projeto (para o eleito do TSE, a primeira execução depois da eleição). |  |
 
 ### marts.dim_pessoas_cadastro

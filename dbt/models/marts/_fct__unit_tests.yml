@@ -139,3 +139,42 @@ unit_tests:
         - {id_ocupacao: "mandato:s26", base_ocupacao: mandato, fonte: tse, id_pessoa: 5, id_candidatura: s26, id_exercicio: null, id_partido: 7, base_partido: informado, ano_inicio: 2027, dt_inicio: "2027-02-01", base_dt_inicio: derivado, dt_fim: "2035-01-31", base_dt_fim: previsto}
         - {id_ocupacao: "mandato:g22", base_ocupacao: mandato, fonte: tse, id_pessoa: 6, id_candidatura: g22, id_exercicio: null, id_partido: null, base_partido: null, ano_inicio: 2023, dt_inicio: "2023-01-01", base_dt_inicio: derivado, dt_fim: "2026-12-31", base_dt_fim: previsto}
         - {id_ocupacao: "mandato:v26", base_ocupacao: mandato, fonte: tse, id_pessoa: 7, id_candidatura: v26, id_exercicio: null, id_partido: 7, base_partido: informado, ano_inicio: 2027, dt_inicio: null, base_dt_inicio: null, dt_fim: null, base_dt_fim: null}
+
+  - name: pessoa_traz_o_cadastro_primeiro_e_cada_atributo_do_tse_vem_da_candidatura_mais_recente_que_o_informa
+    description: >
+      O cadastro da Câmara ou do Senado vale primeiro; o que falta vem do valor da candidatura mais recente do TSE que
+      informa aquele atributo (a mais recente pode não informar), e a fonte de cada atributo fica ao lado. O ano da eleição
+      vem de dim_eleicoes. Quem não tem cadastro nem candidatura que informe fica com o atributo e a fonte vazios.
+    model: dim_pessoas
+    given:
+      - input: ref('stg_identity__pessoas')
+        rows:
+          - {id_pessoa: 1}
+          - {id_pessoa: 2}
+          - {id_pessoa: 3}
+      - input: ref('int_pessoas_unidas_cadastro')
+        rows: []
+      - input: ref('int_pessoas_senado_unidas')
+        rows: []
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows: []
+      - input: ref('stg_tse__candidaturas')
+        rows: []
+      - input: ref('dim_pessoas_cadastro')
+        rows:
+          - {id_pessoa: 1, fonte: camara, uf_nascimento: SP, escolaridade: Superior, profissoes: Advogado}
+      - input: ref('dim_eleicoes')
+        rows:
+          - {id_eleicao: "2018-1", ano_eleicao: 2018}
+          - {id_eleicao: "2022-1", ano_eleicao: 2022}
+      - input: ref('fct_candidaturas')
+        rows:
+          - {id_candidatura: a18, id_pessoa: 1, id_eleicao: "2018-1", uf_nascimento: RJ, estado_civil: Solteiro, id_captura: 18}
+          - {id_candidatura: a22, id_pessoa: 1, id_eleicao: "2022-1", uf_nascimento: RJ, estado_civil: Casado, id_captura: 22}
+          - {id_candidatura: b18, id_pessoa: 2, id_eleicao: "2018-1", uf_nascimento: MG, grau_instrucao: Médio, ocupacao: Professor, nome_social: Nome Social, foto_caminho: "fotos/2018/MG/b.jpg", id_captura: 18}
+          - {id_candidatura: b22, id_pessoa: 2, id_eleicao: "2022-1", uf_nascimento: null, grau_instrucao: Superior, ocupacao: null, nome_social: null, foto_caminho: null, id_captura: 22}
+    expect:
+      rows:
+        - {id_pessoa: 1, uf_nascimento: SP, fonte_uf_nascimento: camara, escolaridade: Superior, fonte_escolaridade: camara, profissoes: Advogado, fonte_profissoes: camara, estado_civil: Casado, nome_social: null, foto_caminho: null, id_captura_tse: 22}
+        - {id_pessoa: 2, uf_nascimento: MG, fonte_uf_nascimento: tse, escolaridade: Superior, fonte_escolaridade: tse, profissoes: Professor, fonte_profissoes: tse, estado_civil: null, nome_social: Nome Social, foto_caminho: "fotos/2018/MG/b.jpg", id_captura_tse: 22}
+        - {id_pessoa: 3, uf_nascimento: null, fonte_uf_nascimento: null, escolaridade: null, fonte_escolaridade: null, profissoes: null, fonte_profissoes: null, estado_civil: null, nome_social: null, foto_caminho: null, id_captura_tse: null}
