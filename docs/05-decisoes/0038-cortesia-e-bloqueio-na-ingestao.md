@@ -1,4 +1,4 @@
-# ADR 0037: Cortesia em toda requisição, bloqueio sem insistência e partição mensal
+# ADR 0038: Cortesia em toda requisição, bloqueio sem insistência e partição mensal
 
 - **Status:** aceito (2026-11-03, pelo fundador)
 - **Data:** 2026-11-03

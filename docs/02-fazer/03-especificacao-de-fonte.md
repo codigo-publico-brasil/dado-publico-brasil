@@ -134,7 +134,7 @@ No download padrão, nada é gravado no landing e o resto da fonte é interrompi
 - **HTML legítimo:** a regra do HTML não vale quando o formato esperado é `html` (`format: html`).
 - **Mesmo site:** o redirecionamento só bloqueia se sair do domínio registrável (`www.in.gov.br` para `in.gov.br` passa).
 
-[ADR 0037](../05-decisoes/0037-cortesia-e-bloqueio-na-ingestao.md). Contornar bloqueio (proxy, troca de IP) está fora do projeto: abra uma issue.
+[ADR 0038](../05-decisoes/0038-cortesia-e-bloqueio-na-ingestao.md). Contornar bloqueio (proxy, troca de IP) está fora do projeto: abra uma issue.
 
 ## Credenciais, arquivo compactado, SOAP, robô
 
