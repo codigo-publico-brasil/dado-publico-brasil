@@ -135,7 +135,8 @@ models:
       - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_transparencia__compras
-    description: "Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado (nome e código) fica de fora: pessoa física vem com CPF completo."
+    description: "Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado pessoa física vem com CPF completo na fonte e sai mascarado aqui."
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros}
     columns:
       - {name: numero_contrato, description: "Número do contrato, como a fonte informa (único só junto com a unidade gestora).", tests: ["not_null"]}
       - {name: objeto, description: "Objeto do contrato, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing). Pode ser `Informação protegida por sigilo`."}
@@ -152,6 +153,8 @@ models:
       - {name: dt_publicacao_dou, description: "Data de publicação no Diário Oficial da União."}
       - {name: dt_inicio_vigencia, description: "Data de início da vigência."}
       - {name: dt_fim_vigencia, description: "Data de fim da vigência."}
+      - {name: cd_contratado, meta: {pii: true}, description: "CNPJ, CPF ou código de estrangeiro do contratado, como a fonte publica. CPF (11 dígitos, completo na fonte) sai mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing e no raw (privados). `-11` quando a fonte protege por sigilo."}
+      - {name: contratado, meta: {pii: true}, description: "Nome do contratado (pessoa física inclusive), como a fonte publica; número de CPF no texto é mascarado pelo projeto. `Sigiloso` quando protegido por sigilo."}
       - {name: valor_inicial, description: "Valor inicial do contrato, em reais."}
       - {name: valor_final, description: "Valor final do contrato (com aditivos), em reais."}
       - {name: numero_licitacao, description: "Número da licitação de origem, quando houve."}

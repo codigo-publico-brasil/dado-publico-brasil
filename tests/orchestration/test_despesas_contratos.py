@@ -1,4 +1,4 @@
-"""Despesas e contratos do Portal da Transparência: pacote mensal, contratado fora do raw e texto livre sem CPF."""
+"""Despesas e contratos do Portal da Transparência: pacote mensal; CPF do contratado só no raw (privado), mascarado no staging."""
 
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, columns, scalar
@@ -16,16 +16,15 @@ def test_the_contract_is_polite_direct_and_covers_four_years() -> None:
         assert (dataset.partition, dataset.first_month) == ("month", 202211)
         assert contrato.url(nome, 202401).startswith("https://dadosabertos-download.cgu.gov.br/")
         assert "{" not in contrato.url(nome, 202401)
-        assert not {"Código Contratado", "Nome Contratado"} & set(dataset.columns)
 
 
-def test_expenses_and_contracts_reach_the_raw_without_the_contractor(full: Env) -> None:
+def test_expenses_and_contracts_reach_the_raw(full: Env) -> None:
     con, _ = full
     assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.despesas") == 1
     assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.compras") == 2
     assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.compras_itens") == 1
     assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.compras_termos_aditivos") == 1
-    assert not {"c_digo_contratado", "nome_contratado"} & set(
+    assert {"c_digo_contratado", "nome_contratado"} <= set(
         columns(con, "raw_federal_transparencia", "compras")
     )
 
@@ -52,3 +51,20 @@ def test_staging_converts_types_and_masks_the_cpf_in_free_text(full: Env) -> Non
             scalar(con, f"SELECT COUNT(*) FROM staging.stg_transparencia__{modelo} WHERE id_captura IS NULL")
             == 0
         )
+
+
+def test_the_contractor_cpf_is_masked_in_staging_and_never_leaves_it_whole(full: Env) -> None:
+    con, _ = full
+    found = dict(
+        con.execute("SELECT contratado, cd_contratado FROM staging.stg_transparencia__compras").fetchall()
+    )
+    assert found == {"EMPRESA EXEMPLO LTDA": "12345678000199", "PESSOA EXEMPLO": "***.456.789-**"}
+    cpf = "[0-9]{3}[.]?[0-9]{3}[.]?[0-9]{3}-?[0-9]{2}"
+    assert (
+        scalar(
+            con,
+            "SELECT COUNT(*) FROM staging.stg_transparencia__compras "
+            f"WHERE regexp_matches(cd_contratado || ' ' || contratado || ' ' || objeto, '(^|[^0-9]){cpf}($|[^0-9])')",
+        )
+        == 0
+    )

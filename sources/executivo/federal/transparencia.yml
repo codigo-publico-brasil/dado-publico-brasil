@@ -1,7 +1,7 @@
 # Declaração da fonte: Portal da Transparência do Governo Federal (CGU), arquivos de dados abertos.
 # Despesas e contratos: um .zip por mês na URL direta do host de download (dadosabertos-download.cgu.gov.br; o endereço do
 # portal redireciona para esse host, que a regra de bloqueio do ADR 0038 trata como outro site), de 2022-11 em diante (4 anos).
-# Contratado pessoa física vem com CPF completo no arquivo: `Código Contratado` e `Nome Contratado` ficam fora de `columns`.
+# Contratado pessoa física vem com CPF completo no arquivo: o raw (privado) o guarda como vem; o staging, que vai ao lake, o mascara.
 # Emendas parlamentares: um pacote .zip nacional com três tabelas, atualizado todo dia. Os três datasets usam o
 # mesmo arquivo e se distinguem por um fragmento na URL (`#...`), que nunca vai ao servidor, só ao registro de
 # captura. Os favorecidos entram como a fonte publica, inclusive pessoa física (cidadão comum, com CPF mascarado):
@@ -97,7 +97,7 @@ datasets:
        "Valor Restos a Pagar Pagos (R$)"]
 
   compras:
-    # Contratos do governo federal (um por linha): objeto, órgão, vigência e valores. Contratado fora (CPF de pessoa física).
+    # Contratos do governo federal (um por linha): objeto, órgão, vigência e valores. Contratado com CPF completo no raw; mascarado no staging.
     url: "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/compras/{month}_Compras.zip#compras"
     max_age_days: 40   # mês fechado não muda; avisa se a última verificação passar de 40 dias
     load: yearly
@@ -111,7 +111,8 @@ datasets:
       ["Número do Contrato", "Objeto", "Fundamento Legal", "Modalidade Compra", "Situação Contrato",
        "Código Órgão Superior", "Nome Órgão Superior", "Código Órgão", "Nome Órgão", "Código UG", "Nome UG",
        "Data Assinatura Contrato", "Data Publicação DOU", "Data Início Vigência", "Data Fim Vigência",
-       "Valor Inicial Compra", "Valor Final Compra", "Número Licitação", "Código UG Licitação", "Nome UG Licitação",
+       "Código Contratado", "Nome Contratado", "Valor Inicial Compra", "Valor Final Compra", "Número Licitação",
+       "Código UG Licitação", "Nome UG Licitação",
        "Código Modalidade Compra Licitação", "Modalidade Compra Licitação"]
 
   compras_itens:

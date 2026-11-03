@@ -17,6 +17,8 @@ select
     try_strptime(data_publica_o_dou, '%d/%m/%Y')::date as dt_publicacao_dou,
     try_strptime(data_in_cio_vig_ncia, '%d/%m/%Y')::date as dt_inicio_vigencia,
     try_strptime(data_fim_vig_ncia, '%d/%m/%Y')::date as dt_fim_vigencia,
+    mascarar_dado_pessoal(c_digo_contratado, 'favorecido') as cd_contratado,
+    mascarar_dado_pessoal(nome_contratado, 'favorecido') as contratado,
     try_cast(replace(valor_inicial_compra, ',', '.') as decimal(18, 2)) as valor_inicial,
     try_cast(replace(valor_final_compra, ',', '.') as decimal(18, 2)) as valor_final,
     n_mero_licita_o as numero_licitacao,
