@@ -182,10 +182,11 @@ def test_the_person_card_comes_from_dim_pessoas_with_the_birth_state_from_the_ts
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
-    ana = con.execute(
-        "SELECT nome_publico, profissoes FROM marts.dim_pessoas WHERE nome_publico = 'Ana Árvore'"
-    ).fetchone()
-    assert ana is not None and ana[1]  # o cadastro da Câmara chega à ficha
+    # o cadastro da Câmara chega à ficha (há mais de uma pessoa de mesmo nome na amostra; basta uma com profissões)
+    assert scalar(
+        con,
+        "SELECT count(*) FROM marts.dim_pessoas WHERE nome_publico = 'Ana Árvore' AND profissoes IS NOT NULL",
+    )
     assert (
         scalar(
             con,
