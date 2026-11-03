@@ -5,11 +5,12 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --all-extras --no-dev --no-install-project
 COPY . .
-RUN uv sync --frozen --all-extras --no-dev && uv run dbt deps --project-dir dbt --profiles-dir dbt
+RUN uv sync --frozen --all-extras --no-dev && uv run --no-sync dbt deps --project-dir dbt --profiles-dir dbt
 
-ENV DAGSTER_HOME=/dagster_home
+# Na imagem não há `.git`: o CI passa o commit (`--build-arg GIT_SHA`) e `versao_commit` o registra.
+ARG GIT_SHA=unknown
+ENV DADO_PUBLICO_GIT_SHA=$GIT_SHA     PYTHONUNBUFFERED=1     DAGSTER_HOME=/dagster_home
 EXPOSE 3000
-# O `dagster.yaml` da imagem é copiado para o DAGSTER_HOME (um volume) a cada subida: o estado persiste e a configuração acompanha o código.
-ENTRYPOINT ["sh", "-c", "cp /app/dagster.yaml \"$DAGSTER_HOME/dagster.yaml\" && exec \"$@\"", "--"]
-# Serviço, não `dagster dev`: o compose sobe o `dagster-webserver` e o `dagster-daemon` (agendamentos e sensores).
+# Serviço, não `dagster dev`: o compose sobe o `dagster-webserver` e o `dagster-daemon` (agendamentos e sensores),
+# depois do serviço `init` (manifesto do dbt e `dagster.yaml`).
 CMD ["uv", "run", "--no-sync", "dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-m", "dado_publico_brasil.orchestration.definitions"]

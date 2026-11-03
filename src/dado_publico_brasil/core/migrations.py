@@ -56,12 +56,21 @@ def open_warehouse(settings: Settings, restore: bool = True) -> Connection:
     """Abre o warehouse para escrita e aplica as migrações pendentes.
 
     Arquivo novo com o bucket privado configurado: restaura dele o metadata e a identidade (ADR 0036).
+    Se a migração ou a restauração falhar num arquivo recém-criado, ele é apagado: um arquivo pela metade
+    faria a próxima subida pular a restauração.
     """
     from dado_publico_brasil.core import privado  # privado importa rebuild, que importa este módulo
 
     new = not settings.warehouse.exists()
     con = warehouse.connect(settings)
-    apply(con)
-    if new and restore:
-        privado.restore(con, settings)
+    try:
+        apply(con)
+        if new and restore:
+            privado.restore(con, settings)
+    except BaseException:
+        if new:
+            con.close()
+            for file in (settings.warehouse, settings.warehouse.with_name(settings.warehouse.name + ".wal")):
+                file.unlink(missing_ok=True)
+        raise
     return con
