@@ -6,7 +6,7 @@ from pathlib import Path
 from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection
-from dado_publico_brasil.ingestion import landing, monitoring
+from dado_publico_brasil.ingestion import fetch, landing, monitoring
 from dado_publico_brasil.ingestion.contract import SourceContract, load_contract
 
 CONTRACT = """
@@ -109,3 +109,44 @@ def test_extract_plan_records_the_state_of_the_partitions_for_the_observability(
         "SELECT resultado, detalhe FROM metadata.fontes_verificacoes WHERE verificacao = 'particoes' AND dataset = 'votos'"
     ).fetchone()
     assert row is not None and row[0] == "warn" and "1 de" in row[1] and "faltam:" in row[1]
+
+
+def test_the_monthly_incremental_plan_asks_for_the_current_and_the_previous_month(tmp_path: Path) -> None:
+    def mensal(today: date) -> list[int | None]:
+        return [p for d, p in landing.plan_incremental(contract(tmp_path), today) if d == "mensal"]
+
+    assert mensal(TODAY) == [202609, 202610]
+    assert mensal(date(2027, 1, 2)) == [202612, 202701]  # a virada do ano pede o dezembro anterior
+    assert landing.previous_month(202701) == 202612
+
+
+def test_a_404_of_the_previous_month_at_the_turn_of_the_month_is_not_unavailable(
+    con: Connection, tmp_path: Path
+) -> None:
+    monitoring.record(con, "teste", "mensal", 202610, "availability", "error", "HTTP Error 404: Not Found")
+    monitoring.record(con, "teste", "mensal", 202609, "availability", "error", "HTTP Error 404: Not Found")
+    gaps = landing.partition_gaps(con, contract(tmp_path), date(2026, 11, 2))["mensal"]
+    assert gaps["indisponiveis"] == [202609] and 202610 in gaps["faltam"]
+
+
+def test_a_blocked_source_records_the_block_and_stops_the_rest_of_the_plan(
+    con: Connection, tmp_path: Path, settings: Settings
+) -> None:
+    asked: list[str] = []
+
+    def blocked(url: str, folder: Path) -> tuple[Path, str, int]:
+        asked.append(url)
+        raise fetch.SourceBlocked(f"{url}: HTTP 403")
+
+    count = landing.extract_plan(
+        con,
+        settings,
+        contract(tmp_path),
+        [("votos", 2024), ("votos", 2025)],
+        downloader=blocked,
+        head_request=lambda url: {},
+    )
+    assert asked == ["http://exemplo/votos-2024.csv"] and count == 2
+    assert con.execute(
+        "SELECT resultado FROM metadata.fontes_verificacoes WHERE verificacao = 'bloqueio'"
+    ).fetchall() == [("error",)]

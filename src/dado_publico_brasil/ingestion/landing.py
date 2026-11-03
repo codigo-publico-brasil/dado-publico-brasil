@@ -144,6 +144,11 @@ def current_partition(dataset: Dataset, today: date) -> int:
             return today.year
 
 
+def previous_month(value: int) -> int:
+    """O mês (AAAAMM) anterior."""
+    return value - 1 if value % 100 > 1 else (value // 100 - 1) * 100 + 12
+
+
 def plan(contract: SourceContract, years: list[int], extra_years: list[int] | None = None) -> list[Item]:
     """Plano explícito: datasets completos e os anos pedidos dos anuais.
 
@@ -172,7 +177,7 @@ def plan_historical(
 
 
 def plan_incremental(contract: SourceContract, today: date | None = None) -> list[Item]:
-    """Plano incremental (o da execução diária): só a partição em curso de cada dataset da fonte.
+    """Plano incremental (o da execução diária): a partição em curso de cada dataset (e o mês anterior).
 
     Cada fonte diz, no seu YAML, quando se captura (`schedule`, um cron); sem `schedule` o plano é vazio e
     a fonte só roda quando pedida. Tudo que é retroativo (anos ou meses anteriores) exige pedir (`--years`
@@ -187,8 +192,12 @@ def plan_incremental(contract: SourceContract, today: date | None = None) -> lis
             continue
         if not d.yearly:
             items.append((d.name, None))
-        elif (current := current_partition(d, today)) in partitions(d, {today.year}):
-            items.append((d.name, current))
+        else:
+            valid = partitions(d, {today.year - 1, today.year}, today)
+            current = current_partition(d, today)
+            # mês anterior: fechado e sem mudança custa um HEAD; a virada não perde o fim dele
+            wanted = (current, previous_month(current)) if d.partition == "month" else (current,)
+            items += [(d.name, p) for p in sorted(wanted) if p in valid]
     return items
 
 
@@ -240,6 +249,10 @@ def partition_gaps(
         unavailable = {
             int(r["particao"]) for r in latest if r["resultado"] == "error" and "404" in str(r["detalhe"])
         } - got
+        if (
+            d.partition == "month"
+        ):  # o mês anterior ainda é pedido: um 404 no fim do mês não o torna indisponível
+            unavailable.discard(previous_month(current_partition(d, today)))
         missing = [p for p in expected if p not in got and p not in unavailable]
         result[d.name] = {
             "esperadas": len(expected),
@@ -364,12 +377,20 @@ def extract_plan(
     """Executa um plano, item a item. Devolve quantos itens foram processados.
 
     Com `recover` (a execução incremental), soma ao plano as partições passadas que faltam (`plan_recovery`).
+    Se a fonte bloqueia (`SourceBlocked`), registra `bloqueio` e interrompe o resto dela.
     Ao fim, registra por dataset o estado das partições (`particoes` em `fontes_verificacoes`)."""
     if recover:
-        items = [*items, *plan_recovery(con, contract)]
+        items = [*items, *(i for i in plan_recovery(con, contract) if i not in items)]
     for dataset, year in items:
         print(f"Extraindo {dataset} {year or ''}".strip(), flush=True)
-        extract(con, settings, contract, dataset, year, downloader, head_request, force)
+        try:
+            extract(con, settings, contract, dataset, year, downloader, head_request, force)
+        except fetch.SourceBlocked as error:  # sem retry: o próximo agendamento tenta de novo
+            monitoring.record(con, contract.source, dataset, year, "bloqueio", "error", str(error))
+            print(
+                f"Fonte {contract.source} bloqueou ({error}); o resto da fonte fica para a próxima execução"
+            )
+            break
     record_gaps(con, contract)
     arquivos.materialize(con, settings, contract)  # coleções `arq_` do contrato (ADR 0037)
     privado.push_metadata(con, settings)

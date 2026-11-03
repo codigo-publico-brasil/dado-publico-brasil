@@ -113,7 +113,7 @@ class SourceContract:
     encoding: str
     format: str = "csv"
     headers: dict[str, str] = field(default_factory=dict)  # aceita ${VARIAVEL} do ambiente
-    rate_limit: float = 4.0  # chamadas por segundo nos datasets por item (educação com a fonte)
+    rate_limit: float = 4.0  # requisições por segundo a toda a fonte (cortesia)
     schedule: str | None = None  # cron (5 campos) da captura automática; None: só quando pedido
     custom: ModuleType | None = None
     datasets: dict[str, Dataset] = field(default_factory=dict)
@@ -121,13 +121,13 @@ class SourceContract:
     def url(self, dataset: str, year: int | None = None) -> str:
         """Endereço oficial do arquivo de um dataset.
 
-        Nos particionados, `year` é o valor da partição: o ano ou, em `partition: legislature`, o
-        número da legislatura.
+        Nos particionados, `year` é o valor da partição: o ano, em `partition: legislature` o
+        número da legislatura e em `partition: month` o mês (AAAAMM); `{month}` na URL é esse valor.
         """
         d = self.datasets[dataset]
         if d.yearly and year is None:
             raise ValueError(f"{dataset} é particionado: informe o ano ou a legislatura")
-        return d.url.format(base_url=self.base_url, year=year, legislature=year, item=year)
+        return d.url.format(base_url=self.base_url, year=year, legislature=year, month=year, item=year)
 
     def item_url(self, dataset: str, item: str) -> str:
         """Endereço de um item de um dataset `foreach`."""
