@@ -4,6 +4,7 @@ Um arquivo DuckDB aceita um processo escritor por vez (ou vários leitores). Por
 outro processo, com a conexão do chamador fechada, e a aplicação abre em modo somente leitura.
 """
 
+import os
 from typing import Any
 
 import duckdb
@@ -15,10 +16,13 @@ Connection = duckdb.DuckDBPyConnection
 
 def connect(settings: Settings, read_only: bool = False) -> Connection:
     path = settings.warehouse
+    config: dict[str, Any] = {
+        "memory_limit": os.environ.get("DADO_PUBLICO_DUCKDB_MEMORY", "80%")
+    }  # padrão do DuckDB
     if read_only:
-        return duckdb.connect(str(path), read_only=True)
+        return duckdb.connect(str(path), read_only=True, config=config)
     path.parent.mkdir(parents=True, exist_ok=True)
-    return duckdb.connect(str(path))
+    return duckdb.connect(str(path), config=config)
 
 
 def scalar(con: Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:
