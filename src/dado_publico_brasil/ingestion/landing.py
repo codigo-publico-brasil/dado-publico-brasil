@@ -387,11 +387,14 @@ def extract_plan(
         try:
             extract(con, settings, contract, dataset, year, downloader, head_request, force)
             done += 1
-            if con.execute(  # um bloqueio antigo deixa de contar quando a fonte volta a responder
-                "SELECT count(*) FROM metadata.fontes_verificacoes WHERE fonte = ? AND dataset = ? AND "
-                "particao IS NOT DISTINCT FROM ? AND verificacao = 'bloqueio' AND resultado = 'error'",
-                (contract.source, dataset, year),
-            ).fetchone() == (1,):
+            if (
+                con.execute(  # um bloqueio antigo deixa de contar quando a fonte volta a responder
+                    "SELECT count(*) FROM metadata.fontes_verificacoes WHERE fonte = ? AND dataset = ? AND "
+                    "particao IS NOT DISTINCT FROM ? AND verificacao = 'bloqueio' AND resultado = 'error'",
+                    (contract.source, dataset, year),
+                ).fetchone()
+                or (0,)
+            )[0]:
                 monitoring.record(con, contract.source, dataset, year, "bloqueio", "ok")
         except fetch.SourceBlocked as error:  # sem retry: o próximo agendamento tenta de novo
             monitoring.record(con, contract.source, dataset, year, "bloqueio", "error", str(error))
