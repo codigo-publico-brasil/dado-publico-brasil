@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from dado_publico_brasil.core.settings import DBT_DIR, Settings
+from dado_publico_brasil.transformation import branding
 
 
 @dataclass
@@ -76,12 +77,43 @@ def serve_docs(settings: Settings, port: int = 8080) -> int:
     return 0
 
 
+def prune_static(html: str, project: str = "dado_publico_brasil") -> str:
+    """Tira do site estático do dbt o que não é do projeto: pacotes (Elementary, dbt_utils...) e exposures.
+
+    O dbt embute `{manifest:{...},catalog:{...}}` no HTML e não tem opção para ocultar pacotes inteiros.
+    """
+    start = html.index("{manifest:") + len("{manifest:")
+    manifest, end = json.JSONDecoder().raw_decode(html, start)
+    catalog_start = html.index(",catalog:", end) + len(",catalog:")
+    catalog, catalog_end = json.JSONDecoder().raw_decode(html, catalog_start)
+    drop = {k for k, n in manifest["nodes"].items() if n.get("package_name") != project}
+    manifest["nodes"] = {k: v for k, v in manifest["nodes"].items() if k not in drop}
+    manifest["macros"] = {k: v for k, v in manifest["macros"].items() if v.get("package_name") == project}
+    drop |= set(manifest["exposures"])
+    manifest["exposures"] = {}
+    for graph in ("parent_map", "child_map"):
+        manifest[graph] = {
+            k: [x for x in v if x not in drop] for k, v in manifest[graph].items() if k not in drop
+        }
+    catalog["nodes"] = {k: v for k, v in catalog["nodes"].items() if k not in drop}
+    return (
+        html[:start]
+        + json.dumps(manifest)
+        + html[end:catalog_start]
+        + json.dumps(catalog)
+        + html[catalog_end:]
+    )
+
+
 def static_docs(settings: Settings) -> Path:
-    """Gera o site do dbt em um único HTML (`docs generate --static`), pronto para publicar."""
+    """Gera o site do dbt em um único HTML (`docs generate --static`), só com o projeto."""
     outcome = invoke(settings, "docs", "generate", "--static")
     if outcome.returncode != 0:
         raise RuntimeError(f"dbt docs generate falhou: {outcome.output}")
-    return target_dir(settings) / "static_index.html"
+    file = target_dir(settings) / "static_index.html"
+    html = prune_static(file.read_text(encoding="utf-8"))
+    file.write_text(branding.apply(html, "Dado Público Brasil · Tabelas"), encoding="utf-8")
+    return file
 
 
 def read_results(

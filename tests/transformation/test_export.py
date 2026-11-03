@@ -135,6 +135,14 @@ def test_the_catalog_attaches_read_only_and_queries_with_descriptions(
         == "Quantidade de teste."
     )
     assert scalar(cat, "SELECT versao_commit IS NOT NULL FROM metadata.exportacao")
+    assert (
+        scalar(
+            cat,
+            "SELECT count(*) FROM duckdb_columns() WHERE schema_name = 'metadata' AND table_name = 'exportacao' "
+            "AND coalesce(comment, '') = ''",
+        )
+        == 0
+    )  # as 3 colunas da exportação também são descritas (issue 197)
     cat.close()
 
 
@@ -329,11 +337,11 @@ def test_publish_docs_uploads_both_pages_as_html_and_does_nothing_without_r2(
     monkeypatch.setattr(export, "_r2", lambda: {})
     assert export.publish_docs(settings) == [] and sent == []
     monkeypatch.setattr(export, "_r2", lambda: {"BUCKET": "b"})
-    assert export.publish_docs(settings) == ["docs/dbt.html", "docs/qualidade.html", "index.html"]
+    assert export.publish_docs(settings) == ["docs/dbt.html", "docs/qualidade.html", "docs/index.html"]
     assert sent == [
         ("docs/dbt.html", "text/html; charset=utf-8"),
         ("docs/qualidade.html", "text/html; charset=utf-8"),
-        ("index.html", "text/html; charset=utf-8"),
+        ("docs/index.html", "text/html; charset=utf-8"),
     ]
 
 
@@ -345,3 +353,7 @@ def test_the_home_page_fills_the_card_from_the_published_manifest(
     published = manifest(out)
     assert "{{" not in html
     assert str(published["id_execucao"]) in html and f">{len(published['tabelas'])}<" in html
+
+
+def test_seed_mart_goes_to_the_reference_folder() -> None:
+    assert export._key({}, "marts", "dim_cargos") == "marts/referencia/dim_cargos"

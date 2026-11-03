@@ -30,6 +30,7 @@ vars:
 models:
   elementary:
     +schema: elementary
+    +docs: {show: false}  # modelos do pacote ficam fora do site público
   dado_publico_brasil:
     +persist_docs:
       relation: true

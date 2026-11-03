@@ -118,6 +118,8 @@ def _domain(models: dict[str, dict[str, Any]], table: str) -> str:
         return str(models[table]["original_file_path"]).replace("\\", "/").split("/")[2]
     found = sorted((DBT_DIR / "models" / "marts").glob(f"*/{table}.sql"))
     if not found:
+        if (DBT_DIR / "seeds" / "marts" / f"{table}.csv").exists():
+            return "referencia"  # tabela de referência curada à mão (seed): não tem pasta de modelo
         raise ValueError(f"mart {table} sem pasta de domínio em dbt/models/marts")
     return found[0].parent.name
 
@@ -259,6 +261,15 @@ def _catalog(entries: list[dict[str, Any]], file: Path, base: str, meta: dict[st
         (meta["id_execucao"], meta["dt_exportacao"], meta["versao_commit"]),
     )
     cat.execute("COMMENT ON TABLE metadata.exportacao IS 'Execução do export que gerou o lake publicado.'")
+    for col, desc in (
+        ("id_execucao", "Identificador da execução do export que gerou o lake publicado."),
+        ("dt_exportacao", "Instante (UTC) em que o export gerou o lake publicado."),
+        (
+            "versao_commit",
+            "Commit do código que fez o export; termina em +dirty se havia alteração não commitada.",
+        ),
+    ):
+        cat.execute(f"COMMENT ON COLUMN metadata.exportacao.{col} IS '{_q(desc)}'")
     cat.close()
 
 
@@ -320,14 +331,14 @@ def _index(settings: Settings) -> Path:
 
 
 def publish_docs(settings: Settings) -> list[str]:
-    """Sobe ao R2 o dbt e o Elementary (`docs/`) e a página inicial do lake (`index.html`).
+    """Sobe ao R2 o dbt e o Elementary (`docs/`) e a página inicial do lake (`docs/index.html`).
 
     Roda depois do `export`, com o warehouse livre (o dbt e o `edr` o abrem). Sem R2, não faz nada.
     """
     if not _r2():
         return []
     pages = {"dbt": dbt.static_docs(settings), "qualidade": observability.html_report(settings)}
-    keys = {f"docs/{name}.html": file for name, file in pages.items()} | {"index.html": _index(settings)}
+    keys = {f"docs/{name}.html": file for name, file in pages.items()} | {"docs/index.html": _index(settings)}
     for key, file in keys.items():
         r2_request("PUT", key, file, "text/html; charset=utf-8")
     return list(keys)
@@ -414,6 +425,8 @@ def export(
                 "nada foi apagado nem publicado. "
                 "Confira o warehouse ou use --prune para retirá-las do lake"
             )
+        for schema, table in relations:
+            _key(models, schema, table)  # falha cedo, antes de gravar qualquer arquivo
         for schema, table in relations:
             description, columns = _describe(con, schema, table)
             if not columns:
