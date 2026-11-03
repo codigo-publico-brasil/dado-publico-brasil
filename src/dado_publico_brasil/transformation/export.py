@@ -5,7 +5,7 @@ do DuckDB, sem cópia local) se DADO_PUBLICO_R2_* estiver completo; senão `<sto
 
     staging/<poder>/<esfera>/<fonte>/<modelo>    (a árvore de `sources/`; a fonte sai de `stg_<fonte>__...`)
     intermediate/<modelo>
-    marts/<dominio>/<tabela>                     (domínio = pasta do modelo no dbt; sem as views `app_`)
+    marts/<dominio>/<tabela>                     (domínio = pasta do modelo no dbt)
     metadata/capturas
 
 Cada tabela é `<caminho>.parquet` (um arquivo, ordenado pelo período se tiver `meta.particao`) ou, se tiver
@@ -155,8 +155,7 @@ def _relations(con: warehouse.Connection) -> list[tuple[str, str]]:
             f"WHERE database_name = current_database() AND NOT internal AND schema_name IN ({marks})",
             (*LAYERS, *LAYERS),
         ).fetchall()
-        if not (s == "marts" and t.startswith("app_"))
-        and not (s == "staging" and _source(t) in (None, *PRIVATE_SOURCES))
+        if not (s == "staging" and _source(t) in (None, *PRIVATE_SOURCES))
     }
     return sorted(found | set(EXTRA), key=lambda r: (LAYERS.index(r[0]) if r[0] in LAYERS else 9, r[1]))
 

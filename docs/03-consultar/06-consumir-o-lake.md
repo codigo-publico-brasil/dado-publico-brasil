@@ -101,6 +101,10 @@ FROM dim_pessoas AS p JOIN capturas AS c ON c.id_captura = p.id_captura_tse
 
 Mesmo caminho para os demais: `fct_candidaturas.id_captura` e `fct_campanhas.id_captura_receitas|despesas|bens` (arquivos do TSE), `dim_pessoas_cadastro.id_captura` (Câmara ou Senado). Um aplicativo que lê o lake lê a ficha de `dim_pessoas` (atributos já resolvidos, com `fonte_*` ao lado; todas as pessoas do projeto) e junta `dim_pessoas_cadastro` (só Câmara e Senado) para contato, gabinete, redes, situação e falecimento. As campanhas saem de `fct_candidaturas` (`fl_eleito` é o eleito informado ou derivado; `base_eleicao` diz qual), `dim_eleicoes`, `dim_disputas`, `dim_cargos`, `dim_partidos`, `fct_campanhas` e `metadata/capturas`.
 
+## O que um aplicativo lê
+
+Só os marts do lake e `metadata/capturas`. Não há views `app_*` (o prefixo não existe mais, [ADR 0041](../05-decisoes/0041-eleito-completo-e-fim-das-views-app.md)): cada aplicativo monta as suas consultas, e a regra de negócio já está nos marts (ocupação de cargo em `fct_cargos_ocupacoes`, ficha em `dim_pessoas`, eleito em `fct_candidaturas.fl_eleito`).
+
 ## Cuidados
 
 - O caminho é sempre o dado **atual**: não há pasta por versão. Para citar um número, anote o `id_execucao` de `metadata.exportacao` (ou do `manifesto.json`) e guarde o resultado.
