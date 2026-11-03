@@ -39,6 +39,7 @@ import os
 import re
 import shutil
 import threading
+import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
@@ -68,6 +69,7 @@ ROW_GROUP = 500_000  # entre 122.880 e 1 milhão de linhas por grupo
 MEMORY_LIMIT = "4GB"  # a máquina do mantenedor tem 8 GB
 ENV_URL = "DADO_PUBLICO_LAKE_URL"
 _LOCAL = threading.local()  # uma conexão HTTPS persistente por thread de envio
+ATTEMPTS = 6  # tentativas por requisição ao R2
 UPLOADS = 16  # envios simultâneos ao R2
 CACHE_CONTROL = "public, max-age=86400, must-revalidate"  # caminho estável, conteúdo pode mudar
 CONTROL_DESCRIPTION = "Arquivos da coleção %s, um por linha, com hash e a captura de origem (ADR 0037)."
@@ -361,7 +363,9 @@ def r2_request(
     if path:
         sent["Content-Length"] = str(path.stat().st_size)
     with path.open("rb") if path else nullcontext() as body:
-        for attempt in (1, 2):  # a conexão persistente pode ter sido fechada pelo servidor: reabre uma vez
+        for attempt in range(
+            1, ATTEMPTS + 1
+        ):  # erro transitório (5xx, 429, conexão fechada): espera e tenta de novo
             conn = getattr(_LOCAL, "conn", None) or http.client.HTTPSConnection(host, timeout=3600)
             _LOCAL.conn = conn
             try:
@@ -370,15 +374,17 @@ def r2_request(
                 conn.request(method, uri, body=body, headers=sent)
                 response = conn.getresponse()
                 detail = response.read()
-            except (http.client.HTTPException, OSError):
+                failure = None if response.status < 300 else f"HTTP {response.status} {detail[:200]!r}"
+                retry = response.status == 429 or response.status >= 500
+            except (http.client.HTTPException, OSError) as error:
                 conn.close()
                 _LOCAL.conn = None
-                if attempt == 2:
-                    raise
-                continue
-            if response.status >= 300:
-                raise RuntimeError(f"R2 {method} {key}: HTTP {response.status} {detail[:200]!r}")
-            return
+                failure, retry = repr(error), True
+            if failure is None:
+                return
+            if not retry or attempt == ATTEMPTS:
+                raise RuntimeError(f"R2 {method} {key}: {failure}")
+            time.sleep(min(2**attempt, 30))
 
 
 def _index(settings: Settings) -> Path:

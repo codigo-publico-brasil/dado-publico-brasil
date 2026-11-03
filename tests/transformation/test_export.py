@@ -11,6 +11,7 @@ import json
 import mimetypes
 import shutil
 import threading
+import time
 import zipfile
 from pathlib import Path
 
@@ -571,3 +572,38 @@ def test_the_signed_upload_carries_content_type_cache_control_and_checksum(
     assert seen["content-type"] == "image/jpeg" and seen["cache-control"] == export.CACHE_CONTROL
     assert seen["x-amz-checksum-sha256"] == base64.b64encode(hashlib.sha256(b"abc").digest()).decode()
     assert "cache-control" in seen["authorization"] and "x-amz-checksum-sha256" in seen["authorization"]
+
+
+def test_a_transient_r2_error_is_retried(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    statuses = [500, 429, 200]
+
+    class Response:
+        def __init__(self) -> None:
+            self.status = statuses.pop(0)
+
+        def read(self) -> bytes:
+            return b"erro"
+
+    class Conn:
+        def __init__(self, host: str, timeout: int) -> None: ...
+
+        def request(self, method: str, uri: str, body: object, headers: dict[str, str]) -> None: ...
+
+        def getresponse(self) -> Response:
+            return Response()
+
+        def close(self) -> None: ...
+
+    keys = ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "BUCKET")
+    monkeypatch.setattr(export, "_r2", lambda: dict.fromkeys(keys, "x"))
+    monkeypatch.setattr(http.client, "HTTPSConnection", Conn)
+    monkeypatch.setattr(export, "_LOCAL", threading.local())
+    monkeypatch.setattr(time, "sleep", lambda _: None)
+    file = tmp_path / "f.jpg"
+    file.write_bytes(b"abc")
+    export.r2_request("PUT", "k/f.jpg", file, "image/jpeg")
+    assert statuses == []  # duas falhas transitórias e a terceira tentativa passou
+
+    statuses[:] = [403]
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        export.r2_request("PUT", "k/f.jpg", file, "image/jpeg")
