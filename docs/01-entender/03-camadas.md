@@ -120,6 +120,8 @@ O arquivo DuckDB é só o motor de cálculo. Um único arquivo DuckDB, com um es
 
 **Sem banco de serviço** ([ADR 0038](../05-decisoes/0038-lake-como-unica-publicacao.md)). O dbt roda só no DuckDB e o `export` grava o lake; cada aplicação lê os marts do Parquet e monta as suas próprias consultas, no banco que quiser.
 
+**Os marts são a camada semântica** ([ADR 0039](../05-decisoes/0039-marts-como-camada-semantica.md)). A regra de negócio vive neles, com teste de dado e unit test; a aplicação só junta nomes e filtra. Mudança de mart é aditiva, e o que não vem da fonte é marcado `derivado`. Exemplo: quem ocupa cada cargo está em `fct_cargos_ocupacoes` ([ADR 0040](../05-decisoes/0040-ocupacao-de-cargo.md)), e `app_cargo_ocupantes` só junta os nomes.
+
 **Cópia imutável da identidade.** A chave `id_pessoa` não pode mudar depois de entregue a uma aplicação, e reconstruir a partir do landing não garante as mesmas chaves. Quando a identidade muda, a execução grava `snapshots/identity/<data-hora>/` (um Parquet compactado por tabela de `identity`) dentro da pasta de armazenamento; nunca se sobrescreve. Se a identidade é igual à cópia mais recente, nada é gravado (a pipeline roda várias vezes por dia e a identidade quase não muda). `dado-publico verify` confere se a cópia mais recente é igual à identidade do warehouse.
 
 ## Caixa dos textos

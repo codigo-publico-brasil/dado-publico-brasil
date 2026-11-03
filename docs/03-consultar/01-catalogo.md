@@ -197,7 +197,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
 | `agg_composicoes` | Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje), por território e partido. A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes. | publico | corte |
-| `app_cargo_ocupantes` | Quem ocupa cada cargo, uma linha por período de ocupação; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. Deputado federal e senador vêm do exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu e eleito em eleição suplementar); quem foi eleito e ainda não assumiu e os demais cargos vêm do mandato da eleição, com o fim previsto pela duração do cargo (cassação e renúncia desses cargos não aparecem, issue 162). Sem data de posse, entra com dt_inicio vazio e ano_inicio preenchido. | publico-agente-publico | período de ocupação |
+| `app_cargo_ocupantes` | Quem ocupa cada cargo, uma linha por período de ocupação; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. Só junta nomes a fct_cargos_ocupacoes, que traz a regra (ADR 0040). Deputado federal e senador vêm do exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu e eleito em eleição suplementar); quem foi eleito e ainda não assumiu e os demais cargos vêm do mandato da eleição, com o fim previsto pela duração do cargo (cassação e renúncia desses cargos não aparecem, issue 162). Sem data de posse, entra com dt_inicio vazio e ano_inicio preenchido. | publico-agente-publico | período de ocupação |
 | `app_pessoa_campanhas` | Todas as candidaturas da pessoa, com foto, resultado e campanha, tenha ela vencido ou não. Só candidaturas de quem tem pessoa no projeto (quem já foi eleito). | publico-agente-publico | candidatura |
 | `app_pessoas` | A ficha cadastral de cada pessoa do projeto (quem já foi eleito), com a foto. O cadastro de contato, escolaridade e profissões só existe para quem passou pela Câmara ou pelo Senado e fica vazio para os demais. | publico-agente-publico | pessoa |
 | `brg_frentes_membros` | Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título. | publico-agente-publico | pessoa |
@@ -223,12 +223,13 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fct_candidaturas` | Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era, por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer novato. | publico-agente-publico | candidatura |
 | `fct_candidaturas_bens` | Bens declarados à Justiça Eleitoral por candidatos que já são pessoa do projeto, de 2006 em diante, como o TSE publica (valor declarado, sem correção). Uma linha por bem. | publico-agente-publico | candidatura e bem |
 | `fct_candidaturas_votos` | Votos de cada candidatura de quem já é pessoa do projeto, somados dos municípios e zonas, nas eleições gerais já carregadas. Uma linha por candidatura e turno. | publico-agente-publico | candidatura e turno |
+| `fct_cargos_ocupacoes` | Cada período em que uma pessoa ocupa um cargo num território: a camada semântica da ocupação, que junta o exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu, eleito em eleição suplementar) e o mandato da eleição (fct_mandatos), que cobre quem foi eleito e ainda não assumiu e os cargos sem fonte de exercício (vereador, prefeito, governador, presidente, deputado estadual), com o fim previsto pela duração do cargo. O exercício vence: o mandato que ele cumpre não gera outra linha. Cassação e renúncia dos cargos sem exercício não aparecem (issue 162). Quem filtra a data usa dt_inicio e dt_fim. | publico-agente-publico | período de ocupação |
 | `fct_constituicao_alteracoes` | Cada indicação de emenda que o texto da Constituição traz entre parênteses, por dispositivo (por exemplo, Redação dada pela Emenda Constitucional nº 45, de 2004). Uma linha por dispositivo e emenda citada. | publico | dispositivo e emenda citada |
 | `fct_emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
 | `fct_emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
 | `fct_emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês. | publico-dados-pessoais-de-terceiros | emenda |
 | `fct_eventos` | A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto livre). O tipo vem do catálogo fechado dim_evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data, retorno de afastamento) ainda não têm linha: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fct_eventos. | publico-agente-publico | evento da pessoa |
-| `fct_exercicios` | Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Nada é derivado de regra. Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos). O nome do modelo leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fct_exercicios. | publico-agente-publico | período de exercício |
+| `fct_exercicios` | Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Os campos da fonte não são derivados; as colunas que ligam o período ao resto (id_candidatura, id_partido) são derivadas e marcadas (base_partido). Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos; a ocupação dos dois juntos, em fct_cargos_ocupacoes). O nome do modelo leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fct_exercicios. | publico-agente-publico | período de exercício |
 | `fct_mandatos` | Um mandato por candidatura eleita, de todos os cargos (inclusive vereador e o vice e os suplentes eleitos junto): o mandato nasce da eleição, não do exercício. Quem assumiu depois como suplente não tem linha aqui (será fct_exercicios). O início vem da regra da Constituição com a vigência (dim_cargos_posse); onde a Constituição não fixa a data, da data de posse do TSE quando plausível. O fim é sempre derivado da duração do cargo. Só TSE; a ligação com a pessoa do projeto virá com as pessoas de todos os eleitos. O nome do modelo leva o prefixo fatos_ só porque fct_mandatos ainda existe; a tabela é fct_mandatos. | publico-agente-publico | mandato (candidatura eleita) |
 | `fct_normas` | Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...) desde 1808, só metadados; o texto integral não vem desta fonte. Uma linha por norma. | publico | norma |
 | `fct_normas_geradas` | Norma jurídica que resultou de uma matéria, com número, datas e veículo de publicação. Só o Senado informa por enquanto. Uma linha por matéria. | publico | matéria |
@@ -671,6 +672,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_captura_bens` | bigint | Captura do arquivo de bens de origem; vazia sem bens. |  |
 | `id_captura_receitas` | bigint | Captura do arquivo de receitas de origem; vazia sem receitas. |  |
 | `id_captura_despesas` | bigint | Captura do arquivo de despesas de origem; vazia sem despesas. |  |
+| `dt_captura` | date | Data da captura mais recente entre os arquivos de bens, receitas e despesas de origem; as capturas de cada arquivo estão em id_captura_bens, id_captura_receitas e id_captura_despesas. |  |
 
 ### marts.fct_candidaturas
 
@@ -679,6 +681,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fonte` | varchar | Fonte oficial do registro (tse). |  |
 | `id_candidatura` | varchar | Identificador da candidatura: ano da eleição, unidade eleitoral e sequencial do candidato, como o TSE informa. |  |
 | `id_disputa` | varchar | Disputa da candidatura (dim_disputas); vazio quando o arquivo de vagas do TSE não traz a unidade do candidato. O teste de aviso mede quantas ficam assim. |  |
+| `id_eleicao` | varchar | Eleição da candidatura (dim_eleicoes), achada pelo ano e pelo código da eleição do arquivo de candidaturas, sem depender da disputa. Vazia quando o arquivo de vagas não traz essa eleição; o teste de aviso mede quantas. |  |
 | `sq_candidato` | bigint | Número sequencial do candidato na eleição, como o TSE informa; liga ao nome do arquivo de foto. |  |
 | `numero` | varchar | Número do candidato na urna. |  |
 | `numero_partido` | varchar | Número do partido na urna, como o TSE informa. Não identifica o partido ao longo do tempo: o mesmo número já foi usado por partidos diferentes (por exemplo, um número foi de um partido e depois de outro). |  |
@@ -700,6 +703,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `qtd_turnos` | integer | Número do último turno em que a candidatura consta (2 quando foi ao segundo turno). |  |
 | `resultado` | varchar | Resultado do último turno como o arquivo de candidaturas do TSE informa (eleito, suplente, não eleito, 2º turno); vazio quando o TSE não informa, como o 2º turno de presidente de 2006. |  |
 | `fl_eleito` | boolean | Verdadeiro quando o TSE marca a candidatura como eleita em algum turno. Falso não quer dizer derrota quando o resultado está vazio. |  |
+| `base_eleicao` | varchar | Como se sabe que a candidatura foi eleita: informado pelo TSE ou DERIVADO dos votos pela Constituição (int_tse_eleitos). Vazia para quem não foi eleito. Não muda o significado de fl_eleito, que segue só o resultado informado pelo TSE. |  |
 | `fl_mais_votado_no_ultimo_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no último turno com votos. Vazio sem votos carregados ou em cargo de várias vagas. |  |
 | `id_pessoa_tse` | varchar | Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato. |  |
 | `id_pessoa` | bigint | Pessoa do projeto (dim_pessoas) quando a candidatura é de alguém eleito alguma vez ou que foi deputado ou senador (ligada pelo nome e o nascimento); vazio para quem nunca foi eleito, por regra (ADR 0031). |  |
@@ -741,6 +745,28 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `municipios` | bigint | Em quantos municípios o candidato teve votos. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+
+### marts.fct_cargos_ocupacoes
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_ocupacao` | varchar | Identificador do período: a base (exercicio ou mandato) e o identificador do exercício ou da candidatura de origem. |  |
+| `fonte` | varchar | Fonte oficial do registro de origem (camara e senado para o exercício; tse para o mandato). |  |
+| `id_pessoa` | bigint | Pessoa que ocupa o cargo (dim_pessoas). |  |
+| `id_cargo` | varchar | Cargo ocupado (dim_cargos); vazio no mandato de candidatura sem disputa (o teste de aviso mede). |  |
+| `id_territorio` | varchar | Território do cargo (dim_territorios); vazio onde a fonte não liga a um território (o teste de aviso mede). |  |
+| `id_partido` | integer | Partido da pessoa na ocupação (dim_partidos). Por ordem: o da candidatura do TSE (o mandato), o informado pelo histórico da Câmara e o derivado do último registro (fct_exercicios); base_partido diz qual. Vazio sem registro de partido (o teste de aviso mede). |  |
+| `base_partido` | varchar | informado (candidatura do TSE ou histórico da Câmara) ou derivado (último partido registrado da pessoa até o ano do início). Vazia quando id_partido é vazio. |  |
+| `id_candidatura` | varchar | Mandato eleito (fct_mandatos) a que a ocupação pertence; vazio para o suplente que assumiu e para o eleito em eleição suplementar. |  |
+| `id_exercicio` | varchar | Exercício publicado (fct_exercicios) que originou a ocupação; vazio quando a ocupação vem só do mandato. |  |
+| `ano_inicio` | integer | Ano em que a ocupação começa: o do exercício, ou o ano seguinte ao da eleição no mandato. Preenchido mesmo sem dt_inicio. |  |
+| `dt_inicio` | date | Dia do início; vazio quando o dia não está numa fonte nem numa regra (por exemplo, deputado estadual de 2026, que depende da constituição de cada estado). |  |
+| `base_dt_inicio` | varchar | informado (a fonte do exercício, ou a data de posse do TSE onde a Constituição não fixa a data) ou derivado (regra da Constituição para o cargo). Vazia quando dt_inicio é vazio. |  |
+| `dt_fim` | date | Fim da ocupação: o fim real do exercício quando a fonte o registra, senão o fim do mandato, previsto pela duração do cargo. Vazio quando o início é vazio. Com dt_inicio, diz quem ocupa o cargo em uma data. |  |
+| `base_dt_fim` | varchar | informado (a Câmara ou o Senado registra o fim do exercício) ou previsto (fim do mandato pela duração do cargo, sem cassação, renúncia nem morte). Vazia quando dt_fim é vazio. |  |
+| `base_ocupacao` | varchar | exercicio (período em que a Câmara ou o Senado registra a pessoa em exercício) ou mandato (período da eleição, sem exercício publicado). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.fct_constituicao_alteracoes
 
@@ -848,6 +874,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_partido` | integer | Partido do evento (dim_partidos), quando o tipo exige. |  |
 | `base` | varchar | Como o evento é obtido: informado pela fonte ou derivado de regra do projeto. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto. |  |
+| `fonte` | varchar | Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento, a fonte do cadastro. Vazia no falecimento, que junta fontes sem captura própria (o teste de aviso mede). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem do fato; vazia quando o evento não tem id_captura. |  |
 
 ### marts.fct_exercicios
 
@@ -855,6 +883,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `fonte` | varchar | Fonte oficial do registro (camara ou senado). |  |
 | `id_exercicio` | varchar | Identificador do período: fonte e identificador da fonte (Câmara: deputado, legislatura e momento da entrada). |  |
+| `id_territorio` | varchar | Território representado (dim_territorios): a UF que a fonte informa, ligada pela sigla. Vazio quando a fonte não informa a UF (o teste de aviso mede). |  |
+| `id_candidatura` | varchar | DERIVADO: o mandato (fct_mandatos) que o período cumpre, o da mesma pessoa e cargo cuja janela contém o início do período, com 31 dias de folga antes da posse para o registro. Vazio para o suplente e para o eleito em eleição suplementar, que não têm mandato eleito. |  |
+| `id_partido` | integer | Partido da pessoa no início do período (dim_partidos); base_partido diz se é informado ou derivado. Vazio quando nenhum registro de partido da pessoa vale até o ano do início (o teste de aviso mede). |  |
+| `base_partido` | varchar | informado: o partido do histórico da Câmara que cobre o início do período. derivado: o último partido registrado da pessoa até o ano do início (fct_pessoas_partidos); vale para o Senado, que não publica o partido do exercício. Vazia quando id_partido é vazio. |  |
 | `id_pessoa` | bigint | Pessoa do projeto (dim_pessoas_cadastro); vazio se a ligação não existe (o teste de aviso mede). |  |
 | `id_cargo` | varchar | Cargo exercido (dim_cargos): deputado_federal ou senador (suplente em exercício ocupa a vaga do titular). |  |
 | `condicao_na_fonte` | varchar | Condição como a fonte informa (Câmara: Titular, Suplente, Efetivado; Senado: Titular, 1º Suplente, 2º Suplente); vazia quando a fonte não informa. |  |
@@ -887,6 +919,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_fim_prevista` | date | DERIVADO: dt_inicio mais a duração do cargo na Constituição, menos um dia. É o fim previsto, não o fim real (cassação, renúncia e morte não entram). |  |
 | `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.capturas). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `ano_inicio` | integer | DERIVADO: ano da eleição (dim_eleicoes) mais um, o ano em que o mandato começa pela Constituição e pelas eleições ordinárias; preenchido mesmo sem data de posse. Vazio só quando a disputa não tem eleição (o teste de aviso mede). |  |
+| `tipo_mandato` | varchar | DERIVADO, comparando com o mandato anterior da mesma pessoa no mesmo cargo (e na mesma unidade, abaixo do nível federal): reeleito (o anterior é da eleição de um mandato atrás), retorno (houve intervalo) ou novato (não há anterior e a base de eleições já cobria o ciclo anterior). Vazio quando não há prova: sem prova nada é afirmado. |  |
 
 ### marts.fct_normas
 

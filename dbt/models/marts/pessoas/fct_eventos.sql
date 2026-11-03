@@ -201,8 +201,16 @@ eventos as (
 
 )
 
+-- `fonte` e `dt_captura` vêm da captura do fato de origem; o nascimento traz a fonte do cadastro e o falecimento fica
+-- sem, porque a data junta duas fontes sem captura própria.
 select
-    id_tipo_evento || ':' || fato_origem || ':' || id_fato_origem as id_evento,
-    *
+    e.id_tipo_evento || ':' || e.fato_origem || ':' || e.id_fato_origem as id_evento,
+    e.*,
+    coalesce(k.fonte, n.fonte_dt_nascimento) as fonte,
+    cast(k.dt_captura as date) as dt_captura
 
-from eventos
+from eventos as e
+
+left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = e.id_captura
+
+left join {{ ref('dim_pessoas') }} as n on e.id_tipo_evento = 'nascimento' and n.id_pessoa = e.id_pessoa

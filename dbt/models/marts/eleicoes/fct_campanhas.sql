@@ -3,7 +3,9 @@
 -- foi carregado ou não traz o candidato; a lacuna aparece em teste, não escondida em zero.
 with bens as (
 
-    select id_candidatura, count(*) as qtd_bens, sum(valor) as valor_bens, max(id_captura) as id_captura_bens
+    select
+        id_candidatura, count(*) as qtd_bens, sum(valor) as valor_bens, max(id_captura) as id_captura_bens,
+        max(dt_captura) as dt_captura
     from {{ ref('stg_tse__bens') }}
     group by 1
 
@@ -16,7 +18,8 @@ receitas as (
         count(*) as qtd_receitas,
         sum(valor) as valor_receitas,
         max(dt_prestacao) as dt_prestacao,
-        max(id_captura) as id_captura_receitas
+        max(id_captura) as id_captura_receitas,
+        max(dt_captura) as dt_captura
     from {{ ref('stg_tse__receitas_candidatos') }}
     group by 1
 
@@ -29,7 +32,8 @@ despesas as (
         count(*) as qtd_despesas,
         sum(valor) as valor_despesas,
         max(dt_prestacao) as dt_prestacao,
-        max(id_captura) as id_captura_despesas
+        max(id_captura) as id_captura_despesas,
+        max(dt_captura) as dt_captura
     from {{ ref('stg_tse__despesas_candidatos') }}
     group by 1
 
@@ -57,7 +61,9 @@ select
     greatest(r.dt_prestacao, d.dt_prestacao) as dt_prestacao,
     b.id_captura_bens,
     r.id_captura_receitas,
-    d.id_captura_despesas
+    d.id_captura_despesas,
+    -- a mais recente entre os arquivos de origem
+    cast(greatest(b.dt_captura, r.dt_captura, d.dt_captura) as date) as dt_captura
 
 from candidaturas as c
 

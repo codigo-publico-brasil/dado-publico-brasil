@@ -29,6 +29,8 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0036](0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md) | R2 privado é a fonte da verdade da identidade e do metadata; disco local descartável; landing só local por ora (risco aceito) | proposto; complementa 0014 (item 4) e 0035 (item 7) |
 | [0037](0037-arquivos-no-lake-com-prefixo-arq.md) | Arquivos (DOU, fotos) no lake público: pasta `arq_` na camada da fonte, com tabela de controle `arq_<nome>.parquet`; publicar é opt-in por dataset | proposto (decisão do fundador); altera 0035 (item 7) e 0036 (fotos) |
 | [0038](0038-lake-como-unica-publicacao.md) | O lake é a única publicação: sem PostgreSQL de serviço, cada aplicação monta as suas consultas sobre os marts | proposto (decisão do fundador); substitui 0034 e altera 0014 e 0033 |
+| [0039](0039-marts-como-camada-semantica.md) | Os marts são a camada semântica: regra de negócio nos marts (não nas `app_*`), mudança só aditiva, derivado sempre marcado | proposto (desenho aprovado pelo fundador); altera 0038 (itens 3 e 4) |
+| [0040](0040-ocupacao-de-cargo.md) | Ocupação de cargo como fato (`fct_cargos_ocupacoes`): exercício publicado vence, mandato cobre o resto | proposto (desenho aprovado pelo fundador); complementa 0039 e 0030 |
 
 ### Estrutura do repositório e das camadas
 
