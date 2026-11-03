@@ -34,7 +34,11 @@ TRIES = 3
 
 
 class SourceBlocked(Exception):
-    """A fonte nos barrou (403/429, HTML no lugar do arquivo, outro host): não se insiste."""
+    """A fonte nos barrou (403/405/429, HTML no lugar do arquivo, outro host): não se insiste."""
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class Pace:
@@ -78,8 +82,8 @@ def _open(
     try:
         response = urllib.request.urlopen(_request(url, headers, method), timeout=timeout)
     except urllib.error.HTTPError as error:
-        if error.code in (403, 429):
-            raise SourceBlocked(f"{url}: HTTP {error.code}") from error
+        if error.code in (403, 405, 429):
+            raise SourceBlocked(f"{url}: HTTP {error.code}", error.code) from error
         raise
     if _site(response.url) != _site(url):
         response.close()

@@ -81,6 +81,7 @@ models:
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_transparencia__despesas
     description: Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa, com os valores empenhado, liquidado e pago. Não traz favorecido (o arquivo não o publica).
+    meta: {sensitivity: publico-agente-publico, grain: "mês, órgão subordinado, unidade gestora, gestão, unidade orçamentária, plano orçamentário, subtítulo, localizador, autor da emenda, elemento e modalidade da despesa"}
     columns:
       - {name: dt_lancamento, description: "Mês do lançamento da despesa (primeiro dia do mês; a fonte traz AAAA/MM).", tests: ["not_null"]}
       - {name: cd_orgao_superior, description: "Código SIAFI do órgão superior (ministério ou equivalente), como a fonte informa."}
@@ -136,7 +137,7 @@ models:
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_transparencia__compras
     description: "Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado pessoa física vem com CPF completo na fonte e sai mascarado aqui."
-    meta: {sensitivity: publico-dados-pessoais-de-terceiros}
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "numero_contrato + cd_ug"}
     columns:
       - {name: numero_contrato, description: "Número do contrato, como a fonte informa (único só junto com a unidade gestora).", tests: ["not_null"]}
       - {name: objeto, description: "Objeto do contrato, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing). Pode ser `Informação protegida por sigilo`."}
@@ -169,6 +170,7 @@ models:
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_transparencia__compras_itens
     description: Itens dos contratos do governo federal.
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "numero_contrato + cd_ug + cd_item"}
     columns:
       - {name: cd_orgao, description: "Código SIAFI do órgão contratante."}
       - {name: orgao, description: "Nome do órgão contratante."}
@@ -187,6 +189,7 @@ models:
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_transparencia__compras_termos_aditivos
     description: Termos aditivos dos contratos do governo federal.
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "numero_contrato + cd_ug + numero_termo_aditivo"}
     columns:
       - {name: numero_contrato, description: "Número do contrato aditado (liga a `stg_transparencia__compras` junto com a unidade gestora).", tests: ["not_null"]}
       - {name: cd_orgao_superior, description: "Código SIAFI do órgão superior (ministério ou equivalente)."}

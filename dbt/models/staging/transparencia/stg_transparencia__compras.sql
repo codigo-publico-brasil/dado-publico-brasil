@@ -1,4 +1,4 @@
--- Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado (nome e código) fica de fora: pessoa física vem com CPF completo.
+-- Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado (nome e código) entra mascarado: pessoa física vem com CPF completo no raw.
 with base as (
 
 select

@@ -159,10 +159,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_senado__vetos_votos` | Voto nominal de cada deputado e senador num dispositivo vetado, sem o código do parlamentar. | publico-agente-publico |  |
 | `stg_senado__votacoes` | Votações em plenário com resultado, totais e a matéria votada. Votação secreta tem `secreta` verdadeiro. | publico-agente-publico |  |
 | `stg_senado__votos` | Voto de cada senador em cada votação nominal. Em votação secreta a sigla é "Votou". | publico-agente-publico |  |
-| `stg_transparencia__compras` | Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado pessoa física vem com CPF completo na fonte e sai mascarado aqui. | publico-dados-pessoais-de-terceiros |  |
-| `stg_transparencia__compras_itens` | Itens dos contratos do governo federal. | publico-agente-publico |  |
-| `stg_transparencia__compras_termos_aditivos` | Termos aditivos dos contratos do governo federal. | publico-agente-publico |  |
-| `stg_transparencia__despesas` | Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa, com os valores empenhado, liquidado e pago. Não traz favorecido (o arquivo não o publica). | publico-agente-publico |  |
+| `stg_transparencia__compras` | Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado pessoa física vem com CPF completo na fonte e sai mascarado aqui. | publico-dados-pessoais-de-terceiros | numero_contrato + cd_ug |
+| `stg_transparencia__compras_itens` | Itens dos contratos do governo federal. | publico-dados-pessoais-de-terceiros | numero_contrato + cd_ug + cd_item |
+| `stg_transparencia__compras_termos_aditivos` | Termos aditivos dos contratos do governo federal. | publico-dados-pessoais-de-terceiros | numero_contrato + cd_ug + numero_termo_aditivo |
+| `stg_transparencia__despesas` | Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa, com os valores empenhado, liquidado e pago. Não traz favorecido (o arquivo não o publica). | publico-agente-publico | mês, órgão subordinado, unidade gestora, gestão, unidade orçamentária, plano orçamentário, subtítulo, localizador, autor da emenda, elemento e modalidade da despesa |
 | `stg_transparencia__emendas` | Emendas parlamentares, uma linha por emenda, localidade, função, programa e ação. | publico-agente-publico |  |
 | `stg_transparencia__emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico-agente-publico |  |
 | `stg_transparencia__emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica (inclui pessoa física, com CPF mascarado). | publico-agente-publico |  |

@@ -124,11 +124,16 @@ Para fontes que publicam um arquivo por mês (o DOU, e as de transparência do e
 
 O plano incremental pede o mês em curso **e o anterior**: o mês fechado sem mudança custa só um HEAD, e a virada do mês não perde o fim dele. Um 404 do mês anterior não o torna "indisponível" (só os meses mais antigos viram lacuna sem tentativa eterna).
 
+- **`lag_months: 1`** (só `partition: month`) pede só meses fechados: o "mês em curso" do plano passa a ser o anterior (o portal publica o mês depois de fechado). Um 403 no mês mais recente é "ainda não publicado" (`availability`, sem bloqueio); em mês mais antigo, 403 é bloqueio. [ADR 0041](../05-decisoes/0041-meses-fechados-405-e-pacote-unico.md).
+- **Vários datasets, um zip:** URLs que diferem só no fragmento `#` leem o mesmo arquivo; o primeiro dataset baixa e os demais registram a captura apontando para o mesmo arquivo do landing (um GET por mês), se o HEAD diz que não mudou.
+- **Mês republicado:** o `write: merge` com `_row_hash` só insere linhas novas; **não apaga** a linha antiga de um mês que a fonte republicou com valor diferente. As duas ficam no raw (a antiga com `id_captura` da captura antiga). Para recomeçar um mês limpo, `--rebuild` do dataset. Cada staging declara o grão em `meta.grain` e um teste `warn` (`transparencia_linhas_duplicadas_no_grao`) mede as duplicatas.
+- **Frequência da conferência:** o plano diário pede os dois últimos meses fechados (dois HEAD por dataset); `max_age_days: 40` evita o alerta de defasagem. Um intervalo próprio para meses fechados é pendência (hoje seria um `schedule` por dataset, que o contrato ainda não tem).
+
 ## Cortesia e bloqueio
 
 `access.rate_limit` (requisições por segundo, padrão 4; deve ser maior que zero) é o intervalo mínimo entre as requisições do **download padrão** (HEAD e GET do arquivo) da fonte. **Não vale** para `fetch.get` (datasets `foreach`, que têm o próprio intervalo) nem para módulos `custom/` que fazem a própria requisição.
 
-No download padrão, nada é gravado no landing e o resto da fonte é interrompido naquela execução (sem nova tentativa até o próximo agendamento; a verificação `bloqueio` fica como erro em `metadata.fontes_verificacoes` e é zerada quando a fonte volta a responder) se o **GET** devolve HTTP 403 ou 429, página HTML no lugar do arquivo ou redirecionamento para outro site. Detalhes:
+No download padrão, nada é gravado no landing e o resto da fonte é interrompido naquela execução (sem nova tentativa até o próximo agendamento; a verificação `bloqueio` fica como erro em `metadata.fontes_verificacoes` e é zerada quando a fonte volta a responder) se o **GET** devolve HTTP 403, 405 ou 429 ([ADR 0041](../05-decisoes/0041-meses-fechados-405-e-pacote-unico.md) acrescentou o 405), página HTML no lugar do arquivo ou redirecionamento para outro site. Detalhes:
 
 - **HEAD é brando:** qualquer falha do HEAD (403, 405, 429...) vira "sem informação" e o GET decide; só o GET bloqueia.
 - **HTML legítimo:** a regra do HTML não vale quando o formato esperado é `html` (`format: html`).

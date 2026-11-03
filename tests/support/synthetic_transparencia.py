@@ -115,16 +115,20 @@ COMPRAS = [
     "900052024;;;;",
     "000022024;Serviço pessoal;;Dispensa;Ativo;30000;Ministério A;30108;Órgão B;200384;UG C;25/01/2024;;25/01/2024;"
     "25/01/2025;12345678909;PESSOA EXEMPLO;1000,0000;1000,0000;;;;;",
+    "000032024;Informação protegida por sigilo nos termos da legislação vigente;;Sem Informação;Não se aplica;30000;"
+    "Ministério A;30108;Órgão B;200384;UG C;26/01/2024;;26/01/2024;26/01/2025;-11;Sigiloso;500,0000;500,0000;;;;;",
 ]
 ITENS_COMPRA = [
     "Código Órgão;Nome Órgão;Código UG;Nome UG;Número Contrato;Código Item Compra;Descrição Item Compra;"
     "Descrição Complementar Item Compra;Quantidade Item;Valor Item",
     "30108;Órgão B;200384;UG C;000012024;200384059006220240001;LIMPEZA;LIMPEZA DE PREDIO;1,5;205690,00",
+    "30108;Órgão B;200384;UG C;000022024;200384059006220240002;SERVICO;CONTRATADO CPF 987.654.321-00;1;1000,00",
 ]
 TERMOS_ADITIVOS = [
     "Número Contrato;Código Órgão Superior;Nome Órgão Superior;Código Órgão;Nome Órgão;Código UG;Nome UG;"
     "Número Termo Aditivo;Data Publicação;Objeto",
     "000012024;30000;Ministério A;30108;Órgão B;200384;UG C;000012024;16/12/2024;PRORROGACAO DE VIGENCIA",
+    "000022024;30000;Ministério A;30108;Órgão B;200384;UG C;000012024;17/12/2024;ADITIVO DE PESSOA CPF 987.654.321-00",
 ]
 
 

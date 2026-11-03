@@ -78,6 +78,7 @@ datasets:
     load: yearly
     partition: month
     first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
     archive: zip
     member: "*_Despesas.csv"
     write: merge
@@ -103,6 +104,7 @@ datasets:
     load: yearly
     partition: month
     first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
     archive: zip
     member: "*_Compras.csv"
     write: merge
@@ -122,6 +124,7 @@ datasets:
     load: yearly
     partition: month
     first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
     archive: zip
     member: "*_ItemCompra.csv"
     write: merge
@@ -137,6 +140,7 @@ datasets:
     load: yearly
     partition: month
     first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
     archive: zip
     member: "*_TermoAditivo.csv"
     write: merge
