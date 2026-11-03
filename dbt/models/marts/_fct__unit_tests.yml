@@ -178,3 +178,42 @@ unit_tests:
         - {id_pessoa: 1, uf_nascimento: SP, fonte_uf_nascimento: camara, escolaridade: Superior, fonte_escolaridade: camara, profissoes: Advogado, fonte_profissoes: camara, estado_civil: Casado, nome_social: null, foto_caminho: null, id_captura_tse: 22}
         - {id_pessoa: 2, uf_nascimento: MG, fonte_uf_nascimento: tse, escolaridade: Superior, fonte_escolaridade: tse, profissoes: Professor, fonte_profissoes: tse, estado_civil: null, nome_social: Nome Social, foto_caminho: "fotos/2018/MG/b.jpg", id_captura_tse: 22}
         - {id_pessoa: 3, uf_nascimento: null, fonte_uf_nascimento: null, escolaridade: null, fonte_escolaridade: null, profissoes: null, fonte_profissoes: null, estado_civil: null, nome_social: null, foto_caminho: null, id_captura_tse: null}
+
+  - name: eleito_completo_vale_o_informado_pelo_tse_ou_o_derivado_e_o_informado_fica_a_parte
+    description: >
+      fl_eleito_informado é só o que o TSE marca como eleito; fl_eleito soma o vencedor derivado dos votos
+      (base_eleicao) quando o TSE não informa o resultado. Quem não foi eleito fica falso nos dois.
+    model: fct_candidaturas
+    given:
+      - input: ref('stg_tse__candidaturas')
+        rows:
+          - {id_candidatura: "2022:BR:1", turno: 1, resultado: Eleito, ano_eleicao: "2022", cd_eleicao: "1", cd_cargo: "1"}
+          - {id_candidatura: "2006:BR:1", turno: 1, resultado: null, ano_eleicao: "2006", cd_eleicao: "1", cd_cargo: "1"}
+          - {id_candidatura: "2022:BR:2", turno: 1, resultado: Não eleito, ano_eleicao: "2022", cd_eleicao: "1", cd_cargo: "1"}
+      - input: ref('int_tse_eleitos')
+        rows:
+          - {id_candidatura: "2022:BR:1", base_eleicao: informado}
+          - {id_candidatura: "2006:BR:1", base_eleicao: derivado}
+      - input: ref('fct_resultados')
+        rows: []
+      - input: ref('stg_tse__votacao')
+        rows: []
+      - input: ref('stg_tse__fotos')
+        rows: []
+      - input: ref('dim_cargos')
+        rows: []
+      - input: ref('dim_disputas')
+        rows: []
+      - input: ref('dim_eleicoes')
+        rows: []
+      - input: ref('int_tse_pessoas')
+        rows: []
+      - input: ref('partidos_siglas')
+        rows: []
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows: []
+    expect:
+      rows:
+        - {id_candidatura: "2022:BR:1", fl_eleito: true, fl_eleito_informado: true, base_eleicao: informado}
+        - {id_candidatura: "2006:BR:1", fl_eleito: true, fl_eleito_informado: null, base_eleicao: derivado}
+        - {id_candidatura: "2022:BR:2", fl_eleito: false, fl_eleito_informado: false, base_eleicao: null}

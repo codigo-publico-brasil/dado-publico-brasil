@@ -12,7 +12,7 @@ with turnos as (
         max(dt_eleicao) as dt_eleicao,
         arg_max(situacao_candidatura, turno) as situacao_candidatura,
         arg_max(resultado, turno) as resultado,
-        bool_or(resultado like 'Eleito%') as fl_eleito,
+        bool_or(resultado like 'Eleito%') as fl_eleito_informado,
         max(id_captura) as id_captura,
         max(dt_captura) as dt_captura
 
@@ -103,7 +103,9 @@ select
     t.situacao_candidatura,
     greatest(t.qtd_turnos, coalesce(tv.ultimo_turno_votado, 0)) as qtd_turnos,
     t.resultado,
-    t.fl_eleito,
+    -- eleito completo: o que o TSE informa ou o que a Constituição deriva dos votos (base_eleicao); mesmo conjunto de fct_mandatos
+    t.fl_eleito_informado or te.base_eleicao is not null as fl_eleito,
+    t.fl_eleito_informado,
     te.base_eleicao,
     u.fl_mais_votado_no_turno as fl_mais_votado_no_ultimo_turno,
     p.id_pessoa_tse,

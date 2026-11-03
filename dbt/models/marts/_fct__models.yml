@@ -7,7 +7,8 @@ models:
       por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do
       projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em
       eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer
-      novato.
+      novato. fl_eleito vale para o eleito informado pelo TSE ou derivado dos votos pela Constituição (base_eleicao diz
+      qual; o texto original do TSE segue em resultado); fl_eleito_informado guarda só o informado.
     meta: {sensitivity: publico-agente-publico, grain: candidatura, owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "IBGE; Tribunal Superior Eleitoral", particao: "try_cast(split_part(id_candidatura, ':', 1) as integer)"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
@@ -49,8 +50,9 @@ models:
       - {name: situacao_candidatura, data_type: varchar, description: "Situação da candidatura no último turno em que consta, como o TSE informa (por exemplo, deferido, indeferido)."}
       - {name: qtd_turnos, data_type: integer, description: "Número do último turno em que a candidatura consta (2 quando foi ao segundo turno)."}
       - {name: resultado, data_type: varchar, description: "Resultado do último turno como o arquivo de candidaturas do TSE informa (eleito, suplente, não eleito, 2º turno); vazio quando o TSE não informa, como o 2º turno de presidente de 2006."}
-      - {name: fl_eleito, data_type: boolean, description: "Verdadeiro quando o TSE marca a candidatura como eleita em algum turno. Falso não quer dizer derrota quando o resultado está vazio."}
-      - {name: base_eleicao, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como se sabe que a candidatura foi eleita: informado pelo TSE ou DERIVADO dos votos pela Constituição (int_tse_eleitos). Vazia para quem não foi eleito. Não muda o significado de fl_eleito, que segue só o resultado informado pelo TSE."}
+      - {name: fl_eleito, data_type: boolean, description: "Verdadeiro quando a candidatura foi eleita: o TSE informa (fl_eleito_informado) ou, sem essa informação, a Constituição deriva dos votos (base_eleicao). Mesmo conjunto de fct_mandatos. O texto original do TSE segue em resultado. Vazio quando o TSE não informa o resultado e nada foi derivado."}
+      - {name: fl_eleito_informado, data_type: boolean, description: "Verdadeiro quando o TSE marca a candidatura como eleita em algum turno (só o informado; era o significado de fl_eleito até a mudança). Falso não quer dizer derrota quando o resultado está vazio."}
+      - {name: base_eleicao, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como se sabe que a candidatura foi eleita: informado pelo TSE ou DERIVADO dos votos pela Constituição (int_tse_eleitos). Vazia para quem não foi eleito. Quando preenchida, fl_eleito é verdadeiro; fl_eleito_informado segue só o resultado do TSE."}
       - {name: fl_mais_votado_no_ultimo_turno, data_type: boolean, description: "DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no último turno com votos. Vazio sem votos carregados ou em cargo de várias vagas."}
       - {name: id_pessoa_tse, data_type: varchar, description: "Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato."}
       - {name: id_pessoa, data_type: bigint, tests: [{relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa do projeto (dim_pessoas) quando a candidatura é de alguém eleito alguma vez ou que foi deputado ou senador (ligada pelo nome e o nascimento); vazio para quem nunca foi eleito, por regra (ADR 0031)."}

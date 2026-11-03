@@ -73,3 +73,23 @@ def test_a_campaign_total_is_empty_not_zero_when_the_file_has_no_data(full: Env)
         )
         == 0
     )
+
+
+def test_fl_eleito_is_informed_or_derived_and_fl_eleito_informado_keeps_only_the_tse(full: Env) -> None:
+    con, _ = full
+    assert (
+        scalar(
+            con,
+            "SELECT COUNT(*) FROM marts.fct_candidaturas "
+            "WHERE fl_eleito IS DISTINCT FROM (fl_eleito_informado OR base_eleicao IS NOT NULL)",
+        )
+        == 0
+    )
+    assert (
+        scalar(
+            con,
+            "SELECT COUNT(*) FROM marts.fct_candidaturas c WHERE COALESCE(c.fl_eleito, false) <> "
+            "EXISTS (SELECT 1 FROM marts.fct_mandatos m WHERE m.id_candidatura = c.id_candidatura)",
+        )
+        == 0
+    )
