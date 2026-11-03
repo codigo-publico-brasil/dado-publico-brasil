@@ -25,7 +25,7 @@ def test_transform_applies_migrations_before_dbt(monkeypatch: pytest.MonkeyPatch
         calls.append("migrou")
         return Closeable()
 
-    def invoke(*args: Any) -> None:
+    def invoke(*args: Any, **kwargs: Any) -> None:
         calls.append("dbt")
         raise Stop
 

@@ -32,7 +32,7 @@ Princípios que o projeto já cumpre: finalidade, adequação, necessidade (só 
 ## Retenção (proposta)
 
 - **Enquanto a fonte oficial publicar:** o landing é imutável e guarda o que foi capturado, com hash e data.
-- **Pessoa que pede remoção ou correção:** o dado volta ao que a fonte oficial publica; o que a fonte não publica mais deixa de ser mostrado nos serviços. O landing e a identidade não são apagados (são o registro do que foi capturado), mas a publicação (`publish` e o esquema `servico`) respeita o pedido.
+- **Pessoa que pede remoção ou correção:** o dado volta ao que a fonte oficial publica; o que a fonte não publica mais deixa de ser mostrado nos serviços. O landing e a identidade não são apagados (são o registro do que foi capturado; o landing imutável conflita com um pedido de remoção, então ele fica sob acesso restrito e o pedido é registrado), mas a publicação (`publish` e o esquema `marts`) respeita o pedido.
 - **Pessoa que nunca foi eleita:** não tem linha em `dim_pessoas`; as candidaturas dela ficam em `fct_candidaturas` com o que o TSE publica.
 
 ## Direitos dos titulares e canal
@@ -43,6 +43,6 @@ A LGPD dá ao titular acesso, correção, anonimização, eliminação e oposiç
 
 1. Revisão jurídica das bases acima.
 2. Canal de pedidos de titulares.
-3. Se `dim_pessoas` (322 mil pessoas, a maioria vereadores) entra na publicação e com quais campos (data de nascimento completa ou só o ano).
+3. Se `dim_pessoas` (322.749 pessoas em 30/10/2026, a maioria vereadores) entra na publicação e com quais campos (data de nascimento completa ou só o ano).
 4. Se o arquivo de filiados do TSE algum dia entra (o ADR 0032 diz que não, por ora).
 5. Retenção de pessoa que foi eleita e teve o resultado anulado.

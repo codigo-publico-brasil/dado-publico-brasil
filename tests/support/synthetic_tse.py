@@ -128,7 +128,7 @@ def _municipais() -> list[dict[str, str]]:
          "NM_URNA_CANDIDATO": urna, "DS_SIT_TOT_TURNO": resultado, "CD_ELEICAO": eleicao[0], "DS_ELEICAO": eleicao[1],
          "SG_UF": "RJ", "SG_UE": "60011", "NM_UE": "MUNICIPIO 60011", "DS_SITUACAO_CANDIDATURA": "DEFERIDO",
          "SG_PARTIDO": "AAA", "NM_PARTIDO": "PARTIDO AAA", "DT_NASCIMENTO": "02/02/1975", "DS_GENERO": "MASCULINO",
-         "NR_CANDIDATO": "12345"}
+         "NR_CANDIDATO": "12345", "DT_ELEICAO": "02/10/2022"}
         for cargo, sq, nome, urna, resultado, eleicao in MUNICIPAIS
     ]  # fmt: skip
 
@@ -195,7 +195,7 @@ def _csv(linhas: Sequence[tuple[str, ...]], ano: str = "2022", municipais: bool 
         valores = dict.fromkeys(COLUNAS, "#NULO#")
         valores.update(
             ANO_ELEICAO=ano, NR_TURNO="1", DS_CARGO=cargo, SQ_CANDIDATO=sq, NR_CANDIDATO="1234", NM_CANDIDATO=nome, SG_UE=uf,
-            NM_URNA_CANDIDATO=urna, DS_SITUACAO_CANDIDATURA=situacao, SG_PARTIDO=partido, NM_PARTIDO=f"PARTIDO {partido}",
+            NM_URNA_CANDIDATO=urna, DS_SITUACAO_CANDIDATURA=situacao, SG_PARTIDO=partido, DT_ELEICAO=f"07/10/{ano}", NM_PARTIDO=f"PARTIDO {partido}",
             DT_NASCIMENTO=nasc, DS_GENERO="FEMININO", DS_SIT_TOT_TURNO=resultado, SG_UF=uf,
             NR_CPF_CANDIDATO="12345678900", DS_EMAIL="x@exemplo.com", NR_TITULO_ELEITORAL_CANDIDATO="000111222333",
             CD_CARGO=CODIGO_DO_CARGO.get(cargo.title(), "#NULO#"), NR_PARTIDO="10",

@@ -1,6 +1,7 @@
 -- A linha do tempo da pessoa: uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto livre).
 -- O tipo vem do catálogo fechado dim_evento_tipos e `fato_origem` diz de qual fato a linha nasceu (um teste confere o par).
--- `ano_evento` sempre existe; `dt_evento` só quando a fonte dá o dia (eleição e candidatura só têm o ano).
+-- `ano_evento` sempre existe; `dt_evento` só quando a fonte dá o dia. O resultado da eleição (eleito, não eleito, suplente e
+-- 2º turno) leva o dia da votação do TSE; o registro e o deferimento da candidatura só têm o ano (o arquivo não dá o dia).
 -- Tipos sem fato carregado (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data,
 -- retorno de afastamento) não têm linha ainda: o teste de cobertura lista quais.
 with candidaturas as (
@@ -13,6 +14,7 @@ with candidaturas as (
         c.situacao_candidatura,
         c.resultado,
         c.qtd_turnos,
+        c.dt_eleicao,
         a.ano_eleicao,
         d.id_cargo,
         d.id_territorio,
@@ -104,7 +106,7 @@ eventos as (
     select
         id_pessoa,
         case when resultado like 'N_o eleito%' then 'nao_eleito' when resultado = 'Suplente' then 'suplente_eleito' end,
-        'candidaturas', id_candidatura, ano_eleicao, cast(null as date), id_disputa, id_cargo, id_territorio,
+        'candidaturas', id_candidatura, ano_eleicao, dt_eleicao, id_disputa, id_cargo, id_territorio,
         if(resultado = 'Suplente', id_partido, null), 'informado', id_captura
 
     from candidaturas
@@ -114,7 +116,7 @@ eventos as (
     union all
 
     select
-        id_pessoa, 'segundo_turno_disputado', 'candidaturas', id_candidatura, ano_eleicao, cast(null as date),
+        id_pessoa, 'segundo_turno_disputado', 'candidaturas', id_candidatura, ano_eleicao, dt_eleicao,
         id_disputa, id_cargo, id_territorio, null, 'informado', id_captura
 
     from candidaturas
@@ -124,13 +126,15 @@ eventos as (
     union all
 
     select
-        m.id_pessoa, 'eleito', 'mandatos', m.id_candidatura, a.ano_eleicao, cast(null as date),
+        m.id_pessoa, 'eleito', 'mandatos', m.id_candidatura, a.ano_eleicao, fc.dt_eleicao,
         m.id_disputa, m.id_cargo, m.id_territorio, m.id_partido, m.base_eleicao, m.id_captura
 
     from {{ ref('fct_mandatos') }} as m
 
     inner join (select distinct id_candidatura, ano_eleicao from {{ ref('stg_tse__candidaturas') }}) as a
         on a.id_candidatura = m.id_candidatura
+
+    left join {{ ref('fct_candidaturas') }} as fc on fc.id_candidatura = m.id_candidatura
 
     where m.id_pessoa is not null
 

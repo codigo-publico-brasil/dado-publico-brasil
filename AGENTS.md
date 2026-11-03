@@ -17,6 +17,7 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 - Todo dado exibido tem fonte oficial, URL e data de captura.
 - O landing é imutável (arquivo original, hash, URL, data). Nunca edite nem apague.
 - Nunca invente, estime nem complete dado: faltou, fica vazio, e o teste mede a lacuna.
+- Atributo cadastral da pessoa: se qualquer fonte oficial carregada o tem, a ficha o traz (o cadastro da Câmara e do Senado primeiro, o TSE no que faltar); nunca depender de a pessoa estar na fonte mais rica. Um teste confere (`app_pessoas_sem_dado_que_o_tse_tem`).
 - Nenhum documento pessoal (CPF, RG...); nenhum segredo ou dado pessoal no repositório.
 - Sem ranking, nota ou métrica avaliativa derivada. Conteúdo de IA fica em tabelas próprias, rotulado.
 - Camadas posteriores são reproduzíveis do landing por código; pipelines são idempotentes.
@@ -41,14 +42,15 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 | --- | --- |
 | fonte (URL, colunas, chaves, credenciais por `${VARIAVEL}`) | `sources/<poder>/<esfera>/<fonte>.yml` |
 | jeito de obter ou ler que o padrão não cobre (SOAP, robô, zip) | `src/dado_publico_brasil/ingestion/custom/<poder>/<esfera>/<fonte>.py` |
-| regra de transformação, teste de dado, descrição de coluna | `dbt/` (modelos, YAML ao lado) |
+| regra de transformação, teste de dado, descrição de coluna | `dbt/` (modelos e YAML ao lado; tabelas de apoio em `dbt/seeds/`) |
 | tabela própria (metadata, identity) | `ddl/` |
 | página inicial do lake público (texto, layout, logos) | `site/index.html` (depois `dado-publico publish-docs`) |
 | ordem das etapas, agendamento | `src/dado_publico_brasil/orchestration/` |
+| serviços locais (Dagster, PostgreSQL), limite de memória | `compose.yaml`, `dagster.yaml` |
 | ambiente (pasta de dados, warehouse) | variáveis `DADO_PUBLICO_STORAGE_ROOT`, `DADO_PUBLICO_WAREHOUSE` |
 | papel dos agentes (`engenheiro`, `arquiteto`, `qa`, `auditor`) | `.claude/agents/<nome>.md` (só o que é específico do papel; as regras comuns ficam neste arquivo) |
 
-`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português (`pessoas`, `proposicoes`, `votos`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `fotos`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
+`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português; nos marts o prefixo diz o tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `fotos`, `backfill`, `recheck`, `rebuild`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
 
 O fundador usa o projeto para aprender arquitetura de dados e de sistemas: explique decisões e alternativas em poucas linhas e aponte o que merece ADR.
 
@@ -69,6 +71,9 @@ Mapa em [`docs/README.md`](docs/README.md): `01-entender` (explica), `02-fazer` 
 
 ## Lições de experiência
 
+- **Um escritor por vez no DuckDB:** pare o Dagster e container órfão antes de rodar etapas; `publish` trava se uma consulta pesada segura o Postgres. Detalhes e receitas em [Operar e publicar](docs/02-fazer/04-operar-e-publicar.md).
+- **Coluna nova em dataset com `primary_key: [_row_hash]` duplica o raw** (o hash muda); recarregue o dataset ou limpe as duplicatas antes de seguir (issue 156).
+- No Windows o `dado-publico.exe` pode ser bloqueado: use `uv run python -m dado_publico_brasil.orchestration <comando>`.
 - **Confira antes de afirmar:** leia o arquivo, rode o comando ou busque no código antes de dizer que algo existe, falta ou está desatualizado.
 - Ao mover arquivos, use `git mv` e reescreva os links (inclusive em código e testes); depois confira que nenhum link relativo ficou quebrado.
 - O `uv` pode não estar no PATH do shell do agente (no Windows fica em `~/.local/bin`).

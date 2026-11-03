@@ -55,7 +55,7 @@ Requisitos: Python 3.13 e [uv](https://docs.astral.sh/uv/).
 ```bash
 uv sync --all-extras                          # instala o ambiente
 uv run dado-publico run --years 2025 2026     # captura, carrega e transforma (os dados ficam em data_store/)
-uv run dado-publico query --sql "SELECT * FROM marts.pessoas LIMIT 10"
+uv run dado-publico query --sql "SELECT * FROM marts.dim_pessoas LIMIT 10"
 ```
 
 **Todas as opções do `dado-publico`** (comandos, modos de execução, filtros por fonte, dataset e ano) estão em `uv run dado-publico --help`, que é a referência completa e sempre atual.
