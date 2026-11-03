@@ -70,7 +70,9 @@ MAX_BYTES = 128 << 20  # estimativa acima disto, a tabela com `meta.particao` vi
 SAMPLE_ROWS = 200_000  # linhas do COPY de amostra que mede os bytes por linha
 MAX_KV_BYTES = 64 << 10  # teto prático do JSON de descrições no rodapé do Parquet
 ROW_GROUP = 500_000  # entre 122.880 e 1 milhão de linhas por grupo
-MEMORY_LIMIT = "4GB"  # a máquina do mantenedor tem 8 GB
+MEMORY_LIMIT = os.environ.get(
+    "DADO_PUBLICO_DUCKDB_MEMORY", "4GB"
+)  # padrão para 8 GB de RAM; suba em máquina maior
 ENV_URL = "DADO_PUBLICO_LAKE_URL"
 _LOCAL = threading.local()  # uma conexão HTTPS persistente por thread de envio
 ATTEMPTS = 6  # tentativas por requisição ao R2
