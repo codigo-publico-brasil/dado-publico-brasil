@@ -15,10 +15,12 @@ Cada tabela é `<caminho>.parquet` (um arquivo, ordenado pelo período se tiver 
     catalogo.duckdb   uma view por tabela (lista explícita de arquivos), com COMMENT de tabela e coluna
 
 Idempotente e barato de repetir: cada tabela leva uma impressão digital do conteúdo, calculada no DuckDB numa
-varredura (contagem, XOR dos hashes das linhas, que não depende da ordem, esquema e caminho). Se for igual à
-do manifesto anterior (lido da raiz), a tabela é ignorada. Catálogo e manifesto são trocados por último; só
-então se apagam os objetos órfãos sob os caminhos das tabelas (mudança de arquivo único para partição, tabela
-removida). Nunca exporta `raw`, `identity` nem colunas de documento pessoal.
+varredura (contagem, XOR dos hashes das linhas, que não depende da ordem, esquema e caminho), várias tabelas
+ao mesmo tempo. Se for igual à do manifesto anterior (lido da raiz), a tabela é ignorada. Se nada mudou, nada
+é gravado nem enviado (nem catálogo, nem manifesto). Senão, catálogo e manifesto são trocados por último; só
+então se apagam os objetos órfãos sob os caminhos das tabelas gravadas (mudança de arquivo único para
+partição); com `prune`, sob todos (tabela removida). Nunca exporta `raw`, `identity` nem colunas de
+documento pessoal. Imprime o progresso: uma linha por tabela e o tempo de cada fase.
 
 Arquivos (ADR 0037): dataset com `arquivos.publicar: true` no YAML da fonte vira uma coleção `arq_<nome>`
 ao lado das tabelas da fonte (`staging/<poder>/<esfera>/<fonte>/arq_<nome>/...`), lida de
@@ -32,14 +34,19 @@ O catálogo é um DuckDB, que o DuckDB não escreve no R2: sobe, e os órfãos s
 import base64
 import hashlib
 import hmac
+import http.client
 import json
 import mimetypes
 import os
 import re
 import shutil
-import urllib.request
+import threading
+import time
 import warnings
-from contextlib import nullcontext
+import xml.etree.ElementTree as ET
+from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager, nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -63,8 +70,16 @@ MAX_BYTES = 128 << 20  # estimativa acima disto, a tabela com `meta.particao` vi
 SAMPLE_ROWS = 200_000  # linhas do COPY de amostra que mede os bytes por linha
 MAX_KV_BYTES = 64 << 10  # teto prático do JSON de descrições no rodapé do Parquet
 ROW_GROUP = 500_000  # entre 122.880 e 1 milhão de linhas por grupo
-MEMORY_LIMIT = "4GB"  # a máquina do mantenedor tem 8 GB
+MEMORY_LIMIT = os.environ.get(
+    "DADO_PUBLICO_DUCKDB_MEMORY", "4GB"
+)  # padrão para 8 GB de RAM; suba em máquina maior
 ENV_URL = "DADO_PUBLICO_LAKE_URL"
+_LOCAL = threading.local()  # uma conexão HTTPS persistente por thread de envio
+ATTEMPTS = 6  # tentativas por requisição ao R2
+UPLOADS = 16  # envios simultâneos ao R2
+FINGERPRINTS = (
+    4  # impressões digitais simultâneas (cursores só de leitura; o DuckDB já paraleliza cada varredura)
+)
 CACHE_CONTROL = "public, max-age=86400, must-revalidate"  # caminho estável, conteúdo pode mudar
 CONTROL_DESCRIPTION = "Arquivos da coleção %s, um por linha, com hash e a captura de origem (ADR 0037)."
 CONTROL_COLUMNS = (
@@ -89,6 +104,20 @@ def _q(text: str) -> str:
     return text.replace("'", "''")
 
 
+def _say(text: str) -> None:
+    print(text, flush=True)
+
+
+@contextmanager
+def _phase(name: str) -> Iterator[None]:
+    """Imprime o tempo da fase ao fim."""
+    start = time.monotonic()
+    try:
+        yield
+    finally:
+        _say(f"[{name}] {time.monotonic() - start:.1f}s")
+
+
 def _r2() -> dict[str, str]:
     """As quatro variáveis do R2, ou vazio (modo local). Pela metade falha: nunca vira local em silêncio."""
     cfg = {k: os.environ.get(f"DADO_PUBLICO_R2_{k}", "") for k in (*privado.KEYS, "BUCKET")}
@@ -109,6 +138,7 @@ def _connect(settings: Settings, warehouse_file: bool) -> warehouse.Connection:
     """Conexão com limites de memória e, havendo segredo, acesso ao R2; o warehouse só para leitura."""
     con = warehouse.connect(settings, read_only=True) if warehouse_file else duckdb.connect()
     con.execute(f"SET memory_limit = '{MEMORY_LIMIT}'")
+    con.execute("SET preserve_insertion_order = false")  # COPY e varredura sem reter a ordem em memória
     con.execute(f"SET temp_directory = '{_q((settings.state_dir / 'duckdb_tmp').as_posix())}'")
     privado.secret(con)
     return con
@@ -312,16 +342,19 @@ def r2_request(
     path: Path | None = None,
     content_type: str | None = None,
     headers: dict[str, str] | None = None,
-) -> None:
-    """PUT (de um arquivo) ou DELETE assinado (SigV4) no R2: o que o COPY e o `glob` do DuckDB não fazem.
+    query: dict[str, str] | None = None,
+) -> bytes:
+    """PUT (de um arquivo), DELETE ou GET assinado (SigV4) no R2: o que o COPY e o `glob` do DuckDB não fazem.
 
     `headers` somam-se aos assinados (Cache-Control...); num PUT segue o `x-amz-checksum-sha256` do arquivo.
+    `query` são os parâmetros da URL (listagem). Devolve o corpo da resposta.
     """
     cfg = _r2()
     host = f"{cfg['ACCOUNT_ID']}.r2.cloudflarestorage.com"
     now = datetime.now(UTC)
     stamp, day = now.strftime("%Y%m%dT%H%M%SZ"), now.strftime("%Y%m%d")
     uri = f"/{cfg['BUCKET']}/{quote(key)}"
+    params = "&".join(f"{quote(k, safe='')}={quote(v, safe='')}" for k, v in sorted((query or {}).items()))
     signed_headers = {
         "host": host,
         "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
@@ -342,7 +375,7 @@ def r2_request(
         [
             method,
             uri,
-            "",
+            params,
             *(f"{k}:{signed_headers[k]}" for k in sorted(signed_headers)),
             "",
             names,
@@ -362,10 +395,46 @@ def r2_request(
     if path:
         sent["Content-Length"] = str(path.stat().st_size)
     with path.open("rb") if path else nullcontext() as body:
-        request = urllib.request.Request(  # noqa: S310
-            f"https://{host}{uri}", data=body, method=method, headers=sent
-        )
-        urllib.request.urlopen(request, timeout=3600).close()  # noqa: S310
+        for attempt in range(
+            1, ATTEMPTS + 1
+        ):  # erro transitório (5xx, 429, conexão fechada): espera e tenta de novo
+            conn = getattr(_LOCAL, "conn", None) or http.client.HTTPSConnection(host, timeout=3600)
+            _LOCAL.conn = conn
+            try:
+                if body:
+                    body.seek(0)
+                conn.request(method, f"{uri}?{params}" if params else uri, body=body, headers=sent)
+                response = conn.getresponse()
+                detail = response.read()
+                failure = None if response.status < 300 else f"HTTP {response.status} {detail[:200]!r}"
+                retry = response.status == 429 or response.status >= 500
+            except (http.client.HTTPException, OSError) as error:
+                conn.close()
+                _LOCAL.conn = None
+                failure, retry = repr(error), True
+            if failure is None:
+                return detail
+            if not retry or attempt == ATTEMPTS:
+                raise RuntimeError(f"R2 {method} {key}: {failure}")
+            time.sleep(min(2**attempt, 30))
+    raise AssertionError("ATTEMPTS deve ser positivo")  # pragma: no cover
+
+
+def r2_list(prefix: str) -> dict[str, int]:
+    """Chave e tamanho dos objetos sob `prefix` (ListObjectsV2 assinado, paginado por continuation-token)."""
+    found: dict[str, int] = {}
+    token = ""
+    while True:
+        query = {"list-type": "2", "prefix": prefix} | ({"continuation-token": token} if token else {})
+        tree = ET.fromstring(r2_request("GET", "", query=query))
+        for item in tree.iter():
+            if item.tag.endswith("Contents"):
+                fields = {c.tag.rsplit("}", 1)[-1]: (c.text or "") for c in item}
+                found[fields["Key"]] = int(fields["Size"])
+        fields = {c.tag.rsplit("}", 1)[-1]: (c.text or "") for c in tree}
+        token = fields.get("NextContinuationToken", "")
+        if fields.get("IsTruncated") != "true" or not token:
+            return found
 
 
 def _index(settings: Settings) -> Path:
@@ -450,6 +519,39 @@ def _table(
     return _files(con, root, f"{key}.parquet")
 
 
+def _fingerprint(
+    con: warehouse.Connection, schema: str, table: str, key: str, expr: str | None
+) -> dict[str, Any] | None:
+    """Descrição, colunas, linhas e impressão digital da tabela (uma varredura); None sem coluna pública.
+
+    Roda num cursor próprio (só leitura), então várias tabelas podem ser calculadas ao mesmo tempo.
+    """
+    start = time.monotonic()
+    cur = con.cursor()
+    try:
+        description, columns = _describe(cur, schema, table)
+        if not columns:
+            return None
+        cols = ", ".join(f'"{c["nome"]}"' for c in columns)
+        select = f'SELECT {cols} FROM {schema}."{table}"'
+        rows, xor, total = cur.execute(  # xor sozinho zera pares de linhas iguais; a soma não
+            f"SELECT count(*), coalesce(bit_xor(hash(t)), 0), coalesce(sum(hash(t)::HUGEINT), 0) "
+            f"FROM ({select}) t"
+        ).fetchone()  # type: ignore[misc]
+    finally:
+        cur.close()
+    names = [(c["nome"], c["tipo"], c["descricao"]) for c in columns]
+    digest = hashlib.sha256(f"{rows}:{xor}:{total}:{names}:{key}:{expr}:{description}".encode()).hexdigest()
+    return {
+        "description": description,
+        "columns": columns,
+        "select": select,
+        "rows": rows,
+        "fingerprint": digest,
+        "seconds": time.monotonic() - start,
+    }
+
+
 def _collections(
     con: warehouse.Connection, settings: Settings, prune: bool = False
 ) -> dict[str, list[dict[str, Any]]]:
@@ -508,20 +610,39 @@ def _published(dataset: dict[str, Any]) -> bool:
     return (dataset.get("arquivos") or {}).get("publicar") is True
 
 
-def _send(root: str, key: str, files: list[dict[str, Any]], known: dict[str, str]) -> int:
-    """Grava no destino (R2 ou pasta local) só os arquivos que faltam ou mudaram em relação ao controle."""
-    sent = 0
-    for f in files:
-        if known.get(f["caminho"]) == f["sha256_arquivo"]:
-            continue
+def _send(root: str, key: str, files: list[dict[str, Any]], known: dict[str, str]) -> tuple[int, int]:
+    """Grava no destino (R2 ou pasta local) só os arquivos que faltam ou mudaram em relação ao controle.
+
+    Devolve (enviados, já no destino). Retomável: o arquivo novo (fora do controle) cuja chave já existe no
+    destino com o mesmo tamanho veio de um envio interrompido e não é reenviado: o PUT leva o SHA-256 e o R2
+    recusa corpo que não confere. O arquivo que mudou (já no controle) sempre é reenviado: o tamanho não
+    prova o conteúdo. Só lista o destino se houver pendentes. O envio no R2 é paralelo (`UPLOADS` conexões).
+    """
+    pending = [f for f in files if known.get(f["caminho"]) != f["sha256_arquivo"]]
+    if not pending:
+        return 0, 0
+    r2 = root.startswith("r2://")
+    if r2:
+        have = {k[len(key) + 1 :]: n for k, n in r2_list(f"{key}/").items()}
+    else:
+        have = {
+            p.relative_to(Path(root, key)).as_posix(): p.stat().st_size
+            for p in Path(root, key).rglob("*")
+            if p.is_file()
+        }
+    todo = [f for f in pending if f["caminho"] in known or have.get(f["caminho"]) != f["qtd_bytes"]]
+
+    def put(f: dict[str, Any]) -> None:
         target = f"{key}/{f['caminho']}"
-        if root.startswith("r2://"):
+        if r2:
             r2_request("PUT", target, f["local"], f["content_type"], {"Cache-Control": CACHE_CONTROL})
         else:
             Path(root, target).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(f["local"], Path(root, target))
-        sent += 1
-    return sent
+
+    with ThreadPoolExecutor(UPLOADS if r2 else 1) as pool:
+        list(pool.map(put, todo))  # `list` propaga a primeira falha
+    return len(todo), len(pending) - len(todo)
 
 
 def _control(
@@ -580,7 +701,8 @@ def export(
     written = ignored = size = 0
     con = _connect(settings, warehouse_file=True)
     try:
-        old_entries = _manifest(con, root).get("tabelas", [])
+        published = _manifest(con, root)
+        old_entries = published.get("tabelas", [])
         before = {(e["camada"], e["tabela"]): e for e in old_entries if not e["tabela"].startswith("arq_")}
         old_files = {e["caminho"]: e for e in old_entries if e["tabela"].startswith("arq_")}
         touched = {e.get("caminho", f"{e['camada']}/{e['tabela']}") for e in old_entries}
@@ -602,110 +724,150 @@ def export(
                 "tem arquivo no disco; nada foi apagado nem publicado. Confira `arquivos/` e o contrato "
                 "ou use --prune"
             )
-        for schema, table in relations:
-            _key(models, schema, table)  # falha cedo, antes de gravar qualquer arquivo
-        for schema, table in relations:
-            description, columns = _describe(con, schema, table)
-            if not columns:
-                continue
-            key = _key(models, schema, table)
-            expr = models.get(table, {}).get("config", {}).get("meta", {}).get("particao")
-            cols = ", ".join(f'"{c["nome"]}"' for c in columns)
-            select = f'SELECT {cols} FROM {schema}."{table}"'
-            rows, xor, total = con.execute(  # xor sozinho zera pares de linhas iguais; a soma não
-                f"SELECT count(*), coalesce(bit_xor(hash(t)), 0), coalesce(sum(hash(t)::HUGEINT), 0) "
-                f"FROM ({select}) t"
-            ).fetchone()  # type: ignore[misc]
-            names = [(c["nome"], c["tipo"], c["descricao"]) for c in columns]
-            fingerprint = hashlib.sha256(
-                f"{rows}:{xor}:{total}:{names}:{key}:{expr}:{description}".encode()
-            ).hexdigest()
-            old = before.get((schema, table))
-            if old and old["impressao"] == fingerprint:
-                files, columns = old["arquivos"], old["colunas"]
-                ignored += 1
+        keys = {r: _key(models, *r) for r in relations}  # falha cedo, antes de gravar qualquer arquivo
+        exprs = {r: models.get(r[1], {}).get("config", {}).get("meta", {}).get("particao") for r in relations}
+        with _phase("impressões digitais"), ThreadPoolExecutor(FINGERPRINTS) as pool:
+            prints = list(pool.map(lambda r: _fingerprint(con, r[0], r[1], keys[r], exprs[r]), relations))
+        state = {"entries": old_entries, "base": published.get("base")}
+
+        def commit(current: list[dict[str, Any]]) -> None:
+            """Troca catálogo e manifesto (por último, depois dos arquivos) se diferirem do publicado."""
+            if json.loads(json.dumps(current)) == state["entries"] and state["base"] == (base or root):
+                return  # nada mudou: o publicado já é este
+            catalog = settings.state_dir / "catalogo.duckdb"
+            _catalog(current, catalog, base or root, meta)
+            if _r2():
+                r2_request("PUT", "catalogo.duckdb", catalog)
             else:
-                files = _table(
-                    con, settings, root, meta, key, select, expr, description, columns, rows, max_bytes
-                )
-                touched.add(key)
-                written += 1
-                size += sum(f["bytes"] for f in files)
-            years = sorted({int(m[1]) for f in files if (m := re.search(r"/ano=(\d+)/", f["arquivo"]))})
-            entries.append(
-                {
-                    "camada": schema,
-                    "camada_medalhao": MEDALLION[schema],
-                    "tabela": table,
-                    "caminho": key,
-                    "descricao": description,
-                    "linhas": rows,
-                    "impressao": fingerprint,
-                    "particao": expr,
-                    "ano": years or None,
-                    "colunas": columns,
-                    "arquivos": files,
-                }
+                shutil.copyfile(catalog, f"{root}/catalogo.duckdb")
+            catalog.unlink()
+            text = json.dumps({**meta, "base": base or root, "tabelas": current}, ensure_ascii=True)
+            con.execute(  # compacto: uma linha, sem aspas soltas
+                f"COPY (SELECT ?) TO '{_q(root)}/manifesto.json' "
+                "(FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER '\x01')",
+                (text,),
             )
-        for key, files in collections.items():
-            if not files and key not in old_files:
-                continue  # coleção que nunca teve arquivo não vira tabela vazia
-            known: dict[str, str] = {}
-            if key in old_files:
-                known = dict(
-                    con.execute(
-                        f"SELECT caminho, sha256_arquivo FROM read_parquet('{_q(root)}/{key}.parquet')"
-                    ).fetchall()
+            state.update(entries=json.loads(json.dumps(current)), base=base or root)
+            _say("  catálogo e manifesto trocados")
+
+        written_keys: set[str] = set()  # caminhos de tabela a varrer atrás de órfãos
+        changed: set[str] = set()  # tudo o que foi gravado, para as linhas de progresso
+        with _phase("escrita"):
+            for rel, found in zip(relations, prints, strict=True):
+                if not found:
+                    continue
+                (schema, table), key, expr = rel, keys[rel], exprs[rel]
+                description, columns, rows = found["description"], found["columns"], found["rows"]
+                fingerprint, old, start = found["fingerprint"], before.get(rel), time.monotonic()
+                if old and old["impressao"] == fingerprint:
+                    files, columns = old["arquivos"], old["colunas"]
+                    ignored += 1
+                else:
+                    files = _table(
+                        con,
+                        settings,
+                        root,
+                        meta,
+                        key,
+                        found["select"],
+                        expr,
+                        description,
+                        columns,
+                        rows,
+                        max_bytes,
+                    )
+                    written_keys.add(key)
+                    if old and old.get("caminho", key) != key:
+                        written_keys.add(old["caminho"])  # tabela mudou de caminho: o antigo fica órfão
+                    changed.add(key)
+                    written += 1
+                    size += sum(f["bytes"] for f in files)
+                _say(
+                    f"  {schema}.{table}: {'ignorada' if key not in changed else 'gravada'} "
+                    f"(impressão {found['seconds']:.1f}s, escrita {time.monotonic() - start:.1f}s)"
                 )
-            size += sum(f["qtd_bytes"] for f in files if known.get(f["caminho"]) != f["sha256_arquivo"])
-            _send(root, key, files, known)
-            touched.add(key)
-            clean = [{k: v for k, v in f.items() if k != "local"} for f in files]
-            fingerprint = hashlib.sha256(f"{key}:{clean}".encode()).hexdigest()
-            old = old_files.get(key)
-            description = CONTROL_DESCRIPTION % key.rsplit("/", 1)[1]
-            if old and old["impressao"] == fingerprint:
-                parquet, columns = old["arquivos"], old["colunas"]
-                ignored += 1
-            else:
-                parquet, description = _control(con, settings, root, meta, key, files)
-                columns = [{"nome": n, "tipo": t, "descricao": d} for n, t, d in CONTROL_COLUMNS]
-                written += 1
-            entries.append(
-                {
-                    "camada": "staging",
-                    "camada_medalhao": MEDALLION["staging"],
-                    "tabela": key.rsplit("/", 1)[1],
-                    "caminho": key,
-                    "descricao": description,
-                    "linhas": len(files),
-                    "impressao": fingerprint,
-                    "particao": None,
-                    "ano": None,
-                    "colunas": columns,
-                    "arquivos": parquet,
-                }
-            )
-            keep |= {f"{key}/{f['caminho']}" for f in files}
-        catalog = settings.state_dir / "catalogo.duckdb"
-        _catalog(entries, catalog, base or root, meta)
-        if _r2():
-            r2_request("PUT", "catalogo.duckdb", catalog)
-        else:
-            shutil.copyfile(catalog, f"{root}/catalogo.duckdb")
-        catalog.unlink()
-        text = json.dumps(
-            {**meta, "tabelas": entries}, ensure_ascii=True
-        )  # compacto: uma linha, sem aspas soltas
-        con.execute(
-            f"COPY (SELECT ?) TO '{_q(root)}/manifesto.json' "
-            "(FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER '\\x01')",
-            (text,),
-        )  # por último
+                years = sorted({int(m[1]) for f in files if (m := re.search(r"/ano=(\d+)/", f["arquivo"]))})
+                entries.append(
+                    {
+                        "camada": schema,
+                        "camada_medalhao": MEDALLION[schema],
+                        "tabela": table,
+                        "caminho": key,
+                        "descricao": description,
+                        "linhas": rows,
+                        "impressao": fingerprint,
+                        "particao": expr,
+                        "ano": years or None,
+                        "colunas": columns,
+                        "arquivos": files,
+                    }
+                )
+        table_entries = list(entries)
+        coll_entries = {e["caminho"]: e for e in old_entries if e["tabela"].startswith("arq_")}
+        with _phase("catálogo e manifesto (tabelas)"):
+            commit(table_entries + list(coll_entries.values()))  # queda nos arquivos não perde as tabelas
+        con.close()  # a fase de arquivos não lê o warehouse: instância nova, sem a memória das tabelas
+        con = _connect(settings, warehouse_file=False)
+        with _phase("arquivos"):
+            for key, files in collections.items():
+                if not files and key not in old_files:
+                    continue  # coleção que nunca teve arquivo não vira tabela vazia
+                start, sent, resumed = time.monotonic(), 0, 0
+                clean = [{k: v for k, v in f.items() if k != "local"} for f in files]
+                fingerprint = hashlib.sha256(f"{key}:{clean}".encode()).hexdigest()
+                old = old_files.get(key)
+                description = CONTROL_DESCRIPTION % key.rsplit("/", 1)[1]
+                if old and old["impressao"] == fingerprint:  # mesmo controle: tudo já foi enviado
+                    parquet, columns = old["arquivos"], old["colunas"]
+                    ignored += 1
+                else:
+                    known: dict[str, str] = {}
+                    if old:
+                        known = dict(
+                            con.execute(
+                                f"SELECT caminho, sha256_arquivo FROM read_parquet('{_q(root)}/{key}.parquet')"  # noqa: E501
+                            ).fetchall()
+                        )
+                    sent, resumed = _send(root, key, files, known)
+                    size += sum(
+                        f["qtd_bytes"] for f in files if known.get(f["caminho"]) != f["sha256_arquivo"]
+                    )
+                    parquet, description = _control(con, settings, root, meta, key, files)
+                    columns = [{"nome": n, "tipo": t, "descricao": d} for n, t, d in CONTROL_COLUMNS]
+                    changed.add(key)  # coleção: objeto fora do controle só sai com --prune
+                    written += 1
+                _say(
+                    f"  {key}: {'gravada' if key in changed else 'ignorada'} "
+                    f"({len(files)} arquivos, {sent} enviados, {resumed} já no destino, "
+                    f"{time.monotonic() - start:.1f}s)"
+                )
+                entries.append(
+                    {
+                        "camada": "staging",
+                        "camada_medalhao": MEDALLION["staging"],
+                        "tabela": key.rsplit("/", 1)[1],
+                        "caminho": key,
+                        "descricao": description,
+                        "linhas": len(files),
+                        "impressao": fingerprint,
+                        "particao": None,
+                        "ano": None,
+                        "colunas": columns,
+                        "arquivos": parquet,
+                    }
+                )
+                keep |= {f"{key}/{f['caminho']}" for f in files}
+                coll_entries[key] = entries[-1]
+                if key in changed:
+                    commit(table_entries + list(coll_entries.values()))  # coleção concluída: registrada
+        entries = table_entries + [coll_entries[k] for k in collections if k in coll_entries]
+        with _phase("catálogo e manifesto"):
+            commit(entries)
         keep |= {f["arquivo"] for e in entries for f in e["arquivos"]}
-        if not prune:  # arquivo que saiu da fonte só se apaga com --prune
-            touched -= set(collections)
-        orphans = _delete_orphans(con, root, touched, keep)  # só depois do manifesto novo
+        # órfãos só sob o que foi gravado; `prune` varre tudo (tabela removida, arquivo que saiu da fonte)
+        swept = written_keys | (touched | set(collections) if prune else set())
+        with _phase("órfãos"):
+            orphans = _delete_orphans(con, root, swept, keep) if swept else 0  # só depois do manifesto novo
     finally:
         con.close()
     return {

@@ -6,9 +6,11 @@ segredo. O que depende de credencial real (COPY, LIST e DELETE em `r2://` e o PU
 
 import base64
 import hashlib
+import http.client
 import json
 import mimetypes
 import shutil
+import threading
 import zipfile
 from pathlib import Path
 
@@ -114,6 +116,87 @@ def test_a_second_export_without_changes_rewrites_nothing(con: Connection, setti
     second = export.export(settings)
     assert second["gravadas"] == 0 and second["ignoradas"] == first["tabelas"] and second["bytes"] == 0
     assert {p: p.stat().st_mtime_ns for p in out.rglob("*.parquet")} == stamps
+    assert export.verify(settings) == []
+
+
+def test_an_unchanged_run_writes_and_sends_nothing_and_prints_progress(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    stamps = {p: p.stat().st_mtime_ns for p in out.iterdir() if p.is_file()}
+    text = (out / "manifesto.json").read_text(encoding="utf-8")
+    tables = len(manifest(out)["tabelas"])
+    capsys.readouterr()
+    sent: list[str] = []
+    monkeypatch.setattr(shutil, "copyfile", lambda s, d: sent.append(str(d)))
+    export.export(settings)
+    shown = capsys.readouterr().out
+    assert sent == [] and (out / "manifesto.json").read_text(encoding="utf-8") == text
+    assert {p: p.stat().st_mtime_ns for p in out.iterdir() if p.is_file()} == stamps
+    for phase in ("impressões digitais", "escrita", "arquivos", "catálogo e manifesto", "órfãos"):
+        assert f"[{phase}] " in shown
+    assert shown.count(": ignorada (") == tables and ": gravada" not in shown
+
+
+def test_a_changed_table_prints_as_written_and_the_rest_as_ignored(
+    capsys: pytest.CaptureFixture[str], con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    tables = len(manifest(out)["tabelas"])
+    change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
+    capsys.readouterr()
+    export.export(settings)
+    lines = [ln for ln in capsys.readouterr().out.splitlines() if ": gravada (" in ln or ": ignorada (" in ln]
+    assert [ln.split(":")[0].strip() for ln in lines if ": gravada (" in ln] == ["intermediate.int_x"]
+    assert len(lines) == tables
+
+
+def test_a_new_table_is_added_and_a_removed_one_needs_prune(con: Connection, settings: Settings) -> None:
+    out, first = run(con, settings)
+    change(settings, "CREATE TABLE intermediate.int_nova AS SELECT 1 AS a")
+    again = export.export(settings)
+    assert again["gravadas"] == 1 and again["tabelas"] == first["tabelas"] + 1
+    assert (out / "intermediate/int_nova.parquet").exists()
+    change(settings, "DROP TABLE intermediate.int_nova")
+    export.export(settings, prune=True)
+    assert not (out / "intermediate/int_nova.parquet").exists() and export.verify(settings) == []
+
+
+def test_a_description_change_alone_replaces_the_catalog_and_the_manifest(
+    con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    change(settings, "COMMENT ON TABLE intermediate.int_x IS 'Outra descricao.'")
+    assert export.export(settings)["gravadas"] == 1
+    cat = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
+    assert scalar(cat, "SELECT comment FROM duckdb_views() WHERE view_name = 'int_x'") == "Outra descricao."
+    cat.close()
+
+
+def test_changing_the_public_base_url_replaces_the_catalog_and_the_manifest(
+    con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    one, two = out.as_posix(), f"{out.as_posix()}/../lake"  # as duas resolvem para os mesmos arquivos
+    export.export(settings, base_url=one)
+    export.export(settings, base_url=one)
+    stamp = (out / "catalogo.duckdb").stat().st_mtime_ns
+    export.export(settings, base_url=two)
+    assert manifest(out)["base"] == two  # type: ignore[comparison-overlap]
+    assert (out / "catalogo.duckdb").stat().st_mtime_ns != stamp
+    cat = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
+    assert f"{two}/" in scalar(cat, "SELECT sql FROM duckdb_views() WHERE view_name = 'int_x'")
+    cat.close()
+
+
+def test_a_table_that_changed_path_leaves_no_orphan_even_without_prune(
+    con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    moved = json.loads(json.dumps(MODELS).replace("legislativo", "outro"))
+    (settings.state_dir / "dbt" / "target" / "manifest.json").write_text(json.dumps(moved), encoding="utf-8")
+    export.export(settings)
+    assert not (out / f"{VOTOS}.parquet").exists() and (out / "marts/outro/fct_votos.parquet").exists()
     assert export.verify(settings) == []
 
 
@@ -483,9 +566,7 @@ def test_only_missing_or_changed_files_are_sent_and_verify_checks_the_objects(
     sent: list[str] = []
     monkeypatch.setattr(shutil, "copyfile", lambda s, d: sent.append(Path(d).as_posix()))
     again = export.export(settings)
-    assert again["gravadas"] == 0 and sent == [
-        (out / "catalogo.duckdb").as_posix()
-    ]  # nenhum arquivo reenviado
+    assert again["gravadas"] == 0 and sent == []  # nenhum arquivo reenviado, nem o catálogo
     monkeypatch.undo()
     assert (out / FOTOS / FOTO_LOCAL).stat().st_mtime_ns == stamp
     assert export.verify(settings) == []
@@ -504,6 +585,159 @@ def test_only_missing_or_changed_files_are_sent_and_verify_checks_the_objects(
     ]
     (out / DOU / "secao1/202608/base.zip").unlink()
     assert f"falta {DOU}/secao1/202608/base.zip" in export.verify(settings)
+
+
+def test_an_object_outside_the_control_stays_without_prune(con: Connection, settings: Settings) -> None:
+    land_files(con, settings)
+    out, _ = run(con, settings)
+    (out / FOTOS / "2022/RJ/solta.jpg").write_bytes(b"x")
+    con = duckdb.connect(str(settings.warehouse))
+    capture(
+        con,
+        settings,
+        "tse",
+        "fotos_rj",
+        2022,
+        "fotos_rj-ba9876543210.zip",
+        {"FRJ1001_div.jpg": JPG, "FRJ1002_div.jpg": b"\xff\xd8outra"},
+    )
+    arquivos.materialize(con, settings, contracts.find("tse"))
+    con.close()
+    export.export(settings)
+    assert len(control(out, FOTOS)) == 2 and (out / FOTOS / "2022/RJ/solta.jpg").exists()
+    export.export(settings, prune=True)
+    assert not (out / FOTOS / "2022/RJ/solta.jpg").exists()
+
+
+def add_photos(settings: Settings, members: dict[str, bytes]) -> None:
+    con = duckdb.connect(str(settings.warehouse))
+    capture(con, settings, "tse", "fotos_rj", 2022, "fotos_rj-ba9876543210.zip", members)
+    arquivos.materialize(con, settings, contracts.find("tse"))
+    con.close()
+
+
+def test_a_crash_in_the_middle_of_the_send_resumes_without_resending(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    land_files(con, settings)
+    out, _ = run(con, settings)
+    add_photos(
+        settings,
+        {f"FRJ{n}_div.jpg": JPG + bytes([n % 256]) for n in range(1002, 1005)} | {"FRJ1001_div.jpg": JPG},
+    )
+    real, calls = shutil.copyfile, []
+
+    def flaky(src: str, dst: str) -> object:
+        if str(dst).endswith(".jpg"):
+            calls.append(dst)
+            if len(calls) == 3:
+                raise OSError("queda")
+        return real(src, dst)
+
+    monkeypatch.setattr(shutil, "copyfile", flaky)
+    with pytest.raises(OSError, match="queda"):
+        export.export(settings)
+    monkeypatch.undo()
+    assert len(control(out, FOTOS)) == 1  # o controle publicado ainda é o antigo
+    sent: list[str] = []
+
+    def spy(src: str, dst: str) -> object:
+        sent.append(str(dst))
+        return real(src, dst)
+
+    monkeypatch.setattr(shutil, "copyfile", spy)
+    export.export(settings)
+    monkeypatch.undo()
+    assert len([d for d in sent if d.endswith(".jpg")]) == 1  # só o que faltava (2 de 3 já estavam)
+    assert len(control(out, FOTOS)) == 4 and export.verify(settings) == []
+
+
+def test_a_crash_after_the_tables_keeps_them_and_resumes_without_rewriting(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    land_files(con, settings)
+    out, _ = run(con, settings)
+    change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
+    add_photos(settings, {"FRJ1001_div.jpg": JPG, "FRJ1002_div.jpg": JPG + b"2"})
+
+    def crash(*args: object) -> None:
+        raise OSError("queda")
+
+    monkeypatch.setattr(export, "_send", crash)
+    with pytest.raises(OSError, match="queda"):
+        export.export(settings)
+    monkeypatch.undo()
+    assert next(t for t in manifest(out)["tabelas"] if t["tabela"] == "int_x")["linhas"] == 2
+    stamp = (out / "intermediate/int_x.parquet").stat().st_mtime_ns
+    result = export.export(settings)
+    assert (out / "intermediate/int_x.parquet").stat().st_mtime_ns == stamp
+    assert result["gravadas"] == 1 and len(control(out, FOTOS)) == 2  # só a coleção
+    assert export.verify(settings) == []
+
+
+def test_each_finished_collection_is_registered_before_the_next(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    land_files(con, settings)
+    out, _ = run(con, settings)
+    add_photos(settings, {"FRJ1001_div.jpg": JPG, "FRJ1002_div.jpg": JPG + b"2"})
+    real, seen = export._send, []
+
+    def watch(root: str, key: str, files: list[dict[str, object]], known: dict[str, str]) -> tuple[int, int]:
+        seen.append(len(control(out, FOTOS)))  # o que já estava registrado ao começar esta coleção
+        return real(root, key, files, known)
+
+    monkeypatch.setattr(export, "_send", watch)
+    export.export(settings)
+    assert len(control(out, FOTOS)) == 2 and set(seen) == {1}
+
+
+def test_r2_list_follows_the_continuation_token_and_send_skips_existing_objects(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    pages = {
+        "": b"<ListBucketResult xmlns='x'><Contents><Key>c/a.jpg</Key><Size>3</Size></Contents>"
+        b"<IsTruncated>true</IsTruncated><NextContinuationToken>t1</NextContinuationToken></ListBucketResult>",
+        "t1": b"<ListBucketResult xmlns='x'><Contents><Key>c/b.jpg</Key><Size>5</Size></Contents>"
+        b"<IsTruncated>false</IsTruncated></ListBucketResult>",
+    }
+    puts: list[str] = []
+
+    def fake(method: str, key: str, path: Path | None = None, *args: object, **kw: object) -> bytes:
+        if method == "GET":
+            query: dict[str, str] = kw["query"]  # type: ignore[assignment]
+            assert query["prefix"] == "c/" and query["list-type"] == "2"
+            return pages[query.get("continuation-token", "")]
+        puts.append(key)
+        return b""
+
+    monkeypatch.setattr(export, "r2_request", fake)
+    assert export.r2_list("c/") == {"c/a.jpg": 3, "c/b.jpg": 5}
+    files = [
+        {"caminho": n, "sha256_arquivo": "h", "qtd_bytes": q, "content_type": "image/jpeg", "local": tmp_path}
+        for n, q in (("a.jpg", 3), ("b.jpg", 9), ("c.jpg", 1))
+    ]
+    # a.jpg já existe com o mesmo tamanho; b.jpg existe com tamanho diferente; c.jpg falta
+    assert export._send("r2://b", "c", files, {}) == (2, 1) and sorted(puts) == ["c/b.jpg", "c/c.jpg"]
+
+
+def test_the_file_phase_runs_on_a_fresh_connection_and_inserts_are_not_order_preserving(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    land_files(con, settings)
+    run(con, settings)
+    add_photos(settings, {"FRJ1001_div.jpg": JPG, "FRJ1002_div.jpg": JPG + b"2"})
+    seen: list[tuple[int, bool]] = []
+    real = export._control
+
+    def spy(c: Connection, *args: object) -> object:
+        tables = scalar(c, "SELECT count(*) FROM duckdb_tables() WHERE schema_name = 'marts'")
+        seen.append((tables, scalar(c, "SELECT current_setting('preserve_insertion_order')")))
+        return real(c, *args)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(export, "_control", spy)
+    export.export(settings)
+    assert seen == [(0, False)]  # sem o warehouse (memória das tabelas liberada) e sem ordem preservada
 
 
 def test_a_file_missing_on_disk_stops_the_export_unless_pruned(con: Connection, settings: Settings) -> None:
@@ -542,16 +776,27 @@ def test_the_signed_upload_carries_content_type_cache_control_and_checksum(
 ) -> None:
     seen: dict[str, str] = {}
 
-    class Done:
-        def close(self) -> None: ...
+    class Response:
+        status = 200
 
-    def fake_open(request: object, timeout: int) -> Done:
-        seen.update({k.lower(): v for k, v in request.headers.items()})  # type: ignore[attr-defined]
-        return Done()
+        def read(self) -> bytes:
+            return b""
+
+    class Conn:
+        def __init__(self, host: str, timeout: int) -> None: ...
+
+        def request(self, method: str, uri: str, body: object, headers: dict[str, str]) -> None:
+            seen.update({k.lower(): v for k, v in headers.items()})
+
+        def getresponse(self) -> Response:
+            return Response()
+
+        def close(self) -> None: ...
 
     keys = ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "BUCKET")
     monkeypatch.setattr(export, "_r2", lambda: dict.fromkeys(keys, "x"))
-    monkeypatch.setattr(export.urllib.request, "urlopen", fake_open)  # type: ignore[attr-defined]
+    monkeypatch.setattr(http.client, "HTTPSConnection", Conn)
+    monkeypatch.setattr(export, "_LOCAL", threading.local())
     file = tmp_path / "f.jpg"
     file.write_bytes(b"abc")
     export.r2_request("PUT", "k/f.jpg", file, "image/jpeg", {"Cache-Control": export.CACHE_CONTROL})
