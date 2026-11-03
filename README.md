@@ -34,17 +34,17 @@ Pessoas são ligadas entre as fontes por uma chave própria (`id_pessoa`), com r
 
 ```text
 fonte oficial ─► landing ─► raw ─► staging ─► intermediate ─► marts ─► export ─► lake público (Parquet no R2)
-                (arquivos   (dlt)   └──────── dbt ────────┘    └─► publish ─► PostgreSQL ─► aplicações
+                (arquivos   (dlt)   └──────── dbt ────────┘
                  + hash)
 ```
 
-O arquivo original nunca é alterado; o resto se refaz a partir dele. O DuckDB é só o motor de cálculo: o dado público é o **Parquet no lake** (`staging`, `intermediate`, `marts` e `metadata.capturas`, em caminho estável, com catálogo e manifesto), consultável sem instalar nada além do DuckDB ([consumir o lake](docs/03-consultar/06-consumir-o-lake.md)). O landing (que guarda campos que o raw descarta) nunca é público. O PostgreSQL serve só os marts às aplicações. Cada camada, o porquê das ferramentas (dlt, dbt, DuckDB, Dagster, PostgreSQL) e as alternativas descartadas estão em [arquitetura](docs/01-entender/02-arquitetura.md) e [camadas](docs/01-entender/03-camadas.md).
+O arquivo original nunca é alterado; o resto se refaz a partir dele. O DuckDB é só o motor de cálculo: o dado público é o **Parquet no lake** (`staging`, `intermediate`, `marts` e `metadata.capturas`, em caminho estável, com catálogo e manifesto), consultável sem instalar nada além do DuckDB ([consumir o lake](docs/03-consultar/06-consumir-o-lake.md)). O landing (que guarda campos que o raw descarta) nunca é público. As aplicações leem os marts do lake e montam as suas consultas. Cada camada, o porquê das ferramentas (dlt, dbt, DuckDB, Dagster) e as alternativas descartadas estão em [arquitetura](docs/01-entender/02-arquitetura.md) e [camadas](docs/01-entender/03-camadas.md).
 
 ## Estado
 
 Projeto em desenvolvimento, **ainda sem versão publicada e sem garantia de estabilidade** dos nomes de tabelas e colunas.
 
-- **Funciona hoje:** captura com hash e monitoramento das fontes; carga e transformação em camadas com testes de qualidade; identidade de pessoas; catálogo e dicionário de colunas; cópia dos marts para um PostgreSQL local de leitura.
+- **Funciona hoje:** captura com hash e monitoramento das fontes; carga e transformação em camadas com testes de qualidade; identidade de pessoas; catálogo e dicionário de colunas; lake público em Parquet, que as aplicações leem.
 - **Falta:** infraestrutura de produção, trilha de documentos com busca vetorial, estados e municípios, e a primeira publicação do lake no R2 ([ADR 0035](docs/05-decisoes/0035-lakehouse-publico-no-r2.md), proposto).
 - **Pendências e decisões abertas:** [issues do repositório](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues).
 
@@ -60,7 +60,7 @@ uv run dado-publico query --sql "SELECT * FROM marts.dim_pessoas LIMIT 10"
 
 **Todas as opções do `dado-publico`** (comandos, modos de execução, filtros por fonte, dataset e ano) estão em `uv run dado-publico --help`, que é a referência completa e sempre atual.
 
-Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). PostgreSQL, [Dagster](docs/02-fazer/01-rodar-localmente.md#dagster-interface-agendamento-e-linhagem), auditoria e os outros modos de execução: [rodar localmente](docs/02-fazer/01-rodar-localmente.md).
+Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). [Dagster](docs/02-fazer/01-rodar-localmente.md#dagster-interface-agendamento-e-linhagem), auditoria e os outros modos de execução: [rodar localmente](docs/02-fazer/01-rodar-localmente.md).
 
 ## Estrutura das pastas
 
@@ -74,7 +74,7 @@ Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). Pos
 | `docs/` | a documentação |
 | `tests/` | testes |
 | `.claude/agents/` | agentes de IA do projeto (arquiteto, engenheiro, auditor, qa) |
-| `docker/`, `compose.yaml` | PostgreSQL de desenvolvimento |
+| `compose.yaml` | Dagster (webserver e daemon) em Docker |
 | `data_store/` | landing e warehouse (fora do git) |
 
 ## Documentação

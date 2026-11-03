@@ -46,7 +46,7 @@ O raw **espelha a fonte**: guarda os nomes de tabela e de coluna como a fonte pu
 
 ## Descrições
 
-**Toda tabela e toda coluna, de todas as camadas, tem descrição** (raw, staging, intermediate, marts, identity e metadata). No dbt, a descrição fica no YAML do modelo; nas tabelas de `ddl/`, em `COMMENT ON`. O Postgres de serviço recebe os mesmos comentários no `publish`. A descrição diz o que a coluna significa e, quando for dado da fonte, qual é.
+**Toda tabela e toda coluna, de todas as camadas, tem descrição** (raw, staging, intermediate, marts, identity e metadata). No dbt, a descrição fica no YAML do modelo; nas tabelas de `ddl/`, em `COMMENT ON`. O `export` grava os mesmos comentários dentro de cada Parquet. A descrição diz o que a coluna significa e, quando for dado da fonte, qual é.
 
 ## Auditabilidade
 

@@ -1,7 +1,7 @@
 version: 2
 
-# Consultas dos aplicativos (ADR 0030): views só de leitura sobre os fatos e o núcleo, sem regra de negócio. Cada uma é uma
-# tabela larga que o aplicativo filtra pelo parâmetro (data, pessoa, votação, município).
+# Consultas que o aplicativo ainda lê (views só de leitura sobre os marts). Cada app monta as suas próprias; estas três saem quando o
+# app tiver as dele e a regra de ocupação estiver num mart (ADR 0038).
 models:
   - name: app_cargo_ocupantes
     description: Quem ocupa cada cargo, uma linha por período de ocupação; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. Deputado federal e senador vêm do exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu e eleito em eleição suplementar); quem foi eleito e ainda não assumiu e os demais cargos vêm do mandato da eleição, com o fim previsto pela duração do cargo (cassação e renúncia desses cargos não aparecem, issue 162). Sem data de posse, entra com dt_inicio vazio e ano_inicio preenchido.
@@ -24,22 +24,6 @@ models:
       - {name: tipo_registro, description: "exercicio (período em que a Câmara ou o Senado registra a pessoa em exercício) ou mandato (período da eleição)."}
       - {name: fonte_url, description: "Arquivo oficial de onde saiu o registro (o do TSE para o mandato; o da Câmara ou do Senado para o exercício), na captura registrada."}
       - {name: dt_captura, description: "Data da captura desse arquivo."}
-
-  - name: app_pessoa_eventos
-    description: A ficha da pessoa com a linha do tempo, um evento por linha, com o nome do tipo, do cargo e do território e o endereço do arquivo original da fonte.
-    meta: {sensitivity: publico-agente-publico, grain: evento da pessoa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
-    columns:
-      - {name: id_evento, description: "Identificador do evento."}
-      - {name: id_pessoa, description: "Pessoa do evento."}
-      - {name: ano_evento, description: "Ano do evento."}
-      - {name: dt_evento, description: "Dia do evento, só quando a fonte dá o dia."}
-      - {name: id_tipo_evento, description: "Tipo do evento, do catálogo."}
-      - {name: evento, description: "Descrição do tipo do evento."}
-      - {name: cargo, description: "Nome do cargo do evento, quando há."}
-      - {name: territorio, description: "Nome do território do evento, quando há."}
-      - {name: partido, description: "Sigla do partido do evento, quando há."}
-      - {name: base, description: "Como o evento é obtido: informado pela fonte ou derivado de regra do projeto."}
-      - {name: url_original, description: "Endereço do arquivo oficial de onde o evento veio; vazio quando o evento nasce de outra tabela do projeto."}
 
   - name: app_pessoa_campanhas
     description: Todas as candidaturas da pessoa, com foto, resultado e campanha, tenha ela vencido ou não. Só candidaturas de quem tem pessoa no projeto (quem já foi eleito).
@@ -65,58 +49,6 @@ models:
       - {name: fonte_url_despesas, description: "Arquivo oficial do TSE das despesas da campanha; vazio sem prestação de contas carregada."}
       - {name: fonte_url_bens, description: "Arquivo oficial do TSE dos bens declarados; vazio quando o arquivo da eleição não foi carregado."}
       - {name: dt_captura_campanha, description: "Data da captura mais recente entre os arquivos de receitas, despesas e bens."}
-
-  - name: app_decisao
-    description: Uma linha por votação e proposição, com o resultado e os totais, para consumo pelas aplicações.
-    meta: {sensitivity: publico, grain: votação e proposição, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
-    columns:
-      - {name: fonte, description: "Fonte da votação (camara ou senado)."}
-      - {name: id_votacao, description: "Identificador da votação na fonte."}
-      - {name: dt_votacao, description: "Data da votação."}
-      - {name: papel, description: "Papel da proposição na votação: afetada, objeto ou materia."}
-      - {name: proposicao, description: "Sigla da proposição; vazia quando ela não está carregada."}
-      - {name: ementa, description: "Ementa da proposição; vazia quando ela não está carregada."}
-      - {name: url_proposicao, description: "Endereço da proposição na fonte."}
-      - {name: descricao, description: "Descrição da votação como a fonte informa."}
-      - {name: aprovada, description: "Resultado da votação segundo a fonte."}
-      - {name: votos_sim, description: "Votos sim."}
-      - {name: votos_nao, description: "Votos não."}
-      - {name: votos_outros, description: "Demais votos (abstenção, obstrução)."}
-
-  - name: app_decisao_partidos
-    description: O voto por partido em cada votação, com o partido como chave (id_partido) e a sigla do voto ao lado, para a página Quem Decidiu.
-    meta: {sensitivity: publico, grain: votação, partido e voto, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
-    columns:
-      - {name: fonte, description: "Fonte da votação."}
-      - {name: id_votacao, description: "Identificador da votação."}
-      - {name: id_partido, description: "Partido (dim_partidos) na data do voto; vazio para voto sem partido ou sigla não curada."}
-      - {name: partido, description: "Sigla atual do partido; sem id_partido, a sigla do voto."}
-      - {name: partido_no_voto, description: "Sigla do partido na data do voto, como a fonte informa."}
-      - {name: voto, description: "Voto registrado."}
-      - {name: qtd_votos, description: "Quantos votos."}
-
-  - name: app_composicao_comparada
-    description: A composição por corte, tipo, cargo, território e partido, com nomes legíveis; o aplicativo escolhe dois cortes e compara. A eleita e a em exercício aparecem separadas.
-    meta: {sensitivity: publico, grain: corte, tipo, cargo, território e partido, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
-    columns:
-      - {name: dt_corte, description: "Data do corte: 1º de janeiro ou 1º de julho."}
-      - {name: tipo_composicao, description: "eleita ou exercicio."}
-      - {name: cargo, description: "Nome do cargo."}
-      - {name: territorio, description: "Nome do território; vazio onde a fonte não liga a um território."}
-      - {name: partido, description: "Sigla do partido; vazia quando não se conhece."}
-      - {name: cadeiras, description: "Quantas pessoas ocupam o cargo naquele corte, território e partido."}
-
-  - name: app_municipio_governo
-    description: Prefeito, vice e vereadores eleitos de cada município por eleição, com partido.
-    meta: {sensitivity: publico-agente-publico, grain: mandato municipal, owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
-    columns:
-      - {name: id_territorio, description: "Município (dim_territorios)."}
-      - {name: municipio, description: "Nome do município."}
-      - {name: ano_eleicao, description: "Ano da eleição."}
-      - {name: cargo, description: "Nome do cargo."}
-      - {name: nome, description: "Nome público da pessoa; vazio quando o eleito não tem pessoa."}
-      - {name: partido, description: "Sigla do partido pelo qual foi eleito."}
-      - {name: id_pessoa, description: "Pessoa do projeto."}
 
   - name: app_pessoas
     description: A ficha cadastral de cada pessoa do projeto (quem já foi eleito), com a foto. O cadastro de contato, escolaridade e profissões só existe para quem passou pela Câmara ou pelo Senado e fica vazio para os demais.
@@ -146,33 +78,3 @@ models:
       - {name: fontes, description: "Fontes em que a pessoa aparece no cadastro (por exemplo, camara, senado); vazio para quem só tem o TSE."}
       - {name: fonte_url, description: "Arquivo oficial de onde saem os dados da ficha: o cadastro da Câmara ou do Senado quando a pessoa tem, senão o arquivo de candidaturas do TSE, na captura registrada."}
       - {name: dt_captura, description: "Data da captura desse arquivo."}
-
-  - name: app_pessoa_votos
-    description: O voto de cada pessoa em cada votação nominal da Câmara e do Senado, com a data, a descrição e o resultado da votação como a fonte publica. Uma linha por pessoa e votação; as proposições votadas estão em app_decisao.
-    meta: {sensitivity: publico-agente-publico, grain: pessoa e votação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
-    columns:
-      - {name: fonte, description: "Fonte da votação (camara ou senado)."}
-      - {name: id_votacao, description: "Identificador da votação na fonte."}
-      - {name: id_pessoa, description: "Pessoa que votou."}
-      - {name: voto, description: "Voto registrado, como a fonte informa (sim, não, abstenção, obstrução...)."}
-      - {name: dt_voto, description: "Data e hora do voto, como a fonte informa."}
-      - {name: partido, description: "Sigla do partido do parlamentar no voto, do cadastro de partidos; vazia quando a sigla da fonte não casa."}
-      - {name: partido_na_fonte, description: "Sigla do partido como a fonte informa no voto."}
-      - {name: uf, description: "UF do parlamentar no voto, como a fonte informa."}
-      - {name: dt_votacao, description: "Data da votação."}
-      - {name: descricao, description: "Descrição da votação como a fonte informa."}
-      - {name: aprovada, description: "Resultado da votação segundo a fonte."}
-
-  - name: app_pessoa_partidos
-    description: Os partidos da pessoa ao longo do tempo, de fontes oficiais (histórico da Câmara, votos, início da legislatura e candidaturas do TSE), com a base de cada período. Uma linha por pessoa e período. Não afirma a data de filiação; o partido da candidatura é o da eleição.
-    meta: {sensitivity: publico-agente-publico, grain: pessoa e período, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
-    columns:
-      - {name: id_pessoa_partido, description: "Identificador da linha: fonte e registro de origem."}
-      - {name: id_pessoa, description: "Pessoa do projeto."}
-      - {name: partido, description: "Sigla do partido, do cadastro de partidos; vazia quando a sigla da fonte não casa."}
-      - {name: partido_na_fonte, description: "Sigla do partido como a fonte informa."}
-      - {name: ano_referencia, description: "Ano do momento: o do primeiro registro da Câmara ou o da eleição da candidatura."}
-      - {name: dt_inicio, description: "Data do primeiro registro com este partido, quando a fonte dá o dia."}
-      - {name: dt_ultimo_registro, description: "Só na Câmara: data do último registro com este partido; não é o fim da filiação."}
-      - {name: base, description: "De onde sai o partido: historico_de_deputados, inicio_da_legislatura, votos ou candidatura."}
-      - {name: fl_mais_recente, description: "Verdadeiro na linha mais recente da pessoa; não é necessariamente o partido de hoje."}

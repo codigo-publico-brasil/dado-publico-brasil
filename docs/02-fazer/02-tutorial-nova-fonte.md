@@ -48,10 +48,8 @@ uv run dado-publico catalog     # regenera docs/03-consultar/01-catalogo.md
 ## 7. Publicar
 
 ```bash
-uv run dado-publico publish     # copia os marts para o PostgreSQL de serviço
+uv run dado-publico export      # grava o lake em Parquet (no R2, se houver segredo; senão em data_store/lake)
 ```
-
-Veja [`01-rodar-localmente.md`](01-rodar-localmente.md) para subir o PostgreSQL.
 
 ## 8. Testes do repositório, documentação e PR
 

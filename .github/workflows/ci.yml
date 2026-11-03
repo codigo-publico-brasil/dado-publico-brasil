@@ -11,16 +11,6 @@ permissions:
 jobs:
   qualidade:
     runs-on: ubuntu-latest
-    services:
-      postgres:  # PostgreSQL de serviço descartável: os testes do publish rodam contra ele (ADR 0014)
-        image: pgvector/pgvector:pg17
-        env:
-          POSTGRES_PASSWORD: ci
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
-    env:
-      DADO_PUBLICO_TEST_POSTGRES: postgresql://postgres:ci@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
