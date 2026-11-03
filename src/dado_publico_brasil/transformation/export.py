@@ -15,10 +15,12 @@ Cada tabela é `<caminho>.parquet` (um arquivo, ordenado pelo período se tiver 
     catalogo.duckdb   uma view por tabela (lista explícita de arquivos), com COMMENT de tabela e coluna
 
 Idempotente e barato de repetir: cada tabela leva uma impressão digital do conteúdo, calculada no DuckDB numa
-varredura (contagem, XOR dos hashes das linhas, que não depende da ordem, esquema e caminho). Se for igual à
-do manifesto anterior (lido da raiz), a tabela é ignorada. Catálogo e manifesto são trocados por último; só
-então se apagam os objetos órfãos sob os caminhos das tabelas (mudança de arquivo único para partição, tabela
-removida). Nunca exporta `raw`, `identity` nem colunas de documento pessoal.
+varredura (contagem, XOR dos hashes das linhas, que não depende da ordem, esquema e caminho), várias tabelas
+ao mesmo tempo. Se for igual à do manifesto anterior (lido da raiz), a tabela é ignorada. Se nada mudou, nada
+é gravado nem enviado (nem catálogo, nem manifesto). Senão, catálogo e manifesto são trocados por último; só
+então se apagam os objetos órfãos sob os caminhos das tabelas gravadas (mudança de arquivo único para
+partição); com `prune`, sob todos (tabela removida). Nunca exporta `raw`, `identity` nem colunas de
+documento pessoal. Imprime o progresso: uma linha por tabela e o tempo de cada fase.
 
 Arquivos (ADR 0037): dataset com `arquivos.publicar: true` no YAML da fonte vira uma coleção `arq_<nome>`
 ao lado das tabelas da fonte (`staging/<poder>/<esfera>/<fonte>/arq_<nome>/...`), lida de
@@ -39,9 +41,11 @@ import os
 import re
 import shutil
 import threading
+import time
 import warnings
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -69,6 +73,9 @@ MEMORY_LIMIT = "4GB"  # a máquina do mantenedor tem 8 GB
 ENV_URL = "DADO_PUBLICO_LAKE_URL"
 _LOCAL = threading.local()  # uma conexão HTTPS persistente por thread de envio
 UPLOADS = 16  # envios simultâneos ao R2
+FINGERPRINTS = (
+    4  # impressões digitais simultâneas (cursores só de leitura; o DuckDB já paraleliza cada varredura)
+)
 CACHE_CONTROL = "public, max-age=86400, must-revalidate"  # caminho estável, conteúdo pode mudar
 CONTROL_DESCRIPTION = "Arquivos da coleção %s, um por linha, com hash e a captura de origem (ADR 0037)."
 CONTROL_COLUMNS = (
@@ -91,6 +98,20 @@ CONTROL_COLUMNS = (
 
 def _q(text: str) -> str:
     return text.replace("'", "''")
+
+
+def _say(text: str) -> None:
+    print(text, flush=True)
+
+
+@contextmanager
+def _phase(name: str) -> Iterator[None]:
+    """Imprime o tempo da fase ao fim."""
+    start = time.monotonic()
+    try:
+        yield
+    finally:
+        _say(f"[{name}] {time.monotonic() - start:.1f}s")
 
 
 def _r2() -> dict[str, str]:
@@ -463,6 +484,39 @@ def _table(
     return _files(con, root, f"{key}.parquet")
 
 
+def _fingerprint(
+    con: warehouse.Connection, schema: str, table: str, key: str, expr: str | None
+) -> dict[str, Any] | None:
+    """Descrição, colunas, linhas e impressão digital da tabela (uma varredura); None sem coluna pública.
+
+    Roda num cursor próprio (só leitura), então várias tabelas podem ser calculadas ao mesmo tempo.
+    """
+    start = time.monotonic()
+    cur = con.cursor()
+    try:
+        description, columns = _describe(cur, schema, table)
+        if not columns:
+            return None
+        cols = ", ".join(f'"{c["nome"]}"' for c in columns)
+        select = f'SELECT {cols} FROM {schema}."{table}"'
+        rows, xor, total = cur.execute(  # xor sozinho zera pares de linhas iguais; a soma não
+            f"SELECT count(*), coalesce(bit_xor(hash(t)), 0), coalesce(sum(hash(t)::HUGEINT), 0) "
+            f"FROM ({select}) t"
+        ).fetchone()  # type: ignore[misc]
+    finally:
+        cur.close()
+    names = [(c["nome"], c["tipo"], c["descricao"]) for c in columns]
+    digest = hashlib.sha256(f"{rows}:{xor}:{total}:{names}:{key}:{expr}:{description}".encode()).hexdigest()
+    return {
+        "description": description,
+        "columns": columns,
+        "select": select,
+        "rows": rows,
+        "fingerprint": digest,
+        "seconds": time.monotonic() - start,
+    }
+
+
 def _collections(
     con: warehouse.Connection, settings: Settings, prune: bool = False
 ) -> dict[str, list[dict[str, Any]]]:
@@ -597,7 +651,8 @@ def export(
     written = ignored = size = 0
     con = _connect(settings, warehouse_file=True)
     try:
-        old_entries = _manifest(con, root).get("tabelas", [])
+        published = _manifest(con, root)
+        old_entries = published.get("tabelas", [])
         before = {(e["camada"], e["tabela"]): e for e in old_entries if not e["tabela"].startswith("arq_")}
         old_files = {e["caminho"]: e for e in old_entries if e["tabela"].startswith("arq_")}
         touched = {e.get("caminho", f"{e['camada']}/{e['tabela']}") for e in old_entries}
@@ -619,110 +674,136 @@ def export(
                 "tem arquivo no disco; nada foi apagado nem publicado. Confira `arquivos/` e o contrato "
                 "ou use --prune"
             )
-        for schema, table in relations:
-            _key(models, schema, table)  # falha cedo, antes de gravar qualquer arquivo
-        for schema, table in relations:
-            description, columns = _describe(con, schema, table)
-            if not columns:
-                continue
-            key = _key(models, schema, table)
-            expr = models.get(table, {}).get("config", {}).get("meta", {}).get("particao")
-            cols = ", ".join(f'"{c["nome"]}"' for c in columns)
-            select = f'SELECT {cols} FROM {schema}."{table}"'
-            rows, xor, total = con.execute(  # xor sozinho zera pares de linhas iguais; a soma não
-                f"SELECT count(*), coalesce(bit_xor(hash(t)), 0), coalesce(sum(hash(t)::HUGEINT), 0) "
-                f"FROM ({select}) t"
-            ).fetchone()  # type: ignore[misc]
-            names = [(c["nome"], c["tipo"], c["descricao"]) for c in columns]
-            fingerprint = hashlib.sha256(
-                f"{rows}:{xor}:{total}:{names}:{key}:{expr}:{description}".encode()
-            ).hexdigest()
-            old = before.get((schema, table))
-            if old and old["impressao"] == fingerprint:
-                files, columns = old["arquivos"], old["colunas"]
-                ignored += 1
-            else:
-                files = _table(
-                    con, settings, root, meta, key, select, expr, description, columns, rows, max_bytes
+        keys = {r: _key(models, *r) for r in relations}  # falha cedo, antes de gravar qualquer arquivo
+        exprs = {r: models.get(r[1], {}).get("config", {}).get("meta", {}).get("particao") for r in relations}
+        with _phase("impressões digitais"), ThreadPoolExecutor(FINGERPRINTS) as pool:
+            prints = list(pool.map(lambda r: _fingerprint(con, r[0], r[1], keys[r], exprs[r]), relations))
+        written_keys: set[str] = set()  # caminhos de tabela a varrer atrás de órfãos
+        changed: set[str] = set()  # tudo o que foi gravado, para as linhas de progresso
+        with _phase("escrita"):
+            for rel, found in zip(relations, prints, strict=True):
+                if not found:
+                    continue
+                (schema, table), key, expr = rel, keys[rel], exprs[rel]
+                description, columns, rows = found["description"], found["columns"], found["rows"]
+                fingerprint, old, start = found["fingerprint"], before.get(rel), time.monotonic()
+                if old and old["impressao"] == fingerprint:
+                    files, columns = old["arquivos"], old["colunas"]
+                    ignored += 1
+                else:
+                    files = _table(
+                        con,
+                        settings,
+                        root,
+                        meta,
+                        key,
+                        found["select"],
+                        expr,
+                        description,
+                        columns,
+                        rows,
+                        max_bytes,
+                    )
+                    written_keys.add(key)
+                    if old and old.get("caminho", key) != key:
+                        written_keys.add(old["caminho"])  # tabela mudou de caminho: o antigo fica órfão
+                    changed.add(key)
+                    written += 1
+                    size += sum(f["bytes"] for f in files)
+                _say(
+                    f"  {schema}.{table}: {'ignorada' if key not in changed else 'gravada'} "
+                    f"(impressão {found['seconds']:.1f}s, escrita {time.monotonic() - start:.1f}s)"
                 )
-                touched.add(key)
-                written += 1
-                size += sum(f["bytes"] for f in files)
-            years = sorted({int(m[1]) for f in files if (m := re.search(r"/ano=(\d+)/", f["arquivo"]))})
-            entries.append(
-                {
-                    "camada": schema,
-                    "camada_medalhao": MEDALLION[schema],
-                    "tabela": table,
-                    "caminho": key,
-                    "descricao": description,
-                    "linhas": rows,
-                    "impressao": fingerprint,
-                    "particao": expr,
-                    "ano": years or None,
-                    "colunas": columns,
-                    "arquivos": files,
-                }
-            )
-        for key, files in collections.items():
-            if not files and key not in old_files:
-                continue  # coleção que nunca teve arquivo não vira tabela vazia
-            known: dict[str, str] = {}
-            if key in old_files:
-                known = dict(
-                    con.execute(
-                        f"SELECT caminho, sha256_arquivo FROM read_parquet('{_q(root)}/{key}.parquet')"
-                    ).fetchall()
+                years = sorted({int(m[1]) for f in files if (m := re.search(r"/ano=(\d+)/", f["arquivo"]))})
+                entries.append(
+                    {
+                        "camada": schema,
+                        "camada_medalhao": MEDALLION[schema],
+                        "tabela": table,
+                        "caminho": key,
+                        "descricao": description,
+                        "linhas": rows,
+                        "impressao": fingerprint,
+                        "particao": expr,
+                        "ano": years or None,
+                        "colunas": columns,
+                        "arquivos": files,
+                    }
                 )
-            size += sum(f["qtd_bytes"] for f in files if known.get(f["caminho"]) != f["sha256_arquivo"])
-            _send(root, key, files, known)
-            touched.add(key)
-            clean = [{k: v for k, v in f.items() if k != "local"} for f in files]
-            fingerprint = hashlib.sha256(f"{key}:{clean}".encode()).hexdigest()
-            old = old_files.get(key)
-            description = CONTROL_DESCRIPTION % key.rsplit("/", 1)[1]
-            if old and old["impressao"] == fingerprint:
-                parquet, columns = old["arquivos"], old["colunas"]
-                ignored += 1
+        with _phase("arquivos"):
+            for key, files in collections.items():
+                if not files and key not in old_files:
+                    continue  # coleção que nunca teve arquivo não vira tabela vazia
+                start, sent = time.monotonic(), 0
+                clean = [{k: v for k, v in f.items() if k != "local"} for f in files]
+                fingerprint = hashlib.sha256(f"{key}:{clean}".encode()).hexdigest()
+                old = old_files.get(key)
+                description = CONTROL_DESCRIPTION % key.rsplit("/", 1)[1]
+                if old and old["impressao"] == fingerprint:  # mesmo controle: tudo já foi enviado
+                    parquet, columns = old["arquivos"], old["colunas"]
+                    ignored += 1
+                else:
+                    known: dict[str, str] = {}
+                    if old:
+                        known = dict(
+                            con.execute(
+                                f"SELECT caminho, sha256_arquivo FROM read_parquet('{_q(root)}/{key}.parquet')"  # noqa: E501
+                            ).fetchall()
+                        )
+                    size += sum(
+                        f["qtd_bytes"] for f in files if known.get(f["caminho"]) != f["sha256_arquivo"]
+                    )
+                    sent = _send(root, key, files, known)
+                    parquet, description = _control(con, settings, root, meta, key, files)
+                    columns = [{"nome": n, "tipo": t, "descricao": d} for n, t, d in CONTROL_COLUMNS]
+                    changed.add(key)  # coleção: objeto fora do controle só sai com --prune
+                    written += 1
+                _say(
+                    f"  {key}: {'gravada' if key in changed else 'ignorada'} "
+                    f"({len(files)} arquivos, {sent} enviados, {time.monotonic() - start:.1f}s)"
+                )
+                entries.append(
+                    {
+                        "camada": "staging",
+                        "camada_medalhao": MEDALLION["staging"],
+                        "tabela": key.rsplit("/", 1)[1],
+                        "caminho": key,
+                        "descricao": description,
+                        "linhas": len(files),
+                        "impressao": fingerprint,
+                        "particao": None,
+                        "ano": None,
+                        "colunas": columns,
+                        "arquivos": parquet,
+                    }
+                )
+                keep |= {f"{key}/{f['caminho']}" for f in files}
+        with _phase("catálogo e manifesto"):
+            if json.loads(json.dumps(entries)) == old_entries and published.get("base") == (
+                base or root
+            ):  # nada mudou: o publicado já é este
+                _say("  sem mudança: catálogo e manifesto mantidos")
             else:
-                parquet, description = _control(con, settings, root, meta, key, files)
-                columns = [{"nome": n, "tipo": t, "descricao": d} for n, t, d in CONTROL_COLUMNS]
-                written += 1
-            entries.append(
-                {
-                    "camada": "staging",
-                    "camada_medalhao": MEDALLION["staging"],
-                    "tabela": key.rsplit("/", 1)[1],
-                    "caminho": key,
-                    "descricao": description,
-                    "linhas": len(files),
-                    "impressao": fingerprint,
-                    "particao": None,
-                    "ano": None,
-                    "colunas": columns,
-                    "arquivos": parquet,
-                }
-            )
-            keep |= {f"{key}/{f['caminho']}" for f in files}
-        catalog = settings.state_dir / "catalogo.duckdb"
-        _catalog(entries, catalog, base or root, meta)
-        if _r2():
-            r2_request("PUT", "catalogo.duckdb", catalog)
-        else:
-            shutil.copyfile(catalog, f"{root}/catalogo.duckdb")
-        catalog.unlink()
-        text = json.dumps(
-            {**meta, "tabelas": entries}, ensure_ascii=True
-        )  # compacto: uma linha, sem aspas soltas
-        con.execute(
-            f"COPY (SELECT ?) TO '{_q(root)}/manifesto.json' "
-            "(FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER '\\x01')",
-            (text,),
-        )  # por último
+                catalog = settings.state_dir / "catalogo.duckdb"
+                _catalog(entries, catalog, base or root, meta)
+                if _r2():
+                    r2_request("PUT", "catalogo.duckdb", catalog)
+                else:
+                    shutil.copyfile(catalog, f"{root}/catalogo.duckdb")
+                catalog.unlink()
+                text = json.dumps(
+                    {**meta, "base": base or root, "tabelas": entries}, ensure_ascii=True
+                )  # compacto: uma linha, sem aspas soltas
+                con.execute(
+                    f"COPY (SELECT ?) TO '{_q(root)}/manifesto.json' "
+                    "(FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER '\\x01')",
+                    (text,),
+                )  # por último
         keep |= {f["arquivo"] for e in entries for f in e["arquivos"]}
-        if not prune:  # arquivo que saiu da fonte só se apaga com --prune
-            touched -= set(collections)
-        orphans = _delete_orphans(con, root, touched, keep)  # só depois do manifesto novo
+        # órfãos só sob o que foi gravado; `prune` varre tudo (tabela removida, arquivo que saiu da fonte)
+        swept = written_keys | (touched | set(collections) if prune else set())
+        with _phase("órfãos"):
+            orphans = _delete_orphans(con, root, swept, keep) if swept else 0  # só depois do manifesto novo
     finally:
         con.close()
     return {

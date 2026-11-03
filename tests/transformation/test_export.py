@@ -119,6 +119,87 @@ def test_a_second_export_without_changes_rewrites_nothing(con: Connection, setti
     assert export.verify(settings) == []
 
 
+def test_an_unchanged_run_writes_and_sends_nothing_and_prints_progress(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    stamps = {p: p.stat().st_mtime_ns for p in out.iterdir() if p.is_file()}
+    text = (out / "manifesto.json").read_text(encoding="utf-8")
+    tables = len(manifest(out)["tabelas"])
+    capsys.readouterr()
+    sent: list[str] = []
+    monkeypatch.setattr(shutil, "copyfile", lambda s, d: sent.append(str(d)))
+    export.export(settings)
+    shown = capsys.readouterr().out
+    assert sent == [] and (out / "manifesto.json").read_text(encoding="utf-8") == text
+    assert {p: p.stat().st_mtime_ns for p in out.iterdir() if p.is_file()} == stamps
+    for phase in ("impressões digitais", "escrita", "arquivos", "catálogo e manifesto", "órfãos"):
+        assert f"[{phase}] " in shown
+    assert shown.count(": ignorada (") == tables and ": gravada" not in shown
+
+
+def test_a_changed_table_prints_as_written_and_the_rest_as_ignored(
+    capsys: pytest.CaptureFixture[str], con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    tables = len(manifest(out)["tabelas"])
+    change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
+    capsys.readouterr()
+    export.export(settings)
+    lines = [ln for ln in capsys.readouterr().out.splitlines() if ": gravada (" in ln or ": ignorada (" in ln]
+    assert [ln.split(":")[0].strip() for ln in lines if ": gravada (" in ln] == ["intermediate.int_x"]
+    assert len(lines) == tables
+
+
+def test_a_new_table_is_added_and_a_removed_one_needs_prune(con: Connection, settings: Settings) -> None:
+    out, first = run(con, settings)
+    change(settings, "CREATE TABLE intermediate.int_nova AS SELECT 1 AS a")
+    again = export.export(settings)
+    assert again["gravadas"] == 1 and again["tabelas"] == first["tabelas"] + 1
+    assert (out / "intermediate/int_nova.parquet").exists()
+    change(settings, "DROP TABLE intermediate.int_nova")
+    export.export(settings, prune=True)
+    assert not (out / "intermediate/int_nova.parquet").exists() and export.verify(settings) == []
+
+
+def test_a_description_change_alone_replaces_the_catalog_and_the_manifest(
+    con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    change(settings, "COMMENT ON TABLE intermediate.int_x IS 'Outra descricao.'")
+    assert export.export(settings)["gravadas"] == 1
+    cat = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
+    assert scalar(cat, "SELECT comment FROM duckdb_views() WHERE view_name = 'int_x'") == "Outra descricao."
+    cat.close()
+
+
+def test_changing_the_public_base_url_replaces_the_catalog_and_the_manifest(
+    con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    one, two = out.as_posix(), f"{out.as_posix()}/../lake"  # as duas resolvem para os mesmos arquivos
+    export.export(settings, base_url=one)
+    export.export(settings, base_url=one)
+    stamp = (out / "catalogo.duckdb").stat().st_mtime_ns
+    export.export(settings, base_url=two)
+    assert manifest(out)["base"] == two  # type: ignore[comparison-overlap]
+    assert (out / "catalogo.duckdb").stat().st_mtime_ns != stamp
+    cat = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
+    assert f"{two}/" in scalar(cat, "SELECT sql FROM duckdb_views() WHERE view_name = 'int_x'")
+    cat.close()
+
+
+def test_a_table_that_changed_path_leaves_no_orphan_even_without_prune(
+    con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    moved = json.loads(json.dumps(MODELS).replace("legislativo", "outro"))
+    (settings.state_dir / "dbt" / "target" / "manifest.json").write_text(json.dumps(moved), encoding="utf-8")
+    export.export(settings)
+    assert not (out / f"{VOTOS}.parquet").exists() and (out / "marts/outro/fct_votos.parquet").exists()
+    assert export.verify(settings) == []
+
+
 def test_a_changed_table_alone_is_rewritten_and_verify_catches_tampering(
     con: Connection, settings: Settings
 ) -> None:
@@ -485,9 +566,7 @@ def test_only_missing_or_changed_files_are_sent_and_verify_checks_the_objects(
     sent: list[str] = []
     monkeypatch.setattr(shutil, "copyfile", lambda s, d: sent.append(Path(d).as_posix()))
     again = export.export(settings)
-    assert again["gravadas"] == 0 and sent == [
-        (out / "catalogo.duckdb").as_posix()
-    ]  # nenhum arquivo reenviado
+    assert again["gravadas"] == 0 and sent == []  # nenhum arquivo reenviado, nem o catálogo
     monkeypatch.undo()
     assert (out / FOTOS / FOTO_LOCAL).stat().st_mtime_ns == stamp
     assert export.verify(settings) == []
@@ -506,6 +585,28 @@ def test_only_missing_or_changed_files_are_sent_and_verify_checks_the_objects(
     ]
     (out / DOU / "secao1/202608/base.zip").unlink()
     assert f"falta {DOU}/secao1/202608/base.zip" in export.verify(settings)
+
+
+def test_an_object_outside_the_control_stays_without_prune(con: Connection, settings: Settings) -> None:
+    land_files(con, settings)
+    out, _ = run(con, settings)
+    (out / FOTOS / "2022/RJ/solta.jpg").write_bytes(b"x")
+    con = duckdb.connect(str(settings.warehouse))
+    capture(
+        con,
+        settings,
+        "tse",
+        "fotos_rj",
+        2022,
+        "fotos_rj-ba9876543210.zip",
+        {"FRJ1001_div.jpg": JPG, "FRJ1002_div.jpg": b"\xff\xd8outra"},
+    )
+    arquivos.materialize(con, settings, contracts.find("tse"))
+    con.close()
+    export.export(settings)
+    assert len(control(out, FOTOS)) == 2 and (out / FOTOS / "2022/RJ/solta.jpg").exists()
+    export.export(settings, prune=True)
+    assert not (out / FOTOS / "2022/RJ/solta.jpg").exists()
 
 
 def test_a_file_missing_on_disk_stops_the_export_unless_pruned(con: Connection, settings: Settings) -> None:
