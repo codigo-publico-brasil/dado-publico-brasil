@@ -90,8 +90,13 @@ def _q(text: str) -> str:
 
 
 def _r2() -> dict[str, str]:
-    cfg = {**privado.credentials(), "BUCKET": os.environ.get("DADO_PUBLICO_R2_BUCKET", "")}
-    return cfg if all(cfg.values()) and len(cfg) == 4 else {}
+    """As quatro variáveis do R2, ou vazio (modo local). Pela metade falha: nunca vira local em silêncio."""
+    cfg = {k: os.environ.get(f"DADO_PUBLICO_R2_{k}", "") for k in (*privado.KEYS, "BUCKET")}
+    if all(cfg.values()):
+        return cfg
+    if any(cfg.values()) or os.environ.get(ENV_URL):
+        raise ValueError(f"R2 incompleto: defina as quatro DADO_PUBLICO_R2_* ou nenhuma, e sem {ENV_URL}")
+    return {}
 
 
 def _root(settings: Settings) -> str:

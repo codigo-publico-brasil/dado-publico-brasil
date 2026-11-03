@@ -558,3 +558,15 @@ def test_the_signed_upload_carries_content_type_cache_control_and_checksum(
     assert seen["content-type"] == "image/jpeg" and seen["cache-control"] == export.CACHE_CONTROL
     assert seen["x-amz-checksum-sha256"] == base64.b64encode(hashlib.sha256(b"abc").digest()).decode()
     assert "cache-control" in seen["authorization"] and "x-amz-checksum-sha256" in seen["authorization"]
+
+
+@pytest.mark.parametrize("var", ["DADO_PUBLICO_R2_BUCKET", "DADO_PUBLICO_LAKE_URL"])
+def test_a_partial_r2_configuration_fails_instead_of_exporting_locally(
+    var: str, con: Connection, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "BUCKET"):
+        monkeypatch.delenv(f"DADO_PUBLICO_R2_{name}", raising=False)
+    monkeypatch.delenv("DADO_PUBLICO_LAKE_URL", raising=False)
+    monkeypatch.setenv(var, "x")
+    with pytest.raises(ValueError, match="R2 incompleto"):
+        export.export(settings)

@@ -131,9 +131,10 @@ def test_the_html_report_runs_edr_through_uvx_in_the_state_folder_and_needs_uv(
         '{key:"c",path:"p",label:"Catalog",description:"d",icon:A.jsx(a,{}),isSaasPage:!0,tooltip:"t"}</body>'
     )
 
-    def fake_run(command: list[str], **kwargs: Any) -> None:
+    def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         called.update(command=command, **kwargs)
         Path(command[command.index("--file-path") + 1]).write_text(page, encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/uvx")
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -249,3 +250,12 @@ def test_a_dataset_with_a_limit_and_no_capture_is_a_problem(con: Connection) -> 
 def test_without_limits_the_stale_check_does_not_run(con: Connection) -> None:
     capture(con, "votacoes", "2020-01-01T00:00:00")
     assert not observability.report(con)[1]
+
+
+def test_a_failed_edr_carries_its_stderr_in_the_error(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/uvx")
+    monkeypatch.setattr(subprocess, "run", lambda c, **k: subprocess.CompletedProcess(c, 2, "", "sem rede"))
+    with pytest.raises(RuntimeError, match="sem rede"):
+        observability.html_report(settings)

@@ -74,7 +74,7 @@ Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). Pos
 | `docs/` | a documentação |
 | `tests/` | testes |
 | `.claude/agents/` | agentes de IA do projeto (arquiteto, engenheiro, auditor, qa) |
-| `docker/`, `compose.yaml` | PostgreSQL de desenvolvimento |
+| `docker/`, `compose.yaml`, `compose.servidor.yaml` | PostgreSQL de desenvolvimento e Dagster em Docker (o segundo arquivo exige o R2 no servidor) |
 | `data_store/` | landing e warehouse (fora do git) |
 
 ## Documentação

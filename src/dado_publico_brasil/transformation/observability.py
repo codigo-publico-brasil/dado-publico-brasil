@@ -133,9 +133,11 @@ def html_report(settings: Settings) -> Path:
     command += ["--project-name", "Dado Público Brasil", "--disable-samples", "true"]
     command += ["--exclude-elementary-models", "true", "--config-dir", str(DBT_DIR / "edr")]
     env = {**os.environ, "DADO_PUBLICO_WAREHOUSE_FILE": str(settings.warehouse.resolve())}
-    subprocess.run(
-        command, cwd=folder, env=env, check=True, capture_output=True
-    )  # cwd: o edr cria `edr_target`
+    done = subprocess.run(  # cwd: o edr cria `edr_target`
+        command, cwd=folder, env=env, check=False, capture_output=True, text=True, errors="replace"
+    )
+    if done.returncode:
+        raise RuntimeError(f"edr report falhou ({done.returncode}): {(done.stderr or done.stdout)[-2000:]}")
     html = prune_report(file.read_text(encoding="utf-8"))
     file.write_text(branding.apply(html, "Dado Público Brasil · Qualidade dos dados"), encoding="utf-8")
     return file

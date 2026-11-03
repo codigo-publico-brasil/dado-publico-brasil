@@ -1,10 +1,16 @@
-# Configuração do Dagster (ADR 0027). Copie para a pasta de DAGSTER_HOME (o compose já monta este arquivo).
+# Configuração do Dagster (ADR 0027). Copie para a pasta de DAGSTER_HOME (no compose, o serviço `init` copia a cada subida).
 # O DuckDB em arquivo aceita um escritor por vez: uma execução por vez, as demais esperam na fila.
 run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
   config:
     max_concurrent_runs: 1
+
+# Execução que não inicia em 5 min ou passa de 12 h é marcada como falha (o sensor avisa) e libera a fila.
+run_monitoring:
+  enabled: true
+  start_timeout_seconds: 300
+  max_runtime_seconds: 43200
 
 telemetry:
   enabled: false
