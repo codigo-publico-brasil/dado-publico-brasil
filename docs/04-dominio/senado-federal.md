@@ -29,8 +29,8 @@ Siglas de voto que a fonte usa (a descrição é a da própria fonte):
 
 ## Matérias
 
-A plataforma traz as matérias que aparecem em votações (sigla, número, ano, ementa e data de apresentação), com o link para a página oficial da matéria. O **processo** de cada matéria (situação atual e a **norma gerada**: tipo, número, datas e veículo de publicação) vem da API, uma chamada por matéria, sob pedido (`--foreach`): preenche `situacao` e o mart `normas_geradas`. Em parte das respostas a fonte não informa a situação atual, e o campo fica vazio. A autoria está no raw e a tramitação no landing, mas ainda não nos marts.
+A plataforma traz as matérias que aparecem em votações (sigla, número, ano, ementa e data de apresentação), com o link para a página oficial da matéria. O **processo** de cada matéria (situação atual e a **norma gerada**: tipo, número, datas e veículo de publicação) vem da API, uma chamada por matéria, sob pedido (`--foreach`): preenche `situacao` e o mart `fct_normas_geradas`. Em parte das respostas a fonte não informa a situação atual, e o campo fica vazio. A autoria está no raw e a tramitação no landing, mas ainda não nos marts.
 
 ## O que ainda não vem do Senado
 
-Data de nascimento, foto e redes dos senadores (o arquivo de legislatura não as traz), votos em comissões, a tramitação das matérias e detalhes dos mandatos (titular e suplente, períodos de exercício e causas de afastamento). Os mandatos e exercícios já estão no raw (`senadores__mandatos_mandato` e suas tabelas filhas) e entram nos marts quando forem necessários.
+Redes sociais dos senadores, votos em comissões, a tramitação das matérias e as autorias (issue 14). O nascimento, a naturalidade e a foto vêm do detalhe por senador (`senadores_detalhe`), e o exercício real (titular e suplente, períodos e causas de afastamento) está em `fct_exercicios`.
