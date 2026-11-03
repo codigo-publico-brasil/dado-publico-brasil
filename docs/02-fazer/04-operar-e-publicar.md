@@ -103,9 +103,8 @@ Para quem vai deixar o pipeline rodando sozinho num servidor (uma máquina local
 **Uma vez só:**
 
 1. **Servidor:** Linux com Docker, um usuário seu com acesso por chave SSH e uma pasta de dados (por exemplo `/srv/dado-publico`). Com 8 GB de RAM compartilhados, crie swap (8 GB); `DADO_PUBLICO_MEM_LIMIT=6g` e `DADO_PUBLICO_DUCKDB_MEMORY=4GB` (padrões; acima disso o DuckDB usa o disco, mais lento e sem estourar). Em máquina maior, suba os dois.
-2. **Sua máquina:** `docker context create servidor --docker host=ssh://usuario@servidor`. No `.env` local preencha R2 (público e privado), SMTP, `DADO_PUBLICO_DAGSTER_URL` e `DADO_PUBLICO_DATA_DIR=/srv/dado-publico` (caminho **do servidor**).
-3. **Landing** (e a pasta `arquivos`, que se refaz dele) só existe na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing usuario@servidor:/srv/dado-publico/`.
-4. **Subir** (warehouse vazio restaura sozinho a identidade e o metadata do R2 privado, seção abaixo), depois a primeira carga: `docker --context servidor compose exec webserver uv run --no-sync dado-publico rebuild` e o job `atualizar_tudo` na interface (a propagação automática só vale depois da primeira materialização).
+2. **Sua máquina:** `docker context create servidor --docker host=ssh://usuario@servidor`.
+3. **Arquivo `.env.servidor`** (na sua máquina, fora do git; copie o `.env.example` e deixe de fora o DSN e as senhas do Postgres). Ele também define quais compose usar:
 
    ```bash
    COMPOSE_PATH_SEPARATOR=,
@@ -116,7 +115,7 @@ Para quem vai deixar o pipeline rodando sozinho num servidor (uma máquina local
    ```
 
    Valores com `$` (senhas) vão entre aspas simples (`SENHA='a$b'`); sem aspas o compose os interpreta como variável. Use sempre `docker --context servidor compose --env-file .env.servidor ...`.
-4. **Landing** (e a pasta `arquivos`, que se refaz dele) só existe na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing data_store/arquivos usuario@servidor:/srv/dado-publico/`. Termine o rsync antes do passo seguinte.
+4. **Landing e `arquivos/`** (a pasta `arquivos/` também se refaz do landing, mas leva cerca de 40 minutos) só existe na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing data_store/arquivos usuario@servidor:/srv/dado-publico/`. Termine o rsync antes da primeira subida (abaixo).
 
 > **Atenção:** com `--context servidor`, **todo** comando compose precisa de `--env-file .env.servidor`; sem ele o compose lê o `.env` de desenvolvimento (com DSN do Postgres e `DATA_DIR` relativo) e age sobre o lugar errado. Para não esquecer, na sessão: `export COMPOSE_PATH_SEPARATOR=, COMPOSE_FILE=compose.yaml,compose.servidor.yaml DADO_PUBLICO_ENV_FILE=.env.servidor DADO_PUBLICO_DATA_DIR=/srv/dado-publico DOCKER_CONTEXT=servidor` (ou um alias `dc='docker --context servidor compose --env-file .env.servidor'`).
 >
