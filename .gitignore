@@ -29,3 +29,4 @@ dagster_home/
 
 # Identificador de usuário do dbt (local)
 dbt/.user.yml
+.claude/worktrees/
