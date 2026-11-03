@@ -13,7 +13,7 @@ Reparos sem baixar nada: backfill (cria `_ingested_at` no raw e preenche as linh
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
 Lake público: export grava Parquet, manifesto e catálogo no R2 (DADO_PUBLICO_R2_*) ou em <storage_root>/lake;
 export --verificar confere cada arquivo do manifesto e das coleções arq_ (ADR 0037).
-Publicação: publish copia os marts para o PostgreSQL de serviço (DADO_PUBLICO_POSTGRES_DSN).
+Publicação: export grava o lake em Parquet (ADR 0035); publish-docs sobe as páginas.
 Auditoria: verify (hashes do landing e cópia da identidade) e coverage (itens obtidos nos datasets por item).
 Reconstrução do zero: `rebuild --old-warehouse ARQUIVO` (docs/02-fazer/04-operar-e-publicar.md).
 Observabilidade: observe resume a saúde dos dados (fontes, carga, testes, anomalias) e falha se houver
@@ -33,7 +33,7 @@ from dado_publico_brasil.core import settings as settings_module
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.ingestion import contract, foreach, landing, loader
 from dado_publico_brasil.orchestration import pipeline
-from dado_publico_brasil.transformation import build, catalog, dbt, export, observability, publish, snapshot
+from dado_publico_brasil.transformation import build, catalog, dbt, export, observability, snapshot
 
 COMMANDS = (
     "run",
@@ -44,7 +44,6 @@ COMMANDS = (
     "transform",
     "identity",
     "export",
-    "publish",
     "publish-docs",
     "catalog",
     "docs",
@@ -243,9 +242,6 @@ def main(argv: list[str] | None = None) -> int:
         case "publish-docs":
             pages = export.publish_docs(settings)
             print(pages or "R2 não configurado: nada publicado")
-        case "publish":
-            published = publish.publish(settings)
-            print(f"{len(published)} marts publicados ({sum(published.values())} linhas)")
         case _:
             _ingest(settings, args)
     return 0

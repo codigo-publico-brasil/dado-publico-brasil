@@ -198,7 +198,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
   <div class="fig">
   <svg viewBox="0 0 980 345" role="img" aria-labelledby="f1t" aria-describedby="f1d">
     <title id="f1t">Camadas do projeto</title>
-    <desc id="f1d">Da fonte oficial até o aplicativo: landing, raw, staging, intermediate e o esquema marts com cinco tipos de tabela; a identidade alimenta os marts e só marts é publicado no PostgreSQL.</desc>
+    <desc id="f1d">Da fonte oficial até o aplicativo: landing, raw, staging, intermediate e o esquema marts com cinco tipos de tabela; a identidade alimenta os marts e só marts é publicado, no lake em Parquet.</desc>
     <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="svg-ink"/></marker></defs>
     <rect class="svg-box" x="20" y="90" width="110" height="60" rx="3"/><text class="svg-t" x="75" y="116" text-anchor="middle">Fontes</text><text class="svg-s" x="75" y="136" text-anchor="middle">Câmara, TSE…</text>
     <rect class="svg-box" x="150" y="90" width="100" height="60" rx="3"/><text class="svg-t" x="200" y="116" text-anchor="middle">landing</text><text class="svg-s" x="200" y="136" text-anchor="middle">arquivo + hash</text>
@@ -212,12 +212,12 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <line class="svg-ln" x1="620" y1="150" x2="620" y2="215" marker-end="url(#a1)"/><line class="svg-ln" x1="680" y1="240" x2="710" y2="240" marker-end="url(#a1)"/>
     <rect class="svg-box" x="150" y="215" width="260" height="50" rx="3"/><text class="svg-t" x="165" y="238">metadata.capturas</text><text class="svg-s" x="165" y="256">URL, data e hash de cada captura</text>
     <line class="svg-dash" x1="340" y1="215" x2="340" y2="150"/>
-    <rect class="svg-box" x="710" y="290" width="250" height="45" rx="3"/><text class="svg-t" x="725" y="317">PostgreSQL de serviço</text><text class="svg-s" x="945" y="317" text-anchor="end">só marts</text>
+    <rect class="svg-box" x="710" y="290" width="250" height="45" rx="3"/><text class="svg-t" x="725" y="317">lake público (Parquet)</text><text class="svg-s" x="945" y="317" text-anchor="end">só marts</text>
     <line class="svg-ln" x1="835" y1="260" x2="835" y2="290" marker-end="url(#a1)"/>
   </svg>
   </div>
-  <figcaption>Figura 1. Camadas do projeto. O landing e o raw nunca são reescritos; a identidade (código próprio) entra no meio do dbt; os cinco tipos de tabela convivem no esquema <code>marts</code>, e só ele vai ao PostgreSQL que os aplicativos leem.</figcaption>
-  <details class="alt"><summary>Descrição em texto da Figura 1</summary><p>Da esquerda para a direita: fonte oficial, landing (arquivo e hash), raw (fiel à fonte), staging (views <code>stg_</code>), intermediate (tabelas <code>int_</code>) e <code>marts</code>, com <code>dim_</code>, <code>fct_</code>, <code>brg_</code>, <code>agg_</code> e <code>app_</code>. A identidade (<code>id_pessoa</code>) recebe dados do intermediate e alimenta os marts. A tabela <code>metadata.capturas</code>, com URL, data e hash, liga-se ao raw. Só o esquema <code>marts</code> é copiado para o PostgreSQL de serviço.</p></details>
+  <figcaption>Figura 1. Camadas do projeto. O landing e o raw nunca são reescritos; a identidade (código próprio) entra no meio do dbt; os cinco tipos de tabela convivem no esquema <code>marts</code>, e só ele vai ao lake em Parquet, de onde os aplicativos leem.</figcaption>
+  <details class="alt"><summary>Descrição em texto da Figura 1</summary><p>Da esquerda para a direita: fonte oficial, landing (arquivo e hash), raw (fiel à fonte), staging (views <code>stg_</code>), intermediate (tabelas <code>int_</code>) e <code>marts</code>, com <code>dim_</code>, <code>fct_</code>, <code>brg_</code>, <code>agg_</code> e <code>app_</code>. A identidade (<code>id_pessoa</code>) recebe dados do intermediate e alimenta os marts. A tabela <code>metadata.capturas</code>, com URL, data e hash, liga-se ao raw. Só o esquema <code>marts</code> vai ao lake em Parquet.</p></details>
 </figure>
 <div class="scroll"><table>
   <caption>Pastas de <code>dbt/models/marts</code> e o que cada uma reúne</caption>
@@ -372,7 +372,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
 
 <h3>6.4 Exemplo: a trajetória de uma pessoa eleita presidente</h3>
 <div class="scroll"><table>
-  <caption>Eventos de uma pessoa do exemplo, em <code>app_pessoa_eventos</code></caption>
+  <caption>Eventos de uma pessoa do exemplo, em <code>fct_eventos</code></caption>
   <thead><tr><th scope="col">Quando</th><th scope="col">id_tipo_evento</th><th scope="col">O que aconteceu</th><th scope="col">Base</th><th scope="col">Fonte</th></tr></thead>
   <tbody>
     <tr><td>2002</td><td><code>candidatura_registrada</code>, <code>eleito</code></td><td>Candidato a presidente, eleito no segundo turno (27/10)</td><td><span class="chip ok">informado</span></td><td>TSE candidaturas e votação</td></tr>
@@ -447,21 +447,14 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
 </table></div>
 
 <h2 id="views">9 Views dos aplicativos</h2>
-<p>Cada aplicativo lê só as views <code>app_*</code> do esquema <code>marts</code>. Elas são só leitura sobre os fatos e as dimensões, sem regra de negócio escondida, e cada uma traz a fonte e a data de captura quando mostra um dado. São views no warehouse e tabelas no PostgreSQL; não têm contrato de tipos (o contrato de colunas está em <code>_app__models.yml</code>).</p>
+<p>Cada aplicativo monta as suas próprias consultas sobre os marts do lake (<a href="../05-decisoes/0038-lake-como-unica-publicacao.md">ADR 0038</a>). Três views <code>app_*</code> ainda existem porque o app atual as lê; saem quando o app tiver as dele. São só leitura sobre os fatos e as dimensões, sem regra de negócio escondida, e cada uma traz a fonte e a data de captura quando mostra um dado. O contrato de colunas está em <code>_app__models.yml</code>.</p>
 <div class="scroll"><table>
-  <caption>As dez views <code>app_*</code></caption>
+  <caption>As três views <code>app_*</code></caption>
   <thead><tr><th scope="col">View</th><th scope="col">Uma linha por</th><th scope="col">O que entrega</th></tr></thead>
   <tbody>
     <tr><th scope="row"><code>app_cargo_ocupantes</code></th><td>período de ocupação</td><td>Quem ocupa cada cargo: exercício (Câmara e Senado) ou mandato (demais), <code>dt_inicio</code>, <code>dt_fim_prevista</code> com <code>base_do_fim</code>, <code>ano_inicio</code>, <code>tipo_mandato</code> (novato, reeleito, retorno), <code>tipo_registro</code>, <code>dt_eleicao</code>, <code>fonte_url</code>, <code>dt_captura</code>.</td></tr>
     <tr><th scope="row"><code>app_pessoas</code></th><td>pessoa</td><td>Ficha cadastral: nome, nascimento, UF de nascimento, escolaridade, profissões, estado civil, contato institucional, foto (TSE ou casa) e a fonte. O que o TSE declarou completa o que o cadastro das casas não tem.</td></tr>
-    <tr><th scope="row"><code>app_pessoa_eventos</code></th><td>evento</td><td>A linha do tempo da pessoa, com o nome do tipo, do cargo, do território e a URL do arquivo original.</td></tr>
     <tr><th scope="row"><code>app_pessoa_campanhas</code></th><td>candidatura</td><td>Todas as candidaturas da pessoa: cargo, <code>dt_eleicao</code>, resultado, <code>fl_eleito</code> com <code>base_eleito</code>, foto, receitas, despesas, bens e a fonte de cada um.</td></tr>
-    <tr><th scope="row"><code>app_pessoa_votos</code></th><td>pessoa e votação</td><td>O voto de cada pessoa em cada votação nominal, com data, descrição e resultado.</td></tr>
-    <tr><th scope="row"><code>app_pessoa_partidos</code></th><td>pessoa e período</td><td>Partidos ao longo do tempo, com a base de cada período.</td></tr>
-    <tr><th scope="row"><code>app_decisao</code></th><td>votação e proposição</td><td>A votação e o que ela decidiu: proposição, ementa, papel, totais e resultado.</td></tr>
-    <tr><th scope="row"><code>app_decisao_partidos</code></th><td>votação, partido e voto</td><td>Como cada partido votou, pela chave do partido e pela sigla do voto.</td></tr>
-    <tr><th scope="row"><code>app_composicao_comparada</code></th><td>corte, cargo, território e partido</td><td>A composição em cada data de corte, eleita ou em exercício.</td></tr>
-    <tr><th scope="row"><code>app_municipio_governo</code></th><td>eleito do município</td><td>Prefeito, vice e vereadores eleitos por município e eleição.</td></tr>
   </tbody>
 </table></div>
 <p>Exemplo: quem ocupa os cargos de senador em uma data. O mesmo padrão (filtrar a data entre início e fim) vale para qualquer cargo.</p>
@@ -471,14 +464,6 @@ where cargo = 'Senador'
   and :data between dt_inicio and dt_fim_prevista
 order by territorio, nome;</code></pre>
 <p>Em 29/10/2026 essa consulta devolve 81 senadores, três por estado, incluindo quem assumiu por suplência. A mesma consulta em 02/02/2027 também devolve 81 (os 27 de 2022 e os 54 de 2026).</p>
-<pre><code>select ano_evento, dt_evento, evento, cargo, territorio, base, url_original
-from marts.app_pessoa_eventos
-where id_pessoa = :pessoa
-order by ano_evento, dt_evento;</code></pre>
-<pre><code>select d.dt_votacao, d.proposicao, d.ementa, p.partido, p.voto, p.qtd_votos
-from marts.app_decisao d
-join marts.app_decisao_partidos p using (fonte, id_votacao)
-where d.id_votacao = :votacao;</code></pre>
 <p>As colunas de cada view, com a descrição, estão no <a href="../03-consultar/01-catalogo.md">catálogo de dados</a>.</p>
 
 <h2 id="limites">10 Limites e pendências</h2>

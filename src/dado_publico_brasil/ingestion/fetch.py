@@ -21,6 +21,7 @@ from http.client import HTTPException
 from pathlib import Path
 from string import Template
 from typing import IO, Any
+from urllib.parse import urlparse
 
 from dado_publico_brasil.ingestion.contract import SourceContract
 
@@ -30,6 +31,63 @@ HeadRequest = Callable[[str], dict[str, str | None]]
 AGENT = "dado-publico-brasil/0.1 (projeto civico aberto; +https://github.com/codigo-publico-brasil/dado-publico-brasil)"
 CHUNK = 1024 * 1024
 TRIES = 3
+
+
+class SourceBlocked(Exception):
+    """A fonte nos barrou (403/429, HTML no lugar do arquivo, outro host): não se insiste."""
+
+
+class Pace:
+    """Cortesia: intervalo mínimo entre requisições (`access.rate_limit`); relógio e espera injetáveis."""
+
+    def __init__(
+        self,
+        rate: float,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self.interval, self.clock, self.sleep = 1 / rate, clock, sleep
+        self.last: float | None = None
+
+    def wait(self) -> None:
+        if self.last is not None and (pause := self.last + self.interval - self.clock()) > 0:
+            self.sleep(pause)
+        self.last = self.clock()
+
+
+_PACES: dict[tuple[str, float], Pace] = {}  # por fonte e taxa; não é thread-safe (um extrator por vez)
+SECOND_LEVEL = {"gov", "leg", "jus", "mp", "com", "org", "net", "edu", "mil"}  # ex.: camara.leg.br
+
+
+def _site(url: str) -> str:
+    """O domínio registrável do endereço (`www.in.gov.br` e `in.gov.br` são o mesmo site)."""
+    labels = (urlparse(url).hostname or "").split(".")
+    return ".".join(labels[-3:] if len(labels) > 2 and labels[-2] in SECOND_LEVEL else labels[-2:])
+
+
+def pace_of(contract: SourceContract) -> Pace:
+    return _PACES.setdefault((contract.source, contract.rate_limit), Pace(contract.rate_limit))
+
+
+def _open(
+    url: str, headers: dict[str, str], method: str, timeout: int, pace: Pace | None, suffix: str = "csv"
+) -> Any:
+    """Abre a requisição respeitando a cortesia; levanta `SourceBlocked` antes de qualquer gravação."""
+    if pace:
+        pace.wait()
+    try:
+        response = urllib.request.urlopen(_request(url, headers, method), timeout=timeout)
+    except urllib.error.HTTPError as error:
+        if error.code in (403, 429):
+            raise SourceBlocked(f"{url}: HTTP {error.code}") from error
+        raise
+    if _site(response.url) != _site(url):
+        response.close()
+        raise SourceBlocked(f"{url}: redirecionou para {response.url}")
+    if suffix != "html" and "text/html" in (response.headers.get("Content-Type") or "").lower():
+        response.close()
+        raise SourceBlocked(f"{url}: HTML no lugar do arquivo")
+    return response
 
 
 def _request(url: str, headers: dict[str, str], method: str = "GET") -> urllib.request.Request:
@@ -68,24 +126,23 @@ def download(
     headers: dict[str, str] | None = None,
     suffix: str = "csv",
     name: str | None = None,
+    pace: Pace | None = None,
 ) -> tuple[Path, str, int]:
     """Baixa sem alterar. Devolve o caminho (com o hash no nome), o SHA-256 e o tamanho em bytes.
 
     O nome do arquivo vem do fim da URL, ou de `name` quando a URL não termina no nome do arquivo."""
-    folder.mkdir(parents=True, exist_ok=True)
     temporary = folder / "download.tmp"
 
     def attempt() -> tuple[str, int]:
         sha, size = hashlib.sha256(), 0
-        with (
-            urllib.request.urlopen(_request(url, headers or {}), timeout=120) as r,
-            temporary.open("wb") as f,
-        ):
-            body = _body(r)
-            while chunk := body.read(CHUNK):
-                f.write(chunk)
-                sha.update(chunk)
-                size += len(chunk)
+        with _open(url, headers or {}, "GET", 120, pace, suffix) as r:
+            folder.mkdir(parents=True, exist_ok=True)  # só depois de aberta: bloqueio não deixa pasta vazia
+            with temporary.open("wb") as f:
+                body = _body(r)
+                while chunk := body.read(CHUNK):
+                    f.write(chunk)
+                    sha.update(chunk)
+                    size += len(chunk)
         return sha.hexdigest(), size
 
     digest, size = _retrying(attempt)
@@ -123,9 +180,11 @@ def get(url: str, headers: dict[str, str] | None = None) -> tuple[int, bytes]:
         return 0, b""
 
 
-def head(url: str, headers: dict[str, str] | None = None) -> dict[str, str | None]:
+def head(
+    url: str, headers: dict[str, str] | None = None, pace: Pace | None = None, suffix: str = "csv"
+) -> dict[str, str | None]:
     """Pergunta à fonte (HEAD) se o arquivo mudou, sem baixá-lo. Valores ausentes ficam `None`."""
-    with urllib.request.urlopen(_request(url, headers or {}, "HEAD"), timeout=60) as response:
+    with _open(url, headers or {}, "HEAD", 60, pace, suffix) as response:
         return {
             "etag": response.headers.get("ETag"),
             "last_modified": response.headers.get("Last-Modified"),
@@ -137,9 +196,14 @@ def downloader(contract: SourceContract, dataset: str) -> Downloader:
     """O `download` do módulo `custom` da fonte, se houver, ou o padrão com os cabeçalhos do YAML."""
     custom = getattr(contract.custom, "download", None)
     suffix = "zip" if contract.datasets[dataset].archive == "zip" else contract.format_of(dataset)
-    return custom or partial(download, headers=contract.headers_of(dataset), suffix=suffix)
+    return custom or partial(
+        download, headers=contract.headers_of(dataset), suffix=suffix, pace=pace_of(contract)
+    )
 
 
 def head_request(contract: SourceContract, dataset: str) -> HeadRequest:
     custom = getattr(contract.custom, "head", None)
-    return custom or partial(head, headers=contract.headers_of(dataset))
+    suffix = contract.format_of(dataset)
+    return custom or partial(
+        head, headers=contract.headers_of(dataset), pace=pace_of(contract), suffix=suffix
+    )
