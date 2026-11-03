@@ -73,7 +73,7 @@ DAGSTER_HOME=<pasta absoluta> uv run dagster dev -m dado_publico_brasil.orchestr
 
 3. Abra http://127.0.0.1:3000. Os agendamentos e sensores já sobem ligados; deixe o processo rodando. Na primeira vez, rode o job `atualizar_tudo` uma vez (o Dagster só propaga a partir do que ele mesmo já materializou).
 
-**Em servidor (ou com Docker):** `docker compose --profile pipeline up -d --build` sobe o PostgreSQL e o Dagster, que reinicia sozinho e guarda o estado em um volume. O Docker Desktop precisa de pelo menos 8 GB de memória. Para rodar um passo isolado no container, recarregar uma captura e o que fazer quando algo trava (container que segura o warehouse, falta de memória, `publish` parado), veja [Operar e publicar](04-operar-e-publicar.md#rodar-por-partes-no-container).
+**Em servidor (ou com Docker):** `docker compose --profile pipeline up -d --build` sobe o PostgreSQL e o Dagster (`webserver` e `daemon`), que reiniciam sozinhos e guardam o estado em um volume. Só o Dagster, sem banco, e a implantação num servidor, sem entrar nele: [operar e publicar](04-operar-e-publicar.md#implantar-num-servidor).
 
 Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por vez). Os datasets por item (`--foreach`) rodam pela linha de comando; o Dagster não os agenda.
 
