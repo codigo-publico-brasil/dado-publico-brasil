@@ -1,5 +1,7 @@
 -- Voto nominal de cada deputado e senador num dispositivo vetado. A fonte entrega nome, partido e UF, sem o
 -- código do parlamentar: por isso o voto não é ligado a uma pessoa (ADR 0013).
+with base as (
+
 with votacoes as (
 
     select * from {{ source('senado', 'vetos_votos') }}
@@ -24,8 +26,14 @@ select
     o.uf_parlamentar as uf,
     o.tipo_voto as voto,
     v.sessao,
+    v.parte_vetada,
+    v.tipo_votacao as votacao_tipo,
     v._source_file_id as id_captura
 
 from votos as o
 
 inner join votacoes as v on v._dlt_id = o._dlt_parent_id
+
+)
+
+{{ colunas_auditoria('base') }}

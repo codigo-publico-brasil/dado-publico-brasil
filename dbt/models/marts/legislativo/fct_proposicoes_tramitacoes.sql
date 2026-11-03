@@ -8,8 +8,9 @@ select
     t.descricao,
     t.situacao,
     t.despacho,
+    t.id_captura,
     cast(c.dt_captura as date) as dt_captura
 
 from {{ ref('stg_camara__tramitacoes') }} as t
 
-left join {{ ref('stg_metadata__captures') }} as c on c.id_captura = t.id_captura
+left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = t.id_captura

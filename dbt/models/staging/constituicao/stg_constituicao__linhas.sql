@@ -1,5 +1,7 @@
 -- Uma linha por parágrafo de texto do arquivo da Constituição e do ADCT, como publicado. A classificação em
 -- título, artigo, parágrafo, inciso e alínea é do mart `constituicao_dispositivos`.
+with base as (
+
 select
     'Constituição' as parte,
     try_cast(ordem as integer) as ordem,
@@ -19,3 +21,7 @@ select
     _source_file_id
 
 from {{ source('constituicao', 'adct') }}
+
+)
+
+{{ colunas_auditoria('base') }}

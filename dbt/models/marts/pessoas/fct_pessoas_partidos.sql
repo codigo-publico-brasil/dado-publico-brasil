@@ -125,7 +125,7 @@ select
 
 from periodos as p
 
-left join {{ ref('stg_identity__pessoa_identificadores') }} as i
+left join {{ ref('stg_identity__pessoas_identificadores') }} as i
     on i.fonte = '{{ var("source_camara") }}'
     and i.id_tipo = '{{ var("id_type_camara") }}'
     and i.id_na_fonte = cast(p.id_deputado as varchar)
@@ -155,7 +155,7 @@ from votos_periodos as v
 
 where not exists (
     select 1 from periodos as p
-    inner join {{ ref('stg_identity__pessoa_identificadores') }} as i2
+    inner join {{ ref('stg_identity__pessoas_identificadores') }} as i2
         on i2.fonte = '{{ var("source_camara") }}' and i2.id_na_fonte = cast(p.id_deputado as varchar)
     where i2.id_pessoa = v.id_pessoa
 )
@@ -191,7 +191,7 @@ from (
     order by h.id_deputado, h.id_legislatura, h.dt_registro desc
 ) as l
 
-inner join {{ ref('stg_identity__pessoa_identificadores') }} as i
+inner join {{ ref('stg_identity__pessoas_identificadores') }} as i
     on i.fonte = '{{ var("source_camara") }}'
     and i.id_tipo = '{{ var("id_type_camara") }}'
     and i.id_na_fonte = cast(l.id_deputado as varchar)
@@ -223,9 +223,12 @@ where c.id_pessoa is not null
 )
 
 select
-    *,
+    t.*,
+    cast(k.dt_captura as date) as dt_captura,
     row_number() over (
-        partition by id_pessoa order by ano_referencia desc, coalesce(dt_ultimo_registro, date '1900-01-01') desc, fonte
+        partition by id_pessoa order by ano_referencia desc, coalesce(dt_ultimo_registro, date '1900-01-01') desc, t.fonte
     ) = 1 as fl_mais_recente
 
-from todos
+from todos as t
+
+left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = t.id_captura

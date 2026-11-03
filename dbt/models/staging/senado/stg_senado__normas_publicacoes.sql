@@ -1,5 +1,7 @@
 -- Publicações de cada norma no Diário Oficial (a original e, por exemplo, a do veto), das leis, leis complementares,
 -- emendas e medidas provisórias detalhadas e da Constituição.
+with base as (
+
 with detalhadas as (
 
     select _dlt_id, try_cast(id as bigint) as id_norma, _source_file_id as id_captura
@@ -31,8 +33,14 @@ select
     p.pagina,
     p.coluna,
     p.tem_texto = 'S' as fl_tem_texto,
+    p.sigla_fonte as veiculo_sigla,
+    p.dispositivo,
     d.id_captura
 
 from publicacoes as p
 
 inner join detalhadas as d on d._dlt_id = p._dlt_parent_id
+
+)
+
+{{ colunas_auditoria('base') }}

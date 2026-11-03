@@ -2,6 +2,8 @@
 -- uma descrição escrita de dezenas de jeitos: `Sup.`, `Suplem.`, `Nova Eleição`, `Majoritária - X`). Em cada ano,
 -- unidade, cargo e turno vale o código de eleição que cobre mais unidades no ano: a ordinária cobre milhares, a
 -- suplementar uma ou duas (issue 74).
+with base as (
+
 with source as (
 
     select * from {{ tse_source('candidaturas') }}
@@ -71,3 +73,7 @@ select
 from ordinary
 
 where coalesce(ds_eleicao, '') not ilike '%suplementar%'  -- as eleições suplementares repetem o sequencial das ordinárias e ficam no raw
+
+)
+
+{{ colunas_auditoria('base') }}

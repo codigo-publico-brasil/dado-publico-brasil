@@ -21,8 +21,9 @@ select
         or lower(f.tipo_favorecido) like 'pessoa f%'
         or f.tipo_favorecido like 'Inscri%'
     ) as fl_contem_dado_pessoal,
+    f.id_captura,
     cast(k.dt_captura as date) as dt_captura
 
 from {{ ref('stg_transparencia__emendas_favorecidos') }} as f
 
-left join {{ ref('stg_metadata__captures') }} as k on k.id_captura = f.id_captura
+left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = f.id_captura

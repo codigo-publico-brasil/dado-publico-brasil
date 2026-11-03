@@ -2,6 +2,7 @@ version: 2
 
 models:
   - name: int_deputados_votos_agregados
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Um registro por deputado visto nos votos, com nome e foto mais recentes.
     config:
       tags: [pre_identity]
@@ -10,18 +11,21 @@ models:
       - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
       - {name: foto_url, description: "Endereço da foto oficial."}
   - name: int_deputados_ids_unidos
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Todo deputado informado pela Câmara (cadastro mais votos).
     config:
       tags: [pre_identity]
     columns:
       - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["unique", "not_null"]}
   - name: int_ementas_siglas_extraidas
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Siglas escritas em maiúsculas dentro de ementas de caixa mista.
     config:
       tags: [pre_identity]
     columns:
       - {name: sigla, description: "Sigla do tipo da proposição, número e ano.", tests: ["unique", "not_null"]}
   - name: int_pessoas_unidas_cadastro
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Pessoa do projeto unida ao cadastro e aos dados vistos nos votos.
     columns:
       - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
@@ -44,7 +48,10 @@ models:
       - {name: telefone_institucional, description: "Telefone institucional do gabinete, como a fonte publica."}
       - {name: gabinete_endereco, description: "Endereço do gabinete, como a fonte publica."}
       - {name: pagina_url, description: "Página oficial da pessoa no Senado; vazia onde a fonte não informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
   - name: int_votacoes_votos_ligados
+    meta: {fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     description: Votos com a pessoa do projeto (chave própria).
     columns:
       - {name: fonte, description: "Fonte principal do cadastro da pessoa (camara ou senado)."}
@@ -56,7 +63,9 @@ models:
       - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
       - {name: id_legislatura, description: "Número da legislatura."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
   - name: int_proposicoes_autorias_ligadas
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Autorias com a pessoa do projeto; autor que não é deputado fica sem pessoa.
     columns:
       - {name: id_proposicao, description: "Identificador da proposição na fonte."}
@@ -68,7 +77,9 @@ models:
       - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
       - {name: proponente, description: "1 quando consta como proponente; 0 caso contrário."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
   - name: int_pessoas_atividade_agregada
+    meta: {fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     description: Uma linha por pessoa, com votos, propostas e legislaturas.
     columns:
       - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
@@ -80,17 +91,22 @@ models:
       - {name: primeira_legislatura_com_voto, description: "Primeira legislatura em que há voto registrado."}
       - {name: ultima_legislatura_com_voto, description: "Última legislatura em que há voto registrado."}
   - name: int_pessoas_profissoes_agregadas
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Uma linha por pessoa, com as profissões declaradas.
     columns:
       - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
       - {name: profissoes, description: "Profissões declaradas, separadas por ponto e vírgula."}
   - name: int_votacoes_proposicoes_unidas
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Proposições de cada votação, com o papel (afetada ou objeto).
     columns:
       - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
       - {name: id_proposicao, description: "Identificador da proposição na fonte."}
       - {name: papel, description: "Papel da proposição na votação: afetada (proposição afetada pela votação) ou objeto (objeto da votação)."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
   - name: int_orgaos_membros_ligados
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Participação em órgãos ligada à pessoa do projeto.
     columns:
       - {name: id_orgao, description: "Identificador do órgão na fonte."}
@@ -101,9 +117,15 @@ models:
       - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
       - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
       - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: deputado_nome, description: "Nome do deputado como a fonte informa, com caixa padronizada."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
       - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["not_null"]}
+      - {name: fonte, description: "Fonte oficial do registro (igual ao prefixo do staging de origem)."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: int_frentes_membros_ligados
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Participação em frentes ligada à pessoa do projeto.
     columns:
       - {name: id_frente, description: "Identificador da frente na fonte."}
@@ -113,14 +135,21 @@ models:
       - {name: deputado_foto_url, description: "Endereço da foto do deputado na fonte."}
       - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
       - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: cd_titulo, description: "Código do título do deputado na frente, como a fonte informa."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
       - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["not_null"]}
+      - {name: fonte, description: "Fonte oficial do registro (igual ao prefixo do staging de origem)."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: int_deputados_frentes_fotos
+    meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Uma foto por deputado, a da legislatura mais recente nos arquivos de frentes.
     columns:
       - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["unique", "not_null"]}
       - {name: foto_url, description: "Endereço da foto oficial."}
   - name: int_senadores_unidos
+    meta: {fonte_oficial: "Senado Federal"}
     description: Todo senador informado pelo Senado (cadastro mais votos).
     config:
       tags: [pre_identity]
@@ -129,7 +158,10 @@ models:
       - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
       - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
       - {name: sexo, description: "Sexo registrado no cadastro da fonte."}
+      - {name: id_captura, tests: [not_null], description: "Identificador da captura (arquivo do landing) de onde o registro veio: o cadastro de senadores ou, para quem só aparece nos votos, a captura do voto mais recente (de onde vem o nome)."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
   - name: int_pessoas_ids_vistos
+    meta: {fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     description: Todo identificador de pessoa informado pelas fontes. Entrada do código de identidade.
     config:
       tags: [pre_identity]
@@ -138,6 +170,7 @@ models:
       - {name: id_tipo, description: "Identificador do tipo, como a fonte informa."}
       - {name: id_na_fonte, description: "Identificador do registro na fonte de origem."}
   - name: int_pessoas_senado_unidas
+    meta: {fonte_oficial: "Senado Federal"}
     description: Pessoa do projeto unida ao cadastro do Senado.
     columns:
       - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
@@ -159,7 +192,10 @@ models:
       - {name: telefone_institucional, description: "Telefone institucional do gabinete, como a fonte publica."}
       - {name: gabinete_endereco, description: "Endereço do gabinete, como a fonte publica."}
       - {name: pagina_url, description: "Página oficial da pessoa no Senado; vazia onde a fonte não informa."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
   - name: int_senado_materias_unicas
+    meta: {fonte_oficial: "Senado Federal"}
     description: Uma linha por matéria votada no Senado, com os dados da votação mais recente.
     columns:
       - {name: id_materia, description: "Identificador da matéria no Senado.", tests: ["unique", "not_null"]}
@@ -168,6 +204,7 @@ models:
       - {name: dt_apresentacao, description: "Data de apresentação."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
   - name: int_pessoas_vinculo
+    meta: {fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     description: Pessoas das duas casas com nome civil (como chave) e nascimento, para ligar entre fontes.
     config:
       tags: [pre_identity]
@@ -179,6 +216,7 @@ models:
       - {name: nome_urna_chave, description: "Nome parlamentar padronizado (sem acento e em minúsculas), usado só como segunda chave de comparação com o nome de urna do TSE."}
       - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
   - name: int_vinculos_propostos
+    meta: {fonte_oficial: "Câmara dos Deputados; Senado Federal; Tribunal Superior Eleitoral"}
     description: >
       Vínculos propostos entre fontes pela regra de nome civil e nascimento iguais e únicos: Câmara com Senado
       (mesma pessoa) e candidatura do TSE com a pessoa. Entrada da identidade.
@@ -193,6 +231,7 @@ models:
       - {name: id_destino, description: "Identificador do registro de destino do vínculo, na fonte de destino.", tests: ["not_null"]}
       - {name: metodo, description: "Regra que ligou as duas chaves."}
   - name: int_tse_pessoas
+    meta: {fonte_oficial: "Tribunal Superior Eleitoral"}
     config:
       tags: [pre_identity]
     description: Identificador da mesma pessoa entre as eleições do TSE, por nome civil ou nome de urna com a mesma data de nascimento (cada chave única em cada eleição e sem datas de 1º de janeiro); a ligação se propaga entre candidaturas que partilham uma chave. Uma linha por candidatura ligável.
@@ -200,6 +239,7 @@ models:
       - {name: id_candidatura, description: "Identificador da candidatura (ano, unidade eleitoral e sequencial do candidato).", tests: ["unique", "not_null"]}
       - {name: id_pessoa_tse, description: "Identificador da pessoa entre as eleições do TSE, derivado do nome civil e da data de nascimento; não é uma pessoa do projeto.", tests: ["not_null"]}
   - name: int_tse_eleitos_grupos
+    meta: {fonte_oficial: "Tribunal Superior Eleitoral"}
     description: >
       As candidaturas do TSE de quem foi eleito pelo menos uma vez, agrupadas por pessoa entre as eleições. Entrada da
       identidade (ADR 0031): é daqui que nascem as pessoas de todo eleito. O grupo não é estável; a identidade usa a
@@ -211,6 +251,7 @@ models:
       - {name: grupo, description: "Pessoa entre as eleições (id_pessoa_tse) ou, sem ele, a própria candidatura.", tests: ["not_null"]}
       - {name: fl_eleita, description: "Verdadeiro se esta candidatura foi eleita em algum turno."}
   - name: int_tse_eleitos
+    meta: {fonte_oficial: "Tribunal Superior Eleitoral"}
     description: >
       Quem foi eleito, com a base: informado (o TSE diz Eleito) ou derivado (disputa de uma vaga de eleição passada em que
       o TSE não informa o vencedor; vale o mais votado do último turno, art. 77, 28 e 29 da Constituição). Entrada da

@@ -13,6 +13,8 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 
 **Vigente:** vale como escrito. **Em parte:** só o que o ADR seguinte não substituiu. **Proposto:** ainda não aceito.
 
+**Nomes antigos:** os ADRs anteriores a 2026-11-02 citam os nomes antigos de `metadata` e `identity` (`runs`, `captures`, `source_checks`, `pessoa_identificador`...). O de/para está em [`../99-historico/renomeacao-dos-marts.md`](../99-historico/renomeacao-dos-marts.md).
+
 ### Processo e pilha
 
 | ADR | Decisão | Situação |
@@ -23,6 +25,8 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0006](0006-adotar-dlt-dbt-e-dagster.md) | Adotar dlt, dbt-core e Dagster | vigente (pastas e nomes: [0007](0007-dois-pacotes-e-camadas-de-mercado.md)) |
 | [0014](0014-warehouse-lake-duckdb-e-postgres-de-servico.md) | DuckDB calcula, PostgreSQL serve | vigente |
 | [0034](0034-manter-duckdb-e-postgres.md) | Manter DuckDB e PostgreSQL; sem DuckLake nem arquivos separados por ora, com gatilhos para reabrir | proposto (decisão do fundador) |
+| [0035](0035-lakehouse-publico-no-r2.md) | Lakehouse público no R2: Parquet em caminho estável, staging a marts, catálogo e manifesto; DuckDB só calcula | proposto; altera 0014 (item 1 e gatilho 6a) e 0033; item 7 detalhado no 0036 |
+| [0036](0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md) | R2 privado é a fonte da verdade da identidade e do metadata; disco local descartável; landing só local por ora (risco aceito) | proposto; complementa 0014 (item 4) e 0035 (item 7) |
 
 ### Estrutura do repositório e das camadas
 

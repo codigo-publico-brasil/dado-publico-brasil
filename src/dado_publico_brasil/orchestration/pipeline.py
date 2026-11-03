@@ -24,7 +24,7 @@ class Summary:
     items: int = 0
     captures_loaded: int = 0
     rows_loaded: int = 0
-    source_errors: int = 0  # verificações das fontes com erro nesta execução (metadata.source_checks)
+    source_errors: int = 0  # verificações das fontes com erro nesta execução (metadata.fontes_verificacoes)
     new_people: int = 0
     transformed: bool = False
 

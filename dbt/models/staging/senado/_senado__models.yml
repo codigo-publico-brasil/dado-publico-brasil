@@ -8,7 +8,11 @@ models:
       - {name: nome, description: "Nome parlamentar, com caixa padronizada.", tests: ["not_null"]}
       - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
       - {name: sexo, description: "Sexo registrado no cadastro da fonte."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__votacoes
     description: Votações em plenário com resultado, totais e a matéria votada. Votação secreta tem `secreta` verdadeiro.
     columns:
@@ -19,13 +23,24 @@ models:
       - {name: votos_sim, description: "Total de votos Sim informado pela fonte."}
       - {name: votos_nao, description: "Total de votos Não informado pela fonte."}
       - {name: votos_abstencao, description: "Quantidade de votos de abstenção, como a fonte informa."}
-      - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada."}
+      - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing."}
       - {name: orgao_sigla, description: "Sigla do órgão em que ocorreu."}
       - {name: id_materia, description: "Identificador da matéria no Senado."}
       - {name: materia_sigla, description: "Identificação da matéria (sigla, número e ano), como o Senado informa."}
       - {name: dt_materia_apresentacao, description: "Data em que a matéria foi apresentada, como o Senado informa."}
-      - {name: materia_ementa, description: "Ementa da matéria, como o Senado informa."}
+      - {name: materia_ementa, description: "Ementa da matéria, como o Senado informa. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: id_sessao, description: "Identificador da sessão no Senado."}
+      - {name: sessao_tipo_sigla, description: "Sigla do tipo da sessão."}
+      - {name: id_processo, description: "Identificador do processo legislativo da matéria."}
+      - {name: materia_sigla_tipo, description: "Sigla do tipo da matéria (PL, PEC...)."}
+      - {name: materia_numero, description: "Número da matéria."}
+      - {name: materia_ano, description: "Ano da matéria."}
+      - {name: orgao_nome, description: "Nome do colegiado informado na votação."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__votos
     description: Voto de cada senador em cada votação nominal. Em votação secreta a sigla é "Votou".
     columns:
@@ -35,8 +50,15 @@ models:
       - {name: voto, description: "Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.)."}
       - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
       - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: sexo, description: "Sexo do parlamentar registrado na votação."}
+      - {name: voto_descricao, description: "Descrição do voto, como o Senado informa."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__processos
+    meta: {colunas_omitidas: {id: "Igual a _item (conferido em todas as linhas), que o modelo expõe como id_processo."}}
     description: Processo de cada matéria votada (só as já buscadas), com a situação atual e a norma gerada.
     columns:
       - {name: id_processo, description: "Identificador do processo (matéria) no Senado.", tests: ["unique", "not_null"]}
@@ -56,7 +78,15 @@ models:
       - {name: dt_norma_publicacao, description: "Data de publicação da norma gerada pela matéria."}
       - {name: norma_descricao, description: "Descrição da norma gerada pela matéria."}
       - {name: norma_veiculo, description: "Veículo em que a norma gerada pela matéria foi publicada."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: materia_sigla_tipo, description: "Sigla do tipo da matéria (PL, PEC...)."}
+      - {name: materia_numero, description: "Número da matéria."}
+      - {name: materia_ano, description: "Ano da matéria."}
+      - {name: situacao_sigla, description: "Sigla da situação atual do processo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__exercicios
     description: Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento.
     columns:
@@ -71,7 +101,18 @@ models:
       - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
       - {name: causa_afastamento_sigla, description: "Sigla da causa do fim do período (licença, renúncia, fim do mandato); vazia se não informada."}
       - {name: causa_afastamento, description: "Descrição da causa do fim do período."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: id_primeira_legislatura_mandato, description: "Número da primeira legislatura do mandato."}
+      - {name: id_segunda_legislatura_mandato, description: "Número da segunda legislatura do mandato."}
+      - {name: dt_segunda_legislatura_inicio, description: "Data de início da segunda legislatura do mandato."}
+      - {name: dt_leitura, description: "Data em que o exercício foi lido em plenário."}
+      - {name: titular_participacao, description: "Participação do titular do mandato (quando o exercício é de suplente)."}
+      - {name: id_senador_titular, description: "Identificador, no Senado, do titular do mandato."}
+      - {name: titular_nome, description: "Nome parlamentar do titular do mandato, com caixa padronizada."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__normas
     description: Catálogo das normas federais, uma linha por norma, só metadados, com a ementa padronizada e a original.
     columns:
@@ -86,8 +127,13 @@ models:
       - {name: dt_assinatura, description: "Data de assinatura."}
       - {name: ano, description: "Ano do evento."}
       - {name: apelido, description: "Nome curto do órgão."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__normas_publicacoes
+    meta: {colunas_omitidas: {identificacao_tipo: "Repete a identificação da norma que a listagem já traz, exposta por stg_senado__normas (conferido: sem diferença nas normas que aparecem nas duas); este modelo só abre as publicações e as relações.", identificacao_descricao: "Repete a identificação da norma que a listagem já traz, exposta por stg_senado__normas (conferido: sem diferença nas normas que aparecem nas duas); este modelo só abre as publicações e as relações.", identificacao_numero: "Repete a identificação da norma que a listagem já traz, exposta por stg_senado__normas (conferido: sem diferença nas normas que aparecem nas duas); este modelo só abre as publicações e as relações.", identificacao_norma: "Repete a identificação da norma que a listagem já traz, exposta por stg_senado__normas (conferido: sem diferença nas normas que aparecem nas duas); este modelo só abre as publicações e as relações.", identificacao_norma_nome: "Repete a identificação da norma que a listagem já traz, exposta por stg_senado__normas (conferido: sem diferença nas normas que aparecem nas duas); este modelo só abre as publicações e as relações.", identificacao_dataassinatura: "Repete a identificação da norma que a listagem já traz, exposta por stg_senado__normas (conferido: sem diferença nas normas que aparecem nas duas); este modelo só abre as publicações e as relações.", identificacao_apelido: "Repete a identificação da norma que a listagem já traz, exposta por stg_senado__normas (conferido: sem diferença nas normas que aparecem nas duas); este modelo só abre as publicações e as relações.", identificacao_url_documento: "Repete a identificação da norma que a listagem já traz, exposta por stg_senado__normas (conferido: sem diferença nas normas que aparecem nas duas); este modelo só abre as publicações e as relações.", ementa: "Repete a identificação da norma que a listagem já traz, exposta por stg_senado__normas (conferido: sem diferença nas normas que aparecem nas duas); este modelo só abre as publicações e as relações."}}
     description: Publicações de cada norma detalhada (e da Constituição) no Diário Oficial, uma linha por norma e publicação.
     columns:
       - {name: id_norma, description: "Código da norma no Senado (fct_normas).", tests: ["not_null"]}
@@ -98,9 +144,16 @@ models:
       - {name: pagina, description: "Página da publicação."}
       - {name: coluna, description: "Coluna da página."}
       - {name: fl_tem_texto, description: "A fonte informa que há o texto da publicação."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: veiculo_sigla, description: "Sigla do veículo da publicação, como a fonte informa."}
+      - {name: dispositivo, description: "Dispositivo da norma a que a publicação se refere, como a fonte informa."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__normas_relacoes
     description: Relações de cada norma detalhada (e da Constituição) com atos posteriores, uma linha por norma, ato e tipo de relação.
+    meta: {colunas_omitidas: {itens: "Aponta para a tabela filha de itens da relação, que ainda não tem modelo de staging."}}
     columns:
       - {name: id_norma, description: "Código da norma no Senado (fct_normas).", tests: ["not_null"]}
       - {name: tipo_relacao, description: "Tipo da relação como a fonte declara (por exemplo, Declaração de Alteração Permanente)."}
@@ -109,7 +162,15 @@ models:
       - {name: dt_norma_posterior_assinatura, description: "Data de assinatura do ato posterior."}
       - {name: dt_publicacao, description: "Data de publicação."}
       - {name: publicacao, description: "Publicação do ato posterior no Diário Oficial."}
+      - {name: publicacao_pagina, description: "Página da publicação do ato posterior no Diário Oficial, como a fonte declara."}
+      - {name: publicacao_coluna, description: "Coluna da página da publicação do ato posterior, como a fonte declara."}
+      - {name: publicacao_edicao, description: "Edição do Diário Oficial em que o ato posterior foi publicado, como a fonte declara."}
+      - {name: publicacao_edicao_tipo, description: "Tipo da edição do Diário Oficial (por exemplo, ordinária ou extra), como a fonte declara."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__vetos
     description: Vetos presidenciais apreciados pelo Congresso, uma linha por veto, com a matéria vetada e a norma gerada.
     columns:
@@ -135,7 +196,12 @@ models:
       - {name: fl_sobrestando_pauta, description: "O veto tranca a pauta hoje."}
       - {name: quantidade_dispositivos, description: "Quantos dispositivos foram vetados."}
       - {name: fl_em_tramitacao, description: "O veto ainda tramita."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: mensagem_sigla, description: "Sigla da mensagem do veto, como a fonte informa."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__vetos_dispositivos
     description: Dispositivos vetados de cada veto buscado, com o texto vetado, a razão do veto e a situação.
     columns:
@@ -149,7 +215,11 @@ models:
       - {name: fl_possui_votos, description: "Há voto nominal registrado para o dispositivo."}
       - {name: tipo_votacao, description: "Forma da votação (painel ou cédula); vazia quando não foi apreciado."}
       - {name: dt_sessao, description: "Data da sessão do Congresso que apreciou o dispositivo."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__vetos_votos
     description: Voto nominal de cada deputado e senador num dispositivo vetado, sem o código do parlamentar.
     columns:
@@ -160,8 +230,15 @@ models:
       - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
       - {name: voto, description: "Voto registrado pela fonte (Sim, Não, Abstenção, Obstrução etc.)."}
       - {name: sessao, description: "Sessão do Congresso, como a fonte informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: parte_vetada, description: "Parte do dispositivo vetada, como a fonte informa."}
+      - {name: votacao_tipo, description: "Tipo da votação (por exemplo, cédula)."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__senadores_detalhe
+    meta: {colunas_omitidas: {identificacao_parlamentar_codigo_parlamentar: "Igual a _item (conferido em todas as linhas), que o modelo expõe como id_senador.", indicador_fax: "Indica se o telefone é de fax; o modelo junta os telefones em gabinete_telefone e o indicador fica no raw."}}
     description: Detalhe de cada senador (só os já buscados), com nome civil, nascimento, naturalidade e foto.
     columns:
       - {name: id_senador, description: "Identificador do senador no Senado.", tests: ["unique", "not_null"]}
@@ -175,4 +252,8 @@ models:
       - {name: gabinete_email, description: "E-mail institucional do gabinete."}
       - {name: gabinete_endereco, description: "Endereço do gabinete, como a fonte informa."}
       - {name: gabinete_telefone, description: "Telefones do gabinete, na ordem de publicação, separados por ponto e vírgula."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}

@@ -12,7 +12,8 @@ from dado_publico_brasil.core.warehouse import Connection
 
 INTERNAL = {
     "_source_file_id": (
-        "Identificador da captura (metadata.captures.id): liga a linha ao arquivo original do landing, "
+        "Identificador da captura (metadata.capturas.id_captura): liga a linha ao arquivo original do "
+        "landing, "
         "com hash e data."
     ),
     "_ingested_at": "Instante (UTC) em que a linha chegou ao raw, o da carga do arquivo de origem.",

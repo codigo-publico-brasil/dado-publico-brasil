@@ -82,7 +82,7 @@ def test_every_singular_test_in_the_repository_has_a_dimension() -> None:
 
 def test_every_test_of_the_last_build_gets_a_dimension(full: tuple[Connection, Settings]) -> None:
     con, _ = full
-    rows = con.execute("SELECT DISTINCT unique_id FROM metadata.dbt_results WHERE kind = 'test'").fetchall()
+    rows = con.execute("SELECT DISTINCT id_no FROM metadata.testes_resultados WHERE tipo = 'test'").fetchall()
     ids = [r[0] for r in rows]
     assert ids
     singular = health.singular_tests()

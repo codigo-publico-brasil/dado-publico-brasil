@@ -25,6 +25,11 @@ def _parlamentar(codigo: str, nome: str, civil: str, sexo: str) -> dict[str, obj
                     "CodigoMandato": f"m{codigo}",
                     "UfParlamentar": "SP",
                     "DescricaoParticipacao": "Titular",
+                    "Titular": {
+                        "DescricaoParticipacao": "Titular",
+                        "CodigoParlamentar": codigo,
+                        "NomeParlamentar": nome,
+                    },
                     "PrimeiraLegislaturaDoMandato": {
                         "NumeroLegislatura": "56",
                         "DataInicio": "2019-02-01",
@@ -41,6 +46,7 @@ def _parlamentar(codigo: str, nome: str, civil: str, sexo: str) -> dict[str, obj
                                 "CodigoExercicio": f"e{codigo}",
                                 "DataInicio": "2019-02-01",
                                 "DataFim": "2020-05-01",
+                                "DataLeitura": "2019-02-04",
                                 "SiglaCausaAfastamento": "LIC",
                                 "DescricaoCausaAfastamento": "Licença",
                             }
@@ -60,7 +66,7 @@ def _voto(codigo: int, nome: str, partido: str, uf: str, sigla: str) -> dict[str
         "siglaPartidoParlamentar": partido,
         "siglaUFParlamentar": uf,
         "siglaVotoParlamentar": sigla,
-        "descricaoVotoParlamentar": None,
+        "descricaoVotoParlamentar": "Voto registrado",
     }
 
 

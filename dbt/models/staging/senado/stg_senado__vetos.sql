@@ -1,4 +1,6 @@
 -- Vetos presidenciais apreciados pelo Congresso: uma linha por veto, com a matéria vetada e a norma gerada.
+with base as (
+
 select
     try_cast(codigo as bigint) as id_veto,
     try_cast(materia_codigo as bigint) as id_materia_veto,
@@ -22,6 +24,11 @@ select
     sobrestando_pauta = 'Sim' as fl_sobrestando_pauta,
     try_cast(quantidade_dispositivos as integer) as quantidade_dispositivos,
     materia_em_tramitacao = 'Sim' as fl_em_tramitacao,
+    mensagem_sigla,
     _source_file_id as id_captura
 
 from {{ source('senado', 'vetos') }}
+
+)
+
+{{ colunas_auditoria('base') }}

@@ -106,6 +106,6 @@ def test_extract_plan_records_the_state_of_the_partitions_for_the_observability(
     captured(con, "votos", 2020)
     landing.record_gaps(con, contract(tmp_path))
     row = con.execute(
-        "SELECT status, detail FROM metadata.source_checks WHERE check_name = 'particoes' AND dataset = 'votos'"
+        "SELECT resultado, detalhe FROM metadata.fontes_verificacoes WHERE verificacao = 'particoes' AND dataset = 'votos'"
     ).fetchone()
     assert row is not None and row[0] == "warn" and "1 de" in row[1] and "faltam:" in row[1]

@@ -86,7 +86,8 @@ def test_homonyms_in_the_same_election_and_unmatched_candidates_are_not_linked_a
         "2022:SP:1002",
     }  # 1003 e 1004 (mesmo nome e nascimento) e 1005 (sem pessoa) ficam de fora
     gap = scalar(
-        con, "SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%eleitos_federais_sem_vinculo%'"
+        con,
+        "SELECT qtd_falhas FROM metadata.testes_resultados WHERE id_no LIKE '%eleitos_federais_sem_vinculo%'",
     )
     assert gap == 2  # Carlos, eleito sem correspondente em 2018 e em 2022
 
@@ -97,8 +98,8 @@ def test_deputy_and_senator_with_the_same_civil_name_and_birth_date_become_one_p
         r["id_na_fonte"]: r["id_pessoa"]
         for r in rows(
             con,
-            "SELECT i.source_id AS id_na_fonte, i.id_pessoa FROM identity.pessoa_identificador i "
-            "WHERE (i.source, i.source_id) IN (('camara', '11'), ('senado', '5003'))",
+            "SELECT i.id_na_fonte AS id_na_fonte, i.id_pessoa FROM identity.pessoas_identificadores i "
+            "WHERE (i.fonte, i.id_na_fonte) IN (('camara', '11'), ('senado', '5003'))",
         )
     }
     assert len(set(ids.values())) == 1  # a chave mais antiga ficou
@@ -108,7 +109,7 @@ def test_deputy_and_senator_with_the_same_civil_name_and_birth_date_become_one_p
     assert "iguais e únicos" in fusao[0]["metodo"]
     assert (
         scalar(
-            con, f"SELECT COUNT(*) FROM identity.pessoa WHERE id_pessoa = {fusao[0]['id_pessoa_absorvida']}"
+            con, f"SELECT COUNT(*) FROM identity.pessoas WHERE id_pessoa = {fusao[0]['id_pessoa_absorvida']}"
         )
         == 0
     )
@@ -123,7 +124,7 @@ def test_the_merged_person_has_one_row_with_both_sources_and_the_chamber_data(fu
     # marts.dim_pessoas_cadastro só tem parlamentares; as pessoas só do TSE (todo eleito, ADR 0031) estão em marts.dim_pessoas
     assert scalar(con, "SELECT COUNT(*) FROM marts.dim_pessoas_cadastro") == scalar(
         con,
-        "SELECT COUNT(DISTINCT id_pessoa) FROM identity.pessoa_identificador WHERE source IN ('camara', 'senado')",
+        "SELECT COUNT(DISTINCT id_pessoa) FROM identity.pessoas_identificadores WHERE fonte IN ('camara', 'senado')",
     )
 
 
@@ -190,26 +191,27 @@ def test_linking_again_changes_nothing(full: Env) -> None:
     from dado_publico_brasil.transformation import identity
 
     con, _ = full
-    before = scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador")
+    before = scalar(con, "SELECT COUNT(*) FROM identity.pessoas_identificadores")
     identity.resolve(con)
-    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador") == before
-    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa_fusao") == 1
+    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoas_identificadores") == before
+    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoas_fusoes") == 1
 
 
 def test_a_derived_tse_link_that_is_no_longer_proposed_is_removed_and_the_valid_ones_stay(full: Env) -> None:
     from dado_publico_brasil.transformation import identity
 
     con, _ = full
-    valid = scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador WHERE source = 'tse'")
-    person = scalar(con, "SELECT min(id_pessoa) FROM identity.pessoa")
+    valid = scalar(con, "SELECT COUNT(*) FROM identity.pessoas_identificadores WHERE fonte = 'tse'")
+    person = scalar(con, "SELECT min(id_pessoa) FROM identity.pessoas")
     con.execute(
-        "INSERT INTO identity.pessoa_identificador VALUES ('tse', 'candidato', '2022:XX:777', ?, 'x', 'regra automática', 'x')",
+        "INSERT INTO identity.pessoas_identificadores VALUES ('tse', 'candidato', '2022:XX:777', ?, 'x', 'regra automática', '2026-10-27 00:00:00')",
         (person,),
     )  # a chave antiga, sem unidade eleitoral, que a carga corrigida não gera mais
     identity.resolve(con)
-    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador WHERE source = 'tse'") == valid
+    assert scalar(con, "SELECT COUNT(*) FROM identity.pessoas_identificadores WHERE fonte = 'tse'") == valid
     assert (
-        scalar(con, "SELECT COUNT(*) FROM identity.pessoa_identificador WHERE source_id = '2022:XX:777'") == 0
+        scalar(con, "SELECT COUNT(*) FROM identity.pessoas_identificadores WHERE id_na_fonte = '2022:XX:777'")
+        == 0
     )
 
 

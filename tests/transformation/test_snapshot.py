@@ -1,12 +1,14 @@
 """Cópia imutável da identidade: grava, nunca sobrescreve e denuncia qualquer divergência."""
 
+from pathlib import Path
+
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, scalar
 from dado_publico_brasil.transformation import snapshot
 
 
 def add_person(con: Connection) -> None:
-    con.execute("INSERT INTO identity.pessoa (created_at) VALUES ('2026-10-23')")
+    con.execute("INSERT INTO identity.pessoas (dt_criacao) VALUES ('2026-10-23')")
 
 
 def test_without_a_snapshot_the_check_asks_for_one(con: Connection, settings: Settings) -> None:
@@ -17,12 +19,13 @@ def test_snapshot_has_every_identity_table_and_matches_the_warehouse_right_after
     con: Connection, settings: Settings
 ) -> None:
     add_person(con)
-    folder = snapshot.take(con, settings)
-    assert folder is not None
+    taken = snapshot.take(con, settings)
+    assert taken is not None
+    folder = Path(taken)
     assert {f.name for f in folder.glob("*.parquet")} == {
-        "pessoa.parquet",
-        "pessoa_fusao.parquet",
-        "pessoa_identificador.parquet",
+        "pessoas.parquet",
+        "pessoas_fusoes.parquet",
+        "pessoas_identificadores.parquet",
     }
     assert snapshot.problems(con, settings) == []
 
@@ -31,14 +34,15 @@ def test_each_snapshot_is_a_new_folder_and_the_older_ones_stay_as_they_were(
     con: Connection, settings: Settings
 ) -> None:
     add_person(con)
-    first = snapshot.take(con, settings)
-    assert first is not None
-    before = (first / "pessoa.parquet").read_bytes()
+    taken = snapshot.take(con, settings)
+    assert taken is not None
+    first = Path(taken)
+    before = (first / "pessoas.parquet").read_bytes()
     add_person(con)
     second = snapshot.take(con, settings)
-    assert second is not None and first != second
-    assert (first / "pessoa.parquet").read_bytes() == before
-    assert scalar(con, f"SELECT count(*) FROM read_parquet('{(first / 'pessoa.parquet').as_posix()}')") == 1
+    assert second is not None and first.as_posix() != second
+    assert (first / "pessoas.parquet").read_bytes() == before
+    assert scalar(con, f"SELECT count(*) FROM read_parquet('{(first / 'pessoas.parquet').as_posix()}')") == 1
 
 
 def test_a_change_in_the_warehouse_after_the_snapshot_is_reported(
@@ -48,13 +52,14 @@ def test_a_change_in_the_warehouse_after_the_snapshot_is_reported(
     snapshot.take(con, settings)
     add_person(con)
     found = snapshot.problems(con, settings)
-    assert len(found) == 1 and "pessoa difere do warehouse em 1 linhas" in found[0]
+    assert len(found) == 1 and "pessoas difere do warehouse em 1 linhas" in found[0]
 
 
 def test_an_unchanged_identity_writes_no_new_snapshot(con: Connection, settings: Settings) -> None:
     add_person(con)
-    first = snapshot.take(con, settings)
-    assert first is not None
+    taken = snapshot.take(con, settings)
+    assert taken is not None
+    first = Path(taken)
     assert snapshot.take(con, settings) is None
     assert snapshot.take(con, settings) is None
     assert len(list((first.parent).glob("*"))) == 1
@@ -72,9 +77,9 @@ def test_a_change_after_an_unchanged_run_writes_a_new_snapshot(con: Connection, 
 
 def test_the_snapshot_is_compressed(con: Connection, settings: Settings) -> None:
     add_person(con)
-    folder = snapshot.take(con, settings)
-    assert folder is not None
-    file = (folder / "pessoa.parquet").as_posix()
+    taken = snapshot.take(con, settings)
+    assert taken is not None
+    file = (Path(taken) / "pessoas.parquet").as_posix()
     codecs = {
         r[0] for r in con.execute(f"SELECT DISTINCT compression FROM parquet_metadata('{file}')").fetchall()
     }

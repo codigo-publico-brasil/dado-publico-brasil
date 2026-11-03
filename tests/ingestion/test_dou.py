@@ -83,7 +83,9 @@ def test_a_landing_only_dataset_is_kept_with_hash_and_never_loaded_into_the_raw(
         con, settings, source, "secao1", 202610, downloader=downloader, head_request=lambda url: {}
     )
     assert capture > 0
-    assert rows(con, "SELECT dataset, year FROM metadata.captures") == [{"dataset": "secao1", "year": 202610}]
-    assert scalar(con, "SELECT count(*) FROM metadata.source_checks WHERE check_name = 'schema'") == 0
+    assert rows(con, "SELECT dataset, particao FROM metadata.capturas") == [
+        {"dataset": "secao1", "particao": 202610}
+    ]
+    assert scalar(con, "SELECT count(*) FROM metadata.fontes_verificacoes WHERE verificacao = 'schema'") == 0
     assert loader.load_pending(con, settings, source) == (0, 0)
-    assert scalar(con, "SELECT loaded_at IS NULL FROM metadata.captures")
+    assert scalar(con, "SELECT dt_carga IS NULL FROM metadata.capturas")

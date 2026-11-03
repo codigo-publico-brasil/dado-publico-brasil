@@ -1,4 +1,6 @@
 -- Catálogo das normas federais: uma linha por norma. Só metadados (o texto não vem desta API).
+with base as (
+
 with source as (
 
     select * from {{ source('senado', 'normas') }}
@@ -23,3 +25,7 @@ select
 from source
 
 qualify row_number() over (partition by id order by _source_file_id desc) = 1
+
+)
+
+{{ colunas_auditoria('base') }}

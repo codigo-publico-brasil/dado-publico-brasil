@@ -8,7 +8,9 @@ select
     '{{ var("source_camara") }}' as fonte,
     vp.id_votacao,
     cast(vp.id_proposicao as varchar) as id_proposicao,
-    vp.papel
+    vp.papel,
+    vp.id_captura,
+    cast(vp.dt_captura as date) as dt_captura
 
 from {{ ref('int_votacoes_proposicoes_unidas') }} as vp
 
@@ -18,7 +20,9 @@ select
     '{{ var("source_senado") }}',
     cast(v.id_votacao as varchar),
     cast(v.id_materia as varchar),
-    'materia'
+    'materia',
+    v.id_captura,
+    cast(v.dt_captura as date)
 
 from {{ ref('stg_senado__votacoes') }} as v
 

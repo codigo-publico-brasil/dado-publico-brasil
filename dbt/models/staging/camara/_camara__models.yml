@@ -16,7 +16,11 @@ models:
       - {name: site_url, description: "Site informado no cadastro."}
       - {name: id_primeira_legislatura, description: "Identificador da primeira legislatura do mandato."}
       - {name: id_ultima_legislatura, description: "Identificador da última legislatura do mandato."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__deputados_profissoes
     description: Profissões declaradas por deputado (linhas sem título descartadas pela padronização).
     columns:
@@ -24,7 +28,11 @@ models:
       - {name: cd_tipo, description: "Código do tipo, como a fonte informa."}
       - {name: titulo, description: "Ocupação declarada."}
       - {name: dt_registro, description: "Data e hora do andamento."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__deputados_ocupacoes
     description: Ocupações anteriores declaradas por deputado.
     columns:
@@ -37,7 +45,11 @@ models:
       - {name: ano_inicio_original, description: "Ano de início exatamente como a fonte escreve."}
       - {name: ano_fim, description: "Ano de fim; vazio quando a fonte escreve outra coisa que um ano."}
       - {name: ano_fim_original, description: "Ano de fim exatamente como a fonte escreve."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__proposicoes
     description: Proposições com a última situação. A ementa fica como veio da fonte.
     columns:
@@ -46,7 +58,7 @@ models:
       - {name: numero, description: "Número da norma."}
       - {name: ano, description: "Ano do evento."}
       - {name: descricao_tipo, description: "Descrição do tipo da proposição, como a Câmara informa."}
-      - {name: ementa, description: "Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista."}
+      - {name: ementa, description: "Ementa padronizada (caixa); igual à oficial quando já estava em caixa mista. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing."}
       - {name: dt_apresentacao, description: "Data de apresentação."}
       - {name: url_inteiro_teor, description: "Endereço do inteiro teor do documento na fonte."}
       - {name: situacao, description: "Situação atual segundo a fonte."}
@@ -55,7 +67,11 @@ models:
       - {name: tramitacao, description: "Descrição da tramitação do último status da proposição, como a Câmara informa."}
       - {name: regime, description: "Regime de tramitação informado."}
       - {name: apreciacao, description: "Forma de apreciação, como a Câmara informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__proposicoes_autores
     description: Autores de proposições (deputados, comissões, Senado, Executivo...), por ordem de assinatura.
     columns:
@@ -69,7 +85,11 @@ models:
       - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
       - {name: proponente, description: "1 quando consta como proponente; 0 caso contrário."}
       - {name: autor_uri, description: "Endereço (URI) do autor na API da fonte."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__votacoes
     description: Votações com resultado e totais oficiais.
     columns:
@@ -83,8 +103,12 @@ models:
       - {name: votos_sim, description: "Total de votos Sim informado pela fonte."}
       - {name: votos_nao, description: "Total de votos Não informado pela fonte."}
       - {name: votos_outros, description: "Total de outros votos informado pela fonte."}
-      - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada."}
+      - {name: descricao, description: "Descrição oficial da votação, com caixa padronizada. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__votos
     description: Voto de cada deputado em cada votação nominal. Voto vazio fica como texto vazio.
     columns:
@@ -98,26 +122,42 @@ models:
       - {name: id_legislatura, description: "Número da legislatura."}
       - {name: deputado_nome, description: "Nome do deputado, como a fonte informa."}
       - {name: deputado_foto_url, description: "Endereço da foto do deputado na fonte."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__votacoes_orientacoes
     description: Orientação de cada bancada em cada votação.
     columns:
       - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
       - {name: bancada_sigla, description: "Sigla da bancada, bloco ou partido a que a orientação de voto se refere."}
       - {name: orientacao, description: "Orientação de voto da bancada na votação (por exemplo, Sim, Não, Liberado, Obstrução)."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__votacoes_proposicoes
     description: Proposições afetadas por votação.
     columns:
       - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
       - {name: id_proposicao, description: "Identificador da proposição na fonte."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__votacoes_objetos
     description: Proposições que são objeto de votação.
     columns:
       - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["not_null"]}
       - {name: id_proposicao, description: "Identificador da proposição na fonte."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__legislaturas
     description: Legislaturas, uma linha por legislatura, com datas oficiais.
     columns:
@@ -125,7 +165,11 @@ models:
       - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
       - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
       - {name: ano_eleicao, description: "Ano da eleição que a formou."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__partidos
     description: Partidos, uma linha por partido.
     columns:
@@ -133,7 +177,11 @@ models:
       - {name: sigla, description: "Sigla do tipo da proposição, número e ano."}
       - {name: sigla_original, description: "Sigla exatamente como a Câmara publica, com os asteriscos (por exemplo, a mesma sigla com um, dois ou três asteriscos, registros diferentes). O significado dos asteriscos não consta nas fontes que consultamos."}
       - {name: nome, description: "Nome parlamentar, com caixa padronizada."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__orgaos
     description: Órgãos da Câmara, um por órgão, com a URL da fonte.
     columns:
@@ -149,7 +197,11 @@ models:
       - {name: situacao, description: "Situação atual segundo a fonte."}
       - {name: casa, description: "Casa legislativa."}
       - {name: fonte_url, description: "Endereço da proposição na fonte oficial."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__orgaos_membros
     description: Participação de deputados em órgãos, uma linha por cargo e período.
     columns:
@@ -161,7 +213,12 @@ models:
       - {name: uf_sigla, description: "Sigla da unidade da federação, como a fonte informa."}
       - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
       - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: deputado_nome, description: "Nome do deputado como a fonte informa, com caixa padronizada."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__frentes
     description: Frentes parlamentares, uma por frente.
     columns:
@@ -171,7 +228,11 @@ models:
       - {name: id_legislatura, description: "Número da legislatura."}
       - {name: situacao, description: "Situação atual segundo a fonte."}
       - {name: id_coordenador_deputado, description: "Identificador do deputado que coordena a frente, na Câmara."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__frentes_membros
     description: >
       Participação de deputados em frentes parlamentares, uma linha por legislatura e título. Em parte das
@@ -184,7 +245,12 @@ models:
       - {name: deputado_foto_url, description: "Endereço da foto do deputado na fonte."}
       - {name: dt_inicio, description: "Início oficial do mandato; vazio quando a fonte não informa."}
       - {name: dt_fim, description: "Fim oficial do mandato; vazio quando a fonte não informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: cd_titulo, description: "Código do título do deputado na frente, como a fonte informa."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__deputados_detalhe
     description: Cadastro dos deputados (só dos já buscados), uma linha por deputado.
     columns:
@@ -195,7 +261,17 @@ models:
       - {name: gabinete_email, description: "E-mail institucional do gabinete."}
       - {name: gabinete_telefone, description: "Telefone institucional do gabinete."}
       - {name: gabinete_endereco, description: "Prédio, sala e andar do gabinete, como a fonte informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: nome_eleitoral, description: "Nome eleitoral do deputado no último status registrado."}
+      - {name: partido_sigla, description: "Sigla do partido no último status registrado."}
+      - {name: uf_sigla, description: "UF de eleição no último status registrado."}
+      - {name: id_legislatura, description: "Legislatura do último status registrado."}
+      - {name: dt_status, description: "Data do último status registrado."}
+      - {name: gabinete_nome, description: "Nome do gabinete do deputado."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
 
   - name: stg_camara__deputados_historico
     description: Histórico de situação dos deputados (só dos já buscados), uma linha por registro de status.
@@ -210,7 +286,11 @@ models:
       - {name: nome_eleitoral, description: "Nome eleitoral no registro, com caixa padronizada."}
       - {name: partido_sigla, description: "Sigla do partido na data do registro."}
       - {name: uf_sigla, description: "UF de representação na data do registro."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Captura de origem da linha."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
 
   - name: stg_camara__tramitacoes
     description: Tramitação das proposições que podem virar norma (só as já buscadas), uma linha por andamento.
@@ -227,4 +307,8 @@ models:
       - {name: despacho, description: "Texto do despacho, como a fonte informa."}
       - {name: ambito, description: "Âmbito da tramitação, como a Câmara informa."}
       - {name: apreciacao, description: "Forma de apreciação, como a Câmara informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}

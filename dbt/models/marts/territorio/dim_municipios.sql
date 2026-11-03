@@ -10,8 +10,9 @@ select
     m.regiao_imediata,
     m.regiao_intermediaria,
     lower(strip_accents(m.nome)) as nome_busca,
+    m.id_captura,
     cast(k.dt_captura as date) as dt_captura
 
 from {{ ref('stg_ibge__municipios') }} as m
 
-left join {{ ref('stg_metadata__captures') }} as k on k.id_captura = m.id_captura
+left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = m.id_captura

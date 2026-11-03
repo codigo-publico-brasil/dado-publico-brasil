@@ -1,0 +1,2 @@
+# Configuração do `edr` (relatório do Elementary): o relatório é público, então não leva rastreamento de visitas.
+anonymous_usage_tracking: false

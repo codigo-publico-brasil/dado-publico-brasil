@@ -36,11 +36,11 @@ Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e 
 | --- | --- | --- | --- |
 | `raw_federal_camara` | tabelas fiéis à fonte, uma por dataset | dlt | dlt: um schema (dataset) por fonte; `raw_` diz a camada e `federal` a esfera |
 | `dlt_tmp_raw_federal_camara` | área temporária do dlt para fazer `merge` e `replace`; não é camada, ninguém lê | dlt | dlt cria `<dataset>_staging`; renomeamos (`staging_dataset_name_layout`) para não parecer a camada `staging` do dbt |
-| `staging` | views, uma por tabela do raw, com nomes, tipos e caixa padronizados | dbt | guia da dbt Labs |
+| `staging` | uma por tabela do raw, com nomes, tipos e caixa padronizados e colunas de auditoria (`fonte`, `id_captura`, `dt_captura`, `url_fonte`, `sha256_captura`); publicado no lake ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)) | dbt | guia da dbt Labs |
 | `intermediate` | tabelas de passagem (re-granularidade e junções) | dbt | guia da dbt Labs |
-| `marts` | o que a aplicação lê, com contrato, nomeado pelo tipo: `dim_` (dimensão), `fct_` (fato), `brg_` (ponte), `agg_` (agregado) e `app_` (consulta do aplicativo); a única camada publicada ([ADR 0033](../05-decisoes/0033-marts-com-a-terminologia-da-dbt-labs.md)) | dbt | guia da dbt Labs; convenção em [`02-convencao-de-nomes.md`](../03-consultar/02-convencao-de-nomes.md) |
+| `marts` | o que a aplicação lê, com contrato, nomeado pelo tipo: `dim_` (dimensão), `fct_` (fato), `brg_` (ponte), `agg_` (agregado) e `app_` (consulta do aplicativo); única camada que vai ao PostgreSQL ([ADR 0033](../05-decisoes/0033-marts-com-a-terminologia-da-dbt-labs.md)); também vai ao lake | dbt | guia da dbt Labs; convenção em [`02-convencao-de-nomes.md`](../03-consultar/02-convencao-de-nomes.md) |
 | `identity` | chave própria de pessoa e tabela de ligação | código próprio | específico do projeto (não se reconstrói) |
-| `metadata` | execuções, capturas, resultado dos testes, migrações | código próprio e dbt | específico do projeto |
+| `metadata` | execuções, capturas, resultado dos testes, migrações; só `metadata.capturas` (URL, hash e data) é publicada no lake | código próprio e dbt | específico do projeto |
 | `main` | schema padrão do DuckDB; fica vazio | DuckDB | padrão do DuckDB |
 
 O dbt, por padrão, grava em `<schema do perfil>_<schema do modelo>`; aqui a macro `generate_schema_name` usa só o nome do schema do modelo, o que é permitido e recomendado quando cada ambiente tem o seu banco. As tabelas `_dlt_loads`, `_dlt_pipeline_state` e `_dlt_version` dentro de `raw_federal_camara` são controle do dlt.
@@ -50,7 +50,7 @@ O dbt, por padrão, grava em `<schema do perfil>_<schema do modelo>`; aqui a mac
 As outras camadas guardam o **dado da fonte** em estágios de tratamento. Estas duas guardam o que o projeto **acrescenta**:
 
 - **`identity` (identidade):** a chave própria `id_pessoa`, que liga a mesma pessoa em fontes diferentes (um deputado na Câmara, candidato no TSE). É a única camada que **não se reconstrói** do landing: uma chave já entregue a uma aplicação não pode mudar, então ela nasce por código com migração e ganha cópia imutável a cada execução. Detalhes em [`05-identidade-de-pessoas.md`](05-identidade-de-pessoas.md).
-- **`metadata` (metadados):** dados *sobre* o pipeline, não sobre o poder público: cada captura (URL, hash, data, caminho do arquivo), cada execução (versão do código, linhas, resultado), o resultado dos testes do dbt e as verificações das fontes. É o que torna o dado **auditável**: toda linha do raw aponta para `metadata.captures`. O nome segue o uso do mercado ("metadata" = dado que descreve dado). As aplicações leem os marts e, para a página de qualidade, `metadata.captures`, `metadata.dbt_results` e `metadata.source_checks`.
+- **`metadata` (metadados):** dados *sobre* o pipeline, não sobre o poder público: cada captura (URL, hash, data, caminho do arquivo), cada execução (versão do código, linhas, resultado), o resultado dos testes do dbt e as verificações das fontes. É o que torna o dado **auditável**: toda linha do raw aponta para `metadata.capturas`. O nome segue o uso do mercado ("metadata" = dado que descreve dado). As aplicações leem os marts e, para a página de qualidade, `metadata.capturas`, `metadata.testes_resultados` e `metadata.fontes_verificacoes`.
 
 ## Descrições e dicionário de colunas
 
@@ -88,7 +88,7 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 - **intermediate**: uma finalidade por modelo (`int_..._agregados`, `..._ligados_a_...`, `..._unidos`), **tabelas** fora dos marts. Aqui estão a re-granularidade e os joins.
 - **marts**: tabelas com nome pelo tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`, `agg_composicoes`, `app_pessoas`), um grain por tabela, largas, com **contrato de colunas e tipos** (`contract.enforced`; as `app_` são views sem contrato de tipos). Pastas por assunto (`pessoas`, `eleicoes`, `legislativo`, `territorio`, `aplicacao`). Declarados como *exposure* para a aplicação.
 - **YAML** ao lado dos modelos (`_<pasta>__models.yml`, `_<fonte>__sources.yml`), com descrição, `meta` (sensibilidade, grain, dono) e testes de chave (`unique`, `not_null`, `relationships`).
-- **Testes**: genéricos no YAML, singulares em `tests/`. As lacunas conhecidas da fonte são testes `severity: warn` (a contagem de linhas que falharam mede a lacuna); reconciliações e integridade são `error` e interrompem o pipeline. O resultado de cada execução vai para `metadata.dbt_results`.
+- **Testes**: genéricos no YAML, singulares em `tests/`. As lacunas conhecidas da fonte são testes `severity: warn` (a contagem de linhas que falharam mede a lacuna); reconciliações e integridade são `error` e interrompem o pipeline. O resultado de cada execução vai para `metadata.testes_resultados`.
 - **Frescor** declarado nas fontes (`freshness` e `loaded_at_field`), medido com `dbt source freshness`.
 - **Funções de texto** como macros nativas do DuckDB (`proper_name`, `sentence_case`, `standardize_summary`), criadas no `on-run-start`; SQL puro, sem código Python por linha.
 - **Duas fases**: o dbt roda em duas passadas, separadas por tag, porque a identidade (código Python) fica no meio: primeiro `staging` e os modelos `pre_identity`; depois a resolução de identidade; depois o resto.
@@ -103,7 +103,7 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 
 **Organização do landing.** O caminho diz a origem, a referência e a data da extração: `landing/<fonte>/<dataset>/<referência>/<AAAAMMDD>/<nome>-<hash>.<ext>`. A referência é o ano, o mês (`AAAAMM`, no DOU) ou a legislatura do arquivo, ou `completo` quando o dataset não é particionado (lotes de datasets por item também ficam em `completo`). A data é a da captura. Capturar de novo o mesmo conteúdo em outro dia não cria arquivo: vale o primeiro e só a data da última verificação muda ([ADR 0021](../05-decisoes/0021-landing-por-fonte-dataset-e-data.md)).
 
-**Linhagem.** Toda linha do raw leva `_ingested_at` (quando chegou) e `_source_file_id`, que aponta para `metadata.captures` (URL, hash, tamanho, datas, caminho); nos datasets por item, `metadata.capture_items` aponta para cada resposta dentro do lote. Cada execução registra a versão do código (commit). O dlt grava `_dlt_load_id` por carga e o Dagster mostra o grafo entre ativos.
+**Linhagem.** Toda linha do raw leva `_ingested_at` (quando chegou) e `_source_file_id`, que aponta para `metadata.capturas` (URL, hash, tamanho, datas, caminho); nos datasets por item, `metadata.capturas_itens` aponta para cada resposta dentro do lote. Cada execução registra a versão do código (commit). O dlt grava `_dlt_load_id` por carga e o Dagster mostra o grafo entre ativos.
 
 > **Conceito: linhagem de dados.** O rastro de cada dado até a origem. Exigência do projeto: "todo dado exibido precisa de fonte oficial, URL e data de captura".
 
@@ -113,7 +113,9 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 
 ## Armazenamento
 
-Um único arquivo DuckDB, com um esquema por camada (`raw_<esfera>_<fonte>`, `staging`, `intermediate`, `marts`, `identity`, `metadata`). Limite do DuckDB em arquivo: um processo escritor por vez. Por isso o dbt roda em outro processo, com a conexão do chamador fechada, e a aplicação abre em modo somente leitura. 
+**Lake público** ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)). O comando `export`, depois dos testes do dbt, grava em Parquet no R2 as camadas **publicadas**: `staging`, `intermediate`, `marts` e `metadata.capturas`. `raw` não é publicado (o staging cobre o mesmo conteúdo, padronizado) e o **landing nunca é público**: guarda campos que o raw descarta, como CPF. O caminho é estável e segue a organização do projeto: `staging/<poder>/<esfera>/<fonte>/<modelo>` (a árvore de `sources/`), `intermediate/<modelo>`, `marts/<domínio>/<tabela>` e `metadata/capturas`; só entra o staging de fonte (não o de identidade e metadados) e não entram as views `app_`. Cada tabela é `<caminho>.parquet`, ou, se for grande e o dbt declarar `meta.particao` (expressão do ano), `<caminho>/ano=AAAA/part-0.parquet`, sem pasta por versão; `catalogo.duckdb` e `manifesto.json` são a porta de entrada. Landing, fotos, cópias da identidade e metadados de execução ficam num **bucket privado**. Como consumir: [`06-consumir-o-lake.md`](../03-consultar/06-consumir-o-lake.md).
+
+O arquivo DuckDB é só o motor de cálculo. Um único arquivo DuckDB, com um esquema por camada (`raw_<esfera>_<fonte>`, `staging`, `intermediate`, `marts`, `identity`, `metadata`). Limite do DuckDB em arquivo: um processo escritor por vez. Por isso o dbt roda em outro processo, com a conexão do chamador fechada, e a aplicação abre em modo somente leitura. 
 
 **PostgreSQL de serviço** ([ADR 0014](../05-decisoes/0014-warehouse-lake-duckdb-e-postgres-de-servico.md)). O dbt roda só no DuckDB; o PostgreSQL só recebe os marts já prontos, pelo comando `publish`: as tabelas vão para um esquema de trabalho (`marts_novo`) e são trocadas por `marts` num único comando atômico, então quem lê vê os marts antigos ou os novos, nunca metade. Depois da troca o comando confere que cada tabela chegou com as mesmas linhas. O papel `leitor` (somente leitura) é criado pela infraestrutura (em desenvolvimento, por `docker/postgres-init.sh`); o código nunca cria papéis. Ainda não há índices: entram quando uma aplicação declarar como consulta cada mart. A extensão `postgres` do DuckDB é baixada na primeira execução (precisa de rede).
 

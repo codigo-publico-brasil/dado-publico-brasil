@@ -1,3 +1,5 @@
+with base as (
+
 with source as (
 
     select * from {{ source('senado', 'senadores_detalhe') }}
@@ -23,3 +25,7 @@ select
     _source_file_id as id_captura
 
 from source
+
+)
+
+{{ colunas_auditoria('base') }}

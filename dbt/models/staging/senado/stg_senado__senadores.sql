@@ -1,5 +1,7 @@
 -- A mesma pessoa aparece no arquivo de cada legislatura que ela atravessou: o staging fica com uma linha
 -- por senador, com os dados do arquivo mais recente.
+with base as (
+
 with source as (
 
     select * from {{ source('senado', 'senadores') }}
@@ -19,3 +21,7 @@ select
 from source
 
 group by 1
+
+)
+
+{{ colunas_auditoria('base') }}

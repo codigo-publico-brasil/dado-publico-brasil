@@ -12,7 +12,8 @@ with turnos as (
         arg_max(situacao_candidatura, turno) as situacao_candidatura,
         arg_max(resultado, turno) as resultado,
         bool_or(resultado like 'Eleito%') as fl_eleito,
-        max(id_captura) as id_captura
+        max(id_captura) as id_captura,
+        max(dt_captura) as dt_captura
 
     from {{ ref('stg_tse__candidaturas') }}
 
@@ -102,7 +103,8 @@ select
         || '_' || f.pacote_uf || '_div.zip',
         null
     ) as foto_pacote_url,
-    t.id_captura
+    t.id_captura,
+    cast(t.dt_captura as date) as dt_captura
 
 from cadastro as c
 
@@ -124,11 +126,11 @@ left join ultimo_turno as u on u.id_candidatura = c.id_candidatura
 
 left join {{ ref('int_tse_pessoas') }} as p on p.id_candidatura = c.id_candidatura
 
-left join {{ ref('stg_identity__pessoa_identificadores') }} as pe
+left join {{ ref('stg_identity__pessoas_identificadores') }} as pe
     on pe.fonte = '{{ var("source_tse") }}' and pe.id_tipo = '{{ var("id_type_tse_eleito") }}' and pe.id_na_fonte = c.id_candidatura
 
 -- candidatura de quem já era deputado ou senador (ligada pelo nome civil ou de urna e o nascimento), mesmo sem ter sido eleito
-left join {{ ref('stg_identity__pessoa_identificadores') }} as pc
+left join {{ ref('stg_identity__pessoas_identificadores') }} as pc
     on pc.fonte = '{{ var("source_tse") }}' and pc.id_tipo = '{{ var("id_type_tse") }}' and pc.id_na_fonte = c.id_candidatura
 
 left join fotos as f on f.ano_eleicao = c.ano_eleicao and f.sq_candidato = c.sq_candidato

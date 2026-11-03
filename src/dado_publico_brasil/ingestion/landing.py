@@ -1,7 +1,7 @@
 """Landing: os arquivos da fonte exatamente como chegaram, com hash, URL e data de captura.
 
 O arquivo é guardado com o hash no nome e nunca é sobrescrito nem editado. Cada captura entra em
-`metadata.captures`; capturar de novo o mesmo conteúdo só atualiza a data da última verificação.
+`metadata.capturas`; capturar de novo o mesmo conteúdo só atualiza a data da última verificação.
 Antes de baixar, pergunta-se à fonte se o arquivo mudou (`ETag`, `Last-Modified` e tamanho).
 
 Três maneiras de montar o que baixar (o plano):
@@ -11,6 +11,7 @@ Três maneiras de montar o que baixar (o plano):
   da fonte que declara `schedule`; sem `schedule`, só roda quando pedido.
 """
 
+import shutil
 from collections.abc import Mapping
 from contextlib import suppress
 from datetime import UTC, date, datetime
@@ -18,7 +19,7 @@ from http.client import HTTPException
 from pathlib import Path
 from typing import Any
 
-from dado_publico_brasil.core import runs
+from dado_publico_brasil.core import privado, runs
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, rows, scalar
 from dado_publico_brasil.ingestion import fetch, monitoring
@@ -36,9 +37,9 @@ def unchanged(previous: Mapping[str, Any] | None, headers: Mapping[str, str | No
         return True
     return bool(
         headers.get("last_modified")
-        and headers["last_modified"] == previous["last_modified"]
+        and headers["last_modified"] == previous["ultima_modificacao"]
         and headers.get("size")
-        and str(previous["size_bytes"]) == headers["size"]
+        and str(previous["qtd_bytes"]) == headers["size"]
     )
 
 
@@ -51,7 +52,9 @@ def folder(settings: Settings, source: str, dataset: str, partition: int | None,
 
 
 def last_capture(con: Connection, url: str) -> dict[str, Any] | None:
-    found = rows(con, "SELECT * FROM metadata.captures WHERE url = ? ORDER BY id DESC LIMIT 1", (url,))
+    found = rows(
+        con, "SELECT * FROM metadata.capturas WHERE url = ? ORDER BY id_captura DESC LIMIT 1", (url,)
+    )
     return found[0] if found else None
 
 
@@ -71,28 +74,32 @@ def register_capture(
     moment = runs.now()
     h = headers or {}
     con.execute(
-        "INSERT INTO metadata.captures (source, dataset, year, url, sha256, size_bytes, path, "
-        "captured_at, last_checked_at, run_id, etag, last_modified) "
+        "INSERT INTO metadata.capturas (fonte, dataset, particao, url, sha256, qtd_bytes, caminho, "
+        "dt_captura, dt_verificacao, id_execucao, etag, ultima_modificacao) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
-        "ON CONFLICT (url, sha256) DO UPDATE SET last_checked_at = excluded.last_checked_at, "
-        "etag = excluded.etag, last_modified = excluded.last_modified",
+        "ON CONFLICT (url, sha256) DO UPDATE SET dt_verificacao = excluded.dt_verificacao, "
+        "etag = excluded.etag, ultima_modificacao = excluded.ultima_modificacao",
         (source, dataset, year, url, sha256, size_bytes, path, moment, moment, run_id)
         + (h.get("etag"), h.get("last_modified")),
     )
-    return int(scalar(con, "SELECT id FROM metadata.captures WHERE url = ? AND sha256 = ?", (url, sha256)))
+    return int(
+        scalar(con, "SELECT id_captura FROM metadata.capturas WHERE url = ? AND sha256 = ?", (url, sha256))
+    )
 
 
 def mark_checked(con: Connection, capture_id: int) -> None:
-    con.execute("UPDATE metadata.captures SET last_checked_at = ? WHERE id = ?", (runs.now(), capture_id))
+    con.execute(
+        "UPDATE metadata.capturas SET dt_verificacao = ? WHERE id_captura = ?", (runs.now(), capture_id)
+    )
 
 
 def current_captures(con: Connection, source: str) -> list[dict[str, Any]]:
     """A captura mais recente de cada URL da fonte (o que o loader deve ler)."""
     return rows(
         con,
-        "SELECT * FROM metadata.captures c WHERE c.source = ? "
-        "AND c.id = (SELECT MAX(id) FROM metadata.captures WHERE url = c.url) "
-        "ORDER BY c.dataset, c.year, c.id",
+        "SELECT * FROM metadata.capturas c WHERE c.fonte = ? "
+        "AND c.id_captura = (SELECT MAX(id_captura) FROM metadata.capturas WHERE url = c.url) "
+        "ORDER BY c.dataset, c.particao, c.id_captura",
         (source,),
     )
 
@@ -214,23 +221,24 @@ def partition_gaps(
         if d.foreach or not expected:
             continue
         got = {
-            int(r["year"])
+            int(r["particao"])
             for r in rows(
                 con,
-                "SELECT DISTINCT year FROM metadata.captures "
-                "WHERE source = ? AND dataset = ? AND year IS NOT NULL",
+                "SELECT DISTINCT particao FROM metadata.capturas "
+                "WHERE fonte = ? AND dataset = ? AND particao IS NOT NULL",
                 (contract.source, d.name),
             )
         }
         latest = rows(
             con,
-            "SELECT partition, status, detail FROM metadata.source_checks WHERE source = ? AND dataset = ? "
-            "AND check_name = 'availability' AND partition IS NOT NULL "
-            "QUALIFY ROW_NUMBER() OVER (PARTITION BY partition ORDER BY id DESC) = 1",
+            "SELECT particao, resultado, detalhe FROM metadata.fontes_verificacoes WHERE fonte = ? AND "
+            "dataset = ? "
+            "AND verificacao = 'availability' AND particao IS NOT NULL "
+            "QUALIFY ROW_NUMBER() OVER (PARTITION BY particao ORDER BY id_verificacao DESC) = 1",
             (contract.source, d.name),
         )
         unavailable = {
-            int(r["partition"]) for r in latest if r["status"] == "error" and "404" in str(r["detail"])
+            int(r["particao"]) for r in latest if r["resultado"] == "error" and "404" in str(r["detalhe"])
         } - got
         missing = [p for p in expected if p not in got and p not in unavailable]
         result[d.name] = {
@@ -260,7 +268,8 @@ def plan_recovery(
 
 
 def record_gaps(con: Connection, contract: SourceContract) -> None:
-    """Grava em `source_checks` (`particoes`) as partições de cada dataset: aviso se faltam, ok se não."""
+    """Grava em `fontes_verificacoes` (`particoes`) as partições de cada dataset: aviso se faltam, "
+    "ok se não."""
     for name, gap in partition_gaps(con, contract).items():
         missing = gap["faltam"]
         detail = f"{gap['capturadas']} de {gap['esperadas']} partições"
@@ -287,7 +296,7 @@ def extract(
     """Captura um dataset e devolve o id da captura (nova ou a anterior, se nada mudou).
 
     O arquivo vai para `<storage_root>/landing/<fonte>/`. `force` ignora a pergunta à fonte. Se a fonte
-    falhar, a falha é registrada em `metadata.source_checks` e devolve -1, sem interromper o plano.
+    falhar, a falha é registrada em `metadata.fontes_verificacoes` e devolve -1, sem interromper o plano.
     """
     url = contract.url(dataset, year)
     downloader = downloader or fetch.downloader(contract, dataset)
@@ -298,23 +307,29 @@ def extract(
             headers = {} if force else head_request(url)
         except OSError:
             headers = {}
-        if not force and previous is not None and unchanged(previous, headers):
-            mark_checked(con, int(previous["id"]))
+        lost = previous is not None and not (settings.storage_root / previous["caminho"]).exists()
+        if not force and previous is not None and not lost and unchanged(previous, headers):
+            mark_checked(con, int(previous["id_captura"]))
             run.rows_in = 1
-            return int(previous["id"])
+            return int(previous["id_captura"])
         try:
             file, digest, size = downloader(url, folder(settings, contract.source, dataset, year, runs.now()))
         except (OSError, HTTPException) as error:
             monitoring.record(con, contract.source, dataset, year, "availability", "error", str(error))
             return -1
         if previous is not None and previous["sha256"] == digest:  # mesmo conteúdo: fica o arquivo antigo
-            if file != settings.storage_root / previous["path"]:
+            original = settings.storage_root / previous["caminho"]
+            if file != original and lost:  # o arquivo local sumiu: o baixado volta ao `caminho` registrado
+                original.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(file, original)
+            elif file != original:
                 file.unlink()
+            if file != original:
                 with suppress(OSError):  # a pasta só some se ficou vazia
                     file.parent.rmdir()
-            mark_checked(con, int(previous["id"]))
+            mark_checked(con, int(previous["id_captura"]))
             run.rows_in = 1
-            return int(previous["id"])
+            return int(previous["id_captura"])
         monitoring.record(con, contract.source, dataset, year, "availability", "ok", f"{size} bytes")
         if not monitoring.check_integrity(
             con,
@@ -349,11 +364,12 @@ def extract_plan(
     """Executa um plano, item a item. Devolve quantos itens foram processados.
 
     Com `recover` (a execução incremental), soma ao plano as partições passadas que faltam (`plan_recovery`).
-    Ao fim, registra por dataset o estado das partições (`particoes` em `source_checks`)."""
+    Ao fim, registra por dataset o estado das partições (`particoes` em `fontes_verificacoes`)."""
     if recover:
         items = [*items, *plan_recovery(con, contract)]
     for dataset, year in items:
         print(f"Extraindo {dataset} {year or ''}".strip(), flush=True)
         extract(con, settings, contract, dataset, year, downloader, head_request, force)
     record_gaps(con, contract)
+    privado.push_metadata(con, settings)
     return len(items)

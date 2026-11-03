@@ -73,7 +73,7 @@ def test_the_missing_author_is_measured_as_a_gap(full: Env) -> None:
     assert (
         scalar(
             con,
-            "SELECT failures FROM metadata.dbt_results WHERE unique_id LIKE '%emendas_sem_autor_conhecido%'",
+            "SELECT qtd_falhas FROM metadata.testes_resultados WHERE id_no LIKE '%emendas_sem_autor_conhecido%'",
         )
         == 1
     )

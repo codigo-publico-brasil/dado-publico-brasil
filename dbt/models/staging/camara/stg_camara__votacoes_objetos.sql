@@ -15,4 +15,4 @@ renamed as (
 
 )
 
-select * from renamed
+{{ colunas_auditoria('renamed') }}

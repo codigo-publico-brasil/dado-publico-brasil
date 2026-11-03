@@ -23,4 +23,4 @@ left join {{ ref('dim_territorios') }} as t on t.id_territorio = e.id_territorio
 
 left join {{ ref('dim_partidos') }} as pa on pa.id_partido = e.id_partido
 
-left join {{ ref('stg_metadata__captures') }} as cp on cp.id_captura = e.id_captura
+left join {{ ref('stg_metadata__capturas') }} as cp on cp.id_captura = e.id_captura

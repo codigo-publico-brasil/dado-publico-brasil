@@ -3,7 +3,7 @@
 - **Status:** aceito (2026-10-23, pelo fundador)
 - **Data:** 2026-10-23
 - **Altera:** [ADR 0002](0002-pilha-tecnologica.md) (dados curados em PostgreSQL; lakehouse descartado) e o próximo passo do [ADR 0009](0009-repositorio-de-dados-pacote-unico.md) (dbt com macros de portabilidade para o PostgreSQL).
-- **Desenho completo (componentes e infraestrutura):** [`../engenharia/arquitetura-producao.html`](../01-entender/arquitetura-producao.html)
+- **Desenho completo (componentes e infraestrutura):** [`02-arquitetura.md`](../01-entender/02-arquitetura.md) (o HTML original foi removido; ver o histórico do git)
 
 ## Contexto
 

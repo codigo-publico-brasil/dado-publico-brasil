@@ -3,6 +3,6 @@
 select 1
 where (
     select count(distinct id_pessoa)
-    from {{ ref('stg_identity__pessoa_identificadores') }}
+    from {{ ref('stg_identity__pessoas_identificadores') }}
     where fonte in ('{{ var("source_camara") }}', '{{ var("source_senado") }}')
 ) <> (select count(*) from {{ ref('dim_pessoas_cadastro') }})

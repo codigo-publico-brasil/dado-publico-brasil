@@ -14,10 +14,11 @@ renamed as (
         deputado_url_foto as deputado_foto_url,
         try_cast(data_inicio as date) as dt_inicio,
         try_cast(data_fim as date) as dt_fim,
+        deputado_cod_titulo as cd_titulo,
         _source_file_id as id_captura
 
     from source
 
 )
 
-select * from renamed
+{{ colunas_auditoria('renamed') }}

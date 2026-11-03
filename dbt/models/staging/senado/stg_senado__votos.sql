@@ -1,3 +1,5 @@
+with base as (
+
 with votos as (
 
     select * from {{ source('senado', 'votacoes__votos') }}
@@ -17,8 +19,14 @@ select
     votos.sigla_voto_parlamentar as voto,
     votos.sigla_partido_parlamentar as partido_sigla,
     votos.sigla_uf_parlamentar as uf_sigla,
+    votos.sexo_parlamentar as sexo,
+    votos.descricao_voto_parlamentar as voto_descricao,
     votacoes._source_file_id as id_captura
 
 from votos
 
 inner join votacoes on votacoes._dlt_id = votos._dlt_parent_id
+
+)
+
+{{ colunas_auditoria('base') }}

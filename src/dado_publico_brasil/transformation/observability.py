@@ -1,12 +1,13 @@
 """Relatório de saúde dos dados (ADR 0018) e alerta por e-mail.
 
 Reúne o que as camadas de verificação já gravaram em `metadata`: o monitor das fontes e o balanço de cada
-carga (`source_checks`), os testes do dbt e as anomalias que o Elementary detecta nos marts (volume,
+carga (`fontes_verificacoes`), os testes do dbt e as anomalias que o Elementary detecta nos marts (volume,
 colunas que mudam, nulos). Nada aqui interrompe o pipeline: `dado-publico observe` resume e falha (código de
 saída 1) se houver problema, e `notify` manda o resumo por e-mail quando há.
 """
 
 import os
+import re
 import shutil
 import smtplib
 import subprocess
@@ -15,14 +16,14 @@ from pathlib import Path
 from dado_publico_brasil.core import alert
 from dado_publico_brasil.core.settings import DBT_DIR, Settings
 from dado_publico_brasil.core.warehouse import Connection
-from dado_publico_brasil.transformation import health
+from dado_publico_brasil.transformation import branding, health
 
 ELEMENTARY = "0.26.1"  # a mesma versão do pacote dbt em dbt/packages.yml
 
 ANOMALIES = (
-    "SELECT status, unique_id, failures, message FROM metadata.dbt_results WHERE run_id = "
-    "(SELECT max(id) FROM metadata.runs WHERE stage = 'transform_post' AND source = 'dbt') "
-    "AND status IN ('warn', 'fail', 'error') AND unique_id LIKE 'test.%.elementary_%' ORDER BY 2"
+    "SELECT resultado, id_no, qtd_falhas, mensagem FROM metadata.testes_resultados WHERE id_execucao = "
+    "(SELECT max(id_execucao) FROM metadata.execucoes WHERE etapa = 'transform_post' AND fonte = 'dbt') "
+    "AND resultado IN ('warn', 'fail', 'error') AND id_no LIKE 'test.%.elementary_%' ORDER BY 2"
 )
 
 
@@ -35,10 +36,12 @@ def report(con: Connection, limits: dict[tuple[str, str], int] | None = None) ->
     """
     lines: list[str] = []
     sources = con.execute(
-        "SELECT status, source || '.' || dataset, check_name, detail, count(*), "
-        "min(partition), max(partition) FROM metadata.source_checks WHERE status <> 'ok' AND id IN "
-        "(SELECT max(id) FROM metadata.source_checks GROUP BY source, dataset, partition, check_name) "
-        "GROUP BY ALL ORDER BY status DESC, 2, 3"
+        "SELECT resultado, fonte || '.' || dataset, verificacao, detalhe, count(*), "
+        "min(particao), max(particao) FROM metadata.fontes_verificacoes WHERE resultado <> 'ok' AND "
+        "id_verificacao IN "
+        "(SELECT max(id_verificacao) FROM metadata.fontes_verificacoes GROUP BY fonte, dataset, "
+        "particao, verificacao) "
+        "GROUP BY ALL ORDER BY resultado DESC, 2, 3"
     ).fetchall()
     source_errors = sum(n for status, *_, n, _, _ in sources if status == "error")
     total = sum(n for *_, n, _, _ in sources)
@@ -60,10 +63,11 @@ def report(con: Connection, limits: dict[tuple[str, str], int] | None = None) ->
     lines += ["", f"Capturas velhas: {len(stale)}"]
     lines += [f"  [erro] {line}" for line in stale]
     failing = con.execute(
-        "SELECT status, unique_id, failures FROM metadata.dbt_results "
-        "WHERE run_id IN (SELECT max(id) FROM metadata.runs WHERE source = 'dbt' AND stage LIKE 'transform%' "
-        "GROUP BY stage) "
-        "AND status IN ('error', 'fail') ORDER BY 2"
+        "SELECT resultado, id_no, qtd_falhas FROM metadata.testes_resultados "
+        "WHERE id_execucao IN (SELECT max(id_execucao) FROM metadata.execucoes WHERE fonte = 'dbt' AND "
+        "etapa LIKE 'transform%' "
+        "GROUP BY etapa) "
+        "AND resultado IN ('error', 'fail') ORDER BY 2"
     ).fetchall()
     lines += ["", f"Testes do dbt das últimas fases: {len(failing)} reprovados"]
     lines += [f"  [{s}] {uid} ({n})" for s, uid, n in failing]
@@ -77,14 +81,14 @@ def report(con: Connection, limits: dict[tuple[str, str], int] | None = None) ->
 def stale_captures(con: Connection, limits: dict[tuple[str, str], int]) -> list[str]:
     """Datasets cuja última verificação é mais velha que o limite (ou que nunca foram capturados).
 
-    Usa `last_checked_at`, que a pipeline atualiza a cada verificação da fonte mesmo quando o arquivo não
+    Usa `dt_verificacao`, que a pipeline atualiza a cada verificação da fonte mesmo quando o arquivo não
     mudou: se ele para de andar, a pipeline parou ou a fonte deixou de responder.
     """
     problems: list[str] = []
     for (source, dataset), limit in sorted(limits.items()):
         row = con.execute(
-            "SELECT date_diff('day', CAST(max(last_checked_at) AS TIMESTAMP), current_timestamp) "
-            "FROM metadata.captures WHERE source = ? AND dataset = ?",
+            "SELECT date_diff('day', max(dt_verificacao), now() AT TIME ZONE 'UTC') "
+            "FROM metadata.capturas WHERE fonte = ? AND dataset = ?",
             (source, dataset),
         ).fetchone()
         age = None if row is None else row[0]
@@ -93,6 +97,24 @@ def stale_captures(con: Connection, limits: dict[tuple[str, str], int]) -> list[
         elif age > limit:
             problems.append(f"{source}.{dataset}: última verificação há {age} dias (limite de {limit})")
     return problems
+
+
+CLOUD_ITEM = re.compile(
+    r'\{key:"[^"]+",path:"[^"]*",label:"[^"]+",description:"[^"]*",icon:[^,]+,\{\}\),isSaasPage:!0,tooltip:"[^"]*"\},?'
+)
+EMPTY_GROUP = re.compile(r',(?:"[A-Z &]+"|[A-Z]+):\[\]')
+# o relatório só carrega o que é do próprio HTML: sem scripts nem requisições de terceiros (estatística, GTM)
+CSP = "script-src 'unsafe-inline' 'unsafe-eval' blob:; worker-src blob:; connect-src 'self'"
+
+
+def prune_report(html: str) -> str:
+    """Tira do menu as páginas do Elementary Cloud (`isSaasPage`), que aqui só levam a anúncio."""
+    html, removed = CLOUD_ITEM.subn("", html)
+    if not removed:
+        raise ValueError("menu do relatório sem itens do Elementary Cloud: o Elementary mudou o formato")
+    html = EMPTY_GROUP.sub("", html)
+    meta = f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'
+    return html.replace("<head>", "<head>" + meta, 1)
 
 
 def html_report(settings: Settings) -> Path:
@@ -108,10 +130,14 @@ def html_report(settings: Settings) -> Path:
     file = folder / "report.html"
     command = [uvx, "--from", f"elementary-data[duckdb]=={ELEMENTARY}", "edr", "report"]
     command += ["--profiles-dir", str(DBT_DIR), "--file-path", str(file)]
+    command += ["--project-name", "Dado Público Brasil", "--disable-samples", "true"]
+    command += ["--exclude-elementary-models", "true", "--config-dir", str(DBT_DIR / "edr")]
     env = {**os.environ, "DADO_PUBLICO_WAREHOUSE_FILE": str(settings.warehouse.resolve())}
     subprocess.run(
         command, cwd=folder, env=env, check=True, capture_output=True
     )  # cwd: o edr cria `edr_target`
+    html = prune_report(file.read_text(encoding="utf-8"))
+    file.write_text(branding.apply(html, "Dado Público Brasil · Qualidade dos dados"), encoding="utf-8")
     return file
 
 

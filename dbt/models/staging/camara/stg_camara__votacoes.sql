@@ -17,11 +17,11 @@ renamed as (
         try_cast(votos_sim as integer) as votos_sim,
         try_cast(votos_nao as integer) as votos_nao,
         try_cast(votos_outros as integer) as votos_outros,
-        descricao,
+        mascarar_dado_pessoal(descricao, 'cpf') as descricao,
         _source_file_id as id_captura
 
     from source
 
 )
 
-select * from renamed
+{{ colunas_auditoria('renamed') }}

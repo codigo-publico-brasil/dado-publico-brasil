@@ -22,7 +22,8 @@ select
     i.dt_inicio,
     i.base_dt_inicio,
     cast(i.dt_inicio + to_years(k.duracao_anos) - interval 1 day as date) as dt_fim_prevista,
-    c.id_captura
+    c.id_captura,
+    c.dt_captura
 
 from {{ ref('fct_candidaturas') }} as c
 

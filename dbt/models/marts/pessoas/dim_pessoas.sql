@@ -34,7 +34,7 @@ tse as (
         case lower(c.genero) when 'masculino' then 'masculino' when 'feminino' then 'feminino' end as genero,
         c.ano_eleicao
 
-    from {{ ref('stg_identity__pessoa_identificadores') }} as i
+    from {{ ref('stg_identity__pessoas_identificadores') }} as i
 
     inner join {{ ref('stg_tse__candidaturas') }} as c
         on i.fonte = '{{ var("source_tse") }}' and i.id_tipo = '{{ var("id_type_tse_eleito") }}' and i.id_na_fonte = c.id_candidatura
