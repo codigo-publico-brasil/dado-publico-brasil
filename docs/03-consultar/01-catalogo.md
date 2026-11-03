@@ -71,6 +71,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
+| `compras` | Contratos do governo federal, um por linha (sem o contratado, que traz CPF de pessoa física). Fonte: saida/compras/AAAAMM_Compras.zip. | publico-dados-pessoais-de-terceiros |  |
+| `compras_itens` | Itens dos contratos do governo federal. | publico-dados-pessoais-de-terceiros |  |
+| `compras_termos_aditivos` | Termos aditivos dos contratos do governo federal. | publico-dados-pessoais-de-terceiros |  |
+| `despesas` | Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa (sem favorecido). Fonte: saida/despesas-execucao/AAAAMM_Despesas.zip. | publico-dados-pessoais-de-terceiros |  |
 | `emendas` | Emendas parlamentares por localidade, função, programa e ação, com os valores empenhado, liquidado e pago. | publico-dados-pessoais-de-terceiros |  |
 | `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico-dados-pessoais-de-terceiros |  |
 | `emendas_favorecidos` | Quem recebeu o dinheiro das emendas, como a fonte publica (inclui pessoa física, com CPF mascarado). | publico-dados-pessoais-de-terceiros |  |
@@ -155,6 +159,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_senado__vetos_votos` | Voto nominal de cada deputado e senador num dispositivo vetado, sem o código do parlamentar. | publico-agente-publico |  |
 | `stg_senado__votacoes` | Votações em plenário com resultado, totais e a matéria votada. Votação secreta tem `secreta` verdadeiro. | publico-agente-publico |  |
 | `stg_senado__votos` | Voto de cada senador em cada votação nominal. Em votação secreta a sigla é "Votou". | publico-agente-publico |  |
+| `stg_transparencia__compras` | Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado (nome e código) fica de fora: pessoa física vem com CPF completo. | publico-agente-publico |  |
+| `stg_transparencia__compras_itens` | Itens dos contratos do governo federal. | publico-agente-publico |  |
+| `stg_transparencia__compras_termos_aditivos` | Termos aditivos dos contratos do governo federal. | publico-agente-publico |  |
+| `stg_transparencia__despesas` | Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa, com os valores empenhado, liquidado e pago. Não traz favorecido (o arquivo não o publica). | publico-agente-publico |  |
 | `stg_transparencia__emendas` | Emendas parlamentares, uma linha por emenda, localidade, função, programa e ação. | publico-agente-publico |  |
 | `stg_transparencia__emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico-agente-publico |  |
 | `stg_transparencia__emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica (inclui pessoa física, com CPF mascarado). | publico-agente-publico |  |

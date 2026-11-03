@@ -46,6 +46,87 @@ FAVORECIDOS = [
     "Pessoa Física;Inscrição Genérica;PR;ALVORADA DO SUL;800,00",
 ]
 
+MES = 202401  # nome dos CSVs; o mesmo pacote responde por todos os meses de 2024 (linhas iguais se fundem)
+DESPESAS = [
+    ";".join(
+        [
+            "Ano e mês do lançamento",
+            "Código Órgão Superior",
+            "Nome Órgão Superior",
+            "Código Órgão Subordinado",
+            "Nome Órgão Subordinado",
+            "Código Unidade Gestora",
+            "Nome Unidade Gestora",
+            "Código Gestão",
+            "Nome Gestão",
+            "Código Unidade Orçamentária",
+            "Nome Unidade Orçamentária",
+            "Código Função",
+            "Nome Função",
+            "Código Subfução",
+            "Nome Subfunção",
+            "Código Programa Orçamentário",
+            "Nome Programa Orçamentário",
+            "Código Ação",
+            "Nome Ação",
+            "Código Plano Orçamentário",
+            "Plano Orçamentário",
+            "Código Programa Governo",
+            "Nome Programa Governo",
+            "UF",
+            "Município",
+            "Código Subtítulo",
+            "Nome Subtítulo",
+            "Código Localizador",
+            "Nome Localizador",
+            "Sigla Localizador",
+            "Descrição Complementar Localizador",
+            "Código Autor Emenda",
+            "Nome Autor Emenda",
+            "Código Categoria Econômica",
+            "Nome Categoria Econômica",
+            "Código Grupo de Despesa",
+            "Nome Grupo de Despesa",
+            "Código Elemento de Despesa",
+            "Nome Elemento de Despesa",
+            "Código Modalidade da Despesa",
+            "Modalidade da Despesa",
+            "Valor Empenhado (R$)",
+            "Valor Liquidado (R$)",
+            "Valor Pago (R$)",
+            "Valor Restos a Pagar Inscritos (R$)",
+            "Valor Restos a Pagar Cancelado (R$)",
+            "Valor Restos a Pagar Pagos (R$)",
+        ]
+    ),
+    "2024/01;52000;Ministério A;52904;Órgão B;167399;UNIDADE GESTORA C;00001;TESOURO NACIONAL;52921;UNIDADE D;05;"
+    "Defesa nacional;331;Proteção;0032;PROGRAMA;2004;ACAO;0007;PLANO;00;Sem informação;;;20040001;SUBTITULO;0001;"
+    "LOCALIZADOR;-1;Sem informação;;SEM EMENDA;3;DESPESAS CORRENTES;3;Outras Despesas Correntes;30;Material;90;"
+    "Aplicações Diretas;805942,86;698956,52;743598,53;0,00;0,00;27426,73",
+]
+COMPRAS = [
+    "Número do Contrato;Objeto;Fundamento Legal;Modalidade Compra;Situação Contrato;Código Órgão Superior;"
+    "Nome Órgão Superior;Código Órgão;Nome Órgão;Código UG;Nome UG;Data Assinatura Contrato;Data Publicação DOU;"
+    "Data Início Vigência;Data Fim Vigência;Código Contratado;Nome Contratado;Valor Inicial Compra;"
+    "Valor Final Compra;Número Licitação;Código UG Licitação;Nome UG Licitação;Código Modalidade Compra Licitação;"
+    "Modalidade Compra Licitação",
+    "000012024;Serviço de limpeza. CPF 123.456.789-09;;Pregão;Ativo;30000;Ministério A;30108;Órgão B;200384;UG C;"
+    "24/01/2024;29/01/2024;24/01/2024;24/01/2025;12345678000199;EMPRESA EXEMPLO LTDA;205690,0000;205690,0000;"
+    "900052024;;;;",
+    "000022024;Serviço pessoal;;Dispensa;Ativo;30000;Ministério A;30108;Órgão B;200384;UG C;25/01/2024;;25/01/2024;"
+    "25/01/2025;12345678909;PESSOA EXEMPLO;1000,0000;1000,0000;;;;;",
+]
+ITENS_COMPRA = [
+    "Código Órgão;Nome Órgão;Código UG;Nome UG;Número Contrato;Código Item Compra;Descrição Item Compra;"
+    "Descrição Complementar Item Compra;Quantidade Item;Valor Item",
+    "30108;Órgão B;200384;UG C;000012024;200384059006220240001;LIMPEZA;LIMPEZA DE PREDIO;1,5;205690,00",
+]
+TERMOS_ADITIVOS = [
+    "Número Contrato;Código Órgão Superior;Nome Órgão Superior;Código Órgão;Nome Órgão;Código UG;Nome UG;"
+    "Número Termo Aditivo;Data Publicação;Objeto",
+    "000012024;30000;Ministério A;30108;Órgão B;200384;UG C;000012024;16/12/2024;PRORROGACAO DE VIGENCIA",
+]
+
 
 def _csv(linhas: list[str]) -> bytes:
     saida = io.StringIO()
@@ -56,7 +137,7 @@ def _csv(linhas: list[str]) -> bytes:
 
 
 def transparencia_files(pasta: Path) -> dict[str, Path]:
-    """O pacote sintético, pela URL oficial de cada dataset (os três usam o mesmo arquivo)."""
+    """Os pacotes sintéticos, pela URL oficial de cada dataset (as emendas usam o mesmo arquivo; os mensais, um por mês)."""
     pasta.mkdir(parents=True, exist_ok=True)
     contrato = contracts.find("transparencia")
     destino = pasta / "UNICO.zip"
@@ -64,4 +145,21 @@ def transparencia_files(pasta: Path) -> dict[str, Path]:
         pacote.writestr("EmendasParlamentares.csv", _csv(EMENDAS))
         pacote.writestr("EmendasParlamentares_Convenios.csv", _csv(CONVENIOS))
         pacote.writestr("EmendasParlamentares_PorFavorecido.csv", _csv(FAVORECIDOS))
-    return {contrato.url(nome): destino for nome in contrato.datasets}
+    despesas = pasta / "despesas.zip"
+    with zipfile.ZipFile(despesas, "w") as pacote:
+        pacote.writestr(f"{MES}_Despesas.csv", _csv(DESPESAS))
+    compras = pasta / "compras.zip"
+    with zipfile.ZipFile(compras, "w") as pacote:
+        pacote.writestr(f"{MES}_Compras.csv", _csv(COMPRAS))
+        pacote.writestr(f"{MES}_ItemCompra.csv", _csv(ITENS_COMPRA))
+        pacote.writestr(f"{MES}_TermoAditivo.csv", _csv(TERMOS_ADITIVOS))
+    mensais = {
+        "despesas": despesas,
+        "compras": compras,
+        "compras_itens": compras,
+        "compras_termos_aditivos": compras,
+    }
+    return {
+        **{contrato.url(nome, 202400 + mes): mensais[nome] for nome in mensais for mes in range(1, 13)},
+        **{contrato.url(nome): destino for nome in contrato.datasets if nome not in mensais},
+    }

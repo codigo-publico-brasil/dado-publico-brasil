@@ -3,9 +3,10 @@ version: 2
 sources:
   - name: transparencia
     description: >
-      Portal da Transparência do Governo Federal (CGU), emendas parlamentares (pacote .zip nacional com três tabelas).
+      Portal da Transparência do Governo Federal (CGU), emendas parlamentares (pacote .zip nacional com três tabelas), despesas e contratos (um .zip por mês, de 2022-11 em diante).
       Carregado em raw_federal_transparencia (declaração em sources/executivo/federal/transparencia.yml): favorecido
-      pessoa física entra como a fonte publica (marcado como dado pessoal). Licença pela política de dados abertos (Decreto 8.777/2016); o Termo de Uso do portal (lido em 27/10/2026) permite utilizar os dados "da forma que melhor lhe convier", sem licença própria nem citação obrigatória.
+      de emenda pessoa física entra como a fonte publica (marcado como dado pessoal); nas despesas e nos contratos o
+      contratado fica fora (a fonte traz o CPF completo). Licença pela política de dados abertos (Decreto 8.777/2016); o Termo de Uso do portal (lido em 27/10/2026) permite utilizar os dados "da forma que melhor lhe convier", sem licença própria nem citação obrigatória.
       Fonte oficial: [https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares](https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares).
     schema: raw_federal_transparencia
     loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
@@ -24,3 +25,11 @@ sources:
         description: Convênios firmados com recursos de emendas parlamentares.
       - name: emendas_favorecidos
         description: Quem recebeu o dinheiro das emendas, como a fonte publica (inclui pessoa física, com CPF mascarado).
+      - name: despesas
+        description: "Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa (sem favorecido). Fonte: saida/despesas-execucao/AAAAMM_Despesas.zip."
+      - name: compras
+        description: "Contratos do governo federal, um por linha (sem o contratado, que traz CPF de pessoa física). Fonte: saida/compras/AAAAMM_Compras.zip."
+      - name: compras_itens
+        description: Itens dos contratos do governo federal.
+      - name: compras_termos_aditivos
+        description: Termos aditivos dos contratos do governo federal.

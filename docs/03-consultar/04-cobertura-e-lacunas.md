@@ -134,6 +134,8 @@ Lacunas conhecidas, medidas ou registradas:
 | Emendas parlamentares | `emendas` | 94.761 linhas (30/10/2026) |
 | Convênios de emendas | `emendas_convenios` | 85.403 linhas |
 | Quem recebeu o dinheiro, como o portal publica (com sinalização de dado pessoal) | `emendas_favorecidos` | 828.419 linhas, todas; `fl_contem_dado_pessoal` marca as de pessoa física e de CPF mascarado |
+| Execução da despesa federal por mês (sem favorecido) | `despesas` (por mês) | staging, de 2022-11 em diante; sem mart |
+| Contratos, itens e termos aditivos | `compras`, `compras_itens`, `compras_termos_aditivos` (por mês) | staging, de 2022-11 em diante; sem o contratado (CPF); sem mart |
 
 Lacunas conhecidas, medidas ou registradas:
 
@@ -144,7 +146,9 @@ Lacunas conhecidas, medidas ou registradas:
 - **Emenda sem ligação a pessoa:** o autor vem pelo nome e por um código orçamentário que não é o do parlamentar. 15.962 emendas (as antigas, sobretudo) vêm sem autor (`emendas_sem_autor_conhecido`).
 - **Favorecido pessoa física:** entra como o portal publica, com CPF mascarado ([ADR 0017](../05-decisoes/0017-revisao-de-filtros-e-dados-pessoais.md)); a tabela, as colunas `favorecido` e `cd_favorecido` e cada linha (`fl_contem_dado_pessoal`) são sinalizadas como dado pessoal. Quem consome precisa tratar assim (LGPD).
 - **Termos do portal:** o Termo de Uso do Portal da Transparência foi lido em 27/10/2026: permite a qualquer cidadão "visualizar e utilizar os dados disponíveis da forma que melhor lhe convier", sem definir licença, exigir citação nem restringir uso comercial, redistribuição ou acesso automatizado (detalhes em [fontes de dados](03-fontes-de-dados.md)). O dicionário de dados das emendas também foi lido (detalhes em [fontes de dados](03-fontes-de-dados.md)); vale a livre utilização do Decreto 8.777/2016.
-- **Despesas (empenhos) e TCU:** não carregados. O DOU está só no landing, de ago a out de 2026 ([ADR 0019](../05-decisoes/0019-dou-so-no-landing.md)); o TCU não tem licença aberta (ver o [catálogo de fontes](03-fontes-de-dados.md)).
+- **Despesas e contratos só no staging:** sem mart, identidade nem publicação. O contratado (nome e código) não é carregado porque pessoa física vem com CPF completo; `Apostilamento` também não. A despesa não traz favorecido. Os testes `despesas_com_valores_sem_conversao` e `compras_com_valores_ou_datas_sem_conversao` medem o que a fonte publica e não vira número ou data (aviso).
+- **Licitações e sanções (CEIS, CNEP, CEAF):** não carregadas (padrão de URL não confirmado; ver [fontes de dados](03-fontes-de-dados.md)).
+- **TCU:** não carregado. O DOU está só no landing, de ago a out de 2026 ([ADR 0019](../05-decisoes/0019-dou-so-no-landing.md)); o TCU não tem licença aberta (ver o [catálogo de fontes](03-fontes-de-dados.md)).
 
 ## Eleitos das eleições gerais
 

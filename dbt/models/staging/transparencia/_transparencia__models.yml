@@ -79,3 +79,124 @@ models:
       - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
       - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+  - name: stg_transparencia__despesas
+    description: Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa, com os valores empenhado, liquidado e pago. Não traz favorecido (o arquivo não o publica).
+    columns:
+      - {name: dt_lancamento, description: "Mês do lançamento da despesa (primeiro dia do mês; a fonte traz AAAA/MM).", tests: ["not_null"]}
+      - {name: cd_orgao_superior, description: "Código SIAFI do órgão superior (ministério ou equivalente), como a fonte informa."}
+      - {name: orgao_superior, description: "Nome do órgão superior (ministério ou equivalente)."}
+      - {name: cd_orgao_subordinado, description: "Código SIAFI do órgão subordinado, como a fonte informa."}
+      - {name: orgao_subordinado, description: "Nome do órgão subordinado."}
+      - {name: cd_unidade_gestora, description: "Código SIAFI da unidade gestora que executou a despesa.", tests: ["not_null"]}
+      - {name: unidade_gestora, description: "Nome da unidade gestora."}
+      - {name: cd_gestao, description: "Código da gestão no SIAFI."}
+      - {name: gestao, description: "Nome da gestão no SIAFI."}
+      - {name: cd_unidade_orcamentaria, description: "Código da unidade orçamentária."}
+      - {name: unidade_orcamentaria, description: "Nome da unidade orçamentária."}
+      - {name: cd_funcao, description: "Código da função orçamentária."}
+      - {name: funcao, description: "Função orçamentária."}
+      - {name: cd_subfuncao, description: "Código da subfunção orçamentária (a coluna da fonte se chama `Código Subfução`, com o erro de grafia)."}
+      - {name: subfuncao, description: "Subfunção orçamentária."}
+      - {name: cd_programa_orcamentario, description: "Código do programa orçamentário."}
+      - {name: programa_orcamentario, description: "Programa orçamentário."}
+      - {name: cd_acao, description: "Código da ação orçamentária."}
+      - {name: acao, description: "Ação orçamentária."}
+      - {name: cd_plano_orcamentario, description: "Código do plano orçamentário."}
+      - {name: plano_orcamentario, description: "Plano orçamentário."}
+      - {name: cd_programa_governo, description: "Código do programa de governo."}
+      - {name: programa_governo, description: "Programa de governo."}
+      - {name: uf, description: "UF onde a despesa foi aplicada, como a fonte informa; vazia quando não se aplica."}
+      - {name: municipio, description: "Município de aplicação da despesa; vazio quando não se aplica."}
+      - {name: cd_subtitulo, description: "Código do subtítulo (localizador do gasto) orçamentário."}
+      - {name: subtitulo, description: "Subtítulo orçamentário."}
+      - {name: cd_localizador, description: "Código do localizador do gasto."}
+      - {name: localizador, description: "Localizador do gasto."}
+      - {name: sigla_localizador, description: "Sigla do localizador do gasto, como a fonte informa (`-1` quando não se aplica)."}
+      - {name: localizador_descricao, description: "Descrição complementar do localizador do gasto."}
+      - {name: cd_autor_emenda, description: "Código do autor da emenda como registrado no SIAFI (não é o código do parlamentar); vazio sem emenda."}
+      - {name: autor_emenda, description: "Nome do autor da emenda como registrado no SIAFI (parlamentar, bancada ou comissão), como a fonte publica; `SEM EMENDA` quando a despesa não vem de emenda."}
+      - {name: cd_categoria_economica, description: "Código da categoria econômica da despesa."}
+      - {name: categoria_economica, description: "Categoria econômica da despesa (corrente ou de capital)."}
+      - {name: cd_grupo_despesa, description: "Código do grupo de despesa."}
+      - {name: grupo_despesa, description: "Grupo de despesa."}
+      - {name: cd_elemento_despesa, description: "Código do elemento de despesa."}
+      - {name: elemento_despesa, description: "Elemento de despesa."}
+      - {name: cd_modalidade_despesa, description: "Código da modalidade de aplicação da despesa."}
+      - {name: modalidade_despesa, description: "Modalidade de aplicação da despesa."}
+      - {name: valor_empenhado, description: "Valor empenhado no mês, em reais."}
+      - {name: valor_liquidado, description: "Valor liquidado no mês, em reais."}
+      - {name: valor_pago, description: "Valor pago no mês, em reais."}
+      - {name: valor_restos_a_pagar_inscritos, description: "Restos a pagar inscritos, em reais."}
+      - {name: valor_restos_a_pagar_cancelados, description: "Restos a pagar cancelados, em reais."}
+      - {name: valor_restos_a_pagar_pagos, description: "Restos a pagar pagos, em reais."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+  - name: stg_transparencia__compras
+    description: "Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado (nome e código) fica de fora: pessoa física vem com CPF completo."
+    columns:
+      - {name: numero_contrato, description: "Número do contrato, como a fonte informa (único só junto com a unidade gestora).", tests: ["not_null"]}
+      - {name: objeto, description: "Objeto do contrato, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing). Pode ser `Informação protegida por sigilo`."}
+      - {name: fundamento_legal, description: "Fundamento legal da contratação."}
+      - {name: modalidade_compra, description: "Modalidade da compra (pregão, dispensa, inexigibilidade...), como a fonte informa."}
+      - {name: situacao, description: "Situação do contrato, como a fonte informa."}
+      - {name: cd_orgao_superior, description: "Código SIAFI do órgão superior (ministério ou equivalente)."}
+      - {name: orgao_superior, description: "Nome do órgão superior."}
+      - {name: cd_orgao, description: "Código SIAFI do órgão contratante."}
+      - {name: orgao, description: "Nome do órgão contratante."}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: ["not_null"]}
+      - {name: ug, description: "Nome da unidade gestora contratante."}
+      - {name: dt_assinatura, description: "Data de assinatura do contrato."}
+      - {name: dt_publicacao_dou, description: "Data de publicação no Diário Oficial da União."}
+      - {name: dt_inicio_vigencia, description: "Data de início da vigência."}
+      - {name: dt_fim_vigencia, description: "Data de fim da vigência."}
+      - {name: valor_inicial, description: "Valor inicial do contrato, em reais."}
+      - {name: valor_final, description: "Valor final do contrato (com aditivos), em reais."}
+      - {name: numero_licitacao, description: "Número da licitação de origem, quando houve."}
+      - {name: cd_ug_licitacao, description: "Código SIAFI da unidade gestora da licitação."}
+      - {name: ug_licitacao, description: "Nome da unidade gestora da licitação."}
+      - {name: cd_modalidade_licitacao, description: "Código da modalidade da licitação."}
+      - {name: modalidade_licitacao, description: "Modalidade da licitação."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+  - name: stg_transparencia__compras_itens
+    description: Itens dos contratos do governo federal.
+    columns:
+      - {name: cd_orgao, description: "Código SIAFI do órgão contratante."}
+      - {name: orgao, description: "Nome do órgão contratante."}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: ["not_null"]}
+      - {name: ug, description: "Nome da unidade gestora contratante."}
+      - {name: numero_contrato, description: "Número do contrato a que o item pertence (liga a `stg_transparencia__compras` junto com a unidade gestora).", tests: ["not_null"]}
+      - {name: cd_item, description: "Código do item da compra."}
+      - {name: item, description: "Descrição do item, texto livre da fonte."}
+      - {name: item_descricao, description: "Descrição complementar do item, texto livre da fonte."}
+      - {name: quantidade, description: "Quantidade do item."}
+      - {name: valor, description: "Valor do item, em reais."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+  - name: stg_transparencia__compras_termos_aditivos
+    description: Termos aditivos dos contratos do governo federal.
+    columns:
+      - {name: numero_contrato, description: "Número do contrato aditado (liga a `stg_transparencia__compras` junto com a unidade gestora).", tests: ["not_null"]}
+      - {name: cd_orgao_superior, description: "Código SIAFI do órgão superior (ministério ou equivalente)."}
+      - {name: orgao_superior, description: "Nome do órgão superior."}
+      - {name: cd_orgao, description: "Código SIAFI do órgão contratante."}
+      - {name: orgao, description: "Nome do órgão contratante."}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: ["not_null"]}
+      - {name: ug, description: "Nome da unidade gestora contratante."}
+      - {name: numero_termo_aditivo, description: "Número do termo aditivo.", tests: ["not_null"]}
+      - {name: dt_publicacao, description: "Data de publicação do termo aditivo."}
+      - {name: objeto, description: "Objeto do termo aditivo, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto)."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}

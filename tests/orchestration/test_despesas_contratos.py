@@ -1,0 +1,54 @@
+"""Despesas e contratos do Portal da Transparência: pacote mensal, contratado fora do raw e texto livre sem CPF."""
+
+from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.warehouse import Connection, columns, scalar
+from dado_publico_brasil.ingestion import contract as contracts
+
+Env = tuple[Connection, Settings]
+MENSAIS = ("despesas", "compras", "compras_itens", "compras_termos_aditivos")
+
+
+def test_the_contract_is_polite_direct_and_covers_four_years() -> None:
+    contrato = contracts.find("transparencia")
+    assert contrato.rate_limit == 0.2  # uma requisição a cada 5 segundos (ADR 0038)
+    for nome in MENSAIS:
+        dataset = contrato.datasets[nome]
+        assert (dataset.partition, dataset.first_month) == ("month", 202211)
+        assert contrato.url(nome, 202401).startswith("https://dadosabertos-download.cgu.gov.br/")
+        assert "{" not in contrato.url(nome, 202401)
+        assert not {"Código Contratado", "Nome Contratado"} & set(dataset.columns)
+
+
+def test_expenses_and_contracts_reach_the_raw_without_the_contractor(full: Env) -> None:
+    con, _ = full
+    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.despesas") == 1
+    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.compras") == 2
+    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.compras_itens") == 1
+    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.compras_termos_aditivos") == 1
+    assert not {"c_digo_contratado", "nome_contratado"} & set(
+        columns(con, "raw_federal_transparencia", "compras")
+    )
+
+
+def test_staging_converts_types_and_masks_the_cpf_in_free_text(full: Env) -> None:
+    con, _ = full
+    despesa = con.execute(
+        "SELECT dt_lancamento, valor_empenhado FROM staging.stg_transparencia__despesas"
+    ).fetchone()
+    assert despesa
+    dt, empenhado = despesa
+    assert (str(dt), float(empenhado)) == ("2024-01-01", 805942.86)
+    contrato = con.execute(
+        "SELECT objeto, dt_assinatura, valor_inicial FROM staging.stg_transparencia__compras "
+        "WHERE numero_contrato = '000012024'"
+    ).fetchone()
+    assert contrato
+    objeto, assinatura, valor = contrato
+    assert "123.456.789-09" not in objeto and "***.456.789-**" in objeto
+    assert (str(assinatura), float(valor)) == ("2024-01-24", 205690.0)
+    assert float(scalar(con, "SELECT quantidade FROM staging.stg_transparencia__compras_itens")) == 1.5
+    for modelo in MENSAIS:
+        assert (
+            scalar(con, f"SELECT COUNT(*) FROM staging.stg_transparencia__{modelo} WHERE id_captura IS NULL")
+            == 0
+        )
