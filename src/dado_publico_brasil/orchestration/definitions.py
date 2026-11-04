@@ -11,7 +11,7 @@ Automação (ADR 0027): cada fonte com `schedule` no YAML ganha um agendamento q
 (landing e raw); o que depende do raw (dbt, identidade, publicação) roda sozinho quando o raw recebe dado novo
 (`AutomationCondition.eager`). `atualizar_<fonte>` refaz tudo o que vem da fonte; `atualizar_tudo` refaz tudo;
 `capturar_tudo` só captura (todas as fontes);
-`processar_tudo` só processa, sem capturar nada.
+`processar_tudo` só processa, sem capturar nada; `publicar` só publica (lake e docs).
 """
 
 import json
@@ -293,6 +293,11 @@ jobs = [
     define_asset_job("atualizar_tudo", selection="*", tags=REFRESH),
     # captura tudo (landing e raw de todas as fontes), sem processar
     define_asset_job("capturar_tudo", selection=AssetSelection.assets(*INGESTED)),
+    # só publica (lake no R2 e docs) o que já está pronto no warehouse, sem capturar nem transformar
+    define_asset_job(
+        "publicar",
+        selection=AssetSelection.assets(AssetKey(["publicacao", "lake"]), AssetKey(["publicacao", "docs"])),
+    ),
     # processa tudo (dbt, identidade, publicação) a partir do que já está no raw, sem capturar nada
     define_asset_job("processar_tudo", selection=AssetSelection.all() - AssetSelection.assets(*INGESTED)),
     *(
