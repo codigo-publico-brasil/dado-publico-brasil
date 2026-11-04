@@ -34,22 +34,30 @@ def test_exemplo_nao_tem_segredo() -> None:
     assert "COMPOSE_FILE=compose.yaml,compose.servidor.yaml" in EXEMPLO.read_text(encoding="utf-8")
 
 
-def test_implantar_primeira_vez(tmp_path: Path) -> None:
+def test_implantar_nunca_lanca_o_atualizar_tudo(tmp_path: Path) -> None:
     out = dry("implantar", tmp=tmp_path)
+    for esperado in ("pull webserver daemon", "up -d webserver daemon", "ps -a"):
+        assert esperado in out
+    assert "atualizar_tudo" not in out and "implantado" not in out
+    assert DC in out
+
+
+def test_primeira_carga_tem_trava_e_ordem(tmp_path: Path) -> None:
+    out = dry("primeira-carga", tmp=tmp_path)
+    assert "ativas" in out  # trava de execução em andamento
     for esperado in (
-        "pull webserver daemon",
         "up -d webserver",
         "dagster job launch -m dado_publico_brasil.orchestration.definitions -j atualizar_tudo",
         "up -d daemon",
-        "ps -a",
     ):
         assert esperado in out
-    assert DC in out
     assert out.index("up -d webserver") < out.index("-j atualizar_tudo") < out.index("up -d daemon")
 
 
 def test_status_e_dados(tmp_path: Path) -> None:
-    assert "stats --no-stream" in dry("status", tmp=tmp_path)
+    out = dry("status", tmp=tmp_path)
+    assert "stats --no-stream" in out
+    assert "http://127.0.0.1:3000/server_info" in out  # DADO_PUBLICO_BIND:DADO_PUBLICO_PORT do .env.servidor
     assert "landing" in dry("dados", tmp=tmp_path)
 
 

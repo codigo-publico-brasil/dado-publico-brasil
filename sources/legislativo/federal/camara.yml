@@ -23,7 +23,7 @@ description: Câmara dos Deputados, dados abertos (arquivos em lote)
 
 # Regra de extração: a Câmara muda todo dia; a execução diária confere só o ano em curso (e os datasets completos). O que
 # é retroativo (anos anteriores) só roda quando pedido: `--years` ou `--historical --from-year`.
-schedule: "0 6 * * *"            # captura automática (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
+schedule: "0 1 * * *"            # captura noturna (cron, fuso America/Sao_Paulo; escalonada 01:00-02:20, ADR 0042); sem esta linha, só quando pedido
 
 access:
   base_url: https://dadosabertos.camara.leg.br/arquivos

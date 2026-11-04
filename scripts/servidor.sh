@@ -9,6 +9,7 @@ USO='Uso: scripts/servidor.sh <subcomando> [--dry-run]
   preparar usuario@host [porta]  chave SSH, contexto Docker, .env.servidor e verificação do servidor
   dados [--forcar]               copia landing/, arquivos/ e warehouse.duckdb locais para o servidor
   implantar [--forcar]           baixa a imagem e (re)inicia webserver e daemon; --forcar ignora execução em andamento
+  primeira-carga [--forcar]      lança o atualizar_tudo uma vez (só no primeiro uso; nunca é automático)
   status                         containers, últimas execuções, daemons, memória e endereço
 --dry-run imprime os comandos sem executar.'
 
@@ -248,34 +249,38 @@ dados() {
   say "Dados copiados."
 }
 
-# -------------------------------------------------------------------------------------------------------------- implantar
-implantar() {
-  local ativas marcador=$DATA/.state/implantado
-  run "${DC[@]}" pull webserver daemon
+# ----------------------------------------------------------------------------------------------------- implantar / primeira-carga
+trava() { # recusa se há execução em andamento (cortá-la deixa a captura sem concluir), salvo --forcar
+  local ativas
   if ((DRY)); then gql ativas
   elif ((!FORCAR)) && web_rodando; then
     ativas=$(gql ativas) || die "não consegui consultar as execuções; use --forcar para ignorar"
     [ -z "$ativas" ] || { say "$ativas"; die "há execução em andamento (cortá-la deixa a captura sem concluir). Espere ou use --forcar."; }
   fi
-  if ((DRY)) || ! rd "${RSH[@]}" "test -e $(printf %q "$marcador")"; then
-    say "Primeira implantação: o daemon só sobe depois do atualizar_tudo (senão ele roda antes do raw existir)."
-    rd "${RSH[@]}" "test -s $QD/warehouse.duckdb" || ((DRY)) || die "falta o warehouse no servidor: rode 'scripts/servidor.sh dados'"
-    run "${DC[@]}" up -d webserver
-    if ((DRY)); then gql ping
-    else
-      for _ in $(seq 60); do gql ping >/dev/null 2>&1 && break; sleep 10; done
-      gql ping >/dev/null 2>&1 || die "a interface não respondeu em 10 minutos: veja '${DC[*]} logs webserver'"
-    fi
-    if ((DRY)) || [ "$(gql lancada)" != 1 ]; then
-      ((DRY)) && gql lancada
-      # container avulso do daemon (6 GB; o webserver tem 1 GB), sem dependências: o init já rodou. Entra na fila (Queued).
-      run "${DC[@]}" run --rm --no-deps -T daemon uv run --no-sync dagster job launch -m dado_publico_brasil.orchestration.definitions -j atualizar_tudo
-    else say "atualizar_tudo já foi lançado antes: não lanço de novo."; fi
-    run "${DC[@]}" up -d daemon
-    run "${DC[@]}" exec -T webserver sh -c 'mkdir -p /data/.state && date -u +%FT%TZ > /data/.state/implantado'
+}
+
+implantar() { # nunca lança o atualizar_tudo: a primeira carga é o subcomando explícito primeira-carga
+  run "${DC[@]}" pull webserver daemon
+  trava
+  run "${DC[@]}" up -d webserver daemon
+  status
+}
+
+primeira_carga() { # lança o atualizar_tudo uma vez (custo e alternativas: docs, "Implantar num servidor")
+  trava
+  rd "${RSH[@]}" "test -s $QD/warehouse.duckdb" || ((DRY)) || die "falta o warehouse no servidor: rode 'scripts/servidor.sh dados' (ou restaure do bucket e faça o rebuild)"
+  run "${DC[@]}" up -d webserver
+  if ((DRY)); then gql ping
   else
-    run "${DC[@]}" up -d webserver daemon
+    for _ in $(seq 60); do gql ping >/dev/null 2>&1 && break; sleep 10; done
+    gql ping >/dev/null 2>&1 || die "a interface não respondeu em 10 minutos: veja '${DC[*]} logs webserver'"
   fi
+  if ((DRY)) || ((FORCAR)) || [ "$(gql lancada)" != 1 ]; then
+    ((DRY)) && gql lancada
+    # container avulso do daemon (mesmo limite de memória do daemon; o webserver tem 1 GB), sem dependências. Entra na fila (Queued).
+    run "${DC[@]}" run --rm --no-deps -T daemon uv run --no-sync dagster job launch -m dado_publico_brasil.orchestration.definitions -j atualizar_tudo
+  else say "atualizar_tudo já foi lançado antes: não lanço de novo (use --forcar para lançar outra vez)."; fi
+  run "${DC[@]}" up -d daemon
   status
 }
 
@@ -288,6 +293,10 @@ status() {
   # shellcheck disable=SC2086
   if ((DRY)); then show docker --context servidor stats --no-stream "<containers>"
   elif [ -n "$ids" ]; then docker --context servidor stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.CPUPerc}}' $ids; fi
+  # a pergunta vai ao servidor por SSH e usa o endereço publicado (DADO_PUBLICO_BIND:PORT), o mesmo que o navegador alcança
+  if ((DRY)); then show "${RSH[@]}" "curl -fsS -m 5 http://$BIND:$UIPORT/server_info"
+  elif "${RSH[@]}" "curl -fsS -m 5 -o /dev/null http://$BIND:$UIPORT/server_info" 2>/dev/null; then say "Interface responde em $BIND:$UIPORT (no servidor)."
+  else say "Interface NÃO responde em $BIND:$UIPORT (no servidor)."; fi
   say "Interface: http://${SSH#*@}:$UIPORT (escuta em $BIND$([ "$BIND" = 127.0.0.1 ] && echo "; de fora, túnel: ssh -L $UIPORT:127.0.0.1:$UIPORT -p $PORT $SSH"))"
 }
 
@@ -295,6 +304,7 @@ case $CMD in
   preparar) preparar ;;
   dados) carregar; dados ;;
   implantar) carregar; implantar ;;
+  primeira-carga) carregar; primeira_carga ;;
   status) carregar; status ;;
   *) echo "$USO"; [ -z "$CMD" ] || exit 1 ;;
 esac

@@ -14,3 +14,7 @@ run_monitoring:
 
 telemetry:
   enabled: false
+
+# Sem relançamento automático de execuções que falham (cada captura e o ciclo rodam no máximo uma vez por dia, ADR 0042).
+run_retries:
+  enabled: false

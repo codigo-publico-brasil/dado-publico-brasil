@@ -3,9 +3,10 @@
 Para cada captura vigente, copia o arquivo ou extrai os membros do zip que casam com `membro`, para
 `<pasta de dados>/arquivos/<poder>/<esfera>/<fonte>/arq_<colecao>/<caminho>`, e anota em `metadata.arquivos`
 o hash e a captura de origem. É cópia derivada do landing (que fica intacto): refaz-se quando quiser, e só se
-escreve o que falta ou mudou (gravação atômica). Captura corrompida ou caminho que sai da coleção vira aviso e
-não para as outras. Membro que some de uma captura nova não é apagado: a última cópia fica, com a captura de
-origem anterior. O `export` lê esta pasta e publica o que o contrato manda (`publicar: true`).
+escreve o que falta ou mudou (gravação atômica; membro já presente com o mesmo tamanho não é regravado).
+Captura corrompida ou caminho que sai da coleção vira aviso e não para as outras. Membro que some de uma
+captura nova não é apagado: a última cópia fica, com a captura de origem anterior.
+O `export` lê esta pasta e publica o que o contrato manda (`publicar: true`).
 """
 
 import hashlib
@@ -41,7 +42,7 @@ def materialize(con: Connection, settings: Settings, contract: SourceContract) -
             r["caminho"]: r
             for r in rows(
                 con,
-                "SELECT caminho, id_captura, qtd_bytes FROM metadata.arquivos "
+                "SELECT caminho, id_captura, qtd_bytes, sha256_arquivo FROM metadata.arquivos "
                 "WHERE fonte = ? AND colecao = ?",
                 (contract.source, spec.colecao),
             )
@@ -84,13 +85,18 @@ def _capture(
         current = old and old["id_captura"] == capture["id_captura"] and old["qtd_bytes"] == size
         if target.exists() and target.stat().st_size == size and current:
             continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        part = target.with_name(target.name + ".parte")
-        try:
-            write(part)
-            part.replace(target)
-        finally:
-            part.unlink(missing_ok=True)
+        # mesmo tamanho já materializado (captura nova do mesmo membro): não regrava, só reaponta
+        same = (
+            target.exists() and target.stat().st_size == size and old is not None and old["qtd_bytes"] == size
+        )
+        if not same:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            part = target.with_name(target.name + ".parte")
+            try:
+                write(part)
+                part.replace(target)
+            finally:
+                part.unlink(missing_ok=True)
         con.execute(
             "INSERT INTO metadata.arquivos (fonte, colecao, caminho, dataset, id_captura, "
             "sha256_arquivo, qtd_bytes, fl_original) VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
@@ -104,12 +110,15 @@ def _capture(
                 name,
                 dataset,
                 capture["id_captura"],
-                sha or hashlib.sha256(target.read_bytes()).hexdigest(),
+                sha
+                or (
+                    old and old["sha256_arquivo"] if same else hashlib.sha256(target.read_bytes()).hexdigest()
+                ),
                 size,
                 spec.membro is None,
             ),
         )
-        written += 1
+        written += not same
     return written
 
 

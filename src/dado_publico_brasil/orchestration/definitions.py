@@ -7,9 +7,11 @@ Os ativos de cada fonte saem de `sources/` (uma fonte nova não pede código aqu
 (um por modelo); as fontes do dbt têm a mesma chave dos ativos do raw (`<fonte>/<tabela>`), então a
 dependência vem da declaração do dbt. Carga histórica ou incremental é só a configuração do landing.
 
-Automação (ADR 0027): cada fonte com `schedule` no YAML ganha um agendamento que roda o job `captura_<fonte>`
-(landing e raw); o que depende do raw (dbt, identidade, publicação) roda sozinho quando o raw recebe dado novo
-(`AutomationCondition.eager`). `atualizar_<fonte>` refaz tudo o que vem da fonte; `atualizar_tudo` refaz tudo;
+Automação (ADR 0027, alterado pelo 0042): cada fonte com `schedule` no YAML ganha um agendamento que roda
+o job `captura_<fonte>` (landing e raw), de madrugada. O agendamento `processar_e_publicar` roda depois delas
+o job `processar_tudo` (dbt, identidade, lake e docs; a publicação por último), se o raw recebeu dado novo.
+Cada agendamento roda no máximo uma vez por dia COM SUCESSO (falha pode ser repetida). Nada a jusante dispara
+por evento. `atualizar_<fonte>` refaz tudo o que vem da fonte; `atualizar_tudo` refaz tudo;
 `capturar_tudo` só captura (todas as fontes);
 `processar_tudo` só processa, sem capturar nada; `publicar` só publica (lake e docs).
 """
@@ -31,15 +33,16 @@ from dagster import (
     AssetsDefinition,
     AssetSelection,
     AssetSpec,
-    AutomationCondition,
-    AutomationConditionSensorDefinition,
     Config,
     DefaultScheduleStatus,
     DefaultSensorStatus,
     Definitions,
     MaterializeResult,
     RunFailureSensorContext,
+    RunRequest,
     ScheduleDefinition,
+    ScheduleEvaluationContext,
+    SkipReason,
     asset,
     build_last_update_freshness_checks,
     build_sensor_for_freshness_checks,
@@ -48,6 +51,7 @@ from dagster import (
     multi_asset,
     multi_asset_check,
     run_failure_sensor,
+    schedule,
 )
 from dagster_dbt import DagsterDbtTranslator, DbtCliResource, DbtProject, dbt_assets
 
@@ -67,22 +71,16 @@ PROJECT = DbtProject(
 PROJECT.prepare_if_dev()
 
 REFRESH = {pipeline.REFRESH_TAG: "true"}  # nos jobs `atualizar_*`: refaz o que vem depois do raw
-TIMEZONE = "America/Sao_Paulo"  # fuso dos `schedule` das fontes
-EAGER = AutomationCondition.eager()  # roda quando uma dependência recebe dado novo
+TIMEZONE = pipeline.TIMEZONE  # fuso dos `schedule` das fontes
 
 
 class LayerTranslator(DagsterDbtTranslator):
-    """Grupo = camada do dbt (staging, intermediate, marts) e execução automática quando o upstream muda."""
+    """Grupo = camada do dbt (staging, intermediate, marts)."""
 
     def get_group_name(self, dbt_resource_props: Mapping[str, Any]) -> str | None:
         if dbt_resource_props["resource_type"] == "seed":  # o `fqn` de um seed é só o nome dele
             return "seeds"
         return str(dbt_resource_props["fqn"][1])
-
-    def get_automation_condition(
-        self, dbt_resource_props: Mapping[str, Any]
-    ) -> AutomationCondition[Any] | None:
-        return EAGER
 
 
 PEOPLE = [AssetKey(["identity", "pessoas"]), AssetKey(["identity", "pessoas_identificadores"])]
@@ -220,9 +218,7 @@ def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Ite
 
 
 @multi_asset(
-    specs=[
-        AssetSpec(key=k, group_name="identity", deps=[IDS_MODEL], automation_condition=EAGER) for k in PEOPLE
-    ],
+    specs=[AssetSpec(key=k, group_name="identity", deps=[IDS_MODEL]) for k in PEOPLE],
     name="identity",
 )
 def identity_asset() -> Iterator[MaterializeResult[Any]]:
@@ -268,7 +264,6 @@ def _marts() -> list[AssetKey]:
     key=AssetKey(["publicacao", "lake"]),
     deps=_marts(),
     group_name="marts",
-    automation_condition=EAGER,
 )
 def export_asset() -> MaterializeResult[Any]:
     """Grava o lake público em Parquet (no R2, se houver segredo) depois dos testes do dbt (ADR 0035)."""
@@ -279,7 +274,6 @@ def export_asset() -> MaterializeResult[Any]:
     key=AssetKey(["publicacao", "docs"]),
     deps=[AssetKey(["publicacao", "lake"])],
     group_name="marts",
-    automation_condition=EAGER,
 )
 def docs_asset() -> MaterializeResult[Any]:
     """Sobe ao R2 o dbt docs, o relatório do Elementary e a página inicial do lake (sem R2, não faz nada)."""
@@ -308,16 +302,55 @@ jobs = [
     ),
     *(define_asset_job(f"captura_{s.source}", selection=AssetSelection.assets(*_keys(s))) for s in SOURCES),
 ]
-schedules = [
-    ScheduleDefinition(
-        name=f"captura_{s.source}",
-        job_name=f"captura_{s.source}",
-        cron_schedule=str(s.schedule),
+
+
+def _latest(context: ScheduleEvaluationContext, key: AssetKey) -> float | None:
+    event = context.instance.get_latest_materialization_event(key)
+    return event.timestamp if event else None
+
+
+def _request(context: ScheduleEvaluationContext, job: str) -> RunRequest | SkipReason:
+    """Roda o job, salvo se já teve execução com SUCESSO (ou em andamento) hoje; falha ou nada: executa."""
+    if pipeline.done_today(context.instance, job):
+        return SkipReason(f"{job} já foi concluído (ou está em andamento) hoje")
+    return RunRequest()
+
+
+def _capture_schedule(source: contract.SourceContract) -> ScheduleDefinition:
+    name = f"captura_{source.source}"
+
+    @schedule(
+        name=name,
+        job_name=name,
+        cron_schedule=str(source.schedule),
         execution_timezone=TIMEZONE,
         default_status=DefaultScheduleStatus.RUNNING,
     )
-    for s in SCHEDULED
-]
+    def capture(context: ScheduleEvaluationContext) -> RunRequest | SkipReason:
+        return _request(context, name)
+
+    return capture
+
+
+@schedule(
+    name="processar_e_publicar",
+    job_name="processar_tudo",
+    cron_schedule=pipeline.CYCLE_CRON,
+    execution_timezone=TIMEZONE,
+    default_status=DefaultScheduleStatus.RUNNING,
+)
+def process_and_publish(context: ScheduleEvaluationContext) -> RunRequest | SkipReason:
+    """Ciclo noturno: dbt, identidade, lake e docs, só se o raw recebeu dado desde o último ciclo completo."""
+    raw = [_latest(context, k) for k in INGESTED if k.path[0] != "landing"]
+    cycle = [_latest(context, k) for k in (*PEOPLE, AssetKey(["publicacao", "docs"]))]
+    if not pipeline.needs_cycle(raw, cycle):
+        return SkipReason("nenhum dado novo no raw desde o último ciclo completo")
+    return _request(context, "processar_tudo")
+
+
+schedules = [*(_capture_schedule(s) for s in SCHEDULED), process_and_publish]
+
+
 freshness = [
     check
     for s in SCHEDULED
@@ -330,9 +363,6 @@ freshness = [
 ]
 sensors = [
     failure_email,
-    AutomationConditionSensorDefinition(
-        "propagar_atualizacoes", target=AssetSelection.all(), default_status=DefaultSensorStatus.RUNNING
-    ),
     build_sensor_for_freshness_checks(
         freshness_checks=freshness, name="verificar_atrasos", default_status=DefaultSensorStatus.RUNNING
     ),

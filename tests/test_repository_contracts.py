@@ -92,34 +92,35 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
     settings = Settings(storage_root=tmp_path / "store")
     dbt.invoke(settings, "parse")  # gera o manifesto que o Dagster lê
     code = (
-        "from dagster import AssetKey;"
+        "import tempfile; from dagster import AssetKey, DagsterInstance, build_schedule_context;"
         "from dado_publico_brasil.ingestion import contract;"
         "from dado_publico_brasil.orchestration.definitions import defs;"
         "graph = defs.resolve_asset_graph();"
         "keys = {k.to_user_string() for k in graph.get_all_asset_keys()};"
         "scheduled = sorted(s.source for s in contract.find_all() if s.schedule);"
         "print(len(keys), 'marts/dim_pessoas_cadastro' in keys, 'identity/pessoas' in keys, {'landing/camara', 'landing/senado'} <= keys,"
-        " sorted(s.name for s in defs.schedules or []) == [f'captura_{n}' for n in scheduled],"
+        " sorted(s.name for s in defs.schedules or []) == sorted([f'captura_{n}' for n in scheduled] + ['processar_e_publicar']),"
         " sorted(j.name for j in defs.jobs or []) ==  sorted(['atualizar_tudo', 'capturar_tudo', 'processar_tudo', 'publicar'] + [f'{p}_{c.source}' for c in contract.find_all() for p in ('atualizar', 'captura')]),"
         " sorted(s.name for s in defs.sensors or []),"
-        " graph.get(AssetKey(['marts', 'dim_pessoas_cadastro'])).automation_condition is not None,"
-        " graph.get(AssetKey(['identity', 'pessoas'])).automation_condition is not None,"
-        " graph.get(AssetKey(['tse', 'candidaturas'])).automation_condition is None,"
+        " all(graph.get(k).automation_condition is None for k in graph.get_all_asset_keys()),"
+        " {AssetKey(['publicacao', 'lake']), AssetKey(['publicacao', 'docs'])} <= set(defs.resolve_job_def('processar_tudo').asset_layer.executable_asset_keys),"
+        " 'tse' not in scheduled and not [c for c in graph.asset_check_keys if c.asset_key.path == ('landing', 'tse') and c.name != 'saude_da_fonte'],"
         " len([c for c in graph.asset_check_keys if c.name == 'saude_da_fonte']) > 0,"
         " defs.resolve_job_def('atualizar_tudo').tags.get('dado_publico/refazer') == 'true'"
         " and 'dado_publico/refazer' not in defs.resolve_job_def('captura_camara').tags,"
         " {a.specs_by_key[k].group_name for a in [d for d in defs.assets if hasattr(d, 'specs_by_key')] for k in a.keys if k.path[0] in ('staging', 'intermediate', 'marts')}"
         " <= {'staging', 'intermediate', 'marts', 'seeds'},"
-        " len([c for c in graph.asset_check_keys if c.asset_key.path[0] == 'landing' and c.name != 'saude_da_fonte']) == len(scheduled))"
+        " len([c for c in graph.asset_check_keys if c.asset_key.path[0] == 'landing' and c.name != 'saude_da_fonte']) == len(scheduled),"
+        " all(len(s.evaluate_tick(build_schedule_context(instance=DagsterInstance.local_temp(tempfile.mkdtemp()))).run_requests) == 1 for s in defs.schedules or []))"
     )
     env = {**os.environ, "DADO_PUBLICO_STORAGE_ROOT": str(settings.storage_root)}
     result = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, env=env, cwd=ROOT, check=False
     )
     assert result.returncode == 0, result.stderr[-1500:]
-    sensors = "['falha_de_execucao', 'propagar_atualizacoes', 'verificar_atrasos']"
+    sensors = "['falha_de_execucao', 'verificar_atrasos']"
     # ativos; agendamento e job por fonte; sensores; dbt e identidade sobem sozinhos, o raw não; atraso por fonte agendada
-    assert f"True True True True True {sensors} True True True True True True True" in result.stdout, (
+    assert f"True True True True True {sensors} True True True True True True True True" in result.stdout, (
         result.stdout
     )
 
