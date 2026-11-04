@@ -181,14 +181,14 @@ def plan_incremental(contract: SourceContract, today: date | None = None) -> lis
 
     Cada fonte diz, no seu YAML, quando se captura (`schedule`, um cron); sem `schedule` o plano é vazio e
     a fonte só roda quando pedida. Tudo que é retroativo (anos ou meses anteriores) exige pedir (`--years`
-    ou `--historical`).
+    ou `--historical`). Dataset `on_demand` fica fora: só vem quando pedido.
     """
     today = today or datetime.now(UTC).date()
     items: list[Item] = []
     if contract.schedule is None:
         return items
     for d in contract.datasets.values():
-        if d.foreach:
+        if d.foreach or d.on_demand:
             continue
         if not d.yearly:
             items.append((d.name, None))
@@ -253,12 +253,13 @@ def partition_gaps(
             d.partition == "month"
         ):  # o mês anterior ainda é pedido: um 404 no fim do mês não o torna indisponível
             unavailable.discard(previous_month(current_partition(d, today)))
-        missing = [p for p in expected if p not in got and p not in unavailable]
+        missing = [p for p in expected if p not in got and p not in unavailable and not d.on_demand]
         result[d.name] = {
             "esperadas": len(expected),
             "capturadas": len(got & set(expected)),
             "indisponiveis": sorted(unavailable & set(expected)),
-            "faltam": missing,
+            "faltam": missing,  # `on_demand`: sempre vazio, o que falta é escolha e não lacuna
+            "sob_demanda": d.on_demand,
         }
     return result
 

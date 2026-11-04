@@ -30,6 +30,13 @@ datasets:
     first_month: 202608
     archive: zip
     raw: false
+  fotos:
+    url: "{base_url}/fotos-{year}.zip"
+    load: yearly
+    first_year: 2020
+    on_demand: true
+    write: replace
+    columns: [codigo]
   completo:
     url: "{base_url}/completo.csv"
     load: full
@@ -62,6 +69,7 @@ def test_gaps_list_expected_captured_and_missing_per_partition(con: Connection, 
         "capturadas": 2,
         "indisponiveis": [],
         "faltam": [2021, 2022, 2023, 2025, 2026],
+        "sob_demanda": False,
     }
     assert gaps["mensal"]["faltam"] == [202608, 202609, 202610]
     assert "completo" not in gaps  # dataset sem partição não tem lacuna de partição
@@ -173,3 +181,21 @@ def test_a_head_that_the_source_refuses_does_not_block_the_download(
     assert con.execute(
         "SELECT count(*) FROM metadata.fontes_verificacoes WHERE verificacao = 'bloqueio'"
     ).fetchone() == (0,)
+
+
+def test_an_on_demand_dataset_is_out_of_the_incremental_plan_the_recovery_and_the_gap_alert(
+    con: Connection, tmp_path: Path
+) -> None:
+    c = contract(tmp_path)
+    assert not [i for i in landing.plan_incremental(c, TODAY) if i[0] == "fotos"]
+    assert not [i for i in landing.plan_recovery(con, c, TODAY) if i[0] == "fotos"]
+    assert landing.partition_gaps(con, c, TODAY)["fotos"]["faltam"] == []
+    landing.record_gaps(con, c)
+    row = con.execute(
+        "SELECT resultado FROM metadata.fontes_verificacoes WHERE dataset = 'fotos' AND verificacao = 'particoes'"
+    ).fetchone()
+    assert row == ("ok",)
+    assert (  # pedido explícito inclui
+        "fotos",
+        2024,
+    ) in landing.plan(c, [2024])

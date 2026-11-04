@@ -101,6 +101,8 @@ def _coverage(settings: Settings, only: str | None) -> None:
                     line = f"{source.source}.{name}: {gap['capturadas']} de {gap['esperadas']} partições"
                     if gap["indisponiveis"]:
                         line += f"; a fonte não publica {gap['indisponiveis']}"
+                    if gap["sob_demanda"]:
+                        line += "; sob demanda"
                     print(line + (f"; faltam {gap['faltam']}" if gap["faltam"] else ""))
     finally:
         con.close()

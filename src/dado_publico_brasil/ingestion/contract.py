@@ -93,6 +93,7 @@ class Dataset:
     aliases: dict[str, str] = field(
         default_factory=dict
     )  # layout antigo: nome antigo da coluna -> nome em `columns`
+    on_demand: bool = False  # true: fora do plano incremental e da recuperação; só quando pedido
     max_age_days: int | None = (
         None  # idade máxima da última verificação da fonte; mais velha que isso é problema
     )
@@ -209,6 +210,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         aliases=dict(data.get("aliases", {})),
         optional=tuple(data.get("optional", ())),
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
+        on_demand=_on_demand(where, data.get("on_demand", False)),
         max_age_days=_max_age(where, data.get("max_age_days")),
     )
 
@@ -243,6 +245,12 @@ def _arquivos(where: str, data: dict[str, Any]) -> Arquivos | None:
         membro=block.get("membro"),
         publicar=block.get("publicar", False),
     )
+
+
+def _on_demand(where: str, value: Any) -> bool:
+    if not isinstance(value, bool):
+        raise InvalidContract(f"{where}: on_demand deve ser true ou false")
+    return value
 
 
 def _max_age(where: str, value: Any) -> int | None:
