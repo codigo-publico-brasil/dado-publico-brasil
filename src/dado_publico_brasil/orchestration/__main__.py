@@ -175,6 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "query" and not args.sql:
         p.error("query exige --sql")
 
+    settings_module.load_env_file()
     settings = settings_module.load_settings(storage_root=args.storage_root, warehouse=args.warehouse)
     match args.command:
         case "query":
