@@ -126,7 +126,7 @@ Requisitos do servidor: Linux x86_64 com Docker e Compose, um usuário no grupo 
 
 **Conferir:** `dc exec daemon uv run --no-sync dado-publico export --verificar`, `observe --email` (testa o SMTP) e a data do `manifesto.json` público.
 
-**Manutenção:** os serviços reiniciam sozinhos (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Uma execução que passa de 24 h, ou que não inicia em 5 min, é marcada como falha (`run_monitoring` do `dagster.yaml`). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
+**Manutenção:** os serviços reiniciam sozinhos (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Uma execução que passa de 24 h, ou que não inicia em 15 min, é marcada como falha (`run_monitoring` do `dagster.yaml`). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
 
 ## Restaurar numa máquina vazia (bucket privado)
 
