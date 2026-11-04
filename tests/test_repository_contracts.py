@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.transformation import catalog, dbt
@@ -121,3 +122,13 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
     assert f"True True True True True {sensors} True True True True True True True" in result.stdout, (
         result.stdout
     )
+
+
+def test_every_compose_dependency_is_a_defined_service() -> None:
+    """Um `depends_on` para serviço que não existe faz o compose inteiro falhar (regressão de merge, 2026-11)."""
+    for name in ("compose.yaml", "compose.servidor.yaml"):
+        data = yaml.safe_load((ROOT / name).read_text(encoding="utf-8"))
+        services = data.get("services", {})
+        for service, spec in services.items():
+            missing = set(spec.get("depends_on") or {}) - set(services)
+            assert not missing, f"{name}: {service} depende de {sorted(missing)}, que não está definido"
