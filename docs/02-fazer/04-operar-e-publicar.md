@@ -142,7 +142,7 @@ docker --context servidor compose --env-file .env.servidor pull webserver daemon
 
 **Acesso à interface:** o compose publica a porta só em `127.0.0.1` do servidor (o Dagster aberto não tem login). Se a porta 3000 do servidor já estiver ocupada por outra aplicação, defina `DADO_PUBLICO_PORT` (por exemplo `3030`) no `.env.servidor`. Use túnel SSH (`ssh -L 3000:127.0.0.1:<porta> usuario@servidor`, com a porta de `DADO_PUBLICO_PORT`). VPN ou Cloudflare Access são escolha da infraestrutura: nesse caso defina `DADO_PUBLICO_BIND` com o IP da VPN, nunca `0.0.0.0`.
 
-**Manutenção:** os serviços reiniciam sozinhos (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Uma execução que passa de 24 h, ou que não inicia em 5 min, é marcada como falha (`run_monitoring` do `dagster.yaml`). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
+**Manutenção:** os serviços reiniciam sozinhos (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Uma execução que passa de 24 h, ou que não inicia em 15 min, é marcada como falha (`run_monitoring` do `dagster.yaml`). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
 
 ## Restaurar numa máquina vazia (bucket privado)
 
