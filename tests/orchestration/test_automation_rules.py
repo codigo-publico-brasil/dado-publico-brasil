@@ -88,3 +88,20 @@ def test_the_publication_only_leaves_through_the_cycle_job_and_the_manual_job() 
     src = (ROOT / "src/dado_publico_brasil/orchestration/definitions.py").read_text(encoding="utf-8")
     assert "automation_condition" not in src and "AutomationCondition" not in src
     assert "propagar_atualizacoes" not in src
+
+
+def test_step_logs_start_end_and_failure_in_the_dagster_log() -> None:
+    from types import SimpleNamespace
+
+    import pytest
+
+    from dado_publico_brasil.orchestration.pipeline import step
+
+    lines: list[str] = []
+    context = SimpleNamespace(log=SimpleNamespace(info=lines.append, error=lines.append))
+    with step(context, "passo"):
+        pass
+    with pytest.raises(ValueError), step(context, "outro"):
+        raise ValueError
+    assert [x.split(": ")[0] for x in lines] == ["passo", "passo", "outro", "outro"]
+    assert "iniciando" in lines[0] and "concluído em" in lines[1] and "falhou" in lines[3]

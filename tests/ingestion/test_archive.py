@@ -66,6 +66,7 @@ def test_only_keeps_the_declared_rows_in_the_raw_and_the_columns_exclude_what_is
         "loaded": 2,
         "rejected": 0,
         "conflicting": 0,
+        "replaced": 0,
     }  # MARIA (estadual) fica de fora
     found = rows(con, f"SELECT id, nome FROM {c.schema}.eleicoes ORDER BY id")
     assert [(r["id"], r["nome"]) for r in found] == [("1", "JOSÉ"), ("3", "ANA")]
@@ -98,7 +99,7 @@ def test_a_legacy_layout_is_read_through_aliases_to_the_current_column_names(tmp
     settings = Settings(storage_root=tmp_path / "store")
     con = migrations.open_warehouse(settings)
     stats = loader.load_file(settings, c, c.datasets["eleicoes"], file, 1, con)
-    assert stats == {"read": 1, "filtered": 0, "loaded": 1, "rejected": 0, "conflicting": 0}
+    assert stats == {"read": 1, "filtered": 0, "loaded": 1, "rejected": 0, "conflicting": 0, "replaced": 0}
     found = rows(con, f"SELECT id, nome FROM {c.schema}.eleicoes")
     assert [(r["id"], r["nome"]) for r in found] == [("1", "ANTIGO")]
 

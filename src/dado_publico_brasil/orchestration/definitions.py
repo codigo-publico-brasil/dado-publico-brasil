@@ -59,6 +59,7 @@ from dado_publico_brasil.core import alert, migrations, runs, warehouse
 from dado_publico_brasil.core.settings import DBT_DIR, load_settings
 from dado_publico_brasil.ingestion import contract, landing, loader, monitoring
 from dado_publico_brasil.orchestration import pipeline
+from dado_publico_brasil.orchestration.pipeline import step
 from dado_publico_brasil.transformation import build, describe, export, observability, quality
 from dado_publico_brasil.transformation import dbt as dbt_runner
 
@@ -114,20 +115,22 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
     raw_tables = list(raw)
 
     @asset(key=captured, group_name="landing")
-    def landing_asset(config: ExtractionConfig) -> MaterializeResult[Any]:
+    def landing_asset(context: AssetExecutionContext, config: ExtractionConfig) -> MaterializeResult[Any]:
         """Arquivos da fonte, intactos, com hash e data."""
         con = migrations.open_warehouse(SETTINGS)
         try:
-            n = landing.extract_plan(
-                con,
-                SETTINGS,
-                source,
-                _plan(config)(source),
-                force=config.force,
-                recover=config.mode == "incremental",
-            )
+            with step(context, f"landing {source.source} ({config.mode})"):
+                n = landing.extract_plan(
+                    con,
+                    SETTINGS,
+                    source,
+                    _plan(config)(source),
+                    force=config.force,
+                    recover=config.mode == "incremental",
+                )
         finally:
             con.close()
+        context.log.info(f"landing {source.source}: {n} datasets verificados")
         return MaterializeResult(metadata={"datasets": n, "mode": config.mode})
 
     @multi_asset(
@@ -142,7 +145,8 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
         """
         con = migrations.open_warehouse(SETTINGS)
         try:
-            captures, rows = loader.load_pending(con, SETTINGS, source)
+            with step(context, f"raw {source.source}"):
+                captures, rows = loader.load_pending(con, SETTINGS, source, log=context.log.info)
         finally:
             con.close()
         refresh = context.run.tags.get(pipeline.REFRESH_TAG) == "true"
@@ -188,7 +192,7 @@ def _cadence_slack(cron: str) -> timedelta:
     return timedelta(seconds=(second - first).total_seconds() * 1.5)
 
 
-def _record_dbt(stage: str, target: Path) -> None:
+def _record_dbt(stage: str, target: Path, context: AssetExecutionContext) -> None:
     """Grava o resultado dos modelos e testes em `metadata.testes_resultados`, como a linha de comando faz."""
     con = warehouse.connect(SETTINGS)
     try:
@@ -196,6 +200,7 @@ def _record_dbt(stage: str, target: Path) -> None:
             results = dbt_runner.read_results(SETTINGS, target=target)
             quality.record(con, run.id, results)
             run.rows_in = len(results)
+            context.log.info(f"dbt {stage}: {len(results)} resultados de modelos e testes gravados")
             if stage == "transform_post":
                 describe.raw(con, target)
                 observability.notify(con, pipeline.freshness_limits())
@@ -210,19 +215,22 @@ def _record_dbt(stage: str, target: Path) -> None:
     dagster_dbt_translator=LayerTranslator(),
 )
 def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
-    invocation = dbt.cli(
-        ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
-    )
-    yield from invocation.stream()
-    _record_dbt("transform_pre", invocation.target_path)
+    with step(context, "dbt antes da identidade"):
+        invocation = dbt.cli(
+            ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
+        )
+        yield from invocation.stream()
+    _record_dbt("transform_pre", invocation.target_path, context)
 
 
 @multi_asset(
     specs=[AssetSpec(key=k, group_name="identity", deps=[IDS_MODEL]) for k in PEOPLE],
     name="identity",
 )
-def identity_asset() -> Iterator[MaterializeResult[Any]]:
-    created = build.resolve_identity(SETTINGS)
+def identity_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult[Any]]:
+    with step(context, "identidade"):
+        created = build.resolve_identity(SETTINGS)
+    context.log.info(f"identidade: {created} pessoas novas criadas")
     for key in PEOPLE:
         yield MaterializeResult(asset_key=key, metadata={"created": created})
 
@@ -234,11 +242,12 @@ def identity_asset() -> Iterator[MaterializeResult[Any]]:
     dagster_dbt_translator=LayerTranslator(),
 )
 def dbt_post_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
-    invocation = dbt.cli(
-        ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
-    )
-    yield from invocation.stream()
-    _record_dbt("transform_post", invocation.target_path)
+    with step(context, "dbt depois da identidade"):
+        invocation = dbt.cli(
+            ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
+        )
+        yield from invocation.stream()
+    _record_dbt("transform_post", invocation.target_path, context)
 
 
 @run_failure_sensor(name="falha_de_execucao", default_status=DefaultSensorStatus.RUNNING)
@@ -265,9 +274,12 @@ def _marts() -> list[AssetKey]:
     deps=_marts(),
     group_name="marts",
 )
-def export_asset() -> MaterializeResult[Any]:
+def export_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
     """Grava o lake público em Parquet (no R2, se houver segredo) depois dos testes do dbt (ADR 0035)."""
-    return MaterializeResult(metadata=dict(export.export(SETTINGS)))
+    with step(context, "export do lake"):
+        result = dict(export.export(SETTINGS))
+    context.log.info("export do lake: " + ", ".join(f"{k} {v:,}" for k, v in result.items()))
+    return MaterializeResult(metadata=result)
 
 
 @asset(
@@ -275,9 +287,12 @@ def export_asset() -> MaterializeResult[Any]:
     deps=[AssetKey(["publicacao", "lake"])],
     group_name="marts",
 )
-def docs_asset() -> MaterializeResult[Any]:
+def docs_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
     """Sobe ao R2 o dbt docs, o relatório do Elementary e a página inicial do lake (sem R2, não faz nada)."""
-    return MaterializeResult(metadata={"paginas": len(export.publish_docs(SETTINGS))})
+    with step(context, "publicação das docs"):
+        pages = export.publish_docs(SETTINGS)
+    context.log.info(f"docs: {len(pages)} páginas publicadas")
+    return MaterializeResult(metadata={"paginas": len(pages)})
 
 
 SOURCES = contract.find_all()

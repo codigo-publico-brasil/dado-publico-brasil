@@ -7,7 +7,9 @@ Cada etapa roda sozinha e pode rodar de novo. Se nada novo foi carregado, a tran
 O Dagster (`definitions.py`) e a linha de comando chamam as mesmas funções.
 """
 
-from collections.abc import Callable
+import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -21,6 +23,19 @@ from dado_publico_brasil.ingestion import contract, fetch, foreach, landing, loa
 from dado_publico_brasil.transformation import build
 
 Plan = Callable[[contract.SourceContract], list[landing.Item]]
+
+
+@contextmanager
+def step(context: Any, name: str) -> Iterator[None]:
+    """Registra no log do Dagster (`context.log`, aba Runs) início, fim e duração de um passo, e a falha."""
+    context.log.info(f"{name}: iniciando")
+    started = time.monotonic()
+    try:
+        yield
+    except Exception:
+        context.log.error(f"{name}: falhou após {time.monotonic() - started:,.0f}s")
+        raise
+    context.log.info(f"{name}: concluído em {time.monotonic() - started:,.0f}s")
 
 
 @dataclass
