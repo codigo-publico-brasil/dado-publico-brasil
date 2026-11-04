@@ -55,7 +55,8 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0019](0019-dou-so-no-landing.md) | Diário Oficial só no landing | vigente |
 | [0021](0021-landing-por-fonte-dataset-e-data.md) | Landing por fonte, dataset, referência e data | vigente |
 | [0024](0024-regras-de-extracao-por-fonte.md) | Regras de extração e carga diária | em parte (`refresh` virou `schedule`: [0027](0027-orquestracao-automatica-por-fonte.md)) |
-| [0027](0027-orquestracao-automatica-por-fonte.md) | Agendamento por fonte, propagação automática e serviço contínuo | vigente |
+| [0027](0027-orquestracao-automatica-por-fonte.md) | Agendamento por fonte, propagação automática e serviço contínuo | em parte (propagação por evento: [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md), proposto) |
+| [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) | Ciclo noturno: capturas escalonadas, um processamento e uma publicação por dia | proposto |
 
 ### Nomes, qualidade e dados pessoais
 

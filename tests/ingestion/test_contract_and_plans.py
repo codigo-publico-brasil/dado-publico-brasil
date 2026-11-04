@@ -99,12 +99,9 @@ def test_a_source_without_schedule_has_an_empty_incremental_plan(tmp_path: Path)
 
 def test_each_source_declares_its_schedule_and_the_plan_has_only_the_current_partition() -> None:
     today = date(2026, 10, 24)
-    assert all(c.schedule for c in contracts.find_all())  # nenhuma fonte fica sem cadência por esquecimento
-    tse = {part for _, part in landing.plan_incremental(contracts.find("tse"), today)}
-    assert tse == {2026}  # ano de eleição: só ele é conferido
-    assert (
-        landing.plan_incremental(contracts.find("tse"), date(2025, 6, 1)) == []
-    )  # sem eleição, nada a conferir
+    # nenhuma fonte fica sem cadência por esquecimento; o TSE está desativado após as eleições (ADR 0042)
+    assert {c.source for c in contracts.find_all() if not c.schedule} == {"tse"}
+    assert landing.plan_incremental(contracts.find("tse"), today) == []  # sem schedule, só quando pedido
     assert {name for name, _ in landing.plan_incremental(contracts.find("dou"), today)} == {
         "secao1",
         "secao2",
