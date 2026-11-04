@@ -213,3 +213,13 @@ def test_rate_limit_must_be_positive(tmp_path: Path) -> None:
     text = TEMPLATE.format(extra="").replace("encoding: utf-8}", "encoding: utf-8, rate_limit: 0}")
     with pytest.raises(InvalidContract, match="rate_limit"):
         contract_from(tmp_path, text=text)
+
+
+def test_on_demand_must_be_a_boolean(tmp_path: Path) -> None:
+    def text(value: str) -> str:
+        return TEMPLATE.format(extra="") + f"    on_demand: {value}" + chr(10)
+
+    with pytest.raises(InvalidContract, match="on_demand"):
+        contract_from(tmp_path, text=text("sim"))
+    assert contract_from(tmp_path, text=text("true")).datasets["pessoas"].on_demand
+    assert not contract_from(tmp_path).datasets["pessoas"].on_demand

@@ -132,7 +132,10 @@ datasets:
   # O pacote fica guardado no landing com hash; o raw só lista o que há dentro (`format: members`, sem extrair). O
   # arquivo de cada foto é `F<UF><SQ_CANDIDATO>_div.jpg` (ou `.jpeg`), e o SQ_CANDIDATO liga à candidatura. As eleições
   # municipais não entram (o pacote de um estado passa de 2 GB). As fotos vêm do TSE sob a licença dos dados abertos dele.
+  # `on_demand`: o TSE republica os pacotes e são gigantes, então ficam fora do incremental e da recuperação de
+  # lacunas; só vêm com `--years`, `--historical` ou `--dataset` (ou o job manual do Dagster em years/historical).
   fotos_br: &fotos
+    on_demand: true
     url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_BR_div.zip"
     load: yearly
     first_year: 2006
