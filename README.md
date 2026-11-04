@@ -75,6 +75,7 @@ Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). [Da
 | `tests/` | testes |
 | `.claude/agents/` | agentes de IA do projeto (arquiteto, engenheiro, auditor, qa) |
 | `compose.yaml` | Dagster (webserver e daemon) em Docker |
+| `scripts/servidor.sh` | prepara, abastece e atualiza o servidor remoto ([guia](docs/02-fazer/04-operar-e-publicar.md)) |
 | `data_store/` | landing e warehouse (fora do git) |
 
 ## Documentação

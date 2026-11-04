@@ -53,6 +53,7 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 | página inicial do lake público (texto, layout, logos) | `site/index.html` (depois `dado-publico publish-docs`) |
 | ordem das etapas, agendamento | `src/dado_publico_brasil/orchestration/` |
 | serviços locais (Dagster), limite de memória | `compose.yaml`, `dagster.yaml` |
+| preparar, abastecer e atualizar o servidor remoto (Dagster em Docker por SSH) | `scripts/servidor.sh` e o modelo `.env.servidor.example` (genéricos: nada do servidor atual no código) |
 | ambiente (pasta de dados, warehouse) | variáveis `DADO_PUBLICO_STORAGE_ROOT`, `DADO_PUBLICO_WAREHOUSE` |
 | papel dos agentes (`engenheiro`, `arquiteto`, `qa`, `auditor`) | `.claude/agents/<nome>.md` (só o que é específico do papel; as regras comuns ficam neste arquivo) |
 
