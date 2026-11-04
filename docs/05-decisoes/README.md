@@ -57,6 +57,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0024](0024-regras-de-extracao-por-fonte.md) | Regras de extração e carga diária | em parte (`refresh` virou `schedule`: [0027](0027-orquestracao-automatica-por-fonte.md)) |
 | [0027](0027-orquestracao-automatica-por-fonte.md) | Agendamento por fonte, propagação automática e serviço contínuo | em parte (propagação por evento: [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md), proposto) |
 | [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) | Ciclo noturno: capturas escalonadas, um processamento e uma publicação por dia | proposto |
+| [0043](0043-raw-em-parquet-substituicao-por-particao-e-logs.md) | Raw carregado em Parquet (`pyarrow`), `write: replace_partition` para arquivo anual completo e logs no Dagster | proposto; altera 0011, 0012 e 0024 |
 
 ### Nomes, qualidade e dados pessoais
 

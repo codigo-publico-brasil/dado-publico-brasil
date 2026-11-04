@@ -26,7 +26,7 @@ LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
 ARCHIVES = {"zip"}
 PARTITIONS = {"year", "legislature", "month"}  # month: o valor da partição é AAAAMM
-WRITES = {"merge", "replace"}
+WRITES = {"merge", "replace", "replace_partition"}
 # Documentos pessoais nunca são lidos de nenhuma fonte (princípio IX da constituição do projeto).
 # Chave "linha inteira": identifica a linha pelo conteúdo, para arquivos sem chave natural.
 ROW_HASH = "_row_hash"
@@ -186,6 +186,8 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         raise InvalidContract(f"{where}: chave {missing} não está em columns")
     if data.get("write") == "merge" and not key:
         raise InvalidContract(f"{where}: write merge exige primary_key")
+    if data.get("write") == "replace_partition" and data.get("nested"):
+        raise InvalidContract(f"{where}: write replace_partition não aceita nested (tabelas filhas)")
     return Dataset(
         name=name,
         url=data["url"],

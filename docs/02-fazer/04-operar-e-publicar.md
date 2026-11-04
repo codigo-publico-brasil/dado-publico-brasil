@@ -33,7 +33,8 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 - **Captura velha:** o dataset que declara `max_age_days` no contrato e não foi verificado nesse prazo aparece em `observe` e no e-mail como problema (a pipeline parou ou a fonte deixou de responder); um dataset com limite e nenhuma captura também.
 - Recesso do Congresso (julho e dezembro a janeiro) pode gerar aviso de volume e de frescor: é esperado, e o aviso é só informação.
 - `load --rebuild` descarta a tabela raw do dataset (e as tabelas filhas) e o estado do dlt antes de recarregar do landing; por isso mudar a chave primária de um contrato não exige apagar nada à mão.
-- O `merge` do dlt não apaga: uma linha que a fonte removeu continua no raw. O aviso `linhas_removidas` conta as que vieram de capturas anteriores do mesmo arquivo e a atual não traz; decidir o que fazer com elas é manual.
+- O `merge` do dlt não apaga: uma linha que a fonte removeu continua no raw (nos datasets `replace_partition` ela sai com a versão antiga e o aviso não existe). O aviso `linhas_removidas` conta as que vieram de capturas anteriores do mesmo arquivo e a atual não traz; decidir o que fazer com elas é manual.
+- **Tempo da carga do raw** (ADR 0043, medido numa máquina de desenvolvimento, não no servidor): votação do TSE de 2016 (943 mil linhas) em 160 s com Parquet contra 1.062 s com `insert_values`; a de 2026 (6,7 milhões de linhas, zip de 446 MB) em 28 min com `merge` e 19 min com `replace_partition`, pico de 2,9 GB e 1,5 GB. Mais da metade é a leitura do CSV em Python. Acompanhe a carga na aba *Runs*: o ativo `raw_<fonte>` avisa o dataset, o arquivo, o tamanho e as linhas lidas a cada 30 s.
 - Uma coluna nova legítima gera um aviso do `schema_changes` uma vez; depois vira a nova referência.
 - O Elementary não enxerga o `raw`: ali valem o balanço da carga e o monitor da fonte.
 
@@ -154,7 +155,7 @@ Requisitos do servidor: Linux x86_64 com Docker e Compose, um usuário no grupo 
 Com `DADO_PUBLICO_R2_BUCKET_PRIVADO` e as credenciais do R2 (`.env.example`), um warehouse novo (arquivo inexistente) restaura sozinho o `metadata` e a cópia mais recente e concluída da identidade, **com as mesmas chaves `id_pessoa`**, e avança as sequências. Depois: `uv run dado-publico rebuild` (sem `--old-warehouse`) e `run --historical` recapturam o raw das fontes.
 
 - **Volta:** `id_pessoa` e suas ligações, o registro das capturas (URL, hash, data), execuções e testes.
-- **Não volta sem o landing:** os arquivos. Eles são baixados de novo; o que a fonte mudou ou tirou do ar fica no `metadata` com o hash, e `verify` o aponta como ausente. Os lotes dos datasets por item (`foreach`) não se refazem iguais, e o acumulado dos datasets `merge` não volta (issue 155). Os arquivos de `arquivos/` se materializam de novo do landing.
+- **Não volta sem o landing:** os arquivos. Eles são baixados de novo; o que a fonte mudou ou tirou do ar fica no `metadata` com o hash, e `verify` o aponta como ausente. Os lotes dos datasets por item (`foreach`) não se refazem iguais, e o acumulado dos datasets `merge` não volta (issue 155; nos `replace_partition` não há acumulado: o raw é a versão atual). Os arquivos de `arquivos/` se materializam de novo do landing.
 - **Um escritor:** só a produção tem a variável e o token com escrita. O envio do `metadata` recusa sobrescrever um bucket com mais capturas que a máquina (restaure antes).
 
 ## Rodar por partes no container
@@ -226,7 +227,7 @@ Se parar no meio, `uv run dado-publico load --rebuild` e `uv run dado-publico tr
 | Nenhum teste do dbt reprova | `uv run dado-publico observe` (0 reprovados; a seção "Saúde por dimensão" mostra o resto) |
 | Os modelos novos têm o tamanho esperado | `select count(*)` em `dim_pessoas`, `fct_mandatos`, `fct_eventos`, `agg_composicoes`, `fct_votos` contra o warehouse antigo |
 | A identidade está sã | `dim_pessoas` e `identity.pessoas` com o mesmo número; nenhum mandato sem `id_pessoa` |
-| O raw bate com o antigo | As diferenças esperadas são só de versões: o `load --rebuild` carrega a **versão mais recente** de cada arquivo, e a carga diária **soma** as versões nos datasets `merge` (issue 155). Fora disso, as contagens devem ser iguais; uma diferença de dobro é duplicação no antigo (foi o caso da votação de 2022) |
+| O raw bate com o antigo | As diferenças esperadas são só de versões: o `load --rebuild` carrega a **versão mais recente** de cada arquivo, e a carga diária **soma** as versões nos datasets `merge` (issue 155; os `replace_partition` não somam). Fora disso, as contagens devem ser iguais; uma diferença de dobro é duplicação no antigo (foi o caso da votação de 2022) |
 | Reconstruiu igual | rode `transform` de novo: nenhuma pessoa nova, nenhum snapshot novo |
 
 5. Reconstrua a imagem do Dagster com o código atual (`docker compose --profile pipeline up -d --build`) antes de religá-lo.

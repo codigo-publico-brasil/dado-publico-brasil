@@ -180,6 +180,7 @@ def check_load(
     detail = (
         f"lidas {stats['read']}, filtradas pelo only {stats['filtered']}, carregadas {stats['loaded']}, "
         f"rejeitadas {stats['rejected']}, colisões de chave {stats['conflicting']}"
+        + (f", substituídas de versões anteriores {stats['replaced']}" if stats.get("replaced") else "")
     )
     record(con, source, dataset, partition, "carga", "error" if lost else "ok", detail)
 

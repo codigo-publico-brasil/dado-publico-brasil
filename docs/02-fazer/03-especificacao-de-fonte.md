@@ -24,7 +24,7 @@ datasets:
     load: yearly                    # full | yearly
     first_year: 2001                # (yearly) primeiro ano publicado pela fonte: anos anteriores não são pedidos
     extra_years: true               # (yearly) aceita anos só deste dataset (--extra-years)
-    write: merge                    # merge (upsert pela chave) | replace (troca o conteúdo anterior)
+    write: merge                    # merge (upsert pela chave) | replace (troca a tabela inteira) | replace_partition (troca as linhas da versão anterior do mesmo arquivo)
     primary_key: [id]
     columns: [id, siglaTipo, numero, ano, ementa, dataApresentacao]   # lista permitida
 ```
@@ -148,6 +148,7 @@ O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósi
 - **`columns` é a lista permitida.** Só estas colunas do arquivo são lidas (minimização de dados, princípio IX). O nome é o do arquivo; o dlt o normaliza para snake_case (`siglaTipo` vira `sigla_tipo`).
 - **Documentos pessoais são recusados.** Um contrato que liste `cpf`, `rg`, `titulo_eleitor`, `cnh` ou `passaporte` não carrega. Um teste confere.
 - **`write: merge` exige `primary_key`**; linhas sem valor na chave são rejeitadas e contadas. `write: replace` serve a arquivos completos que substituem o anterior.
+- **`write: replace_partition`** é para o arquivo que é a **foto completa** de uma partição (o ano de uma eleição, um mês): a captura nova entra e as linhas das capturas anteriores **da mesma URL** saem. Várias partições convivem na mesma tabela (outras URLs nunca são tocadas) e o raw espelha a versão atual; o histórico fica no landing. Não pede coluna de partição: a partição é a própria captura (`_source_file_id`), então vale para qualquer fonte e não muda o esquema. Não compara linha com linha (barato em dezenas de milhões de linhas); `primary_key: [_row_hash]` segue valendo para manter as linhas idênticas da fonte e dar chave ao dbt. Não aceita `nested`. Recarregar a mesma captura é idempotente. Em tabela que já existe não há migração: todas as linhas já levam o id da captura; na próxima captura nova de cada arquivo, as linhas antigas saem (a primeira carga depois de trocar de `merge` para `replace_partition` pode ainda ter linhas de versões que o `merge` somou: o `load --rebuild --dataset` do dataset as limpa) ([ADR 0043](../05-decisoes/0043-raw-em-parquet-substituicao-por-particao-e-logs.md)).
 - **Valores como texto, vazio como nulo.** Tipos e limpeza ficam no staging.
 - Toda linha do raw leva `_source_file_id`, o id da captura (arquivo do landing) de onde veio, e `_ingested_at`, o instante em que chegou ao raw.
 - Erros do contrato (tipo, chave ou `load` inválidos) dizem onde está o problema.
