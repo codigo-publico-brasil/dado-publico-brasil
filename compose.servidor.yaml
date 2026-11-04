@@ -1,5 +1,5 @@
 # Acrescenta ao `compose.yaml` as exigências do servidor: sem R2 completo o export e o publish-docs gravariam só no disco.
-# Ativado por `COMPOSE_FILE=compose.yaml:compose.servidor.yaml` no `.env.servidor` (docs/02-fazer/04-operar-e-publicar.md).
+# Ativado por `COMPOSE_FILE=compose.yaml,compose.servidor.yaml` (com `COMPOSE_PATH_SEPARATOR=,`) no `.env.servidor` (docs/02-fazer/04-operar-e-publicar.md).
 x-r2: &r2
   environment:
     DADO_PUBLICO_DATA_DIR: ${DADO_PUBLICO_DATA_DIR:?defina DADO_PUBLICO_DATA_DIR (caminho absoluto do servidor) no .env.servidor}
