@@ -58,7 +58,9 @@ def test_volume_drop_against_the_previous_load_is_a_warning(con: Connection) -> 
         run.rows_in = 100
     monitoring.check_volume(con, "camara", "partidos", None, 90)
     monitoring.check_volume(con, "camara", "partidos", None, 50)
-    assert [s for s, _ in checks(con, "volume")] == ["ok", "warn"]
+    monitoring.check_volume(con, "camara", "partidos", None, 0)
+    # carga que leu 0 linhas de um arquivo que já teve linhas é carga falha (o raw ficaria velho): erro
+    assert [s for s, _ in checks(con, "volume")] == ["ok", "warn", "error"]
 
 
 def test_a_different_column_order_is_not_a_schema_change(
@@ -84,7 +86,9 @@ def test_json_that_omits_an_empty_field_is_a_warning_and_csv_missing_a_column_st
     )
     monitoring.check_header(con, senado, senado.datasets["normas"], 1950, file)
     [(status, detail)] = [(s, d) for s, d in checks(con, "schema")]
-    assert status == "warn" and "numero" in detail
+    assert (
+        status == "warn" and "ementa" in detail and "numero" not in detail
+    )  # `numero` é optional no contrato
 
 
 def test_the_column_change_is_measured_against_the_same_partition_not_against_another_year(

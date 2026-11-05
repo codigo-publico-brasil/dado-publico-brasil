@@ -807,7 +807,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_partido` | integer | Partido do evento (dim_partidos), quando o tipo exige. |  |
 | `base` | varchar | Como o evento é obtido: informado pela fonte ou derivado de regra do projeto. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto. |  |
-| `fonte` | varchar | Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento, a fonte do cadastro. Vazia no falecimento, que junta fontes sem captura própria (o teste de aviso mede). |  |
+| `fonte` | varchar | Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento e no falecimento, a fonte do cadastro que informa a data. O teste de aviso mede o que ficar sem. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem do fato; vazia quando o evento não tem id_captura. |  |
 
 ### marts.fct_exercicios
