@@ -223,3 +223,26 @@ def test_a_renewed_election_with_another_code_does_not_enter_even_without_the_wo
     assert 1010 in found  # a eleição ordinária entra
     assert 1014 not in found and 1016 not in found  # a suplementar e a renovada ficam só no raw
     assert scalar(con, "SELECT COUNT(*) FROM raw_federal_tse.candidaturas WHERE sq_candidato = '1016'") == 1
+
+
+def test_tse_staging_is_materialized_as_table_and_the_rest_stays_a_view(full: Env) -> None:
+    """ADR 0044: o staging do TSE é lido dezenas de vezes por noite e vira tabela; os demais seguem views."""
+    con, _ = full
+    tables = {
+        r[0]
+        for r in con.execute(
+            "SELECT table_name FROM duckdb_tables() WHERE schema_name = 'staging'"
+        ).fetchall()
+    }
+    views = {
+        r[0]
+        for r in con.execute(
+            "SELECT view_name FROM duckdb_views() WHERE schema_name = 'staging' AND NOT internal"
+        ).fetchall()
+    }
+    assert {t for t in tables | views if t.startswith("stg_tse__")} == {
+        t for t in tables if t.startswith("stg_tse__")
+    }
+    assert {"stg_tse__candidaturas", "stg_tse__votacao"} <= tables
+    assert not any(t.startswith("stg_tse__") for t in views)
+    assert "stg_camara__deputados" in views

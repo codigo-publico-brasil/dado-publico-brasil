@@ -18,7 +18,7 @@ Para quem precisa saber por onde o dado passa e onde mudar cada coisa. Responde:
 | --- | --- | --- | --- |
 | **landing** | "O que a fonte entregou, exatamente?" | código próprio (pacote `ingestion`, `landing.py`) | não: é imutável |
 | **raw** (`raw_<esfera>_<fonte>`) | "O que a fonte diz, tabela a tabela?" | **dlt**, guiado por `sources/<poder>/<esfera>/<fonte>.yml` | sim, a partir do landing |
-| **staging** | "Como isso fica com nomes, tipos e caixa padronizados?" | **dbt** (views, um modelo por tabela do raw) | sim |
+| **staging** | "Como isso fica com nomes, tipos e caixa padronizados?" | **dbt** (views, tabelas no TSE; um modelo por tabela do raw) | sim |
 | **intermediate** | "Como juntar e re-granular para chegar às entidades?" | **dbt** (tabelas, uma finalidade por modelo) | sim |
 | **marts** | "Como entregar cada entidade, fato e consulta prontos para consumo?" | **dbt** (tabelas com contrato de colunas) | sim |
 | **identity** | "Quem é cada pessoa, em todas as fontes?" | código próprio (pacote `transformation`, `identity.py`) | não: a chave não se reaproveita |
@@ -85,7 +85,7 @@ Três passos por dataset ([ADR 0011](../05-decisoes/0011-buscar-ler-custom-e-cha
 
 O projeto segue o guia oficial de estrutura (“How we structure our dbt projects”):
 
-- **staging**: um modelo por tabela do raw, `stg_<fonte>__<entidades>`, **views**, só renomear, converter tipos e padronizar texto. Sem joins nem agregações. É o único lugar que usa `source()`.
+- **staging**: um modelo por tabela do raw, `stg_<fonte>__<entidades>`, **views** (exceção: o staging do TSE é **tabela**, porque é lido dezenas de vezes por noite e a limpeza de texto é cara, [ADR 0044](../05-decisoes/0044-ciclo-rapido-staging-do-tse-em-tabela-e-tempos.md); ele só reflete o raw depois do `transform`), só renomear, converter tipos e padronizar texto. Sem joins nem agregações. É o único lugar que usa `source()`.
 - **intermediate**: uma finalidade por modelo (`int_..._agregados`, `..._ligados_a_...`, `..._unidos`), **tabelas** fora dos marts. Aqui estão a re-granularidade e os joins.
 - **marts**: tabelas com nome pelo tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`, `agg_composicoes`), um grain por tabela, largas, com **contrato de colunas e tipos** (`contract.enforced`). Pastas por assunto (`pessoas`, `eleicoes`, `legislativo`, `territorio`). Declarados como *exposure* para a aplicação.
 - **YAML** ao lado dos modelos (`_<pasta>__models.yml`, `_<fonte>__sources.yml`), com descrição, `meta` (sensibilidade, grain, dono) e testes de chave (`unique`, `not_null`, `relationships`).

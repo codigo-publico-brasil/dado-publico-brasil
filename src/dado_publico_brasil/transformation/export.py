@@ -697,6 +697,7 @@ def export(
     }
     models = _models(settings)
     entries: list[dict[str, Any]] = []
+    tempos: dict[str, dict[str, Any]] = {}  # tempo por tabela, guardado em `state_dir/export_tempos.json`
     written = ignored = size = 0
     con = _connect(settings, warehouse_file=True)
     try:
@@ -781,9 +782,14 @@ def export(
                     changed.add(key)
                     written += 1
                     size += sum(f["bytes"] for f in files)
+                result, spent = ("ignorada" if key not in changed else "gravada"), time.monotonic() - start
+                tempos[f"{schema}.{table}"] = {
+                    "impressao_s": round(found["seconds"], 1),
+                    "escrita_s": round(spent, 1),
+                    "resultado": result,
+                }
                 _say(
-                    f"  {schema}.{table}: {'ignorada' if key not in changed else 'gravada'} "
-                    f"(impressão {found['seconds']:.1f}s, escrita {time.monotonic() - start:.1f}s)"
+                    f"  {schema}.{table}: {result} (impressão {found['seconds']:.1f}s, escrita {spent:.1f}s)"
                 )
                 years = sorted({int(m[1]) for f in files if (m := re.search(r"/ano=(\d+)/", f["arquivo"]))})
                 entries.append(
@@ -867,6 +873,7 @@ def export(
         swept = written_keys | (touched | set(collections) if prune else set())
         with _phase("órfãos"):
             orphans = _delete_orphans(con, root, swept, keep) if swept else 0  # só depois do manifesto novo
+        (settings.state_dir / "export_tempos.json").write_text(json.dumps(tempos, indent=1), encoding="utf-8")
     finally:
         con.close()
     return {

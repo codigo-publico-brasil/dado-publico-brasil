@@ -58,6 +58,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0027](0027-orquestracao-automatica-por-fonte.md) | Agendamento por fonte, propagação automática e serviço contínuo | em parte (propagação por evento: [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md), proposto) |
 | [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) | Ciclo noturno: capturas escalonadas, um processamento e uma publicação por dia | proposto |
 | [0043](0043-raw-em-parquet-substituicao-por-particao-e-logs.md) | Raw carregado em Parquet (`pyarrow`), `write: replace_partition` para arquivo anual completo e logs no Dagster | proposto; altera 0011, 0012 e 0024 |
+| [0044](0044-ciclo-rapido-staging-do-tse-em-tabela-e-tempos.md) | Ciclo mais rápido: staging do TSE em tabela, tempo de cada nó; propostas de `threads` e de reconstrução parcial | proposto; altera o 0007 (item 3: staging = views)
 
 ### Nomes, qualidade e dados pessoais
 

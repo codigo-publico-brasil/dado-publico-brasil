@@ -192,11 +192,11 @@ def _cadence_slack(cron: str) -> timedelta:
     return timedelta(seconds=(second - first).total_seconds() * 1.5)
 
 
-def _record_dbt(stage: str, target: Path, context: AssetExecutionContext) -> None:
+def _record_dbt(stage: str, target: Path, context: AssetExecutionContext, started: str) -> None:
     """Grava o resultado dos modelos e testes em `metadata.testes_resultados`, como a linha de comando faz."""
     con = warehouse.connect(SETTINGS)
     try:
-        with runs.track(con, stage, "dbt") as run:
+        with runs.track(con, stage, "dbt", started=started) as run:
             results = dbt_runner.read_results(SETTINGS, target=target)
             quality.record(con, run.id, results)
             run.rows_in = len(results)
@@ -215,12 +215,13 @@ def _record_dbt(stage: str, target: Path, context: AssetExecutionContext) -> Non
     dagster_dbt_translator=LayerTranslator(),
 )
 def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
+    started = runs.now()  # a execução mede o `dbt build` inteiro
     with step(context, "dbt antes da identidade"):
         invocation = dbt.cli(
             ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
         )
         yield from invocation.stream()
-    _record_dbt("transform_pre", invocation.target_path, context)
+    _record_dbt("transform_pre", invocation.target_path, context, started)
 
 
 @multi_asset(
@@ -242,12 +243,13 @@ def identity_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult
     dagster_dbt_translator=LayerTranslator(),
 )
 def dbt_post_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
+    started = runs.now()
     with step(context, "dbt depois da identidade"):
         invocation = dbt.cli(
             ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
         )
         yield from invocation.stream()
-    _record_dbt("transform_post", invocation.target_path, context)
+    _record_dbt("transform_post", invocation.target_path, context, started)
 
 
 @run_failure_sensor(name="falha_de_execucao", default_status=DefaultSensorStatus.RUNNING)

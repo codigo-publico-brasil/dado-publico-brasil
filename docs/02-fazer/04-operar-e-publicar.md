@@ -14,7 +14,7 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 | Integridade do download | Antes de virar captura, o arquivo não pode ser uma página HTML no lugar do esperado, o tamanho tem de bater com o `Content-Length` informado e, nos `.zip`, o pacote abre sem erro e tem o membro esperado (`member`, como `*.xml` no DOU). Reprovado vira `integridade` com erro, o arquivo fica no landing como evidência, não vira captura e a próxima execução tenta de novo | `metadata.fontes_verificacoes` |
 | Partições que faltam | Por dataset anual, mensal ou por legislatura, as partições esperadas contra as capturadas (`particoes`). A execução incremental recupera sozinha as que faltam (as mais recentes primeiro, até 3 por dataset e por execução); a que a fonte não publica (404) vira "indisponível" e não é tentada de novo. Dataset `on_demand` (fotos do TSE) fica fora do incremental e da recuperação e não gera aviso de lacuna: só se captura pedindo (`--years`, `--historical`, `--dataset`). `dado-publico coverage` lista as lacunas | `metadata.fontes_verificacoes` |
 | Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`); linhas de capturas anteriores que a atual não traz (`linhas_removidas`) | `metadata.fontes_verificacoes` |
-| Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.testes_resultados` |
+| Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.testes_resultados` (com `qtd_segundos`, o tempo de cada nó) |
 | Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam; nos marts com data de evento (`fct_votacoes`, `fct_proposicoes`, `fct_normas`, `fct_emendas_convenios`), volume por dia com sazonalidade de dia da semana e frescor (a fonte parou de atualizar) | `metadata.testes_resultados` e esquema `elementary` |
 | Relatório e alerta | Junta tudo, falha se houver problema e envia por e-mail | `dado-publico observe` |
 | Dagster | A saúde de cada fonte e da carga aparece como a verificação `saude_da_fonte` de cada tabela do raw (erro vira falha, aviso vira aviso); o sensor `falha_de_execucao` manda e-mail quando qualquer execução falha | interface do Dagster |
@@ -70,7 +70,7 @@ O `export` **recusa** (nada é apagado nem publicado) se faltar no warehouse alg
 
 **Destino:** o CLI lê o `.env` da pasta onde roda (ou o arquivo de `DADO_PUBLICO_ENV_FILE`) sem sobrescrever o que o shell já define. Com as quatro `DADO_PUBLICO_R2_*` o `export` grava no bucket; sem elas grava em `<pasta de dados>/lake`. Confira o destino antes de dizer que publicou: pasta local não é o lake público (o `manifesto.json` público é a prova).
 
-O `export` imprime uma linha por tabela (`ignorada` ou `gravada`, com os segundos) e o tempo de cada fase. Em rodada sem mudança só lê (impressões digitais, quatro tabelas por vez): não grava, não envia e não troca `catalogo.duckdb` nem `manifesto.json`. Os objetos órfãos só são procurados sob as tabelas gravadas; `--prune` varre todas (e as coleções `arq_`: objeto que saiu do controle só é apagado com `--prune`). Sem mudança, `id_execucao`, `dt_exportacao` e `versao_commit` do manifesto e do catálogo continuam os da última rodada que mudou algo; mudar a URL base (`DADO_PUBLICO_LAKE_URL`) conta como mudança. Resto de rodada interrompida (objeto gravado antes do manifesto) não deixa estado para trás que a rodada seguinte enxergue se a tabela voltar a ser ignorada; `--prune` limpa.
+O `export` imprime uma linha por tabela (`ignorada` ou `gravada`, com os segundos) e o tempo de cada fase; os tempos por tabela ficam também em `<pasta de dados>/.state/export_tempos.json` (só a última rodada). Em rodada sem mudança só lê (impressões digitais, quatro tabelas por vez): não grava, não envia e não troca `catalogo.duckdb` nem `manifesto.json`. Os objetos órfãos só são procurados sob as tabelas gravadas; `--prune` varre todas (e as coleções `arq_`: objeto que saiu do controle só é apagado com `--prune`). Sem mudança, `id_execucao`, `dt_exportacao` e `versao_commit` do manifesto e do catálogo continuam os da última rodada que mudou algo; mudar a URL base (`DADO_PUBLICO_LAKE_URL`) conta como mudança. Resto de rodada interrompida (objeto gravado antes do manifesto) não deixa estado para trás que a rodada seguinte enxergue se a tabela voltar a ser ignorada; `--prune` limpa.
 
 **Memória:** o `export` usa `preserve_insertion_order = false` (a ordem só vale onde há `ORDER BY`) e, depois das tabelas, fecha o warehouse e abre uma instância nova do DuckDB para a fase de arquivos, que não precisa dele; assim a memória das varreduras e dos COPY das tabelas não sobra para os arquivos.
 
@@ -231,6 +231,16 @@ Se parar no meio, `uv run dado-publico load --rebuild` e `uv run dado-publico tr
 | Reconstruiu igual | rode `transform` de novo: nenhuma pessoa nova, nenhum snapshot novo |
 
 5. Reconstrua a imagem do Dagster com o código atual (`docker compose --profile pipeline up -d --build`) antes de religá-lo.
+
+## Onde o tempo da rotina vai
+
+Depois de uma noite, três consultas respondem ([ADR 0044](../05-decisoes/0044-ciclo-rapido-staging-do-tse-em-tabela-e-tempos.md)): a duração de cada fase do dbt (`metadata.execucoes`, etapas `transform_pre`, `transform_post` e `freshness`, que medem o `dbt build` inteiro) e os nós mais lentos; e o `export` por tabela em `export_tempos.json`.
+
+```bash
+uv run dado-publico query --sql "SELECT id_no, tipo, qtd_segundos FROM metadata.testes_resultados WHERE id_execucao = (SELECT max(id_execucao) FROM metadata.execucoes WHERE etapa = 'transform_post') ORDER BY qtd_segundos DESC LIMIT 20"
+```
+
+O staging do TSE é tabela, recalculada no `transform_pre`: carregar o raw sem rodar o dbt deixa o staging do TSE com o raw anterior.
 
 ## Como saber o que está desatualizado
 

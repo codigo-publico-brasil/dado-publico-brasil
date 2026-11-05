@@ -22,7 +22,9 @@ def record(con: Connection, run_id: int, results: list[dict[str, Any]]) -> None:
         return
     moment = runs.now()
     con.executemany(
-        "INSERT INTO metadata.testes_resultados VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO metadata.testes_resultados "
+        "(id_execucao, id_no, tipo, resultado, qtd_falhas, mensagem, dt_registro, qtd_segundos) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [
             (
                 run_id,
@@ -32,6 +34,7 @@ def record(con: Connection, run_id: int, results: list[dict[str, Any]]) -> None:
                 r["failures"],
                 r["message"],
                 moment,
+                r.get("seconds"),
             )
             for r in results
         ],
