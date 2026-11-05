@@ -304,7 +304,7 @@ models:
       - {name: id_partido, data_type: integer, description: "Partido do evento (dim_partidos), quando o tipo exige."}
       - {name: base, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informado, derivado]}}}], description: "Como o evento é obtido: informado pela fonte ou derivado de regra do projeto."}
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto."}
-      - {name: fonte, data_type: varchar, tests: [{not_null: {config: {severity: warn}}}], description: "Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento, a fonte do cadastro. Vazia no falecimento, que junta fontes sem captura própria (o teste de aviso mede)."}
+      - {name: fonte, data_type: varchar, tests: [{not_null: {config: {severity: warn}}}], description: "Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento e no falecimento, a fonte do cadastro que informa a data. O teste de aviso mede o que ficar sem."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem do fato; vazia quando o evento não tem id_captura."}
 
   - name: fct_votos
