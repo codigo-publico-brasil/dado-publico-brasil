@@ -22,7 +22,7 @@ models:
       - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_camara__deputados_profissoes
-    description: Profissões declaradas por deputado (linhas sem título descartadas pela padronização).
+    description: Profissões declaradas por deputado. Deputado sem profissão declarada vem da fonte com título vazio e fica aqui com `titulo` nulo (lacuna medida, não preenchida); quem consome filtra.
     columns:
       - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["not_null"]}
       - {name: cd_tipo, description: "Código do tipo, como a fonte informa."}

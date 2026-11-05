@@ -83,13 +83,13 @@ TIMEZONE = pipeline.TIMEZONE  # fuso dos `schedule` das fontes
 
 
 class LayerTranslator(DagsterDbtTranslator):
-    """Grupo = camada do dbt (staging, intermediate, marts); tabela aninhada do dlt aponta ao ativo do dataset."""
+    """Grupo = camada do dbt (staging, intermediate, marts); tabela aninhada do dlt = ativo do dataset."""
 
     def get_asset_key(self, dbt_resource_props: Mapping[str, Any]) -> AssetKey:
         key = super().get_asset_key(dbt_resource_props)
         if dbt_resource_props["resource_type"] != "source":
             return key
-        # o dlt grava `dataset__filho` junto com o dataset; sem isto o Dagster cria um stub sem op para a tabela
+        # o dlt grava `dataset__filho` junto com o dataset; sem isto o Dagster cria um stub sem op
         raw = {
             AssetKey([s.source, loader.normalize(n)]) for s in SOURCES for n, d in s.datasets.items() if d.raw
         }
@@ -241,7 +241,7 @@ def _record_dbt(stage: str, target: Path, context: AssetExecutionContext) -> Non
     ),
 )
 def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
-    """Fase 1 do dbt: os modelos de que a identidade precisa (`tag:pre_identity`). Depois dela vem a identidade."""
+    """Fase 1 do dbt: os modelos de que a identidade precisa (`tag:pre_identity`)."""
     with step(context, "dbt antes da identidade"):
         invocation = dbt.cli(
             ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
@@ -255,7 +255,7 @@ def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Ite
     name="identity",
 )
 def identity_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult[Any]]:
-    """Fase 2: resolve as pessoas a partir de `int_pessoas_ids_vistos`; os modelos seguintes leem `identity.*`."""
+    """Fase 2: resolve as pessoas de `int_pessoas_ids_vistos`; os modelos seguintes leem `identity.*`."""
     with step(context, "identidade"):
         created = build.resolve_identity(SETTINGS)
     context.log.info(f"identidade: {created} pessoas novas criadas")

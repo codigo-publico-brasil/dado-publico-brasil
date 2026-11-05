@@ -46,7 +46,9 @@ datasets:
     url: "{base_url}/deputadosProfissoes/csv/deputadosProfissoes.csv"
     load: full
     write: replace
-    primary_key: [id, titulo]
+    # ~1.070 deputados vêm sem profissão (titulo e dataHora vazios, codTipoProfissao 0): o arquivo os lista mesmo assim.
+    # Com chave [id, titulo] o loader as rejeitava (erro de perda); pelo conteúdo, o raw guarda todas as linhas da fonte.
+    primary_key: [_row_hash]
     columns: [id, codTipoProfissao, titulo, dataHora]
 
   deputadosOcupacoes:
