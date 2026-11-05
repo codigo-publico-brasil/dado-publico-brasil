@@ -346,6 +346,25 @@ def test_the_load_registers_one_balance_that_is_an_error_for_collisions_and_reje
     assert scalar(con, "SELECT resultado FROM metadata.fontes_verificacoes WHERE dataset = 'limpo'") == "ok"
 
 
+def test_declared_tolerance_turns_the_rejection_into_a_warning_only_up_to_the_limit(con: Connection) -> None:
+    from dado_publico_brasil.ingestion import monitoring
+    from dado_publico_brasil.ingestion.contract import Tolerancia
+
+    tolerance = Tolerancia(limite=1, justificativa="linha da fonte sem chave")
+    stats = {"read": 10, "filtered": 0, "loaded": 9, "rejected": 1, "conflicting": 0}
+
+    def outcome(values: dict[str, int], declared: Tolerancia | None) -> tuple[str, str]:
+        con.execute("DELETE FROM metadata.fontes_verificacoes")
+        monitoring.check_load(con, "teste", "ds", 2004, values, declared)
+        return con.execute("SELECT resultado, detalhe FROM metadata.fontes_verificacoes").fetchall()[0]
+
+    status, detail = outcome(stats, tolerance)
+    assert status == "warn" and "rejeitadas 1" in detail and "tolerada: linha da fonte sem chave" in detail
+    assert outcome({**stats, "loaded": 8, "rejected": 2}, tolerance)[0] == "error"
+    assert outcome({**stats, "conflicting": 1}, tolerance)[0] == "error"
+    assert outcome(stats, None)[0] == "error"  # sem declaração, o comportamento não muda
+
+
 def test_rows_that_a_previous_capture_had_and_the_current_one_lacks_are_a_warning(
     con: Connection, settings: Settings, tmp_path: Path
 ) -> None:

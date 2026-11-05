@@ -23,7 +23,7 @@ Toda execução (`metadata.execucoes`) registra a versão do código (commit), l
 | Cada resposta de um dataset por item continua igual? | o mesmo `verify` confere o hash de cada resposta dentro dos lotes e o índice `metadata.capturas_itens` |
 | Quanto já foi buscado e quanto falta? | `uv run dado-publico coverage`: itens esperados, obtidos, inexistentes (404), com falha e faltantes, por dataset |
 | A fonte respondeu, mudou de colunas, encolheu? | `metadata.fontes_verificacoes` (`availability`, `schema`, `volume`, `coverage`) |
-| O dado está fresco? | `freshness` do dbt, em `metadata.testes_resultados`; o atraso por arquivo aparece no Dagster e em `dado-publico observe` |
+| O dado está fresco? | `dt_verificacao` em `metadata.capturas` (última verificação da fonte); o atraso por dataset aparece no Dagster e em `dado-publico observe` |
 | Alguma linha se perdeu entre as camadas? | testes de reconciliação do dbt (severidade erro), por exemplo `votos_perdidos_do_staging_aos_marts` |
 | Quais lacunas conhecidas existem e de que tamanho? | testes `warn` do dbt (a contagem de linhas que falham mede a lacuna) e [cobertura e lacunas](../03-consultar/04-cobertura-e-lacunas.md) |
 
@@ -50,7 +50,7 @@ Tramitação e situação só existem por item (uma chamada por proposição). U
 
 ## Monitoramento das fontes
 
-Cada captura grava em `metadata.fontes_verificacoes` (status `ok`, `warn` ou `error`): `availability` (a fonte respondeu?), `schema` (coluna do contrato ausente é erro; coluna nova ou removida é aviso) e `volume` (menos de 80% das linhas da carga anterior é aviso). O frescor do dado carregado é medido pelo `freshness` do dbt. Nada interrompe o pipeline; a execução devolve `source_errors`. Consulta:
+Cada captura grava em `metadata.fontes_verificacoes` (status `ok`, `warn` ou `error`): `availability` (a fonte respondeu?), `schema` (coluna do contrato ausente é erro; coluna nova ou removida é aviso) e `volume` (menos de 80% das linhas da carga anterior é aviso). O frescor é medido pela última verificação (`max_age_days` e o sensor `verificar_atrasos`). Nada interrompe o pipeline; a execução devolve `source_errors`. Consulta:
 
 ```bash
 uv run dado-publico query --sql "SELECT * FROM metadata.fontes_verificacoes WHERE resultado <> 'ok' ORDER BY id_verificacao DESC LIMIT 20"

@@ -5,7 +5,7 @@
       -> transform_post (dbt: o resto do intermediate e os marts)
 
 Os testes do dbt rodam junto com cada fase; teste com erro interrompe a execução. O resultado de
-cada nó (modelo, teste, frescor) é gravado em `metadata.testes_resultados`. Não importa a ingestão: parte
+cada nó (modelo ou teste) é gravado em `metadata.testes_resultados`. Não importa a ingestão: parte
 dos schemas `raw_*` e de `metadata.capturas`.
 """
 
@@ -53,18 +53,6 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
         con.close()
 
 
-def check_freshness(settings: Settings) -> None:
-    """Roda `dbt source freshness` e registra o resultado (não interrompe a execução)."""
-    outcome = dbt.invoke(settings, "source", "freshness", results_file="sources.json")
-    con = warehouse.connect(settings)
-    try:
-        with runs.track(con, "freshness", "dbt") as run:
-            record(con, run.id, outcome.results)
-            run.rows_in = len(outcome.results)
-    finally:
-        con.close()
-
-
 def resolve_identity(settings: Settings) -> int:
     """Cria as pessoas novas e guarda a cópia imutável da identidade. Devolve quantas foram criadas."""
     con = warehouse.connect(settings)
@@ -77,9 +65,8 @@ def resolve_identity(settings: Settings) -> int:
 
 
 def run(settings: Settings) -> int:
-    """Fase 1 do dbt, frescor, identidade e fase 2. Devolve quantas pessoas novas nasceram."""
+    """Fase 1 do dbt, identidade e fase 2. Devolve quantas pessoas novas nasceram."""
     transform(settings, "transform_pre", *PRE_IDENTITY)
-    check_freshness(settings)
     created = resolve_identity(settings)
     transform(settings, "transform_post", *POST_IDENTITY)
     con = warehouse.connect(settings)

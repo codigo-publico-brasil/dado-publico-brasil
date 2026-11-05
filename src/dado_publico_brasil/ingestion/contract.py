@@ -67,6 +67,14 @@ class Arquivos:
 
 
 @dataclass(frozen=True)
+class Tolerancia:
+    """Linhas da FONTE sem chave que o balanço da carga aceita como aviso (seguem registradas e contadas)."""
+
+    limite: int
+    justificativa: str
+
+
+@dataclass(frozen=True)
 class Dataset:
     name: str
     url: str
@@ -97,6 +105,9 @@ class Dataset:
     max_age_days: int | None = (
         None  # idade máxima da última verificação da fonte; mais velha que isso é problema
     )
+    rejeitadas_toleradas: dict[int, Tolerancia] = field(
+        default_factory=dict
+    )  # partição -> linhas sem chave que a própria fonte traz e o balanço aceita como aviso
 
     @property
     def yearly(self) -> bool:
@@ -215,6 +226,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
         on_demand=_on_demand(where, data.get("on_demand", False)),
         max_age_days=_max_age(where, data.get("max_age_days")),
+        rejeitadas_toleradas=_tolerancias(where, data.get("rejeitadas_toleradas")),
     )
 
 
@@ -262,6 +274,26 @@ def _max_age(where: str, value: Any) -> int | None:
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise InvalidContract(f"{where}: max_age_days deve ser um número inteiro de dias, maior que zero")
     return value
+
+
+def _tolerancias(where: str, block: Any) -> dict[int, Tolerancia]:
+    found: dict[int, Tolerancia] = {}
+    for partition, spec in (block or {}).items():
+        limit = spec.get("limite") if isinstance(spec, dict) else None
+        reason = spec.get("justificativa") if isinstance(spec, dict) else None
+        if (
+            not isinstance(partition, int)
+            or isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or limit < 1
+            or not isinstance(reason, str)
+            or not reason.strip()
+        ):
+            raise InvalidContract(
+                f"{where}: rejeitadas_toleradas exige, por partição, limite (inteiro >= 1) e justificativa"
+            )
+        found[partition] = Tolerancia(limit, reason.strip())
+    return found
 
 
 def _foreach(where: str, data: dict[str, Any]) -> ForEach:

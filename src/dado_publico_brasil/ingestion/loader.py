@@ -236,7 +236,14 @@ def load_capture(
             ],
             log,
         )
-        monitoring.check_load(con, contract.source, dataset.name, capture["particao"], stats)
+        monitoring.check_load(
+            con,
+            contract.source,
+            dataset.name,
+            capture["particao"],
+            stats,
+            dataset.rejeitadas_toleradas.get(capture["particao"]),
+        )
         if not dataset.foreach:  # lotes têm tamanhos diferentes por natureza
             monitoring.check_volume(con, contract.source, dataset.name, capture["particao"], stats["read"])
             table = f"{contract.schema}.{normalize(dataset.name)}"
