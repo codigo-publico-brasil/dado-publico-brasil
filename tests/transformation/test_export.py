@@ -199,6 +199,16 @@ def test_a_table_that_changed_path_leaves_no_orphan_even_without_prune(
     assert export.verify(settings) == []
 
 
+def test_the_time_of_each_table_is_kept_for_the_next_look(con: Connection, settings: Settings) -> None:
+    run(con, settings)
+    tempos = json.loads((settings.state_dir / "export_tempos.json").read_text(encoding="utf-8"))
+    assert tempos["marts.fct_votos"].keys() == {"impressao_s", "escrita_s", "resultado"}
+    assert tempos["marts.fct_votos"]["resultado"] == "gravada"
+    assert export.export(settings)["ignoradas"] == len(tempos)
+    again = json.loads((settings.state_dir / "export_tempos.json").read_text(encoding="utf-8"))
+    assert {v["resultado"] for v in again.values()} == {"ignorada"}
+
+
 def test_a_changed_table_alone_is_rewritten_and_verify_catches_tampering(
     con: Connection, settings: Settings
 ) -> None:

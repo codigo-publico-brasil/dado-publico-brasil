@@ -40,7 +40,7 @@ def test_failed_run_is_recorded_and_the_error_is_raised(con: Connection) -> None
 
 def test_migrations_apply_once_and_in_order(tmp_path: Path) -> None:
     con = warehouse.connect(Settings(storage_root=tmp_path / "store"))
-    assert migrations.apply(con) == ["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008"]
+    assert migrations.apply(con) == ["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008", "0009"]
     assert migrations.apply(con) == []
 
 
@@ -65,7 +65,7 @@ def test_migration_0007_renames_and_retypes_a_warehouse_that_already_has_data(tm
     con.execute(
         "INSERT INTO identity.pessoa_identificador VALUES ('camara', 'dep', '9', 1, 'oficial', 'x', '2026-10-23T10:00:00+00:00')"
     )
-    assert migrations.apply(con) == ["0007", "0008"]
+    assert migrations.apply(con) == ["0007", "0008", "0009"]
     assert migrations.apply(con) == []
     assert con.execute("SELECT id_execucao, etapa, dt_inicio FROM metadata.execucoes").fetchall() == [
         (1, "load", datetime(2026, 10, 23, 10))
@@ -84,7 +84,7 @@ def test_migration_0007_renames_and_retypes_a_warehouse_that_already_has_data(tm
         "INSERT INTO metadata.execucoes (etapa, dt_inicio, resultado) VALUES ('x', now(), 'ok') RETURNING id_execucao"
     ).fetchone() == (2,)
     assert con.execute("SELECT nextval('identity.seq_pessoas')").fetchone() == (2,)
-    assert con.execute("SELECT versao FROM metadata.migracoes ORDER BY 1").fetchall()[-1] == ("0008",)
+    assert con.execute("SELECT versao FROM metadata.migracoes ORDER BY 1").fetchall()[-1] == ("0009",)
     # instalação nova chega ao mesmo estado final
     fresh = migrations.open_warehouse(Settings(storage_root=tmp_path / "novo"))
     shape = "SELECT table_name, column_name, data_type FROM duckdb_columns() WHERE schema_name IN ('metadata', 'identity') ORDER BY 1, 2"

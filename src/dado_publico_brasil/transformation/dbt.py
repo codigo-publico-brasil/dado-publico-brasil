@@ -129,6 +129,7 @@ def read_results(
             "status": str(item.get("status", "")),
             "failures": item.get("failures"),
             "message": item.get("message"),
+            "seconds": item.get("execution_time"),
         }
         for item in json.loads(file.read_text(encoding="utf-8")).get("results", [])
     ]

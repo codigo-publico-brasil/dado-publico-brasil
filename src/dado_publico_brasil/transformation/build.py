@@ -33,10 +33,11 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
         settings
     ).close()  # o dbt lê `metadata.capturas`: o esquema precisa estar migrado
     print(f"== {stage}: dbt build iniciado", flush=True)
+    started = runs.now()  # a execução mede o `dbt build` inteiro, não só a gravação dos resultados
     outcome = dbt.invoke(settings, "build", *selection, stream=True)
     con = warehouse.connect(settings)
     try:
-        with runs.track(con, stage, "dbt") as run:
+        with runs.track(con, stage, "dbt", started=started) as run:
             record(con, run.id, outcome.results)
             run.rows_in, run.rows_out = len(outcome.results), len(outcome.failures)
             if (
@@ -49,6 +50,19 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
                     f"{r['unique_id']}: {r['status']} {(r['message'] or '')[:1500]}" for r in outcome.failures
                 )
                 raise DbtFailure(names or outcome.output)
+    finally:
+        con.close()
+
+
+def check_freshness(settings: Settings) -> None:
+    """Roda `dbt source freshness` e registra o resultado (não interrompe a execução)."""
+    started = runs.now()
+    outcome = dbt.invoke(settings, "source", "freshness", results_file="sources.json")
+    con = warehouse.connect(settings)
+    try:
+        with runs.track(con, "freshness", "dbt", started=started) as run:
+            record(con, run.id, outcome.results)
+            run.rows_in = len(outcome.results)
     finally:
         con.close()
 
