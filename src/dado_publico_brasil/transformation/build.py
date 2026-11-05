@@ -5,7 +5,7 @@
       -> transform_post (dbt: o resto do intermediate e os marts)
 
 Os testes do dbt rodam junto com cada fase; teste com erro interrompe a execução. O resultado de
-cada nó (modelo, teste, frescor) é gravado em `metadata.testes_resultados`. Não importa a ingestão: parte
+cada nó (modelo ou teste) é gravado em `metadata.testes_resultados`. Não importa a ingestão: parte
 dos schemas `raw_*` e de `metadata.capturas`.
 """
 
@@ -33,10 +33,11 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
         settings
     ).close()  # o dbt lê `metadata.capturas`: o esquema precisa estar migrado
     print(f"== {stage}: dbt build iniciado", flush=True)
+    started = runs.now()  # a execução mede o `dbt build` inteiro, não só a gravação dos resultados
     outcome = dbt.invoke(settings, "build", *selection, stream=True)
     con = warehouse.connect(settings)
     try:
-        with runs.track(con, stage, "dbt") as run:
+        with runs.track(con, stage, "dbt", started=started) as run:
             record(con, run.id, outcome.results)
             run.rows_in, run.rows_out = len(outcome.results), len(outcome.failures)
             if (
@@ -55,10 +56,11 @@ def transform(settings: Settings, stage: str, *selection: str) -> None:
 
 def check_freshness(settings: Settings) -> None:
     """Roda `dbt source freshness` e registra o resultado (não interrompe a execução)."""
+    started = runs.now()
     outcome = dbt.invoke(settings, "source", "freshness", results_file="sources.json")
     con = warehouse.connect(settings)
     try:
-        with runs.track(con, "freshness", "dbt") as run:
+        with runs.track(con, "freshness", "dbt", started=started) as run:
             record(con, run.id, outcome.results)
             run.rows_in = len(outcome.results)
     finally:
@@ -77,9 +79,8 @@ def resolve_identity(settings: Settings) -> int:
 
 
 def run(settings: Settings) -> int:
-    """Fase 1 do dbt, frescor, identidade e fase 2. Devolve quantas pessoas novas nasceram."""
+    """Fase 1 do dbt, identidade e fase 2. Devolve quantas pessoas novas nasceram."""
     transform(settings, "transform_pre", *PRE_IDENTITY)
-    check_freshness(settings)
     created = resolve_identity(settings)
     transform(settings, "transform_post", *POST_IDENTITY)
     con = warehouse.connect(settings)

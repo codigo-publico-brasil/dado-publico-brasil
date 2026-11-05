@@ -126,7 +126,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_camara__deputados_detalhe` | Cadastro dos deputados (só dos já buscados), uma linha por deputado. | publico-agente-publico |  |
 | `stg_camara__deputados_historico` | Histórico de situação dos deputados (só dos já buscados), uma linha por registro de status. | publico-agente-publico |  |
 | `stg_camara__deputados_ocupacoes` | Ocupações anteriores declaradas por deputado. | publico-agente-publico |  |
-| `stg_camara__deputados_profissoes` | Profissões declaradas por deputado (linhas sem título descartadas pela padronização). | publico-agente-publico |  |
+| `stg_camara__deputados_profissoes` | Profissões declaradas por deputado. Deputado sem profissão declarada vem da fonte com título vazio e fica aqui com `titulo` nulo (lacuna medida, não preenchida); quem consome filtra. | publico-agente-publico |  |
 | `stg_camara__frentes` | Frentes parlamentares, uma por frente. | publico-agente-publico |  |
 | `stg_camara__frentes_membros` | Participação de deputados em frentes parlamentares, uma linha por legislatura e título. Em parte das linhas (coordenações antigas) a fonte não identifica o deputado; elas ficam aqui e saem dos marts. | publico-agente-publico |  |
 | `stg_camara__legislaturas` | Legislaturas, uma linha por legislatura, com datas oficiais. | publico-agente-publico |  |
@@ -205,9 +205,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
 | `agg_composicoes` | Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje), por território e partido. A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes. | publico | corte |
-| `app_cargo_ocupantes` | Quem ocupa cada cargo, uma linha por período de ocupação; o aplicativo filtra a data (dt_inicio até dt_fim_prevista) e o cargo. Só junta nomes a fct_cargos_ocupacoes, que traz a regra (ADR 0040). Deputado federal e senador vêm do exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu e eleito em eleição suplementar); quem foi eleito e ainda não assumiu e os demais cargos vêm do mandato da eleição, com o fim previsto pela duração do cargo (cassação e renúncia desses cargos não aparecem, issue 162). Sem data de posse, entra com dt_inicio vazio e ano_inicio preenchido. | publico-agente-publico | período de ocupação |
-| `app_pessoa_campanhas` | Todas as candidaturas da pessoa, com foto, resultado e campanha, tenha ela vencido ou não. Só candidaturas de quem tem pessoa no projeto (quem já foi eleito). | publico-agente-publico | candidatura |
-| `app_pessoas` | A ficha cadastral de cada pessoa do projeto (quem já foi eleito), com a foto. O cadastro de contato, escolaridade e profissões só existe para quem passou pela Câmara ou pelo Senado e fica vazio para os demais. | publico-agente-publico | pessoa |
 | `brg_frentes_membros` | Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título. | publico-agente-publico | pessoa |
 | `brg_normas_relacoes` | Ligações de cada norma com atos posteriores, como o Senado declara (alteração, regulamentação, veto, declaração de constitucionalidade). Só das normas detalhadas (leis, leis complementares, emendas, medidas provisórias e a Constituição). Uma linha por norma, ato posterior e tipo de relação. | publico | norma |
 | `brg_orgaos_membros` | Participação de pessoas em órgãos da Câmara, com cargo e período. Uma linha por pessoa, órgão, cargo e período informado. | publico-agente-publico | pessoa |
@@ -228,7 +225,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dim_pessoas_cadastro` | Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação, falecimento e atividade legislativa (contagens e último partido). Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas). | publico-agente-publico | pessoa |
 | `dim_territorios` | Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato que fala de lugar (ADR 0030). | publico | território |
 | `fct_campanhas` | A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o arquivo daquele dado não foi carregado ou não traz o candidato. | publico-agente-publico | candidatura |
-| `fct_candidaturas` | Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era, por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer novato. | publico-agente-publico | candidatura |
+| `fct_candidaturas` | Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era, por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer novato. fl_eleito vale para o eleito informado pelo TSE ou derivado dos votos pela Constituição (base_eleicao diz qual; o texto original do TSE segue em resultado); fl_eleito_informado guarda só o informado. | publico-agente-publico | candidatura |
 | `fct_candidaturas_bens` | Bens declarados à Justiça Eleitoral por candidatos que já são pessoa do projeto, de 2006 em diante, como o TSE publica (valor declarado, sem correção). Uma linha por bem. | publico-agente-publico | candidatura e bem |
 | `fct_candidaturas_votos` | Votos de cada candidatura de quem já é pessoa do projeto, somados dos municípios e zonas, nas eleições gerais já carregadas. Uma linha por candidatura e turno. | publico-agente-publico | candidatura e turno |
 | `fct_cargos_ocupacoes` | Cada período em que uma pessoa ocupa um cargo num território: a camada semântica da ocupação, que junta o exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu, eleito em eleição suplementar) e o mandato da eleição (fct_mandatos), que cobre quem foi eleito e ainda não assumiu e os cargos sem fonte de exercício (vereador, prefeito, governador, presidente, deputado estadual), com o fim previsto pela duração do cargo. O exercício vence: o mandato que ele cumpre não gera outra linha. Cassação e renúncia dos cargos sem exercício não aparecem (issue 162). Quem filtra a data usa dt_inicio e dt_fim. | publico-agente-publico | período de ocupação |
@@ -281,82 +278,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_territorio` | varchar | Território da composição (dim_territorios): município, UF ou país; vazio onde a fonte não liga a um território. |  |
 | `id_partido` | integer | Partido (dim_partidos): o da eleição na composição eleita, o mais recente conhecido até o corte na composição em exercício; vazio quando não se conhece. |  |
 | `qtd_membros` | bigint | Quantas pessoas ocupam o cargo naquele corte, território e partido. |  |
-
-### marts.app_cargo_ocupantes
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `id_candidatura` |  | Candidatura eleita do mandato a que a ocupação pertence; vazia para o suplente que assumiu e para o eleito em eleição suplementar. |  |
-| `id_pessoa` |  | Pessoa do projeto. |  |
-| `nome` |  | Nome público da pessoa. |  |
-| `cargo` |  | Nome do cargo. |  |
-| `territorio` |  | Nome do território do mandato. |  |
-| `partido` |  | Sigla do partido pelo qual foi eleito. |  |
-| `ano_inicio` |  | Ano de início do mandato: o ano seguinte ao da eleição, como a Constituição e as eleições ordinárias determinam; sempre preenchido. |  |
-| `dt_inicio` |  | Dia do início do mandato; vazio quando o dia não está numa fonte nem numa regra (por exemplo, deputado estadual de 2026, que depende da constituição de cada estado). |  |
-| `base_do_inicio` |  | Como o início foi obtido: derivado da Constituição ou informado pelo TSE. |  |
-| `dt_fim_prevista` |  | Fim da ocupação: o fim real do exercício quando a fonte o registra (base_do_fim informado) ou o fim previsto pela duração do mandato (derivado). Use esta coluna com dt_inicio para saber quem ocupa o cargo em uma data. |  |
-| `base_do_fim` |  | informado (a Câmara ou o Senado registra o fim do exercício) ou derivado (fim do mandato pela duração do cargo). |  |
-| `base_eleicao` |  | Como se sabe que foi eleito: informado pelo TSE ou derivado dos votos. |  |
-| `dt_eleicao` |  | Dia da votação em que a pessoa foi eleita (último turno), como o TSE informa; vazio para quem assumiu como suplente sem ter sido eleito. |  |
-| `tipo_mandato` |  | novato (primeiro mandato no cargo e a base já cobria o ciclo anterior), reeleito (continuou do mandato anterior, um mandato atrás) ou retorno (já teve mandato, voltou depois de um intervalo); vazio quando não há prova. Abaixo do nível federal, compara o mesmo cargo na mesma unidade. |  |
-| `tipo_registro` |  | exercicio (período em que a Câmara ou o Senado registra a pessoa em exercício) ou mandato (período da eleição). |  |
-| `fonte_url` |  | Arquivo oficial de onde saiu o registro (o do TSE para o mandato; o da Câmara ou do Senado para o exercício), na captura registrada. |  |
-| `dt_captura` |  | Data da captura desse arquivo. |  |
-
-### marts.app_pessoa_campanhas
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `id_candidatura` |  | Identificador da candidatura. |  |
-| `id_pessoa` |  | Pessoa do projeto. |  |
-| `ano_eleicao` |  | Ano da eleição. |  |
-| `cargo` |  | Nome do cargo disputado; vazio quando a candidatura não tem disputa. |  |
-| `dt_eleicao` |  | Dia da votação do último turno que a candidatura disputou, como o TSE informa. |  |
-| `numero` |  | Número do candidato na urna. |  |
-| `partido` |  | Sigla do partido da candidatura. |  |
-| `resultado` |  | Resultado do último turno como o TSE informa; vazio quando não informa. |  |
-| `fl_eleito` |  | Verdadeiro quando a candidatura foi eleita: o TSE marca como eleita ou, sem essa informação, vence no último turno pelos votos válidos (base_eleito diz qual). |  |
-| `base_eleito` |  | Base de fl_eleito verdadeiro: informado (o TSE diz Eleito) ou derivado (regra da Constituição, pelos votos do último turno); vazio quando a candidatura não foi eleita. |  |
-| `foto_caminho` |  | Caminho da foto oficial no lake público (coleção arq_fotos); vazio sem foto. |  |
-| `valor_receitas` |  | Soma das receitas declaradas, em reais; vazia sem prestação de contas carregada. |  |
-| `valor_despesas` |  | Soma das despesas contratadas declaradas, em reais. |  |
-| `valor_bens` |  | Soma dos bens declarados, em reais. |  |
-| `fonte_url` |  | Arquivo oficial do TSE de onde saíram a candidatura e o resultado, na captura registrada. |  |
-| `dt_captura` |  | Data da captura desse arquivo. |  |
-| `fonte_url_receitas` |  | Arquivo oficial do TSE das receitas da campanha; vazio sem prestação de contas carregada. |  |
-| `fonte_url_despesas` |  | Arquivo oficial do TSE das despesas da campanha; vazio sem prestação de contas carregada. |  |
-| `fonte_url_bens` |  | Arquivo oficial do TSE dos bens declarados; vazio quando o arquivo da eleição não foi carregado. |  |
-| `dt_captura_campanha` |  | Data da captura mais recente entre os arquivos de receitas, despesas e bens. |  |
-
-### marts.app_pessoas
-
-| Coluna | Tipo | Descrição | Dado pessoal |
-| --- | --- | --- | --- |
-| `id_pessoa` |  | Pessoa do projeto. |  |
-| `nome` |  | Nome pelo qual a pessoa é conhecida. |  |
-| `nome_civil` |  | Nome civil, como a fonte informa. |  |
-| `nome_social` |  | Nome social declarado na candidatura mais recente do TSE que o informa; vazio para quase todos (poucos declaram). |  |
-| `genero` |  | Masculino ou feminino, só quando a fonte diz. |  |
-| `dt_nascimento` |  | Data de nascimento informada pela fonte. |  |
-| `dt_falecimento` |  | Data de falecimento informada pela fonte. |  |
-| `municipio_nascimento` |  | Município de nascimento informado pela fonte. |  |
-| `uf_nascimento` |  | UF de nascimento: a do cadastro da Câmara ou do Senado quando existe; senão, a declarada na candidatura mais recente do TSE (ZZ para nascido no exterior). |  |
-| `escolaridade` |  | Escolaridade: a do cadastro da Câmara quando existe; senão, o grau de instrução declarado na candidatura mais recente do TSE que o informa (Não divulgável quando o TSE protege o dado). |  |
-| `estado_civil` |  | Estado civil declarado na candidatura mais recente do TSE que o informa; vazio quando nenhuma informa (Não divulgável quando o TSE protege o dado). |  |
-| `profissoes` |  | Profissões: as do cadastro da Câmara (separadas por ponto e vírgula) quando existem; senão, a ocupação declarada na candidatura mais recente do TSE que a informa. |  |
-| `situacao_atual` |  | Situação no último status da Câmara (por exemplo, Exercício ou Licença); vazia onde a fonte não informa. |  |
-| `email_institucional` |  | E-mail institucional do gabinete, como a Câmara ou o Senado publica. |  |
-| `telefone_institucional` |  | Telefone institucional do gabinete. |  |
-| `gabinete_endereco` |  | Endereço do gabinete. |  |
-| `pagina_url` |  | Página oficial da pessoa no Senado; vazia onde a fonte não informa. |  |
-| `site_url` |  | Site informado no cadastro. |  |
-| `rede_social_url` |  | Primeira rede social informada no cadastro. |  |
-| `foto_caminho` |  | Foto oficial do TSE da candidatura mais recente (caminho no lake público, coleção arq_fotos); vazia sem foto. |  |
-| `foto_url` |  | Endereço da foto oficial da Câmara ou do Senado; vazio onde a fonte não informa. |  |
-| `fontes` |  | Fontes em que a pessoa aparece no cadastro (por exemplo, camara, senado); vazio para quem só tem o TSE. |  |
-| `fonte_url` |  | Arquivo oficial de onde saem os dados da ficha: o cadastro da Câmara ou do Senado quando a pessoa tem, senão o arquivo de candidaturas do TSE, na captura registrada. |  |
-| `dt_captura` |  | Data da captura desse arquivo. |  |
 
 ### marts.brg_frentes_membros
 
@@ -721,8 +642,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `situacao_candidatura` | varchar | Situação da candidatura no último turno em que consta, como o TSE informa (por exemplo, deferido, indeferido). |  |
 | `qtd_turnos` | integer | Número do último turno em que a candidatura consta (2 quando foi ao segundo turno). |  |
 | `resultado` | varchar | Resultado do último turno como o arquivo de candidaturas do TSE informa (eleito, suplente, não eleito, 2º turno); vazio quando o TSE não informa, como o 2º turno de presidente de 2006. |  |
-| `fl_eleito` | boolean | Verdadeiro quando o TSE marca a candidatura como eleita em algum turno. Falso não quer dizer derrota quando o resultado está vazio. |  |
-| `base_eleicao` | varchar | Como se sabe que a candidatura foi eleita: informado pelo TSE ou DERIVADO dos votos pela Constituição (int_tse_eleitos). Vazia para quem não foi eleito. Não muda o significado de fl_eleito, que segue só o resultado informado pelo TSE. |  |
+| `fl_eleito` | boolean | Verdadeiro quando a candidatura foi eleita: o TSE informa (fl_eleito_informado) ou, sem essa informação, a Constituição deriva dos votos (base_eleicao). Mesmo conjunto de fct_mandatos. O texto original do TSE segue em resultado. Vazio quando o TSE não informa o resultado e nada foi derivado. |  |
+| `fl_eleito_informado` | boolean | Verdadeiro quando o TSE marca a candidatura como eleita em algum turno (só o informado; era o significado de fl_eleito até a mudança). Falso não quer dizer derrota quando o resultado está vazio. |  |
+| `base_eleicao` | varchar | Como se sabe que a candidatura foi eleita: informado pelo TSE ou DERIVADO dos votos pela Constituição (int_tse_eleitos). Vazia para quem não foi eleito. Quando preenchida, fl_eleito é verdadeiro; fl_eleito_informado segue só o resultado do TSE. |  |
 | `fl_mais_votado_no_ultimo_turno` | boolean | DERIVADO dos votos, não é resultado do TSE: só para presidente, governador e prefeito, verdadeiro se teve mais votos válidos no último turno com votos. Vazio sem votos carregados ou em cargo de várias vagas. |  |
 | `id_pessoa_tse` | varchar | Identificador da mesma pessoa entre as eleições do TSE (nome civil ou de urna e data de nascimento únicos, ADRs 0025 e 0026); vazio sem ligação, o que não quer dizer novato. |  |
 | `id_pessoa` | bigint | Pessoa do projeto (dim_pessoas) quando a candidatura é de alguém eleito alguma vez ou que foi deputado ou senador (ligada pelo nome e o nascimento); vazio para quem nunca foi eleito, por regra (ADR 0031). |  |
@@ -893,7 +815,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_partido` | integer | Partido do evento (dim_partidos), quando o tipo exige. |  |
 | `base` | varchar | Como o evento é obtido: informado pela fonte ou derivado de regra do projeto. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto. |  |
-| `fonte` | varchar | Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento, a fonte do cadastro. Vazia no falecimento, que junta fontes sem captura própria (o teste de aviso mede). |  |
+| `fonte` | varchar | Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento e no falecimento, a fonte do cadastro que informa a data. O teste de aviso mede o que ficar sem. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem do fato; vazia quando o evento não tem id_captura. |  |
 
 ### marts.fct_exercicios

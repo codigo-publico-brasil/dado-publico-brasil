@@ -14,7 +14,7 @@ description: Tribunal Superior Eleitoral, dados abertos (CKAN; pacotes .zip com 
 # Regra de extração: o TSE muda em datas pontuais (eleição, apuração, prestação de contas), então a conferência é semanal
 # (segunda, 8h) e só do ano de eleição em curso; a pergunta barata à fonte (ETag/Last-Modified) evita baixar o que não mudou.
 # Anos anteriores ou um dataset pesado: `dado-publico extract --source tse --years 2022 --dataset votacao`.
-schedule: "0 8 * * 1"            # captura automática (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
+# schedule: "20 2 * * 1"  # DESATIVADO após as eleições (ADR 0042): só roda quando pedido (captura_tse, atualizar_tse). Para reativar, descomente (cron, fuso America/Sao_Paulo).
 
 access:
   base_url: https://cdn.tse.jus.br/estatistica/sead/odsele
@@ -31,7 +31,7 @@ datasets:
     step: 2                         # as eleições gerais (1998, 2002, ... 2026) e as municipais (1996, 2000, ... 2024)
     archive: zip
     member: "*_BRASIL.csv"
-    write: merge
+    write: replace_partition   # o arquivo do ano é a foto completa: a captura nova substitui a anterior (ADR 0043)
     primary_key: [ANO_ELEICAO, CD_ELEICAO, SG_UE, SQ_CANDIDATO, NR_TURNO]   # o sequencial se repete entre a eleição ordinária e a suplementar do mesmo município (2004)
     columns:
       [ANO_ELEICAO, NR_TURNO, CD_ELEICAO, DS_ELEICAO, DT_ELEICAO, SG_UF, SG_UE, NM_UE, DS_CARGO, SQ_CANDIDATO, NR_CANDIDATO,
@@ -52,7 +52,7 @@ datasets:
     step: 2                         # 2006, 2008 (primeira municipal com bens), ... 2026
     archive: zip
     member: "*_BRASIL.csv"
-    write: merge
+    write: replace_partition   # o arquivo do ano é a foto completa: a captura nova substitui a anterior (ADR 0043)
     primary_key: [_row_hash]        # o número do bem não é único em 2006: a chave é o conteúdo da linha
     aliases:                        # os arquivos de 2006 e 2010 usam outros nomes
       NR_ORDEM_CANDIDATO: NR_ORDEM_BEM_CANDIDATO
@@ -71,7 +71,7 @@ datasets:
     step: 2
     archive: zip
     member: "*_BRASIL.csv"
-    write: merge
+    write: replace_partition   # o arquivo do ano é a foto completa: a captura nova substitui a anterior (ADR 0043)
     primary_key: [_row_hash]
     optional: [SG_FEDERACAO, NM_TIPO_DESTINACAO_VOTOS, QT_VOTOS_NOMINAIS_VALIDOS]   # só existem nos anos recentes (federação: 2022; votos válidos: ver #76)
     columns:
@@ -91,7 +91,7 @@ datasets:
     step: 2
     archive: zip
     member: "*_BRASIL.csv"
-    write: merge
+    write: replace_partition   # o arquivo do ano é a foto completa: a captura nova substitui a anterior (ADR 0043)
     aliases:
       QT_VAGAS: QT_VAGA
     primary_key: [ANO_ELEICAO, CD_ELEICAO, SG_UE, CD_CARGO]   # o arquivo de 2022 traz também a eleição suplementar de RR
@@ -107,7 +107,7 @@ datasets:
     step: 4
     archive: zip
     member: "receitas_candidatos_[0-9]*_BRASIL.csv"   # não pega receitas_candidatos_doador_originario_*
-    write: merge
+    write: replace_partition   # o arquivo do ano é a foto completa: a captura nova substitui a anterior (ADR 0043)
     primary_key: [_row_hash]   # SQ_RECEITA se repete entre itens do mesmo lançamento; o hash guarda todas as linhas
     columns:
       [AA_ELEICAO, ST_TURNO, TP_PRESTACAO_CONTAS, DT_PRESTACAO_CONTAS, SQ_PRESTADOR_CONTAS, SG_UF, SG_UE, DS_CARGO,
@@ -122,7 +122,7 @@ datasets:
     step: 4
     archive: zip
     member: "despesas_contratadas_candidatos_*_BRASIL.csv"
-    write: merge
+    write: replace_partition   # o arquivo do ano é a foto completa: a captura nova substitui a anterior (ADR 0043)
     primary_key: [_row_hash]   # SQ_DESPESA se repete entre itens do mesmo lançamento; o hash guarda todas as linhas
     columns:
       [AA_ELEICAO, ST_TURNO, TP_PRESTACAO_CONTAS, DT_PRESTACAO_CONTAS, SQ_PRESTADOR_CONTAS, SG_UF, SG_UE, DS_CARGO,
@@ -132,7 +132,10 @@ datasets:
   # O pacote fica guardado no landing com hash; o raw só lista o que há dentro (`format: members`, sem extrair). O
   # arquivo de cada foto é `F<UF><SQ_CANDIDATO>_div.jpg` (ou `.jpeg`), e o SQ_CANDIDATO liga à candidatura. As eleições
   # municipais não entram (o pacote de um estado passa de 2 GB). As fotos vêm do TSE sob a licença dos dados abertos dele.
+  # `on_demand`: o TSE republica os pacotes e são gigantes, então ficam fora do incremental e da recuperação de
+  # lacunas; só vêm com `--years`, `--historical` ou `--dataset` (ou o job manual do Dagster em years/historical).
   fotos_br: &fotos
+    on_demand: true
     url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_BR_div.zip"
     load: yearly
     first_year: 2006

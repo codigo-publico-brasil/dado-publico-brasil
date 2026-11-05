@@ -1,8 +1,8 @@
-# ADR 0041: meses fechados, 405 como bloqueio e um download por pacote
+# ADR 0045: meses fechados, 405 como bloqueio e um download por pacote
 
 - **Status:** aceito (2026-11-03, pelo fundador)
 - **Data:** 2026-11-03
-- **Complementa:** [ADR 0038 (cortesia)](0038-cortesia-e-bloqueio-na-ingestao.md).
+- **Complementa:** [ADR 0038 (cortesia)](0038-cortesia-e-bloqueio-na-ingestao.md) e [ADR 0043](0043-raw-em-parquet-substituicao-por-particao-e-logs.md) (a republicação de mês é a `replace_partition` do 0043; este ADR não a repete).
 
 ## Contexto
 

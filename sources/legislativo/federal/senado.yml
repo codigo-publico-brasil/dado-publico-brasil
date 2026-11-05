@@ -9,7 +9,7 @@ description: Senado Federal, dados abertos (API REST, JSON)
 
 # Regra de extração: o Senado muda todo dia; a execução diária confere só o ano em curso (e os datasets completos). O que
 # é retroativo (anos anteriores) só roda quando pedido: `--years` ou `--historical --from-year`.
-schedule: "30 6 * * *"            # captura automática (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
+schedule: "20 1 * * *"            # captura noturna (cron, fuso America/Sao_Paulo; escalonada 01:00-02:20, ADR 0042); sem esta linha, só quando pedido
 
 access:
   base_url: https://legis.senado.leg.br/dadosabertos
@@ -104,6 +104,8 @@ datasets:
     primary_key: [id]
     columns:
       [id, tipo, descricao, numero, norma, normaNome, ementa, dataassinatura, anoassinatura, apelido]
+    # Normas dos primeiros anos (1808 em diante) vêm sem número: a API omite o campo vazio.
+    optional: [numero]
 
   normas_detalhe:
     # Por item: publicações no DOU e relações com outros atos (alteração, regulamentação, veto) das leis, leis
@@ -137,6 +139,7 @@ datasets:
     columns: [id, identificacao__tipo, identificacao__descricao, identificacao__numero, identificacao__norma,
               identificacao__normaNome, identificacao__dataassinatura, identificacao__apelido,
               identificacao__urlDocumento, ementa, publicacoes__publicacao, vides__vide]
+    optional: [identificacao__numero, ementa]   # a Constituição não tem número de lei nem ementa
     nested: *detalhe_listas
 
   vetos:
@@ -154,6 +157,10 @@ datasets:
        Mensagem__Sigla, Mensagem__Numero, Mensagem__Ano, Mensagem__UrlPlanalto, Total, Assunto,
        DataRecebimentoCongresso, DataPublicacao, DataSobrestacaoPauta, SobrestandoPauta,
        QuantidadeDispositivos]
+    # A API omite o campo vazio: vetos antigos não têm mensagem, assunto nem as datas de recebimento e publicação.
+    optional: [MateriaVetada__NormaGerada__CodigoNorma, MateriaVetada__NormaGerada__NomeNorma, Mensagem__Sigla,
+               Mensagem__Numero, Mensagem__UrlPlanalto, Assunto, DataRecebimentoCongresso, DataPublicacao,
+               DataSobrestacaoPauta]
 
   vetos_dispositivos:
     # Por item: cada dispositivo vetado (texto vetado, razão do veto, situação) e a data da sessão. O item é

@@ -33,11 +33,18 @@ with candidaturas as (
 
 falecimentos as (
 
-    select id_pessoa, dt_falecimento from {{ ref('int_pessoas_unidas_cadastro') }} where dt_falecimento is not null
+    -- um falecimento por pessoa, com a captura do cadastro que o informa (a Câmara primeiro)
+    select id_pessoa, dt_falecimento, id_captura
+    from (
+        select id_pessoa, dt_falecimento, id_captura, 1 as prioridade
+        from {{ ref('int_pessoas_unidas_cadastro') }} where dt_falecimento is not null
 
-    union
+        union all
 
-    select id_pessoa, dt_falecimento from {{ ref('int_pessoas_senado_unidas') }} where dt_falecimento is not null
+        select id_pessoa, dt_falecimento, id_captura, 2 as prioridade
+        from {{ ref('int_pessoas_senado_unidas') }} where dt_falecimento is not null
+    )
+    qualify row_number() over (partition by id_pessoa order by prioridade, dt_falecimento) = 1
 
 ),
 
@@ -70,7 +77,7 @@ eventos as (
 
     select
         id_pessoa, 'falecimento', 'pessoas', cast(id_pessoa as varchar), year(dt_falecimento), dt_falecimento,
-        null, null, null, null, 'informado', null
+        null, null, null, null, 'informado', id_captura
 
     from falecimentos
 
@@ -201,8 +208,8 @@ eventos as (
 
 )
 
--- `fonte` e `dt_captura` vêm da captura do fato de origem; o nascimento traz a fonte do cadastro e o falecimento fica
--- sem, porque a data junta duas fontes sem captura própria.
+-- `fonte` e `dt_captura` vêm da captura do fato de origem (o falecimento, a do cadastro que o informa); o nascimento
+-- traz a fonte do cadastro.
 select
     e.id_tipo_evento || ':' || e.fato_origem || ':' || e.id_fato_origem as id_evento,
     e.*,

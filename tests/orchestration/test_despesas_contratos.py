@@ -20,10 +20,17 @@ def test_the_contract_is_polite_direct_and_covers_four_years() -> None:
 
 def test_expenses_and_contracts_reach_the_raw(full: Env) -> None:
     con, _ = full
-    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.despesas") == 1
-    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.compras") == 3
-    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.compras_itens") == 2
-    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_transparencia.compras_termos_aditivos") == 2
+    # cada mês é uma captura e uma partição (`replace_partition`): o pacote sintético é o mesmo nos 12 meses de 2024
+    for table, rows_per_month in (
+        ("despesas", 1),
+        ("compras", 3),
+        ("compras_itens", 2),
+        ("compras_termos_aditivos", 2),
+    ):
+        per_capture = con.execute(
+            f"SELECT count(*) FROM raw_federal_transparencia.{table} GROUP BY _source_file_id"
+        ).fetchall()
+        assert len(per_capture) == 12 and {n for (n,) in per_capture} == {rows_per_month}
     assert {"c_digo_contratado", "nome_contratado"} <= set(
         columns(con, "raw_federal_transparencia", "compras")
     )
@@ -45,7 +52,10 @@ def test_staging_converts_types_and_masks_the_cpf_in_free_text(full: Env) -> Non
     objeto, assinatura, valor = contrato
     assert "123.456.789-09" not in objeto and "***.456.789-**" in objeto
     assert (str(assinatura), float(valor)) == ("2024-01-24", 205690.0)
-    assert float(scalar(con, "SELECT quantidade FROM staging.stg_transparencia__compras_itens")) == 1.5
+    quantidades = con.execute(
+        "SELECT DISTINCT quantidade FROM staging.stg_transparencia__compras_itens ORDER BY quantidade"
+    ).fetchall()
+    assert [float(q[0]) for q in quantidades] == [1.0, 1.5]  # a vírgula decimal vira ponto, com 4 casas
     for modelo in MENSAIS:
         assert (
             scalar(con, f"SELECT COUNT(*) FROM staging.stg_transparencia__{modelo} WHERE id_captura IS NULL")

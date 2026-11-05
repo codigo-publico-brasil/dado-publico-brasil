@@ -1,6 +1,6 @@
 # Declaração da fonte: Portal da Transparência do Governo Federal (CGU), arquivos de dados abertos.
 # Despesas e contratos: um .zip por mês na URL direta do host de download (dadosabertos-download.cgu.gov.br; o endereço do
-# portal redireciona para esse host, que a regra de bloqueio do ADR 0038 trata como outro site), de 2022-11 em diante (4 anos).
+# portal redireciona para esse host, aceito por `redirect_sites`), de 2022-11 em diante (4 anos), só meses fechados.
 # Contratado pessoa física vem com CPF completo no arquivo: o raw (privado) o guarda como vem; o staging, que vai ao lake, o mascara.
 # Emendas parlamentares: um pacote .zip nacional com três tabelas, atualizado todo dia. Os três datasets usam o
 # mesmo arquivo e se distinguem por um fragmento na URL (`#...`), que nunca vai ao servidor, só ao registro de
@@ -16,7 +16,7 @@ level: federal
 description: Portal da Transparência (CGU), emendas parlamentares, despesas e contratos
 
 # Regra de extração: o portal atualiza todo dia; a execução diária confere os arquivos completos (só baixa se mudaram).
-schedule: "0 7 * * *"            # captura automática (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
+schedule: "40 1 * * *"            # captura noturna (cron, fuso America/Sao_Paulo; escalonada 01:00-02:20, ADR 0042); sem esta linha, só quando pedido
 
 access:
   base_url: https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares/UNICO
@@ -24,6 +24,9 @@ access:
   delimiter: ";"
   encoding: latin-1
   rate_limit: 0.2   # requisições por segundo: uma a cada 5 s (ADR 0038); o portal já nos bloqueou por WAF/CAPTCHA
+  # o portal redireciona o download para o domínio de arquivos da própria CGU (conferido em 05/11/2026:
+  # 302 para dadosabertos-download.cgu.gov.br); outro destino continua sendo bloqueio
+  redirect_sites: [cgu.gov.br]
 
 datasets:
   emendas:
@@ -81,7 +84,7 @@ datasets:
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
     archive: zip
     member: "*_Despesas.csv"
-    write: merge
+    write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
     primary_key: [_row_hash]
     columns:
       ["Ano e mês do lançamento", "Código Órgão Superior", "Nome Órgão Superior", "Código Órgão Subordinado",
@@ -107,7 +110,7 @@ datasets:
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
     archive: zip
     member: "*_Compras.csv"
-    write: merge
+    write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
     primary_key: [_row_hash]
     columns:
       ["Número do Contrato", "Objeto", "Fundamento Legal", "Modalidade Compra", "Situação Contrato",
@@ -127,7 +130,7 @@ datasets:
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
     archive: zip
     member: "*_ItemCompra.csv"
-    write: merge
+    write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
     primary_key: [_row_hash]
     columns:
       ["Código Órgão", "Nome Órgão", "Código UG", "Nome UG", "Número Contrato", "Código Item Compra",
@@ -143,7 +146,7 @@ datasets:
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
     archive: zip
     member: "*_TermoAditivo.csv"
-    write: merge
+    write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
     primary_key: [_row_hash]
     columns:
       ["Número Contrato", "Código Órgão Superior", "Nome Órgão Superior", "Código Órgão", "Nome Órgão", "Código UG",

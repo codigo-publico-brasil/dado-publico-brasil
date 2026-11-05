@@ -1,6 +1,7 @@
 """Landing (arquivos intactos com hash) e raw (carga fiel pelo dlt)."""
 
 from pathlib import Path
+from typing import Any
 
 import duckdb
 import pytest
@@ -10,7 +11,7 @@ from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, columns, rows, scalar, tables
 from dado_publico_brasil.ingestion import landing, loader
-from dado_publico_brasil.ingestion.contract import SourceContract, load_contract
+from dado_publico_brasil.ingestion.contract import InvalidContract, SourceContract, load_contract
 
 
 def test_extract_keeps_the_original_with_hash_and_registers_the_capture(
@@ -213,6 +214,12 @@ datasets:
     write: merge
     primary_key: [_row_hash]
     columns: [codigo, valor]
+  retratos:
+    url: "{{base_url}}/retratos.csv"
+    load: full
+    write: replace_partition
+    primary_key: [_row_hash]
+    columns: [codigo, valor]
   fixos:
     url: "{{base_url}}/fixos.csv"
     load: full
@@ -250,7 +257,7 @@ def test_new_source_enters_with_only_a_contract_and_rejects_rows_without_key(
     settings = Settings(storage_root=tmp_path / "store")
     contract = make_contract(tmp_path)
     stats = load(settings, contract, "pessoas", "codigo,nome,cpf\n1,Ana,111\n2,Bia,222\n,Sem Chave,333\n", 7)
-    assert stats == {"read": 3, "filtered": 0, "loaded": 2, "rejected": 1, "conflicting": 0}
+    assert stats == {"read": 3, "filtered": 0, "loaded": 2, "rejected": 1, "conflicting": 0, "replaced": 0}
     assert read_all(
         settings, "SELECT codigo, nome, _source_file_id FROM raw_municipal_teste.pessoas ORDER BY 1"
     ) == [
@@ -339,6 +346,25 @@ def test_the_load_registers_one_balance_that_is_an_error_for_collisions_and_reje
     assert scalar(con, "SELECT resultado FROM metadata.fontes_verificacoes WHERE dataset = 'limpo'") == "ok"
 
 
+def test_declared_tolerance_turns_the_rejection_into_a_warning_only_up_to_the_limit(con: Connection) -> None:
+    from dado_publico_brasil.ingestion import monitoring
+    from dado_publico_brasil.ingestion.contract import Tolerancia
+
+    tolerance = Tolerancia(limite=1, justificativa="linha da fonte sem chave")
+    stats = {"read": 10, "filtered": 0, "loaded": 9, "rejected": 1, "conflicting": 0}
+
+    def outcome(values: dict[str, int], declared: Tolerancia | None) -> tuple[str, str]:
+        con.execute("DELETE FROM metadata.fontes_verificacoes")
+        monitoring.check_load(con, "teste", "ds", 2004, values, declared)
+        return con.execute("SELECT resultado, detalhe FROM metadata.fontes_verificacoes").fetchall()[0]
+
+    status, detail = outcome(stats, tolerance)
+    assert status == "warn" and "rejeitadas 1" in detail and "tolerada: linha da fonte sem chave" in detail
+    assert outcome({**stats, "loaded": 8, "rejected": 2}, tolerance)[0] == "error"
+    assert outcome({**stats, "conflicting": 1}, tolerance)[0] == "error"
+    assert outcome(stats, None)[0] == "error"  # sem declaração, o comportamento não muda
+
+
 def test_rows_that_a_previous_capture_had_and_the_current_one_lacks_are_a_warning(
     con: Connection, settings: Settings, tmp_path: Path
 ) -> None:
@@ -383,3 +409,68 @@ def test_reset_lets_a_table_be_reloaded_when_the_contract_changes_the_primary_ke
         ("1", "Ana", 2),
         ("3", "Caio", 2),
     ]  # nada da carga anterior sobrou, e as linhas idênticas da fonte ficam todas
+
+
+def _capture(
+    con: Connection, settings: Settings, contract: SourceContract, url: str, text: str, sha: str
+) -> dict[str, Any]:
+    file = settings.storage_root / f"landing/{sha}.csv"
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(text, encoding="utf-8")
+    landing.register_capture(con, "teste", "retratos", None, url, sha, len(text), f"landing/{sha}.csv", 1)
+    return rows(con, "SELECT * FROM metadata.capturas WHERE sha256 = ?", (sha,))[0]
+
+
+def test_replace_partition_swaps_only_the_rows_of_the_same_file_and_is_idempotent(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    table = "raw_municipal_teste.retratos"
+
+    def values() -> list[tuple[Any, ...]]:
+        return con.execute(f"SELECT _source_file_id, codigo FROM {table} ORDER BY 1, 2").fetchall()
+
+    a1 = _capture(con, settings, contract, "http://x/a", "codigo,valor\n1,10\n2,20\n2,20\n", "a1")
+    b1 = _capture(con, settings, contract, "http://x/b", "codigo,valor\n9,90\n", "b1")
+    loader.load_capture(con, settings, contract, a1)
+    loader.load_capture(con, settings, contract, b1)
+    assert len(values()) == 4  # as linhas idênticas da fonte ficam todas
+    a2 = _capture(con, settings, contract, "http://x/a", "codigo,valor\n2,20\n3,30\n", "a2")
+    for _ in range(2):  # carregar a mesma captura de novo não duplica
+        loader.load_capture(con, settings, contract, a2)
+        assert values() == [
+            (b1["id_captura"], "9"),
+            (a2["id_captura"], "2"),
+            (a2["id_captura"], "3"),
+        ]
+    assert (
+        scalar(
+            con, "SELECT count(*) FROM metadata.fontes_verificacoes WHERE verificacao = 'linhas_removidas'"
+        )
+        == 0
+    )
+
+
+def test_replace_partition_does_not_accept_nested_lists(tmp_path: Path) -> None:
+    file = tmp_path / "c.yml"
+    file.write_text(
+        CONTRACT.format(extra="").replace(
+            "write: replace_partition", "write: replace_partition\n    nested: [codigo]"
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(InvalidContract, match="replace_partition"):
+        load_contract(file)
+
+
+def test_the_load_reports_file_size_rows_and_time_through_the_log_callback(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    capture = _capture(con, settings, contract, "http://x/a", "codigo,valor\n1,10\n2,20\n", "log1")
+    messages: list[str] = []
+    loader.load_pending(con, settings, contract, log=messages.append)
+    text = "\n".join(messages)
+    assert "retratos: carga de log1.csv" in text and "MB" in text
+    assert "2 linhas carregadas de 2 lidas" in text and "capturas e 2 linhas carregadas no raw" in text
+    assert capture["id_captura"]

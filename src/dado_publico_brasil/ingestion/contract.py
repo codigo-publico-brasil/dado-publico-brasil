@@ -26,7 +26,7 @@ LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
 ARCHIVES = {"zip"}
 PARTITIONS = {"year", "legislature", "month"}  # month: o valor da partição é AAAAMM
-WRITES = {"merge", "replace"}
+WRITES = {"merge", "replace", "replace_partition"}
 # Documentos pessoais nunca são lidos de nenhuma fonte (princípio IX da constituição do projeto).
 # Chave "linha inteira": identifica a linha pelo conteúdo, para arquivos sem chave natural.
 ROW_HASH = "_row_hash"
@@ -67,6 +67,14 @@ class Arquivos:
 
 
 @dataclass(frozen=True)
+class Tolerancia:
+    """Linhas da FONTE sem chave que o balanço da carga aceita como aviso (seguem registradas e contadas)."""
+
+    limite: int
+    justificativa: str
+
+
+@dataclass(frozen=True)
 class Dataset:
     name: str
     url: str
@@ -96,9 +104,13 @@ class Dataset:
     aliases: dict[str, str] = field(
         default_factory=dict
     )  # layout antigo: nome antigo da coluna -> nome em `columns`
+    on_demand: bool = False  # true: fora do plano incremental e da recuperação; só quando pedido
     max_age_days: int | None = (
         None  # idade máxima da última verificação da fonte; mais velha que isso é problema
     )
+    rejeitadas_toleradas: dict[int, Tolerancia] = field(
+        default_factory=dict
+    )  # partição -> linhas sem chave que a própria fonte traz e o balanço aceita como aviso
 
     @property
     def yearly(self) -> bool:
@@ -117,6 +129,7 @@ class SourceContract:
     format: str = "csv"
     headers: dict[str, str] = field(default_factory=dict)  # aceita ${VARIAVEL} do ambiente
     rate_limit: float = 4.0  # requisições por segundo a toda a fonte (cortesia)
+    redirect_sites: tuple[str, ...] = ()  # domínios registráveis para onde o redirecionamento é aceito
     schedule: str | None = None  # cron (5 campos) da captura automática; None: só quando pedido
     custom: ModuleType | None = None
     datasets: dict[str, Dataset] = field(default_factory=dict)
@@ -190,6 +203,8 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         raise InvalidContract(f"{where}: chave {missing} não está em columns")
     if data.get("write") == "merge" and not key:
         raise InvalidContract(f"{where}: write merge exige primary_key")
+    if data.get("write") == "replace_partition" and data.get("nested"):
+        raise InvalidContract(f"{where}: write replace_partition não aceita nested (tabelas filhas)")
     return Dataset(
         name=name,
         url=data["url"],
@@ -215,7 +230,9 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         aliases=dict(data.get("aliases", {})),
         optional=tuple(data.get("optional", ())),
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
+        on_demand=_on_demand(where, data.get("on_demand", False)),
         max_age_days=_max_age(where, data.get("max_age_days")),
+        rejeitadas_toleradas=_tolerancias(where, data.get("rejeitadas_toleradas")),
     )
 
 
@@ -251,12 +268,38 @@ def _arquivos(where: str, data: dict[str, Any]) -> Arquivos | None:
     )
 
 
+def _on_demand(where: str, value: Any) -> bool:
+    if not isinstance(value, bool):
+        raise InvalidContract(f"{where}: on_demand deve ser true ou false")
+    return value
+
+
 def _max_age(where: str, value: Any) -> int | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise InvalidContract(f"{where}: max_age_days deve ser um número inteiro de dias, maior que zero")
     return value
+
+
+def _tolerancias(where: str, block: Any) -> dict[int, Tolerancia]:
+    found: dict[int, Tolerancia] = {}
+    for partition, spec in (block or {}).items():
+        limit = spec.get("limite") if isinstance(spec, dict) else None
+        reason = spec.get("justificativa") if isinstance(spec, dict) else None
+        if (
+            not isinstance(partition, int)
+            or isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or limit < 1
+            or not isinstance(reason, str)
+            or not reason.strip()
+        ):
+            raise InvalidContract(
+                f"{where}: rejeitadas_toleradas exige, por partição, limite (inteiro >= 1) e justificativa"
+            )
+        found[partition] = Tolerancia(limit, reason.strip())
+    return found
 
 
 def _foreach(where: str, data: dict[str, Any]) -> ForEach:
@@ -333,6 +376,7 @@ def load_contract(path: Path) -> SourceContract:
         encoding=access.get("encoding", "utf-8-sig"),
         format=access.get("format", "csv"),
         rate_limit=_rate_limit(access.get("rate_limit", 4), source),
+        redirect_sites=tuple(access.get("redirect_sites", ())),
         schedule=schedule,
         headers=dict(access.get("headers", {})),
         custom=custom,

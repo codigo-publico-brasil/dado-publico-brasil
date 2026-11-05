@@ -112,3 +112,22 @@ def test_the_tse_member_pattern_and_the_mart_agree_on_the_state_folder(
     assert "regexp_extract(f.arquivo, '^F?([A-Z]{2})', 1)" in sql
     assert mem.execute(f"SELECT regexp_extract('{member}', '^F?([A-Z]{{2}})', 1)").fetchone() == (uf,)
     assert mem.execute(f"SELECT regexp_extract('{member}', '[.](jpe?g|png)$', 1)").fetchone() == (ext,)
+
+
+def test_a_new_capture_does_not_rewrite_a_member_whose_file_already_has_the_same_size(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    spec = contract_from(tmp_path)
+    land(con, settings, "v1.zip", {"a.jpg": b"um", "b.jpg": b"dois"})
+    arquivos.materialize(con, settings, spec)
+    target = settings.storage_root / "arquivos/legislativo/federal/teste/arq_fotos/2022/a.jpg"
+    before = target.stat().st_mtime_ns
+    old = rows(con, "SELECT sha256_arquivo FROM metadata.arquivos WHERE caminho = '2022/a.jpg'")[0]
+    land(con, settings, "v2.zip", {"a.jpg": b"um", "b.jpg": b"DOIS!"})  # a: mesmo tamanho; b: mudou
+    assert arquivos.materialize(con, settings, spec) == 1
+    assert target.stat().st_mtime_ns == before
+    found = {r["caminho"]: r for r in rows(con, "SELECT * FROM metadata.arquivos")}
+    assert (
+        found["2022/a.jpg"]["id_captura"] == found["2022/b.jpg"]["id_captura"]
+    )  # aponta para a captura nova
+    assert found["2022/a.jpg"]["sha256_arquivo"] == old["sha256_arquivo"]

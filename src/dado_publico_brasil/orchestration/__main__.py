@@ -101,6 +101,8 @@ def _coverage(settings: Settings, only: str | None) -> None:
                     line = f"{source.source}.{name}: {gap['capturadas']} de {gap['esperadas']} partições"
                     if gap["indisponiveis"]:
                         line += f"; a fonte não publica {gap['indisponiveis']}"
+                    if gap["sob_demanda"]:
+                        line += "; sob demanda"
                     print(line + (f"; faltam {gap['faltam']}" if gap["faltam"] else ""))
     finally:
         con.close()
@@ -175,6 +177,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "query" and not args.sql:
         p.error("query exige --sql")
 
+    settings_module.load_env_file()
     settings = settings_module.load_settings(storage_root=args.storage_root, warehouse=args.warehouse)
     match args.command:
         case "query":

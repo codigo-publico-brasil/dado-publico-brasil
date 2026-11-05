@@ -23,7 +23,7 @@ description: Câmara dos Deputados, dados abertos (arquivos em lote)
 
 # Regra de extração: a Câmara muda todo dia; a execução diária confere só o ano em curso (e os datasets completos). O que
 # é retroativo (anos anteriores) só roda quando pedido: `--years` ou `--historical --from-year`.
-schedule: "0 6 * * *"            # captura automática (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
+schedule: "0 1 * * *"            # captura noturna (cron, fuso America/Sao_Paulo; escalonada 01:00-02:20, ADR 0042); sem esta linha, só quando pedido
 
 access:
   base_url: https://dadosabertos.camara.leg.br/arquivos
@@ -46,7 +46,9 @@ datasets:
     url: "{base_url}/deputadosProfissoes/csv/deputadosProfissoes.csv"
     load: full
     write: replace
-    primary_key: [id, titulo]
+    # ~1.070 deputados vêm sem profissão (titulo e dataHora vazios, codTipoProfissao 0): o arquivo os lista mesmo assim.
+    # Com chave [id, titulo] o loader as rejeitava (erro de perda); pelo conteúdo, o raw guarda todas as linhas da fonte.
+    primary_key: [_row_hash]
     columns: [id, codTipoProfissao, titulo, dataHora]
 
   deputadosOcupacoes:
@@ -94,6 +96,8 @@ datasets:
     first_year: 2001
     write: merge
     primary_key: [idVotacao, deputado_id]
+    rejeitadas_toleradas:   # a própria fonte traz 1 linha de 24.903 sem deputado_id em 2004; continua registrada e contada
+      2004: {limite: 1, justificativa: linha da fonte sem identificador do deputado}
     columns:
       [idVotacao, dataHoraVoto, voto, deputado_id, deputado_nome, deputado_siglaPartido,
        deputado_uriPartido, deputado_siglaUf, deputado_idLegislatura, deputado_urlFoto]

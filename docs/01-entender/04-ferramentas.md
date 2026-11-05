@@ -7,7 +7,7 @@ Para quem vai rodar ou mexer no código. Responde: o que cada ferramenta faz aqu
 | Ferramenta | O que faz aqui | Ver |
 | --- | --- | --- |
 | **uv** | cria o ambiente e roda comandos (`uv sync`, `uv run`); o `uv.lock` fixa as versões | [docs.astral.sh/uv](https://docs.astral.sh/uv/) |
-| **dlt** | carrega os arquivos do landing no raw, com `merge` idempotente | [ADR 0006](../05-decisoes/0006-adotar-dlt-dbt-e-dagster.md) |
+| **dlt** | carrega os arquivos do landing no raw (formato Parquet, ADR 0043), com `merge` ou `replace_partition` idempotente | [ADR 0006](../05-decisoes/0006-adotar-dlt-dbt-e-dagster.md) |
 | **dbt** | modelos SQL (staging, intermediate, marts), testes e documentação das colunas | [ADR 0006](../05-decisoes/0006-adotar-dlt-dbt-e-dagster.md) |
 | **DuckDB** | o motor de cálculo: um arquivo, sem servidor; também grava o Parquet público no R2 | [ADR 0014](../05-decisoes/0014-warehouse-lake-duckdb-e-postgres-de-servico.md), [ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md) |
 | **Dagster** | ordem das etapas, agendamento diário e grafo de linhagem | [ADR 0006](../05-decisoes/0006-adotar-dlt-dbt-e-dagster.md) |

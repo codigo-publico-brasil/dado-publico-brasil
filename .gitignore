@@ -10,6 +10,7 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.servidor.example
 
 # Dados e estado local (nunca versionar dado)
 data_store/
@@ -29,3 +30,4 @@ dagster_home/
 
 # Identificador de usuário do dbt (local)
 dbt/.user.yml
+.claude/worktrees/

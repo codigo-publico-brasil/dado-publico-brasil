@@ -24,7 +24,7 @@ datasets:
     load: yearly                    # full | yearly
     first_year: 2001                # (yearly) primeiro ano publicado pela fonte: anos anteriores não são pedidos
     extra_years: true               # (yearly) aceita anos só deste dataset (--extra-years)
-    write: merge                    # merge (upsert pela chave) | replace (troca o conteúdo anterior)
+    write: merge                    # merge (upsert pela chave) | replace (troca a tabela inteira) | replace_partition (troca as linhas da versão anterior do mesmo arquivo)
     primary_key: [id]
     columns: [id, siglaTipo, numero, ano, ementa, dataApresentacao]   # lista permitida
 ```
@@ -63,7 +63,7 @@ O [TSE](../../sources/judiciario/federal/tse.yml) é o exemplo:
     optional: [SG_FEDERACAO, DS_COMPOSICAO_FEDERACAO]   # colunas que os arquivos antigos não têm
 ```
 
-`columns` filtra as colunas (minimização: o que não está na lista nunca entra no raw). `only: {COLUNA: [valores]}` filtra as linhas **do raw** quando a fonte traz o que não se deve guardar (o arquivo original no landing continua inteiro, para auditoria); o TSE não usa `only`, porque todos os cargos entram. `optional` lista colunas que podem faltar nos arquivos de alguns anos (a ausência vira vazio, não erro). `max_age_days` (por exemplo, `14` na votação) faz o `observe` acusar o dataset cuja última verificação passou do prazo. `primary_key: [_row_hash]` usa o hash da linha inteira como chave, para fontes sem chave natural.
+`columns` filtra as colunas (minimização: o que não está na lista nunca entra no raw). `only: {COLUNA: [valores]}` filtra as linhas **do raw** quando a fonte traz o que não se deve guardar (o arquivo original no landing continua inteiro, para auditoria); o TSE não usa `only`, porque todos os cargos entram. `optional` lista colunas que podem faltar nos arquivos de alguns anos (a ausência vira vazio, não erro). `max_age_days` (por exemplo, `14` na votação) faz o `observe` acusar o dataset cuja última verificação passou do prazo. `rejeitadas_toleradas` declara, por partição, quantas linhas **da própria fonte** sem valor na chave o balanço da carga aceita: `rejeitadas_toleradas: {2004: {limite: 1, justificativa: "linha da fonte sem identificador do deputado"}}`. Até o limite, o registro `carga` de `metadata.fontes_verificacoes` vira `warn` com `tolerada: <justificativa>` no detalhe; acima dele (ou com colisão de chave) volta a ser `error`. A linha continua rejeitada, registrada e contada: nada é completado nem inventado, só se evita um erro permanente e repetido a cada captura. Sem a declaração, nada muda. `on_demand: true` (padrão `false`) tira o dataset do plano incremental e da recuperação de lacunas: ele só é capturado quando pedido (`--years`, `--historical`, `--dataset`, ou o job manual do Dagster em `years`/`historical`), e a falta de partições não vira aviso. Serve para pacotes grandes ou republicados com frequência, como as fotos do TSE; o que já está no landing segue valendo para o raw e o dbt. `primary_key: [_row_hash]` usa o hash da linha inteira como chave, para fontes sem chave natural.
 
 ## Arquivos servidos ao público (`arquivos`)
 
@@ -124,20 +124,21 @@ Para fontes que publicam um arquivo por mês (o DOU, e as de transparência do e
 
 O plano incremental pede o mês em curso **e o anterior**: o mês fechado sem mudança custa só um HEAD, e a virada do mês não perde o fim dele. Um 404 do mês anterior não o torna "indisponível" (só os meses mais antigos viram lacuna sem tentativa eterna).
 
-- **`lag_months: 1`** (só `partition: month`) pede só meses fechados: o "mês em curso" do plano passa a ser o anterior (o portal publica o mês depois de fechado). Um 403 no mês mais recente é "ainda não publicado" (`availability`, sem bloqueio); em mês mais antigo, 403 é bloqueio. [ADR 0041](../05-decisoes/0041-meses-fechados-405-e-pacote-unico.md).
+- **`lag_months: 1`** (só `partition: month`) pede só meses fechados: o "mês em curso" do plano passa a ser o anterior (o portal publica o mês depois de fechado). Um 403 no mês mais recente é "ainda não publicado" (`availability`, sem bloqueio); em mês mais antigo, 403 é bloqueio. [ADR 0045](../05-decisoes/0045-meses-fechados-405-e-pacote-unico.md).
 - **Vários datasets, um zip:** URLs que diferem só no fragmento `#` leem o mesmo arquivo; o primeiro dataset baixa e os demais registram a captura apontando para o mesmo arquivo do landing (um GET por mês), se o HEAD diz que não mudou.
-- **Mês republicado:** o `write: merge` com `_row_hash` só insere linhas novas; **não apaga** a linha antiga de um mês que a fonte republicou com valor diferente. As duas ficam no raw (a antiga com `id_captura` da captura antiga). Para recomeçar um mês limpo, `--rebuild` do dataset. Cada staging declara o grão em `meta.grain` e um teste `warn` (`transparencia_linhas_duplicadas_no_grao`) mede as duplicatas.
+- **Mês republicado:** os datasets mensais usam `write: replace_partition` ([ADR 0043](../05-decisoes/0043-raw-em-parquet-substituicao-por-particao-e-logs.md)): a captura nova do mês substitui as linhas da anterior (a URL do mês é a partição), então um mês corrigido pela fonte não deixa linha velha no raw. Cada staging declara o grão em `meta.grain` e o teste `warn` `transparencia_linhas_duplicadas_no_grao` mede as duplicatas que a própria fonte traz.
 - **Frequência da conferência:** o plano diário pede os dois últimos meses fechados (dois HEAD por dataset); `max_age_days: 40` evita o alerta de defasagem. Um intervalo próprio para meses fechados é pendência (hoje seria um `schedule` por dataset, que o contrato ainda não tem).
 
 ## Cortesia e bloqueio
 
 `access.rate_limit` (requisições por segundo, padrão 4; deve ser maior que zero) é o intervalo mínimo entre as requisições do **download padrão** (HEAD e GET do arquivo) da fonte. **Não vale** para `fetch.get` (datasets `foreach`, que têm o próprio intervalo) nem para módulos `custom/` que fazem a própria requisição.
 
-No download padrão, nada é gravado no landing e o resto da fonte é interrompido naquela execução (sem nova tentativa até o próximo agendamento; a verificação `bloqueio` fica como erro em `metadata.fontes_verificacoes` e é zerada quando a fonte volta a responder) se o **GET** devolve HTTP 403, 405 ou 429 ([ADR 0041](../05-decisoes/0041-meses-fechados-405-e-pacote-unico.md) acrescentou o 405), página HTML no lugar do arquivo ou redirecionamento para outro site. Detalhes:
+No download padrão, nada é gravado no landing e o resto da fonte é interrompido naquela execução (sem nova tentativa até o próximo agendamento; a verificação `bloqueio` fica como erro em `metadata.fontes_verificacoes` e é zerada quando a fonte volta a responder) se o **GET** devolve HTTP 403, 405 ou 429 ([ADR 0045](../05-decisoes/0045-meses-fechados-405-e-pacote-unico.md) acrescentou o 405), página HTML no lugar do arquivo ou redirecionamento para outro site. Detalhes:
 
 - **HEAD é brando:** qualquer falha do HEAD (403, 405, 429...) vira "sem informação" e o GET decide; só o GET bloqueia.
 - **HTML legítimo:** a regra do HTML não vale quando o formato esperado é `html` (`format: html`).
-- **Mesmo site:** o redirecionamento só bloqueia se sair do domínio registrável (`www.in.gov.br` para `in.gov.br` passa).
+- **Mesmo site:** o redirecionamento só bloqueia se sair do domínio registrável (`www.in.gov.br` para `in.gov.br` passa). Quando o próprio site oficial hospeda os arquivos noutro domínio (o Portal da Transparência redireciona para `dadosabertos-download.cgu.gov.br`), declare-o em `access.redirect_sites: [cgu.gov.br]`; qualquer outro destino segue bloqueado.
+- **Download truncado:** se o corpo recebido não tem o tamanho do `Content-Length` da própria resposta, o download falha e é repetido (três tentativas); nada incompleto é gravado no landing. Se persistir, vira `availability` com erro e a próxima execução tenta de novo.
 
 [ADR 0038](../05-decisoes/0038-cortesia-e-bloqueio-na-ingestao.md). Contornar bloqueio (proxy, troca de IP) está fora do projeto: abra uma issue.
 
@@ -153,6 +154,7 @@ O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósi
 - **`columns` é a lista permitida.** Só estas colunas do arquivo são lidas (minimização de dados, princípio IX). O nome é o do arquivo; o dlt o normaliza para snake_case (`siglaTipo` vira `sigla_tipo`).
 - **Documentos pessoais são recusados.** Um contrato que liste `cpf`, `rg`, `titulo_eleitor`, `cnh` ou `passaporte` não carrega. Um teste confere.
 - **`write: merge` exige `primary_key`**; linhas sem valor na chave são rejeitadas e contadas. `write: replace` serve a arquivos completos que substituem o anterior.
+- **`write: replace_partition`** é para o arquivo que é a **foto completa** de uma partição (o ano de uma eleição, um mês): a captura nova entra e as linhas das capturas anteriores **da mesma URL** saem. Várias partições convivem na mesma tabela (outras URLs nunca são tocadas) e o raw espelha a versão atual; o histórico fica no landing. Não pede coluna de partição: a partição é a própria captura (`_source_file_id`), então vale para qualquer fonte e não muda o esquema. Não compara linha com linha (barato em dezenas de milhões de linhas); `primary_key: [_row_hash]` segue valendo para manter as linhas idênticas da fonte e dar chave ao dbt. Não aceita `nested`. Recarregar a mesma captura é idempotente. Em tabela que já existe não há migração: todas as linhas já levam o id da captura; na próxima captura nova de cada arquivo, as linhas antigas saem (a primeira carga depois de trocar de `merge` para `replace_partition` pode ainda ter linhas de versões que o `merge` somou: o `load --rebuild --dataset` do dataset as limpa) ([ADR 0043](../05-decisoes/0043-raw-em-parquet-substituicao-por-particao-e-logs.md)).
 - **Valores como texto, vazio como nulo.** Tipos e limpeza ficam no staging.
 - Toda linha do raw leva `_source_file_id`, o id da captura (arquivo do landing) de onde veio, e `_ingested_at`, o instante em que chegou ao raw.
 - Erros do contrato (tipo, chave ou `load` inválidos) dizem onde está o problema.

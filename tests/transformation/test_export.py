@@ -45,7 +45,6 @@ def build(con: Connection, settings: Settings) -> None:
     )
     con.execute("COMMENT ON TABLE marts.fct_votos IS 'Votos de teste.'")
     con.execute("COMMENT ON COLUMN marts.fct_votos.qtd IS 'Quantidade de teste.'")
-    con.execute("CREATE VIEW marts.app_visao AS SELECT 1 AS a")
     con.execute("CREATE TABLE intermediate.int_x AS SELECT 1 AS a")
     con.execute(
         "CREATE TABLE staging.stg_camara__base AS SELECT i AS id, 'n' || i AS nome FROM range(50) t(i)"
@@ -200,6 +199,16 @@ def test_a_table_that_changed_path_leaves_no_orphan_even_without_prune(
     assert export.verify(settings) == []
 
 
+def test_the_time_of_each_table_is_kept_for_the_next_look(con: Connection, settings: Settings) -> None:
+    run(con, settings)
+    tempos = json.loads((settings.state_dir / "export_tempos.json").read_text(encoding="utf-8"))
+    assert tempos["marts.fct_votos"].keys() == {"impressao_s", "escrita_s", "resultado"}
+    assert tempos["marts.fct_votos"]["resultado"] == "gravada"
+    assert export.export(settings)["ignoradas"] == len(tempos)
+    again = json.loads((settings.state_dir / "export_tempos.json").read_text(encoding="utf-8"))
+    assert {v["resultado"] for v in again.values()} == {"ignorada"}
+
+
 def test_a_changed_table_alone_is_rewritten_and_verify_catches_tampering(
     con: Connection, settings: Settings
 ) -> None:
@@ -242,7 +251,7 @@ def test_no_personal_column_and_no_private_layer_is_exported(con: Connection, se
     names = [c["nome"] for t in tables for c in t["colunas"]]  # type: ignore[attr-defined]
     assert "cpf_votante" not in names and "id_voto" in names
     assert {t["camada"] for t in tables}.isdisjoint({"raw_x", "identity", "elementary", "main"})
-    assert not [t for t in tables if str(t["tabela"]).startswith(("app_", "stg_identity", "stg_metadata"))]
+    assert not [t for t in tables if str(t["tabela"]).startswith(("stg_identity", "stg_metadata"))]
 
 
 def test_a_big_table_with_a_partition_is_split_by_year_and_filters_by_it(
@@ -520,10 +529,12 @@ def test_files_are_materialized_once_from_the_contract_and_only_the_matching_mem
         "fotos_rj",
         2022,
         "fotos_rj-ba9876543210.zip",
-        {"FRJ1001_div.jpg": b"\xff\xd8nova"},
+        {"FRJ1001_div.jpg": b"\xff\xd8nova!"},
     )
-    assert arquivos.materialize(con, settings, contracts.find("tse")) == 1  # nova captura, mesmo caminho
-    assert (base / "judiciario/federal/tse/arq_fotos" / FOTO_LOCAL).read_bytes() == b"\xff\xd8nova"
+    assert (
+        arquivos.materialize(con, settings, contracts.find("tse")) == 1
+    )  # nova captura, mesmo caminho e tamanho diferente (mesmo tamanho não regrava)
+    assert (base / "judiciario/federal/tse/arq_fotos" / FOTO_LOCAL).read_bytes() == b"\xff\xd8nova!"
 
 
 def test_published_collections_are_copied_with_a_control_table_and_unpublished_ones_are_not(
@@ -570,7 +581,7 @@ def test_only_missing_or_changed_files_are_sent_and_verify_checks_the_objects(
     monkeypatch.undo()
     assert (out / FOTOS / FOTO_LOCAL).stat().st_mtime_ns == stamp
     assert export.verify(settings) == []
-    nova = b"\xff\xd8nova"
+    nova = b"\xff\xd8nova!"
     con = duckdb.connect(str(settings.warehouse))
     capture(con, settings, "tse", "fotos_rj", 2022, "fotos_rj-ba9876543210.zip", {"FRJ1001_div.jpg": nova})
     arquivos.materialize(con, settings, contracts.find("tse"))

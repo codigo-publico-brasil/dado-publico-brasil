@@ -9,8 +9,18 @@ run_coordinator:
 # Execução que não inicia em 5 min ou passa de 24 h é marcada como falha (o sensor avisa) e libera a fila.
 run_monitoring:
   enabled: true
-  start_timeout_seconds: 300
+  start_timeout_seconds: 900  # subir o processo de uma execução leva minutos em máquina pequena e com disco lento
   max_runtime_seconds: 86400
 
+# Servidor de código (gRPC) lento a subir sob carga num servidor pequeno: o padrão (180 s) estourou no ciclo noturno
+# ("Timed out waiting for gRPC server", "Could not reach user code server"). Folga para subida e recarga.
+code_servers:
+  local_startup_timeout: 600
+  reload_timeout: 600
+
 telemetry:
+  enabled: false
+
+# Sem relançamento automático de execuções que falham (cada captura e o ciclo rodam no máximo uma vez por dia, ADR 0042).
+run_retries:
   enabled: false

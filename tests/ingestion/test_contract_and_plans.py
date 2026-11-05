@@ -69,6 +69,31 @@ def test_contract_reads_max_age_days_and_every_real_source_still_loads(tmp_path:
     assert limits and all(days >= 1 for days in limits)
 
 
+TOLERANCE = "    rejeitadas_toleradas:\n      2004: {limite: 1, justificativa: linha da fonte sem chave}\n"
+
+
+def test_contract_reads_the_tolerated_rejections_per_partition(tmp_path: Path) -> None:
+    dataset = contract_from(tmp_path, text=TEMPLATE.format(extra="") + TOLERANCE).datasets["pessoas"]
+    assert dataset.rejeitadas_toleradas[2004].limite == 1
+    assert dataset.rejeitadas_toleradas[2004].justificativa == "linha da fonte sem chave"
+    assert contract_from(tmp_path).datasets["pessoas"].rejeitadas_toleradas == {}
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "{limite: 0, justificativa: x}",
+        "{limite: 1}",
+        "{limite: 1, justificativa: ''}",
+        "{limite: um, justificativa: x}",
+    ],
+)
+def test_contract_with_a_bad_tolerance_is_refused(tmp_path: Path, block: str) -> None:
+    text = TEMPLATE.format(extra="") + f"    rejeitadas_toleradas:\n      2004: {block}\n"
+    with pytest.raises(InvalidContract, match="rejeitadas_toleradas"):
+        contract_from(tmp_path, text=text)
+
+
 def test_explicit_plan_has_full_datasets_and_the_requested_years(contract: SourceContract) -> None:
     items = landing.plan(contract, [2025, 2024], [2019])
     assert ("deputados", None) in items
@@ -99,12 +124,9 @@ def test_a_source_without_schedule_has_an_empty_incremental_plan(tmp_path: Path)
 
 def test_each_source_declares_its_schedule_and_the_plan_has_only_the_current_partition() -> None:
     today = date(2026, 10, 24)
-    assert all(c.schedule for c in contracts.find_all())  # nenhuma fonte fica sem cadência por esquecimento
-    tse = {part for _, part in landing.plan_incremental(contracts.find("tse"), today)}
-    assert tse == {2026}  # ano de eleição: só ele é conferido
-    assert (
-        landing.plan_incremental(contracts.find("tse"), date(2025, 6, 1)) == []
-    )  # sem eleição, nada a conferir
+    # nenhuma fonte fica sem cadência por esquecimento; o TSE está desativado após as eleições (ADR 0042)
+    assert {c.source for c in contracts.find_all() if not c.schedule} == {"tse"}
+    assert landing.plan_incremental(contracts.find("tse"), today) == []  # sem schedule, só quando pedido
     assert {name for name, _ in landing.plan_incremental(contracts.find("dou"), today)} == {
         "secao1",
         "secao2",
@@ -213,3 +235,13 @@ def test_rate_limit_must_be_positive(tmp_path: Path) -> None:
     text = TEMPLATE.format(extra="").replace("encoding: utf-8}", "encoding: utf-8, rate_limit: 0}")
     with pytest.raises(InvalidContract, match="rate_limit"):
         contract_from(tmp_path, text=text)
+
+
+def test_on_demand_must_be_a_boolean(tmp_path: Path) -> None:
+    def text(value: str) -> str:
+        return TEMPLATE.format(extra="") + f"    on_demand: {value}" + chr(10)
+
+    with pytest.raises(InvalidContract, match="on_demand"):
+        contract_from(tmp_path, text=text("sim"))
+    assert contract_from(tmp_path, text=text("true")).datasets["pessoas"].on_demand
+    assert not contract_from(tmp_path).datasets["pessoas"].on_demand

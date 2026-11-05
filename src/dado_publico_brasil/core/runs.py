@@ -53,13 +53,17 @@ def track(
     source: str | None = None,
     dataset: str | None = None,
     year: int | None = None,
+    started: str | None = None,
 ) -> Iterator[Run]:
-    """Abre uma execução. Ao sair, marca `ok` ou `error` (e repassa a exceção)."""
+    """Abre uma execução. Ao sair, marca `ok` ou `error` (e repassa a exceção).
+
+    `started` (de `now()`) é o início real quando o trabalho começou antes de a conexão abrir (o dbt roda
+    com o warehouse fechado)."""
     row = con.execute(
         "INSERT INTO metadata.execucoes (etapa, fonte, dataset, particao, dt_inicio, versao_commit, "
         "resultado) "
         "VALUES (?, ?, ?, ?, ?, ?, 'running') RETURNING id_execucao",
-        (stage, source, dataset, year, now(), code_version()),
+        (stage, source, dataset, year, started or now(), code_version()),
     ).fetchone()
     assert row is not None
     run = Run(id=int(row[0]))

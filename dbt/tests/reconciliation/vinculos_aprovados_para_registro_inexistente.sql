@@ -1,4 +1,5 @@
-{{ config(severity='warn') }}
+{{ config(severity='warn', meta={'dagster': {'asset_key': ['intermediate', 'vinculos_aprovados']}}) }}
+-- (o `meta.dagster` faz o aviso aparecer como verificação do ativo; teste com várias dependências só vira observação)
 -- Aviso se um vínculo aprovado à mão aponta para um registro que não existe (digitação errada): o vínculo simplesmente não liga ninguém.
 -- É aviso, e não erro, porque os vínculos são de dado real e a base sintética dos testes não tem esses registros.
 -- A origem do TSE é a candidatura (staging); a da Câmara e a do Senado é o registro visto nos dados.

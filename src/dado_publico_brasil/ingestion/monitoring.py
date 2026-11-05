@@ -15,7 +15,7 @@ from typing import Any
 from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.warehouse import Connection
 from dado_publico_brasil.ingestion import read
-from dado_publico_brasil.ingestion.contract import Dataset, SourceContract
+from dado_publico_brasil.ingestion.contract import Dataset, SourceContract, Tolerancia
 
 VOLUME_DROP = 0.8  # menos de 80% das linhas da carga anterior vira aviso
 
@@ -120,7 +120,7 @@ def check_integrity(
 
 
 def check_volume(con: Connection, source: str, dataset: str, partition: int | None, rows: int) -> None:
-    """Avisa se a carga trouxe muito menos linhas que a anterior do mesmo dataset e partição."""
+    """Avisa se a carga trouxe muito menos linhas que a anterior (erro se não trouxe nenhuma)."""
     previous = con.execute(
         "SELECT qtd_linhas_entrada FROM metadata.execucoes WHERE etapa = 'load' AND fonte = ? AND "
         "dataset = ? "
@@ -128,7 +128,8 @@ def check_volume(con: Connection, source: str, dataset: str, partition: int | No
         (source, dataset, partition),
     ).fetchone()
     if previous and previous[0] and rows < VOLUME_DROP * previous[0]:
-        record(con, source, dataset, partition, "volume", "warn", f"de {previous[0]} para {rows} linhas")
+        severity = "error" if rows == 0 else "warn"  # 0 linhas onde havia: carga falha
+        record(con, source, dataset, partition, "volume", severity, f"de {previous[0]} para {rows} linhas")
     else:
         record(con, source, dataset, partition, "volume", "ok", f"{rows} linhas")
 
@@ -168,20 +169,34 @@ def check_removed(
 
 
 def check_load(
-    con: Connection, source: str, dataset: str, partition: int | None, stats: dict[str, int]
+    con: Connection,
+    source: str,
+    dataset: str,
+    partition: int | None,
+    stats: dict[str, int],
+    tolerance: Tolerancia | None = None,
 ) -> None:
     """Registra o balanço da carga: o que foi lido, filtrado pelo `only`, carregado, rejeitado e em colisão.
 
     Linha rejeitada (sem valor na chave) e chave que junta linhas diferentes são perda de dado e valem erro. O
     filtro `only` da declaração fica no detalhe, para nunca ser invisível. Um registro por carga: o mais
-    recente substitui o anterior no relatório.
+    recente substitui o anterior no relatório. Com `rejeitadas_toleradas` declarada para a partição, rejeição
+    até o limite (e sem colisão) vira aviso com a justificativa no detalhe; acima do limite volta a ser erro.
     """
     lost = stats["rejected"] or stats["conflicting"]
+    tolerated = bool(
+        tolerance and lost and not stats["conflicting"] and stats["rejected"] <= tolerance.limite
+    )
     detail = (
         f"lidas {stats['read']}, filtradas pelo only {stats['filtered']}, carregadas {stats['loaded']}, "
         f"rejeitadas {stats['rejected']}, colisões de chave {stats['conflicting']}"
+        + (f", substituídas de versões anteriores {stats['replaced']}" if stats.get("replaced") else "")
     )
-    record(con, source, dataset, partition, "carga", "error" if lost else "ok", detail)
+    if tolerated and tolerance:
+        detail += f"; tolerada: {tolerance.justificativa}"
+    record(
+        con, source, dataset, partition, "carga", "warn" if tolerated else "error" if lost else "ok", detail
+    )
 
 
 def errors_since(con: Connection, moment: datetime) -> int:

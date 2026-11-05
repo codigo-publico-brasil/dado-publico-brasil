@@ -121,7 +121,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <li><a href="#eventos">6 Eventos da pessoa</a></li>
     <li><a href="#mandatos">7 Mandatos e composição</a></li>
     <li><a href="#atuacao">8 Quem governa, por que, como</a></li>
-    <li><a href="#views">9 Views dos aplicativos</a></li>
+    <li><a href="#views">9 Consultas dos aplicativos</a></li>
     <li><a href="#limites">10 Limites e pendências</a></li>
     <li><a href="#referencias">11 Referências</a></li>
   </ol>
@@ -142,7 +142,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
 </header>
 
 <div class="callout">
-  <p><b>Como ler os nomes.</b> O prefixo da tabela diz o tipo: <code>dim_</code> (dimensão: algo que existe), <code>fct_</code> (fato: algo que aconteceu, datado e com a fonte), <code>brg_</code> (ponte entre duas entidades), <code>agg_</code> (agregado por período) e <code>app_</code> (consulta pronta do aplicativo). Todas ficam no esquema <code>marts</code>; a regra está na <a href="../03-consultar/02-convencao-de-nomes.md">convenção de nomes</a>. Os rótulos <span class="chip ok">Temos</span> <span class="chip part">Parcial</span> <span class="chip miss">Falta</span> <span class="chip der">Derivado</span> aparecem nas matrizes.</p>
+  <p><b>Como ler os nomes.</b> O prefixo da tabela diz o tipo: <code>dim_</code> (dimensão: algo que existe), <code>fct_</code> (fato: algo que aconteceu, datado e com a fonte), <code>brg_</code> (ponte entre duas entidades), <code>agg_</code> (agregado por período). Todas ficam no esquema <code>marts</code>; a regra está na <a href="../03-consultar/02-convencao-de-nomes.md">convenção de nomes</a>. Os rótulos <span class="chip ok">Temos</span> <span class="chip part">Parcial</span> <span class="chip miss">Falta</span> <span class="chip der">Derivado</span> aparecem nas matrizes.</p>
 </div>
 
 <h2 id="porque">1 Por que o modelo é assim</h2>
@@ -206,7 +206,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <rect class="svg-box" x="430" y="90" width="110" height="60" rx="3"/><text class="svg-t" x="485" y="116" text-anchor="middle">staging</text><text class="svg-s" x="485" y="136" text-anchor="middle">stg_, views</text>
     <rect class="svg-box" x="560" y="90" width="120" height="60" rx="3"/><text class="svg-t" x="620" y="116" text-anchor="middle">intermediate</text><text class="svg-s" x="620" y="136" text-anchor="middle">int_, tabelas</text>
     <rect class="svg-core" x="710" y="40" width="250" height="220" rx="3"/><text class="svg-t" x="725" y="66">marts (esquema publicado)</text>
-    <text class="svg-m" x="725" y="100">dim_  dimensões e catálogos</text><text class="svg-m" x="725" y="126">fct_  fatos datados</text><text class="svg-m" x="725" y="152">brg_  pontes</text><text class="svg-m" x="725" y="178">agg_  agregados por período</text><text class="svg-m" x="725" y="204">app_  consultas do aplicativo</text>
+    <text class="svg-m" x="725" y="100">dim_  dimensões e catálogos</text><text class="svg-m" x="725" y="126">fct_  fatos datados</text><text class="svg-m" x="725" y="152">brg_  pontes</text><text class="svg-m" x="725" y="178">agg_  agregados por período</text>
     <line class="svg-ln" x1="130" y1="120" x2="150" y2="120" marker-end="url(#a1)"/><line class="svg-ln" x1="250" y1="120" x2="270" y2="120" marker-end="url(#a1)"/><line class="svg-ln" x1="410" y1="120" x2="430" y2="120" marker-end="url(#a1)"/><line class="svg-ln" x1="540" y1="120" x2="560" y2="120" marker-end="url(#a1)"/><line class="svg-ln" x1="680" y1="120" x2="710" y2="120" marker-end="url(#a1)"/>
     <rect class="svg-box" x="560" y="215" width="120" height="50" rx="3"/><text class="svg-t" x="620" y="238" text-anchor="middle">identity</text><text class="svg-s" x="620" y="256" text-anchor="middle">id_pessoa</text>
     <line class="svg-ln" x1="620" y1="150" x2="620" y2="215" marker-end="url(#a1)"/><line class="svg-ln" x1="680" y1="240" x2="710" y2="240" marker-end="url(#a1)"/>
@@ -217,7 +217,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
   </svg>
   </div>
   <figcaption>Figura 1. Camadas do projeto. O landing e o raw nunca são reescritos; a identidade (código próprio) entra no meio do dbt; os cinco tipos de tabela convivem no esquema <code>marts</code>, e só ele vai ao lake em Parquet, de onde os aplicativos leem.</figcaption>
-  <details class="alt"><summary>Descrição em texto da Figura 1</summary><p>Da esquerda para a direita: fonte oficial, landing (arquivo e hash), raw (fiel à fonte), staging (views <code>stg_</code>), intermediate (tabelas <code>int_</code>) e <code>marts</code>, com <code>dim_</code>, <code>fct_</code>, <code>brg_</code>, <code>agg_</code> e <code>app_</code>. A identidade (<code>id_pessoa</code>) recebe dados do intermediate e alimenta os marts. A tabela <code>metadata.capturas</code>, com URL, data e hash, liga-se ao raw. Só o esquema <code>marts</code> vai ao lake em Parquet.</p></details>
+  <details class="alt"><summary>Descrição em texto da Figura 1</summary><p>Da esquerda para a direita: fonte oficial, landing (arquivo e hash), raw (fiel à fonte), staging (views <code>stg_</code>), intermediate (tabelas <code>int_</code>) e <code>marts</code>, com <code>dim_</code>, <code>fct_</code>, <code>brg_</code>, <code>agg_</code>. A identidade (<code>id_pessoa</code>) recebe dados do intermediate e alimenta os marts. A tabela <code>metadata.capturas</code>, com URL, data e hash, liga-se ao raw. Só o esquema <code>marts</code> vai ao lake em Parquet.</p></details>
 </figure>
 <div class="scroll"><table>
   <caption>Pastas de <code>dbt/models/marts</code> e o que cada uma reúne</caption>
@@ -227,7 +227,6 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <tr><th scope="row"><code>eleicoes</code></th><td><code>dim_eleicoes</code>, <code>dim_disputas</code>, <code>fct_candidaturas</code>, <code>fct_resultados</code>, <code>fct_campanhas</code>, <code>fct_candidaturas_bens</code>, <code>fct_candidaturas_votos</code>, <code>fct_mandatos</code>, <code>agg_composicoes</code></td></tr>
     <tr><th scope="row"><code>legislativo</code></th><td>proposições, votações, votos, normas, vetos, emendas, órgãos, frentes, legislaturas, Constituição (<code>fct_*</code>, <code>brg_*</code>, <code>dim_*</code>)</td></tr>
     <tr><th scope="row"><code>territorio</code></th><td><code>dim_territorios</code>, <code>dim_municipios</code>, <code>dim_municipios_codigos_tse</code></td></tr>
-    <tr><th scope="row"><code>aplicacao</code></th><td>as dez views <code>app_*</code> (seção 9)</td></tr>
   </tbody>
 </table></div>
 
@@ -274,7 +273,7 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
     <tr><th scope="row">D</th><td>Sem ligação. Fica com o identificador da fonte. Nunca se liga só por nome.</td><td><span class="chip ok">Temos</span></td></tr>
   </tbody>
 </table></div>
-<p>O cadastro de uma pessoa pode divergir entre fontes (por exemplo, o nascimento). O valor adotado segue uma precedência (a Câmara e o Senado antes do TSE); a coluna <code>fonte_*</code> de <code>dim_pessoas</code> diz de onde veio cada atributo, e um teste mede a divergência. O que alguma fonte oficial carregada tem, a ficha tem: <code>app_pessoas</code> completa o que falta no cadastro das casas com o que o TSE declarou.</p>
+<p>O cadastro de uma pessoa pode divergir entre fontes (por exemplo, o nascimento). O valor adotado segue uma precedência (a Câmara e o Senado antes do TSE); a coluna <code>fonte_*</code> de <code>dim_pessoas</code> diz de onde veio cada atributo, e um teste mede a divergência. O que alguma fonte oficial carregada tem, a ficha tem: <code>dim_pessoas</code> completa o que falta no cadastro das casas com o que o TSE declarou.</p>
 
 <h3>5.2 Referências: catálogos pequenos e estáveis</h3>
 <figure>
@@ -446,25 +445,17 @@ footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
   </tbody>
 </table></div>
 
-<h2 id="views">9 Views dos aplicativos</h2>
-<p>Cada aplicativo monta as suas próprias consultas sobre os marts do lake (<a href="../05-decisoes/0038-lake-como-unica-publicacao.md">ADR 0038</a>). Três views <code>app_*</code> ainda existem porque o app atual as lê; saem quando o app tiver as dele. São só leitura sobre os fatos e as dimensões, sem regra de negócio escondida, e cada uma traz a fonte e a data de captura quando mostra um dado. O contrato de colunas está em <code>_app__models.yml</code>.</p>
-<div class="scroll"><table>
-  <caption>As três views <code>app_*</code></caption>
-  <thead><tr><th scope="col">View</th><th scope="col">Uma linha por</th><th scope="col">O que entrega</th></tr></thead>
-  <tbody>
-    <tr><th scope="row"><code>app_cargo_ocupantes</code></th><td>período de ocupação</td><td>Quem ocupa cada cargo: exercício (Câmara e Senado) ou mandato (demais), <code>dt_inicio</code>, <code>dt_fim_prevista</code> com <code>base_do_fim</code>, <code>ano_inicio</code>, <code>tipo_mandato</code> (novato, reeleito, retorno), <code>tipo_registro</code>, <code>dt_eleicao</code>, <code>fonte_url</code>, <code>dt_captura</code>.</td></tr>
-    <tr><th scope="row"><code>app_pessoas</code></th><td>pessoa</td><td>Ficha cadastral: nome, nascimento, UF de nascimento, escolaridade, profissões, estado civil, contato institucional, foto (TSE ou casa) e a fonte. O que o TSE declarou completa o que o cadastro das casas não tem.</td></tr>
-    <tr><th scope="row"><code>app_pessoa_campanhas</code></th><td>candidatura</td><td>Todas as candidaturas da pessoa: cargo, <code>dt_eleicao</code>, resultado, <code>fl_eleito</code> com <code>base_eleito</code>, foto, receitas, despesas, bens e a fonte de cada um.</td></tr>
-  </tbody>
-</table></div>
+<h2 id="views">9 Consultas dos aplicativos</h2>
+<p>Não há views de aplicativo: cada aplicativo monta as suas consultas sobre os marts do lake e sobre <code>metadata/capturas</code> (<a href="../05-decisoes/0041-eleito-completo-e-fim-das-views-app.md">ADR 0041</a>). A regra de negócio está nos marts: a ocupação de cargo em <code>fct_cargos_ocupacoes</code>, a ficha em <code>dim_pessoas</code> e o resultado eleitoral em <code>fct_candidaturas</code> (<code>fl_eleito</code> completo, <code>fl_eleito_informado</code> só o do TSE).</p>
 <p>Exemplo: quem ocupa os cargos de senador em uma data. O mesmo padrão (filtrar a data entre início e fim) vale para qualquer cargo.</p>
-<pre><code>select nome, territorio, partido, dt_inicio, dt_fim_prevista
-from marts.app_cargo_ocupantes
-where cargo = 'Senador'
-  and :data between dt_inicio and dt_fim_prevista
-order by territorio, nome;</code></pre>
-<p>Em 29/10/2026 essa consulta devolve 81 senadores, três por estado, incluindo quem assumiu por suplência. A mesma consulta em 02/02/2027 também devolve 81 (os 27 de 2022 e os 54 de 2026).</p>
-<p>As colunas de cada view, com a descrição, estão no <a href="../03-consultar/01-catalogo.md">catálogo de dados</a>.</p>
+<pre><code>select p.nome_publico, o.id_territorio, o.dt_inicio, o.dt_fim
+from marts.fct_cargos_ocupacoes as o
+join marts.dim_pessoas as p using (id_pessoa)
+join marts.dim_cargos as c using (id_cargo)
+where c.nome = 'Senador'
+  and :data between o.dt_inicio and o.dt_fim
+order by o.id_territorio, p.nome_publico;</code></pre>
+<p>As colunas de cada tabela, com a descrição, estão no <a href="../03-consultar/01-catalogo.md">catálogo de dados</a>.</p>
 
 <h2 id="limites">10 Limites e pendências</h2>
 <p>O que o modelo ainda não tem, com a issue de cada item. Nada daqui é estimado: o dado que falta fica vazio e a lacuna é medida.</p>
@@ -480,7 +471,6 @@ order by territorio, nome;</code></pre>
     <tr><th scope="row">Autorias e proposições do Senado</th><td>Histórico de proposições por pessoa só da Câmara.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/14">#14</a></td></tr>
     <tr><th scope="row">Prestação de contas municipal e de 2014 e antes; fotos municipais</th><td>Prefeitos, vices e vereadores sem receita, despesa e foto.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/150">#150</a>, <a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/177">#177</a></td></tr>
     <tr><th scope="row">Rastreio por captura nos fatos herdados</th><td>Proposições, votações, normas, vetos e emendas sem <code>id_captura</code>.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/163">#163</a></td></tr>
-    <tr><th scope="row">Aplicativos lendo os nomes novos</th><td>Os aplicativos ainda precisam migrar para as views <code>app_*</code>.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/121">#121</a></td></tr>
     <tr><th scope="row">Diplomação, pendência judicial, eleições de 1994</th><td>Sem fonte aberta carregada.</td><td><a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/59">#59</a>, <a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/60">#60</a>, <a href="https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/75">#75</a></td></tr>
   </tbody>
 </table></div>

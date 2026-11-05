@@ -7,10 +7,6 @@ sources:
       fiel à fonte (declaração em sources/legislativo/federal/camara.yml). Só as colunas permitidas pelo contrato existem aqui.
       Fonte oficial: [https://dadosabertos.camara.leg.br](https://dadosabertos.camara.leg.br).
     schema: raw_federal_camara
-    loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
-    freshness:
-      warn_after: {count: 3, period: day}
-      error_after: {count: 14, period: day}
     meta:
       url: https://dadosabertos.camara.leg.br
       origin: Câmara dos Deputados

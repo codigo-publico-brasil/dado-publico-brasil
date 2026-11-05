@@ -1,4 +1,4 @@
-"""Meses fechados, mês ainda não publicado e pacote único lido por vários datasets (ADR 0041)."""
+"""Meses fechados, mês ainda não publicado e pacote único lido por vários datasets (ADR 0045)."""
 
 import zipfile
 from datetime import date

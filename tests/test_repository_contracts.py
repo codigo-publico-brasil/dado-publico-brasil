@@ -2,12 +2,12 @@
 
 import ast
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.transformation import catalog, dbt
@@ -54,14 +54,6 @@ def test_every_mart_column_has_a_description() -> None:
     assert not missing, f"colunas dos marts sem descrição: {missing}"
 
 
-def test_app_queries_read_only_marts_and_the_captures_contract() -> None:
-    """As consultas `app_*` são join puro sobre marts (ADR 0039); a URL da fonte vem de metadata.capturas, nunca de staging."""
-    files = sorted((ROOT / "dbt" / "models" / "marts" / "aplicacao").glob("app_*.sql"))
-    assert files
-    wrong = [f.name for f in files if re.search(r"ref\(\s*'(stg|int)_", f.read_text(encoding="utf-8"))]
-    assert not wrong, f"consultas app_* que leem staging ou intermediate: {wrong}"
-
-
 # Quem pode importar quem: ingestão e transformação só conhecem o núcleo (a fronteira entre elas é o schema
 # raw e metadata.capturas); só a orquestração conhece os dois motores; nada daqui conhece as aplicações.
 ALLOWED = {
@@ -100,33 +92,44 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
     settings = Settings(storage_root=tmp_path / "store")
     dbt.invoke(settings, "parse")  # gera o manifesto que o Dagster lê
     code = (
-        "from dagster import AssetKey;"
+        "import tempfile; from dagster import AssetKey, DagsterInstance, build_schedule_context;"
         "from dado_publico_brasil.ingestion import contract;"
         "from dado_publico_brasil.orchestration.definitions import defs;"
         "graph = defs.resolve_asset_graph();"
         "keys = {k.to_user_string() for k in graph.get_all_asset_keys()};"
         "scheduled = sorted(s.source for s in contract.find_all() if s.schedule);"
         "print(len(keys), 'marts/dim_pessoas_cadastro' in keys, 'identity/pessoas' in keys, {'landing/camara', 'landing/senado'} <= keys,"
-        " sorted(s.name for s in defs.schedules or []) == [f'captura_{n}' for n in scheduled],"
-        " sorted(j.name for j in defs.jobs or []) ==  sorted(['atualizar_tudo', 'capturar_tudo', 'processar_tudo'] + [f'{p}_{c.source}' for c in contract.find_all() for p in ('atualizar', 'captura')]),"
+        " sorted(s.name for s in defs.schedules or []) == sorted([f'captura_{n}' for n in scheduled] + ['processar_e_publicar']),"
+        " sorted(j.name for j in defs.jobs or []) ==  sorted(['atualizar_tudo', 'capturar_tudo', 'processar_tudo', 'publicar'] + [f'{p}_{c.source}' for c in contract.find_all() for p in ('atualizar', 'captura')]),"
         " sorted(s.name for s in defs.sensors or []),"
-        " graph.get(AssetKey(['marts', 'dim_pessoas_cadastro'])).automation_condition is not None,"
-        " graph.get(AssetKey(['identity', 'pessoas'])).automation_condition is not None,"
-        " graph.get(AssetKey(['tse', 'candidaturas'])).automation_condition is None,"
+        " all(graph.get(k).automation_condition is None for k in graph.get_all_asset_keys()),"
+        " {AssetKey(['publicacao', 'lake']), AssetKey(['publicacao', 'docs'])} <= set(defs.resolve_job_def('processar_tudo').asset_layer.executable_asset_keys),"
+        " 'tse' not in scheduled and not [c for c in graph.asset_check_keys if c.asset_key.path == ('landing', 'tse') and c.name != 'saude_da_fonte'],"
         " len([c for c in graph.asset_check_keys if c.name == 'saude_da_fonte']) > 0,"
         " defs.resolve_job_def('atualizar_tudo').tags.get('dado_publico/refazer') == 'true'"
         " and 'dado_publico/refazer' not in defs.resolve_job_def('captura_camara').tags,"
         " {a.specs_by_key[k].group_name for a in [d for d in defs.assets if hasattr(d, 'specs_by_key')] for k in a.keys if k.path[0] in ('staging', 'intermediate', 'marts')}"
         " <= {'staging', 'intermediate', 'marts', 'seeds'},"
-        " len([c for c in graph.asset_check_keys if c.asset_key.path[0] == 'landing' and c.name != 'saude_da_fonte']) == len(scheduled))"
+        " len([c for c in graph.asset_check_keys if c.asset_key.path[0] == 'landing' and c.name != 'saude_da_fonte']) == len(scheduled),"
+        " all(len(s.evaluate_tick(build_schedule_context(instance=DagsterInstance.local_temp(tempfile.mkdtemp()))).run_requests) == 1 for s in defs.schedules or []))"
     )
     env = {**os.environ, "DADO_PUBLICO_STORAGE_ROOT": str(settings.storage_root)}
     result = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, env=env, cwd=ROOT, check=False
     )
     assert result.returncode == 0, result.stderr[-1500:]
-    sensors = "['falha_de_execucao', 'propagar_atualizacoes', 'verificar_atrasos']"
+    sensors = "['falha_de_execucao', 'verificacoes_em_erro', 'verificar_atrasos']"
     # ativos; agendamento e job por fonte; sensores; dbt e identidade sobem sozinhos, o raw não; atraso por fonte agendada
-    assert f"True True True True True {sensors} True True True True True True True" in result.stdout, (
+    assert f"True True True True True {sensors} True True True True True True True True" in result.stdout, (
         result.stdout
     )
+
+
+def test_every_compose_dependency_is_a_defined_service() -> None:
+    """Um `depends_on` para serviço que não existe faz o compose inteiro falhar (regressão de merge, 2026-11)."""
+    for name in ("compose.yaml", "compose.servidor.yaml"):
+        data = yaml.safe_load((ROOT / name).read_text(encoding="utf-8"))
+        services = data.get("services", {})
+        for service, spec in services.items():
+            missing = set(spec.get("depends_on") or {}) - set(services)
+            assert not missing, f"{name}: {service} depende de {sorted(missing)}, que não está definido"

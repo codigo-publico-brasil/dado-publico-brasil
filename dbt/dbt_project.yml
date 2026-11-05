@@ -1,9 +1,9 @@
 # Projeto dbt da camada de dados (ADR 0006). Segue o guia de estrutura da dbt Labs:
 #   Toda tabela leva em meta: owner, sensitivity e fonte_oficial; sem fonte e captura próprias, auditoria_excecao diz por quê.
-#   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views. Sem joins.
+#   staging       1 modelo por tabela do raw: renomear, tipar, padronizar. Views (tabela só no TSE, ADR 0044). Sem joins.
 #   intermediate  uma finalidade por modelo (re-granularidade, joins, resolução de identidade).
 #   marts         entidades e consultas prontas, com contrato de colunas, nomeadas pelo tipo (ADR 0033):
-#                 dim_ (dimensão), fct_ (fato), brg_ (ponte), agg_ (agregado) e app_ (consulta do aplicativo).
+#                 dim_ (dimensão), fct_ (fato), brg_ (ponte) e agg_ (agregado).
 name: dado_publico_brasil
 version: "0.1.0"
 profile: dado_publico_brasil
@@ -49,6 +49,7 @@ models:
         +tags: [pre_identity]
         +meta: {fonte_oficial: Senado Federal}
       tse:
+        +materialized: table  # exceção ao "staging = views" (ADR 0044): lido dezenas de vezes por noite, com limpeza de texto cara
         +tags: [pre_identity]
         +meta: {fonte_oficial: Tribunal Superior Eleitoral}
       ibge:
@@ -76,10 +77,6 @@ models:
         enforced: true
       +meta:
         owner: fundador do projeto
-      aplicacao:
-        +materialized: view
-        +contract:
-          enforced: false
 
 seeds:
   dado_publico_brasil:

@@ -7,9 +7,15 @@ Cada etapa roda sozinha e pode rodar de novo. Se nada novo foi carregado, a tran
 O Dagster (`definitions.py`) e a linha de comando chamam as mesmas funções.
 """
 
-from collections.abc import Callable
+import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
+from zoneinfo import ZoneInfo
+
+from dagster import DagsterRunStatus, RunsFilter
 
 from dado_publico_brasil.core import migrations
 from dado_publico_brasil.core.settings import Settings
@@ -17,6 +23,19 @@ from dado_publico_brasil.ingestion import contract, fetch, foreach, landing, loa
 from dado_publico_brasil.transformation import build
 
 Plan = Callable[[contract.SourceContract], list[landing.Item]]
+
+
+@contextmanager
+def step(context: Any, name: str) -> Iterator[None]:
+    """Registra no log do Dagster (`context.log`, aba Runs) início, fim e duração de um passo, e a falha."""
+    context.log.info(f"{name}: iniciando")
+    started = time.monotonic()
+    try:
+        yield
+    except Exception:
+        context.log.error(f"{name}: falhou após {time.monotonic() - started:,.0f}s")
+        raise
+    context.log.info(f"{name}: concluído em {time.monotonic() - started:,.0f}s")
 
 
 @dataclass
@@ -93,3 +112,45 @@ def freshness_limits() -> dict[tuple[str, str], int]:
 def registers_update(captures: int, refresh: bool, never_registered: bool) -> bool:
     """O raw registra atualização (libera o que vem depois) com captura nova, ao refazer ou na 1ª vez."""
     return bool(captures) or refresh or never_registered
+
+
+# Ciclo noturno (ADR 0042): roda o job `processar_tudo` (dbt, identidade, lake e docs) uma vez por noite,
+# depois das capturas (01:00 a 02:20, fuso America/Sao_Paulo). Se uma captura ainda estiver na fila, o ciclo
+# espera: a fila é uma execução por vez. A publicação é o último passo.
+CYCLE_CRON = "0 4 * * *"
+
+
+def needs_cycle(raw: list[float | None], cycle: list[float | None]) -> bool:
+    """Roda o ciclo se o raw recebeu dado depois do passo mais antigo do último ciclo (ou se nunca fechou).
+
+    `raw`: instante da última atualização de cada tabela do raw; `cycle`: o da última materialização de um
+    ativo de saída do ciclo (identidade e docs). `None` = nunca. Só lê o log de eventos do Dagster.
+    """
+    if any(t is None for t in cycle):
+        return True
+    arrived = [t for t in raw if t is not None]
+    return bool(arrived) and max(arrived) > min(t for t in cycle if t is not None)
+
+
+TIMEZONE = "America/Sao_Paulo"  # fuso dos agendamentos e do "dia" de cada um
+
+
+DONE_OR_RUNNING = [
+    DagsterRunStatus.SUCCESS,
+    DagsterRunStatus.QUEUED,
+    DagsterRunStatus.NOT_STARTED,
+    DagsterRunStatus.STARTING,
+    DagsterRunStatus.STARTED,
+]
+
+
+def done_today(instance: Any, job: str, now: datetime | None = None) -> bool:
+    """O job já teve execução concluída com SUCESSO ou ainda em andamento (ou na fila) desde 00:00 local?
+
+    Só lê o armazenamento do Dagster. Falha ou cancelamento não contam: o agendamento tenta de novo (ou o
+    fundador relança). A fila conta: tiques perdidos, recuperados em sequência, não enfileiram N vezes.
+    """
+    local = (now or datetime.now(UTC)).astimezone(ZoneInfo(TIMEZONE))
+    midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
+    found = RunsFilter(job_name=job, statuses=DONE_OR_RUNNING, created_after=midnight)
+    return bool(instance.get_runs(filters=found, limit=1))

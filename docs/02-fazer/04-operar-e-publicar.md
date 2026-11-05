@@ -12,16 +12,16 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 | --- | --- | --- |
 | Monitor da fonte | Fonte fora do ar, coluna que sumiu ou apareceu (`schema`, `schema_mudou`), queda de volume | `metadata.fontes_verificacoes` |
 | Integridade do download | Antes de virar captura, o arquivo não pode ser uma página HTML no lugar do esperado, o tamanho tem de bater com o `Content-Length` informado e, nos `.zip`, o pacote abre sem erro e tem o membro esperado (`member`, como `*.xml` no DOU). Reprovado vira `integridade` com erro, o arquivo fica no landing como evidência, não vira captura e a próxima execução tenta de novo | `metadata.fontes_verificacoes` |
-| Partições que faltam | Por dataset anual, mensal ou por legislatura, as partições esperadas contra as capturadas (`particoes`). A execução incremental recupera sozinha as que faltam (as mais recentes primeiro, até 3 por dataset e por execução); a que a fonte não publica (404) vira "indisponível" e não é tentada de novo. `dado-publico coverage` lista as lacunas | `metadata.fontes_verificacoes` |
+| Partições que faltam | Por dataset anual, mensal ou por legislatura, as partições esperadas contra as capturadas (`particoes`). A execução incremental recupera sozinha as que faltam (as mais recentes primeiro, até 3 por dataset e por execução); a que a fonte não publica (404) vira "indisponível" e não é tentada de novo. Dataset `on_demand` (fotos do TSE) fica fora do incremental e da recuperação e não gera aviso de lacuna: só se captura pedindo (`--years`, `--historical`, `--dataset`). `dado-publico coverage` lista as lacunas | `metadata.fontes_verificacoes` |
 | Balanço da carga | Linhas lidas, filtradas, carregadas, rejeitadas e colisões de chave (`carga`); linhas de capturas anteriores que a atual não traz (`linhas_removidas`) | `metadata.fontes_verificacoes` |
-| Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.testes_resultados` |
+| Testes do dbt | Regras de negócio, conciliação entre camadas (`reconciliation`), lacunas conhecidas (`gaps`) | `metadata.testes_resultados` (com `qtd_segundos`, o tempo de cada nó) |
 | Elementary (nos marts) | Volume que cai ou explode, coluna removida ou nova, nulos que aumentam; nos marts com data de evento (`fct_votacoes`, `fct_proposicoes`, `fct_normas`, `fct_emendas_convenios`), volume por dia com sazonalidade de dia da semana e frescor (a fonte parou de atualizar) | `metadata.testes_resultados` e esquema `elementary` |
 | Relatório e alerta | Junta tudo, falha se houver problema e envia por e-mail | `dado-publico observe` |
-| Dagster | A saúde de cada fonte e da carga aparece como a verificação `saude_da_fonte` de cada tabela do raw (erro vira falha, aviso vira aviso); o sensor `falha_de_execucao` manda e-mail quando qualquer execução falha | interface do Dagster |
+| Dagster | A saúde de cada fonte e da carga aparece como a verificação `saude_da_fonte` de cada tabela do raw (erro vira falha, aviso vira aviso). A execução segue em SUCCESS mesmo com a verificação em erro (nada é bloqueado): quem avisa é o sensor `verificacoes_em_erro` (abaixo). O sensor `falha_de_execucao` manda e-mail quando uma execução falha | interface do Dagster |
 
 ## Como usar
 
-1. **Automático:** se uma execução falhar em qualquer passo, o sensor do Dagster manda e-mail com os passos que falharam e o link da execução (`DADO_PUBLICO_DAGSTER_URL`). E ao fim de cada fase de marts (`dado-publico transform` ou o Dagster), se houver problema, o relatório sai por e-mail. Configure no `.env` as variáveis `DADO_PUBLICO_SMTP_*` e `DADO_PUBLICO_ALERT_TO` (modelo em `.env.example`).
+1. **Automático:** o sensor `verificacoes_em_erro` olha, a cada 5 minutos, as avaliações novas de verificação de ativo (evento `ASSET_CHECK_EVALUATION`, lido do registro de eventos da instância, sem abrir o warehouse) e avisa das reprovadas com severidade ERROR, um aviso por tique com todos os ativos (o cursor é o instante da última avaliação lida, então nada se repete; na primeira vez olha as últimas 24 h). Sem SMTP configurado, o aviso fica no log do tique (nível erro) e na mensagem do tique, visíveis em *Automation > verificacoes_em_erro* na interface. Verificação com severidade WARN (e teste do dbt em aviso) não dispara aviso: aparece em *Assets* e no `observe`. Se uma execução falhar em qualquer passo, o sensor do Dagster manda e-mail com os passos que falharam e o link da execução (`DADO_PUBLICO_DAGSTER_URL`). E ao fim de cada fase de marts (`dado-publico transform` ou o Dagster), se houver problema, o relatório sai por e-mail. Configure no `.env` as variáveis `DADO_PUBLICO_SMTP_*` e `DADO_PUBLICO_ALERT_TO` (modelo em `.env.example`).
 2. **Sob demanda:** `dado-publico observe` imprime o relatório (código 1 se houver problema); `dado-publico observe --email` também envia, útil para testar o SMTP.
 3. **Relatório HTML do Elementary** (histórico dos testes, gráficos de anomalia), com o pipeline parado: `dado-publico observe --html` roda o `edr report` por `uvx` (precisa do [uv](https://docs.astral.sh/uv/)) e grava em `data_store/.state/observabilidade/report.html` (cerca de 13 MB). Com `--email`, o arquivo vai anexado. O alerta automático do fim da fase de marts não anexa o relatório, porque o `edr` precisa do warehouse livre. Ele **não é gerado sozinho** depois das execuções: gerar e servir o relatório a cada execução é a [issue 43](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/43). O `edr` escreve no warehouse, então rode com o Dagster parado.
 4. **Erro:** investigar antes de publicar. **Aviso:** ler; muitas vezes é fato da fonte (por exemplo, arquivos antigos do Senado sem campos opcionais).
@@ -33,7 +33,10 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 - **Captura velha:** o dataset que declara `max_age_days` no contrato e não foi verificado nesse prazo aparece em `observe` e no e-mail como problema (a pipeline parou ou a fonte deixou de responder); um dataset com limite e nenhuma captura também.
 - Recesso do Congresso (julho e dezembro a janeiro) pode gerar aviso de volume e de frescor: é esperado, e o aviso é só informação.
 - `load --rebuild` descarta a tabela raw do dataset (e as tabelas filhas) e o estado do dlt antes de recarregar do landing; por isso mudar a chave primária de um contrato não exige apagar nada à mão.
-- O `merge` do dlt não apaga: uma linha que a fonte removeu continua no raw. O aviso `linhas_removidas` conta as que vieram de capturas anteriores do mesmo arquivo e a atual não traz; decidir o que fazer com elas é manual.
+- O `merge` do dlt não apaga: uma linha que a fonte removeu continua no raw (nos datasets `replace_partition` ela sai com a versão antiga e o aviso não existe). O aviso `linhas_removidas` conta as que vieram de capturas anteriores do mesmo arquivo e a atual não traz; decidir o que fazer com elas é manual.
+- **Tempo da carga do raw** (ADR 0043, medido numa máquina de desenvolvimento, não no servidor): votação do TSE de 2016 (943 mil linhas) em 160 s com Parquet contra 1.062 s com `insert_values`; a de 2026 (6,7 milhões de linhas, zip de 446 MB) em 28 min com `merge` e 19 min com `replace_partition`, pico de 2,9 GB e 1,5 GB. Mais da metade é a leitura do CSV em Python. Acompanhe a carga na aba *Runs*: o ativo `raw_<fonte>` avisa o dataset, o arquivo, o tamanho e as linhas lidas a cada 30 s.
+- **Carga que leu 0 linhas** de um arquivo que já teve linhas (`volume` de N para 0) é erro: a captura foi marcada como carregada sem entrar no raw, que fica com a versão anterior. Corrija com `load --rebuild --dataset <nome>` (reconstrói do landing).
+- **`optional` no contrato** (colunas que a fonte omite quando vazias, como número e data de normas e vetos antigos do Senado) evita o aviso `schema` por partição; o aviso já gravado só some quando o arquivo é conferido de novo (`dado-publico recheck`).
 - Uma coluna nova legítima gera um aviso do `schema_changes` uma vez; depois vira a nova referência.
 - O Elementary não enxerga o `raw`: ali valem o balanço da carga e o monitor da fonte.
 
@@ -67,7 +70,9 @@ A máquina não prova que o dado está certo. A cada fonte nova: comparar a cont
 
 O `export` **recusa** (nada é apagado nem publicado) se faltar no warehouse alguma tabela do manifesto publicado: protege o lake de um warehouse errado ou incompleto. Para retirar de propósito uma tabela que deixou de existir, rode `dado-publico export --prune`.
 
-O `export` imprime uma linha por tabela (`ignorada` ou `gravada`, com os segundos) e o tempo de cada fase. Em rodada sem mudança só lê (impressões digitais, quatro tabelas por vez): não grava, não envia e não troca `catalogo.duckdb` nem `manifesto.json`. Os objetos órfãos só são procurados sob as tabelas gravadas; `--prune` varre todas (e as coleções `arq_`: objeto que saiu do controle só é apagado com `--prune`). Sem mudança, `id_execucao`, `dt_exportacao` e `versao_commit` do manifesto e do catálogo continuam os da última rodada que mudou algo; mudar a URL base (`DADO_PUBLICO_LAKE_URL`) conta como mudança. Resto de rodada interrompida (objeto gravado antes do manifesto) não deixa estado para trás que a rodada seguinte enxergue se a tabela voltar a ser ignorada; `--prune` limpa.
+**Destino:** o CLI lê o `.env` da pasta onde roda (ou o arquivo de `DADO_PUBLICO_ENV_FILE`) sem sobrescrever o que o shell já define. Com as quatro `DADO_PUBLICO_R2_*` o `export` grava no bucket; sem elas grava em `<pasta de dados>/lake`. Confira o destino antes de dizer que publicou: pasta local não é o lake público (o `manifesto.json` público é a prova).
+
+O `export` imprime uma linha por tabela (`ignorada` ou `gravada`, com os segundos) e o tempo de cada fase; os tempos por tabela ficam também em `<pasta de dados>/.state/export_tempos.json` (só a última rodada). Em rodada sem mudança só lê (impressões digitais, quatro tabelas por vez): não grava, não envia e não troca `catalogo.duckdb` nem `manifesto.json`. Os objetos órfãos só são procurados sob as tabelas gravadas; `--prune` varre todas (e as coleções `arq_`: objeto que saiu do controle só é apagado com `--prune`). Sem mudança, `id_execucao`, `dt_exportacao` e `versao_commit` do manifesto e do catálogo continuam os da última rodada que mudou algo; mudar a URL base (`DADO_PUBLICO_LAKE_URL`) conta como mudança. Resto de rodada interrompida (objeto gravado antes do manifesto) não deixa estado para trás que a rodada seguinte enxergue se a tabela voltar a ser ignorada; `--prune` limpa.
 
 **Memória:** o `export` usa `preserve_insertion_order = false` (a ordem só vale onde há `ORDER BY`) e, depois das tabelas, fecha o warehouse e abre uma instância nova do DuckDB para a fase de arquivos, que não precisa dele; assim a memória das varreduras e dos COPY das tabelas não sobra para os arquivos.
 
@@ -83,71 +88,85 @@ O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md))
 
 | O que | Como |
 | --- | --- |
-| **Captura agendada** | cada fonte com `schedule` no YAML tem um agendamento `captura_<fonte>` (landing e raw). Mudar a cadência é mudar o cron no YAML |
-| **Propagação** | quando o raw de uma fonte recebe dado novo, o dbt, a identidade e o lake rodam sozinhos (`AutomationCondition.eager`). Sem dado novo, nada a jusante roda |
+| **Captura noturna** | cada fonte com `schedule` no YAML tem um agendamento `captura_<fonte>` (landing e raw), escalonado de madrugada. Mudar a cadência é mudar o cron no YAML |
+| **Ciclo a jusante** | `processar_e_publicar`, às 04:00, roda o job `processar_tudo`: dbt, identidade, dbt pós-identidade, export do lake e docs, nessa ordem; a publicação é o último passo. Só roda se o raw recebeu dado desde o último ciclo completo (consulta o log do Dagster, sem abrir o warehouse). Não há disparo por evento ([ADR 0042](../05-decisoes/0042-ciclo-noturno-de-processamento-e-publicacao.md)) |
+| **No máximo uma vez por dia** | cada agendamento pula se o job já teve execução com sucesso (ou em andamento) desde 00:00 de São Paulo. **Execução que falhou não conta**: pode ser relançada à mão ou pelo tique do dia seguinte; não há `run_retries` (`dagster.yaml`) e os sensores de falha só avisam |
 | **Atraso** | cada fonte agendada tem uma verificação de frescor: sem captura por mais de 1,5 intervalo do cron, o ativo `landing/<fonte>` aparece como atrasado |
 | **Uma execução por vez** | `dagster.yaml` limita a fila a uma execução (o DuckDB aceita um escritor) |
 
-**Jobs** (na interface, aba *Jobs*, *Launch run*): `atualizar_<fonte>` refaz tudo o que vem da fonte (por exemplo, `atualizar_tse`: captura, raw, dbt, identidade, publicação); `captura_<fonte>` só captura; `atualizar_tudo` refaz tudo; `capturar_tudo` captura todas as fontes sem processar; `processar_tudo` roda dbt, identidade e publicação com o que já está no raw, sem capturar nada. Para um ano ou modo diferente, abra o *launchpad* do job e ajuste `mode` (`incremental`, `historical`, `years`).
+**Horários (America/Sao_Paulo):**
 
-**Ver o que está atrasado e executar:** na interface, *Assets* mostra a última atualização de cada ativo e os atrasos (verificação *freshness*); selecione os ativos parados e use *Materialize* (com *downstream*, se quiser propagar). Os sensores `propagar_atualizacoes` e `verificar_atrasos` e os agendamentos sobem ligados.
+| Agendamento | Quando | Observação |
+| --- | --- | --- |
+| `captura_camara` | 01:00, todo dia | |
+| `captura_senado` | 01:20 | |
+| `captura_transparencia` | 01:40 | |
+| `captura_constituicao` | 01:50 | |
+| `captura_dou` | 02:00 | |
+| `captura_ibge` | 02:10, dia 1 | mensal |
+| `captura_tse` | sem agendamento | desativado após as eleições; só manual (`captura_tse`, `atualizar_tse`). Para reativar, volte o cron ao YAML. O TSE segue no ciclo a jusante com o que há no raw |
+| `processar_e_publicar` | 04:00 (`pipeline.CYCLE_CRON`) | depois da última captura, com folga; se uma captura passar das 04:00 o ciclo espera na fila (FIFO, uma execução por vez) |
+
+Uma captura que falha não impede o ciclo: ele roda com o que há no raw, e o atraso aparece na verificação de frescor e no aviso da execução que falhou. A publicação (`publicacao/lake`, `publicacao/docs`) só sai do ciclo e do job manual `publicar`.
+
+**Jobs** (na interface, aba *Jobs*, *Launch run*): `atualizar_<fonte>` refaz tudo o que vem da fonte (por exemplo, `atualizar_tse`: captura, raw, dbt, identidade, publicação); `captura_<fonte>` só captura; `atualizar_tudo` refaz tudo; `capturar_tudo` captura todas as fontes sem processar; `processar_tudo` roda dbt, identidade e publicação com o que já está no raw, sem capturar nada; `publicar` só publica (o lake no R2 e as docs) o que já está pronto no warehouse, sem capturar nem transformar, para rodar quando você quiser. Para um ano ou modo diferente, abra o *launchpad* do job e ajuste `mode` (`incremental`, `historical`, `years`).
+
+**Por que o dbt roda em duas fases, com a identidade no meio.** A identidade (`identity.pessoas`) é código Python e precisa de modelos do dbt que a precedem (`int_pessoas_ids_vistos`, a lista de identificadores vistos nas fontes); os modelos seguintes (`dim_pessoas`, mandatos, votos...) precisam de `identity.pessoas` já pronta. Um único `dbt build` não expressa isso, então o dbt é dividido por tag (`pre_identity`, em `dbt_project.yml`; ver [Camadas](../01-entender/03-camadas.md)). No job `processar_tudo` as operações saem nesta ordem (e um teste confere):
+
+```text
+dbt_pre_identity -> identity -> dbt_post_identity -> publicacao/lake -> publicacao/docs
+(modelos tag:pre_identity)  (identity.pessoas, ..._identificadores, ..._fusoes)  (os demais modelos)  (export Parquet)  (docs)
+```
+
+A linhagem por modelo na interface do Dagster mostra modelos e ativos, não essas fases: as fases são as **operações** do job (aba *Runs*, cada passo leva o nome acima). A ligação é pelo grafo: `identity/*` depende de `intermediate/int_pessoas_ids_vistos` e os modelos que leem `source('identity', ...)` dependem de `identity/*`. Uma chave de ativo errada vira um ativo-stub sem op e quebra a ordem em silêncio; o teste `tests/orchestration/test_graph.py` falha se um ativo executável depender de stub. O único stub que resta é `metadata/capturas` (tabela gravada por todas as fontes, sem ativo próprio). As tabelas aninhadas do dlt (`dataset__filho`, gravadas junto com o dataset) apontam ao ativo de raw do dataset pelo tradutor do dbt em `definitions.py`.
+
+**Ver o que está atrasado e executar:** na interface, *Assets* mostra a última atualização de cada ativo e os atrasos (verificação de atraso da captura); selecione os ativos parados e use *Materialize* (com *downstream*, se quiser propagar). O sensor `verificar_atrasos`, o de falha de execução e os agendamentos sobem ligados.
 
 **Memória e temporários:** o dbt chega a 6,5 GB de memória na fase pós-identidade (issue 160), então o Docker Desktop precisa de pelo menos 8 GB. O compose monta `/data/warehouse.duckdb.tmp` sob a pasta de dados (Linux); no Windows os arquivos temporários do DuckDB (spill) num bind mount falham ao ser relidos (`Cannot allocate memory`): defina `DADO_PUBLICO_SPILL=duckdb_tmp` no `.env` para usar um volume do Docker. Trocar o `temp_directory` pelo perfil do dbt não funciona: o DuckDB recusa mudar o diretório depois de usado. O DuckDB tem **teto de 5 GB** (`memory_limit`, no perfil do dbt e em toda conexão do projeto): o que passa disso vai para o disco, em vez de disputar a RAM com o sistema.
 
-**Limites:** o Dagster só propaga a partir do que ele mesmo materializou, então na primeira vez rode `atualizar_tudo`. A interface **não tem login** no Dagster de código aberto: o `webserver` do `compose.yaml` escuta só em `127.0.0.1`; não o exponha à rede sem uma camada de autenticação na frente (ainda em aberto).
+**Limites:** o ciclo noturno só roda se o raw registrou atualização no Dagster; na primeira vez rode `atualizar_tudo` (num servidor, `scripts/servidor.sh primeira-carga`). A interface **não tem login** no Dagster de código aberto: o `webserver` do `compose.yaml` escuta só em `127.0.0.1`; não o exponha à rede sem uma camada de autenticação na frente (ainda em aberto).
 
 ## Implantar num servidor
 
-Para quem vai deixar o pipeline rodando sozinho num servidor (uma máquina local ou um VPS). **Você não entra no servidor para atualizar**: o CI constrói a imagem e a publica no GHCR quando o código entra na `main` (`.github/workflows/imagem.yml`, com o `sha` do commit como etiqueta), e da sua máquina um comando manda o servidor baixá-la e reiniciar. O compose e o `.env` ficam na sua máquina e falam com o Docker do servidor por SSH, então o servidor não tem clone nem `.env`. O Dagster sobe como dois serviços (`webserver`: interface; `daemon`: agendamentos e sensores) e, a cada atualização, publica o lake e as docs.
+Para quem vai deixar o pipeline rodando sozinho num servidor (uma máquina local ou um VPS). **Você não entra no servidor para atualizar**: o CI constrói a imagem e a publica no GHCR quando o código entra na `main` (`.github/workflows/imagem.yml`, com o `sha` do commit como etiqueta), e da sua máquina o script [`scripts/servidor.sh`](../../scripts/servidor.sh) manda o servidor baixá-la e reiniciar. O compose e o `.env.servidor` ficam na sua máquina e falam com o Docker do servidor por SSH, então o servidor não tem clone nem `.env`. O Dagster sobe como dois serviços (`webserver`: interface; `daemon`: agendamentos e sensores) e, a cada atualização, publica o lake e as docs. O script roda no Git Bash (Windows) e no Linux; todo subcomando aceita `--dry-run`, que só imprime os comandos.
 
-**Uma vez só:**
+Requisitos do servidor: Linux x86_64 com Docker e Compose, um usuário no grupo `docker`, acesso SSH (a porta pode não ser 22) e uma pasta de dados (por exemplo `/srv/dado-publico`). Com 8 GB de RAM compartilhados, crie swap (8 GB) e use `DADO_PUBLICO_MEM_LIMIT=4g` e `DADO_PUBLICO_DUCKDB_MEMORY=3GB` (modelo do `.env.servidor.example`; acima do que cabe, o DuckDB usa o disco: mais lento, sem estourar).
 
-1. **Servidor:** Linux com Docker, um usuário seu com acesso por chave SSH e uma pasta de dados (por exemplo `/srv/dado-publico`). Com 8 GB de RAM compartilhados, crie swap (8 GB); `DADO_PUBLICO_MEM_LIMIT=6g` e `DADO_PUBLICO_DUCKDB_MEMORY=4GB` (padrões; acima disso o DuckDB usa o disco, mais lento e sem estourar). Em máquina maior, suba os dois.
-2. **Sua máquina:** `docker context create servidor --docker host=ssh://usuario@servidor`.
-3. **Arquivo `.env.servidor`** (na sua máquina, fora do git; copie o `.env.example` e deixe de fora o DSN e as senhas do Postgres). Ele também define quais compose usar:
+**Uma vez só, da pasta do repositório:**
 
-   ```bash
-   COMPOSE_PATH_SEPARATOR=,
-   COMPOSE_FILE=compose.yaml,compose.servidor.yaml
-   DADO_PUBLICO_ENV_FILE=.env.servidor
-   DADO_PUBLICO_DATA_DIR=/srv/dado-publico   # caminho do servidor
-   DADO_PUBLICO_LAKE_URL=...                 # mais as quatro DADO_PUBLICO_R2_*, o bucket privado, SMTP e DADO_PUBLICO_DAGSTER_URL
-   ```
+1. `scripts/servidor.sh preparar usuario@host [porta]`: envia sua chave SSH (pede a senha uma vez, só se a chave ainda não autentica), cria o contexto Docker `servidor`, gera o `.env.servidor` a partir de [`.env.servidor.example`](../../.env.servidor.example) e do seu `.env` (copia só `DADO_PUBLICO_LAKE_URL` e `DADO_PUBLICO_R2_*`; nunca o Postgres; não imprime segredo) e confere o servidor: Docker e Compose, arquitetura, RAM e swap, espaço, pasta de dados gravável (tenta `sudo -n mkdir`; sem sudo, imprime o comando para você rodar) e porta da interface livre. Termina com um resumo `OK`/`FALTA`; pode rodar quantas vezes quiser. Revise o `.env.servidor` (pasta de dados, memória, `DADO_PUBLICO_PORT`, `DADO_PUBLICO_BIND`).
+2. `scripts/servidor.sh dados`: copia `landing/`, `arquivos/` e `warehouse.duckdb` de `DADO_PUBLICO_STORAGE_ROOT` (padrão `./data_store`) para a pasta de dados do servidor. O landing só existe na máquina antiga (o R2 não o guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)); `arquivos/` também se refaz do landing, mas leva cerca de 40 minutos. Feche tudo que use o warehouse local (Dagster, CLI, DBeaver): o script recusa se houver `warehouse.duckdb.wal`, e recusa também se o warehouse já existir no servidor, a menos que você passe `--forcar`. É idempotente: compara arquivos e bytes de cada pasta e só copia a que difere (`rsync` se existir nas duas pontas; senão `tar | ssh`, que recopia a pasta inteira).
+3. `scripts/servidor.sh implantar`: baixa as imagens e sobe `webserver` e `daemon`. **Nunca lança o `atualizar_tudo` sozinho.**
+4. Só na primeira vez: `scripts/servidor.sh primeira-carga` (aceita `--dry-run` e `--forcar`). Recusa se há execução em andamento, exige o warehouse no servidor, espera a interface e lança o `atualizar_tudo` uma vez (não lança de novo se já houve, salvo `--forcar`).
 
-   Valores com `$` (senhas) vão entre aspas simples (`SENHA='a$b'`); sem aspas o compose os interpreta como variável. Use sempre `docker --context servidor compose --env-file .env.servidor ...`.
-4. **Landing e `arquivos/`** (a pasta `arquivos/` também se refaz do landing, mas leva cerca de 40 minutos) só existe na máquina antiga (o R2 não os guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)): `rsync -a data_store/landing data_store/arquivos usuario@servidor:/srv/dado-publico/`. Termine o rsync antes da primeira subida (abaixo).
+**Dois modos de primeira subida.** (a) *Restaurar do bucket e reconstruir*: sem warehouse para copiar, rode antes `dc run --rm daemon uv run --no-sync dado-publico rebuild` (`dc` na referência abaixo): restaura a identidade e o metadata do bucket privado (seção abaixo) e recarrega o raw do landing; cerca de seis horas, no `daemon` por causa do limite de memória. (b) *Copiar o warehouse e pular o rebuild*: o passo 2 já trouxe `warehouse.duckdb`; vá direto à `primeira-carga`.
 
-> **Atenção:** com `--context servidor`, **todo** comando compose precisa de `--env-file .env.servidor`; sem ele o compose lê o `.env` de desenvolvimento (com DSN do Postgres e `DATA_DIR` relativo) e age sobre o lugar errado. Para não esquecer, na sessão: `export COMPOSE_PATH_SEPARATOR=, COMPOSE_FILE=compose.yaml,compose.servidor.yaml DADO_PUBLICO_ENV_FILE=.env.servidor DADO_PUBLICO_DATA_DIR=/srv/dado-publico DOCKER_CONTEXT=servidor` (ou um alias `dc='docker --context servidor compose --env-file .env.servidor'`).
+**O `atualizar_tudo` não retoma.** Se falhar no meio, relançá-lo do início refaz tudo. O que pula o que já deu certo é **reexecutar a partir da falha** (interface, aba *Runs*, a execução que falhou, *Re-execute* a partir dos passos com falha). Iniciar o `atualizar_tudo` também tem custo: o Dagster grava centenas de eventos no SQLite, e em disco lento isso leva minutos antes do primeiro passo. A rotina não usa esse job: usa os menores (`captura_<fonte>`, `processar_tudo`, `publicar`).
+
+**Servidor pequeno (8 GB compartilhados):** use `DADO_PUBLICO_MEM_LIMIT=4g` e `DADO_PUBLICO_DUCKDB_MEMORY=3GB` (padrões do `.env.servidor.example`) e crie swap. O dbt pós-identidade chegou a 6,5 GB sem limite; com limite, o DuckDB faz spill em disco (mais lento, sem estourar). **Isso não foi medido neste servidor**: meça o primeiro ciclo (aba *Runs* e `status`) antes de confiar no tempo total.
+
+**Toda atualização** (depois do merge na `main` e do fim do workflow *Imagem*): `scripts/servidor.sh implantar`. Ele baixa as imagens e roda `up -d webserver daemon`; se houver execução em andamento (`STARTED`, `QUEUED` ou `STARTING`, consultada na GraphQL do próprio webserver), aborta, porque uma execução cortada no meio deixa a captura sem concluir (o `stop_grace_period` é de 2 minutos); `--forcar` ignora a trava. Para voltar a uma versão anterior, `DADO_PUBLICO_IMAGE_TAG=<sha do commit>` no `.env.servidor`. No VPS o mesmo comando pode virar um passo do workflow, com a chave SSH num segredo do GitHub.
+
+**Acompanhar:** `scripts/servidor.sh status` mostra os containers, as três últimas execuções (estado, job, hora), a saúde dos daemons, as verificações de ativo em erro (consulta GraphQL, sem tocar no warehouse, vale com execução ativa), a memória e se a interface responde no endereço publicado (`DADO_PUBLICO_BIND` e `DADO_PUBLICO_PORT`, perguntado ao servidor por SSH). Na interface, a aba **Runs** lista as execuções e seus logs; é onde se vê a captura da noite e o ciclo das 04:00.
+
+**Tag `dado_publico/refazer`:** os jobs `atualizar_*` levam essa tag. Ela manda o raw registrar uma atualização mesmo sem dado novo, e assim refaz tudo o que vem depois (staging, marts, identidade, export) a partir do que já está no raw. Sem a tag, só captura nova dispara a cadeia.
+
+**Acesso à interface:** o Dagster aberto não tem login, então o compose publica a porta só em `DADO_PUBLICO_BIND` (padrão `127.0.0.1`, o próprio servidor). `DADO_PUBLICO_PORT` escolhe a porta (padrão 3000; o `preparar` avisa se estiver ocupada). Duas formas de abrir da sua máquina: túnel SSH (`ssh -L 3000:127.0.0.1:<porta> -p <porta ssh> usuario@host`, depois `http://localhost:3000`) ou, numa rede local confiável ou VPN, `DADO_PUBLICO_BIND=<IP do servidor na rede>` e `http://<IP>:<porta>`; nunca `0.0.0.0` num servidor exposto à internet.
+
+> **Referência manual** (o que o script faz por baixo; `dc` = `docker --context servidor compose --env-file .env.servidor`, e **todo** comando compose precisa do `--env-file`, senão o compose lê o `.env` de desenvolvimento e age sobre o lugar errado): contexto `docker context create servidor --docker host=ssh://usuario@host:porta`; `dc pull webserver daemon` (`pull` sem nomes ignora serviços com perfil); `dc up -d webserver daemon`; lançar o job: `dc run --rm --no-deps -T daemon uv run --no-sync dagster job launch -m dado_publico_brasil.orchestration.definitions -j atualizar_tudo`. O `.env.servidor` define `COMPOSE_PATH_SEPARATOR=,` e `COMPOSE_FILE=compose.yaml,compose.servidor.yaml`. Valores com `$` (senhas) vão entre aspas simples.
 >
-> `DADO_PUBLICO_LAKE_URL` só vale junto com as quatro chaves do R2: a validação do `export` falha de propósito se faltar alguma. O `init` roda só em `up`: se o host reiniciar, os serviços voltam com o manifesto da subida anterior (rode `up -d` depois de qualquer atualização de imagem). Builds locais (sem `--build-arg GIT_SHA`) gravam `versao_commit` `unknown`.
+> `DADO_PUBLICO_LAKE_URL` só vale junto com as chaves do R2: a validação do `export` falha de propósito se faltar alguma. O `init` roda só em `up`: se o host reiniciar, os serviços voltam com o manifesto da subida anterior (rode `implantar` depois de qualquer atualização de imagem). Builds locais (sem `--build-arg GIT_SHA`) gravam `versao_commit` `unknown`.
 
-**Primeira subida, nesta ordem** (abreviando `docker --context servidor compose --env-file .env.servidor` como `dc`):
+**Conferir:** `dc exec daemon uv run --no-sync dado-publico export --verificar`, `observe --email` (testa o SMTP) e a data do `manifesto.json` público.
 
-1. `dc pull webserver daemon` e `dc up -d webserver`: sobe o `init` e a interface, sem o `daemon` (nada roda sozinho ainda).
-2. `dc run --rm daemon uv run --no-sync dado-publico rebuild`: como o warehouse não existe, restaura sozinho a identidade e o metadata do bucket privado (seção abaixo) e recarrega o raw do landing, roda o dbt, a identidade e o dbt de novo (cerca de seis horas; se parar, `load --rebuild` e `transform` retomam). Roda no `daemon` por causa do limite de memória (o `webserver` tem 1 GB). Se a restauração falhar, o warehouse recém-criado é apagado e o erro aparece: corrija e rode de novo.
-3. Na interface (túnel SSH), rode o job `atualizar_tudo`: a propagação automática só vale depois da primeira materialização. Sem o `daemon` a execução fica na fila (*Queued*).
-4. `dc up -d daemon`: ele assume a fila e liga os agendamentos.
-
-**Toda atualização** (depois do merge na `main` e do fim do workflow *Imagem*), da pasta do repositório e **com a fila ociosa** (sem execução em andamento: o `stop_grace_period` é de 2 minutos, e uma execução cortada no meio deixa a captura sem concluir):
-
-```bash
-docker --context servidor compose --env-file .env.servidor pull webserver daemon && docker --context servidor compose --env-file .env.servidor up -d webserver daemon
-```
-
-(`pull` sem nomes ignora os serviços com perfil, por isso os nomes.) Para voltar a uma versão anterior, `DADO_PUBLICO_IMAGE_TAG=<sha do commit>` no `.env.servidor`. No VPS esse par de comandos pode virar um passo do workflow, com a chave SSH num segredo do GitHub.
-
-**Conferir:** `docker --context servidor compose --env-file .env.servidor exec daemon uv run --no-sync dado-publico export --verificar`, `observe --email` (testa o SMTP) e a data do `manifesto.json` público.
-
-**Acesso à interface:** o compose publica a porta só em `127.0.0.1` do servidor (o Dagster aberto não tem login). Use túnel SSH (`ssh -L 3000:127.0.0.1:3000 usuario@servidor`). VPN ou Cloudflare Access são escolha da infraestrutura: nesse caso defina `DADO_PUBLICO_BIND` com o IP da VPN, nunca `0.0.0.0`.
-
-**Manutenção:** os serviços reiniciam sozinhos (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Uma execução que passa de 24 h, ou que não inicia em 5 min, é marcada como falha (`run_monitoring` do `dagster.yaml`). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
+**Manutenção:** os serviços reiniciam sozinhos (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Uma execução que passa de 24 h, ou que não inicia em 15 min, é marcada como falha (`run_monitoring` do `dagster.yaml`). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
 
 ## Restaurar numa máquina vazia (bucket privado)
 
 Com `DADO_PUBLICO_R2_BUCKET_PRIVADO` e as credenciais do R2 (`.env.example`), um warehouse novo (arquivo inexistente) restaura sozinho o `metadata` e a cópia mais recente e concluída da identidade, **com as mesmas chaves `id_pessoa`**, e avança as sequências. Depois: `uv run dado-publico rebuild` (sem `--old-warehouse`) e `run --historical` recapturam o raw das fontes.
 
 - **Volta:** `id_pessoa` e suas ligações, o registro das capturas (URL, hash, data), execuções e testes.
-- **Não volta sem o landing:** os arquivos. Eles são baixados de novo; o que a fonte mudou ou tirou do ar fica no `metadata` com o hash, e `verify` o aponta como ausente. Os lotes dos datasets por item (`foreach`) não se refazem iguais, e o acumulado dos datasets `merge` não volta (issue 155). Os arquivos de `arquivos/` se materializam de novo do landing.
+- **Não volta sem o landing:** os arquivos. Eles são baixados de novo; o que a fonte mudou ou tirou do ar fica no `metadata` com o hash, e `verify` o aponta como ausente. Os lotes dos datasets por item (`foreach`) não se refazem iguais, e o acumulado dos datasets `merge` não volta (issue 155; nos `replace_partition` não há acumulado: o raw é a versão atual). Os arquivos de `arquivos/` se materializam de novo do landing.
 - **Um escritor:** só a produção tem a variável e o token com escrita. O envio do `metadata` recusa sobrescrever um bucket com mais capturas que a máquina (restaure antes).
 
 ## Rodar por partes no container
@@ -187,6 +206,7 @@ Aprendidas na operação de 29 e 30/10/2026, com Docker Desktop no Windows:
 
 - **Um container esquecido segura o warehouse.** O DuckDB aceita um escritor; um `dagster-run-*` ou o próprio `daemon` ainda ligado faz o próximo comando falhar com `Could not set lock on file ... Conflicting lock is held` ou `Permission denied`. Confira `docker ps -a`, pare o que sobrar e espere cerca de 20 segundos: o Docker libera a trava com atraso. Depois de matar um container, tente de novo antes de achar que o arquivo se corrompeu.
 - **`Cannot allocate memory` ao ler ou escrever o warehouse não é falta de memória do DuckDB.** É o Windows com pouca RAM livre: o Docker acessa o arquivo por um compartilhamento do WSL. Feche programas pesados (navegadores, o aplicativo consumidor), libere o cache com `docker run --rm --privileged alpine sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"` e refaça só o que falhou, como acima. O teto de 5 GB já está aplicado; o acompanhamento é a [issue 160](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/160).
+- **Servidor pequeno e lento: o servidor de código do Dagster demora a subir.** No ciclo noturno o daemon registrou `Timed out waiting for gRPC server ... 180s` e `Could not reach user code server` (junto de `sqlite database is locked`, que é só a fila disputando o SQLite sob carga). O `dagster.yaml` declara `code_servers: {local_startup_timeout: 600, reload_timeout: 600}` (segundos; o aviso vinha aos 180 s), uma folga para a subida e a recarga do servidor de código. `local_startup_timeout` está na [referência do `dagster.yaml`](https://dagster.io/docs/deployment/oss/dagster-yaml) (seção `code_servers`); `reload_timeout` não está na página, mas existe no esquema da versão travada no `uv.lock` (a instância carrega com os dois). O `init` do compose copia esse mesmo arquivo a cada subida; o efeito só vale depois de reiniciar o daemon e o webserver. Se o aviso persistir, o servidor está subdimensionado: aumente memória e disco antes de aumentar o prazo.
 - **Coluna nova em dataset com `primary_key: [_row_hash]` duplica o raw.** Votação e prestação de contas usam o hash da linha inteira como chave; acrescentar uma coluna ao contrato muda o hash de toda linha, e recarregar a captura **insere as linhas novas sem remover as antigas** (os votos contariam em dobro). Depois de recarregar, compare `count(*)` com `count(<coluna nova>)`, confirme que cada linha sem a coluna tem uma gêmea com ela e apague as antigas. Recarregue só o ano necessário. Acompanhamento: [issue 156](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/156).
 
 ## Reconstruir o warehouse do zero, a partir do landing
@@ -217,12 +237,22 @@ Se parar no meio, `uv run dado-publico load --rebuild` e `uv run dado-publico tr
 | O raw tem as mesmas linhas do antigo | compare `select count(*)` de cada tabela `raw_*` com o warehouse antigo (abra o antigo somente leitura com `duckdb`) |
 | O landing está íntegro e a identidade tem cópia | `uv run dado-publico verify` |
 | Nenhum teste do dbt reprova | `uv run dado-publico observe` (0 reprovados; a seção "Saúde por dimensão" mostra o resto) |
-| Os modelos novos têm o tamanho esperado | `select count(*)` em `dim_pessoas`, `fct_mandatos`, `fct_eventos`, `agg_composicoes`, `fct_votos` e `app_*` contra o warehouse antigo |
+| Os modelos novos têm o tamanho esperado | `select count(*)` em `dim_pessoas`, `fct_mandatos`, `fct_eventos`, `agg_composicoes`, `fct_votos` contra o warehouse antigo |
 | A identidade está sã | `dim_pessoas` e `identity.pessoas` com o mesmo número; nenhum mandato sem `id_pessoa` |
-| O raw bate com o antigo | As diferenças esperadas são só de versões: o `load --rebuild` carrega a **versão mais recente** de cada arquivo, e a carga diária **soma** as versões nos datasets `merge` (issue 155). Fora disso, as contagens devem ser iguais; uma diferença de dobro é duplicação no antigo (foi o caso da votação de 2022) |
+| O raw bate com o antigo | As diferenças esperadas são só de versões: o `load --rebuild` carrega a **versão mais recente** de cada arquivo, e a carga diária **soma** as versões nos datasets `merge` (issue 155; os `replace_partition` não somam). Fora disso, as contagens devem ser iguais; uma diferença de dobro é duplicação no antigo (foi o caso da votação de 2022) |
 | Reconstruiu igual | rode `transform` de novo: nenhuma pessoa nova, nenhum snapshot novo |
 
 5. Reconstrua a imagem do Dagster com o código atual (`docker compose --profile pipeline up -d --build`) antes de religá-lo.
+
+## Onde o tempo da rotina vai
+
+Depois de uma noite, três consultas respondem ([ADR 0044](../05-decisoes/0044-ciclo-rapido-staging-do-tse-em-tabela-e-tempos.md)): a duração de cada fase do dbt (`metadata.execucoes`, etapas `transform_pre`, `transform_post` e `freshness`, que medem o `dbt build` inteiro) e os nós mais lentos; e o `export` por tabela em `export_tempos.json`.
+
+```bash
+uv run dado-publico query --sql "SELECT id_no, tipo, qtd_segundos FROM metadata.testes_resultados WHERE id_execucao = (SELECT max(id_execucao) FROM metadata.execucoes WHERE etapa = 'transform_post') ORDER BY qtd_segundos DESC LIMIT 20"
+```
+
+O staging do TSE é tabela, recalculada no `transform_pre`: carregar o raw sem rodar o dbt deixa o staging do TSE com o raw anterior.
 
 ## Como saber o que está desatualizado
 
@@ -234,8 +264,9 @@ uv run dado-publico query --sql "SELECT fonte, dataset, max(dt_captura) AS ultim
 
 Outras visões:
 
+- **Ciclo noturno:** aba *Runs*: `processar_e_publicar` aparece uma vez por dia com dado novo; sem dado novo o tique é pulado (*Schedules* mostra o motivo do `SkipReason`). Lake do dia anterior = o ciclo não rodou ou falhou.
 - **Dagster:** *Assets* mostra a última atualização de cada ativo e o atraso da captura (veja acima); a verificação `saude_da_fonte` mostra o último monitor da fonte (fora do ar, coluna que mudou, queda de volume).
 - `dado-publico observe`: resumo da saúde das fontes, da carga e dos testes (falha se houver problema).
-- **Frescor do dbt:** cada fonte declara `freshness` (`warn_after`, `error_after`) e o `dbt source freshness` roda no `transform`, gravando em `metadata.testes_resultados`. Ele mede a idade da **última carga nossa**, não se a origem publicou algo novo.
+- **Frescor:** o dbt não mede mais o frescor (`dbt source freshness` foi retirado). Ele olhava `_dlt_load_id`, que só muda quando o **arquivo** muda: fonte estática (legislaturas, partidos) ficava em aviso para sempre. O atraso real é a **última verificação** (`metadata.capturas.dt_verificacao`, atualizada a cada captura mesmo sem mudança), medida por `max_age_days` do dataset (`dado-publico observe` e o relatório da carga) e pelo sensor `verificar_atrasos` do Dagster, que alerta quando uma captura agendada deixa de rodar. Fonte que parou de ser verificada continua alertando.
 
-**O que ainda não existe:** um comando que pergunte às origens "há dado novo?" sem baixar. Hoje a pergunta é feita dentro da captura agendada (o pedido leve de `ETag`/`Last-Modified` antes de baixar), que roda no `schedule` de cada fonte. O alerta de atraso aparece na interface; o aviso por e-mail só cobre execuções que falham.
+**O que ainda não existe:** um comando que pergunte às origens "há dado novo?" sem baixar. Hoje a pergunta é feita dentro da captura agendada (o pedido leve de `ETag`/`Last-Modified` antes de baixar), que roda no `schedule` de cada fonte. O alerta de atraso aparece na interface; o aviso por e-mail só cobre execuções que falham e exige SMTP configurado.

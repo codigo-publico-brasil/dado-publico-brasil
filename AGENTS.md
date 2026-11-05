@@ -19,7 +19,7 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 - Todo dado exibido tem fonte oficial, URL e data de captura.
 - O landing é imutável (arquivo original, hash, URL, data). Nunca edite nem apague.
 - Nunca invente, estime nem complete dado: faltou, fica vazio, e o teste mede a lacuna.
-- Atributo cadastral da pessoa: se qualquer fonte oficial carregada o tem, a ficha o traz (o cadastro da Câmara e do Senado primeiro, o TSE no que faltar); nunca depender de a pessoa estar na fonte mais rica. Um teste confere (`app_pessoas_sem_dado_que_o_tse_tem`).
+- Atributo cadastral da pessoa: se qualquer fonte oficial carregada o tem, a ficha o traz (o cadastro da Câmara e do Senado primeiro, o TSE no que faltar); nunca depender de a pessoa estar na fonte mais rica. Um teste confere (`pessoas_sem_dado_que_o_tse_tem`).
 - Nenhum documento pessoal (CPF, RG...); nenhum segredo ou dado pessoal no repositório.
 - Sem ranking, nota ou métrica avaliativa derivada. Conteúdo de IA fica em tabelas próprias, rotulado.
 - Camadas posteriores são reproduzíveis do landing por código; pipelines são idempotentes.
@@ -38,6 +38,9 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 5. **Documentação no mesmo PR:** quem muda comportamento, camada, comando, tabela ou estrutura de pastas atualiza o documento correspondente (e o `README.md` se a estrutura mudar). Doc desatualizada é bug.
 6. Erro recorrente de agente vira regra aqui ou teste.
 7. **Núcleo agnóstico:** antes de dar nome de fonte a comando, função, ativo ou tabela do núcleo, pergunte se outra fonte faria o mesmo; se sim, é configuração do YAML da fonte.
+8. **Plano concreto e sem retrabalho:** antes de agir, escreva um plano curto (arquivos, passos, testes, como verificar) e siga-o; o que já foi apurado nesta conversa ou nos ADRs não se reapura nem se refaz. Leia só o necessário, rode primeiro os testes dos arquivos afetados e a suíte completa uma vez, no fim. Aviso de escopo ou de risco vem antes do trabalho, não depois.
+9. **Cada agente na sua worktree, e limpa:** `git worktree add .claude/worktrees/<tarefa> -b <branch> origin/main`; nunca troque a branch nem edite a pasta principal (outras sessões a usam). O warehouse e a pasta de dados ficam na pasta principal (fora do git): aponte `DADO_PUBLICO_STORAGE_ROOT` para ela e respeite o escritor único. Ao terminar, remova só o que você criou: a worktree (`git worktree remove`), a branch local já enviada, e arquivos, logs e bancos temporários. Agentes que só leem (`qa`, `auditor`) leem o diff com `git show`/`git diff` e só criam worktree se precisarem executar algo.
+10. **Boas práticas e crítica:** aplique as melhores práticas da área (modelagem, dbt, DuckDB, testes, segurança). Se uma diretriz recebida no chat não for a melhor opção, diga isso antes de executar, com a alternativa e o porquê; quem decide é o fundador, mas concordar por cortesia é falha. Na dúvida sobre prática, versão ou comportamento de ferramenta, pesquise na internet (documentação oficial primeiro) e cite a fonte; nunca afirme de memória o que dá para conferir.
 
 ## Onde mexer
 
@@ -50,6 +53,7 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 | página inicial do lake público (texto, layout, logos) | `site/index.html` (depois `dado-publico publish-docs`) |
 | ordem das etapas, agendamento | `src/dado_publico_brasil/orchestration/` |
 | serviços locais (Dagster), limite de memória | `compose.yaml`, `dagster.yaml` |
+| preparar, abastecer e atualizar o servidor remoto (Dagster em Docker por SSH) | `scripts/servidor.sh` e o modelo `.env.servidor.example` (genéricos: nada do servidor atual no código) |
 | ambiente (pasta de dados, warehouse) | variáveis `DADO_PUBLICO_STORAGE_ROOT`, `DADO_PUBLICO_WAREHOUSE` |
 | papel dos agentes (`engenheiro`, `arquiteto`, `qa`, `auditor`) | `.claude/agents/<nome>.md` (só o que é específico do papel; as regras comuns ficam neste arquivo) |
 

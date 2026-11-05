@@ -68,13 +68,14 @@ Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). [Da
 | --- | --- |
 | `sources/` | declaração das fontes: `sources/<poder>/<esfera>/<fonte>.yml` |
 | `src/dado_publico_brasil/` | o código: `core` (base), `ingestion`, `transformation` e `orchestration` (liga os dois) |
-| `dbt/` | modelos SQL: staging, intermediate e marts (`dim_`, `fct_`, `brg_`, `agg_`, `app_`), com testes |
+| `dbt/` | modelos SQL: staging, intermediate e marts (`dim_`, `fct_`, `brg_`, `agg_`), com testes |
 | `site/` | página inicial do lake público (`index.html`), publicada por `dado-publico publish-docs` |
 | `ddl/` | migrações das tabelas próprias (`metadata`, `identity`) |
 | `docs/` | a documentação |
 | `tests/` | testes |
 | `.claude/agents/` | agentes de IA do projeto (arquiteto, engenheiro, auditor, qa) |
 | `compose.yaml` | Dagster (webserver e daemon) em Docker |
+| `scripts/servidor.sh` | prepara, abastece e atualiza o servidor remoto ([guia](docs/02-fazer/04-operar-e-publicar.md)) |
 | `data_store/` | landing e warehouse (fora do git) |
 
 ## Documentação

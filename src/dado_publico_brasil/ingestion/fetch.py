@@ -16,6 +16,7 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from contextlib import suppress
 from functools import partial
 from http.client import HTTPException
 from pathlib import Path
@@ -74,9 +75,17 @@ def pace_of(contract: SourceContract) -> Pace:
 
 
 def _open(
-    url: str, headers: dict[str, str], method: str, timeout: int, pace: Pace | None, suffix: str = "csv"
+    url: str,
+    headers: dict[str, str],
+    method: str,
+    timeout: int,
+    pace: Pace | None,
+    suffix: str = "csv",
+    sites: tuple[str, ...] = (),
 ) -> Any:
-    """Abre a requisição respeitando a cortesia; levanta `SourceBlocked` antes de qualquer gravação."""
+    """Abre a requisição respeitando a cortesia; levanta `SourceBlocked` antes de qualquer gravação.
+
+    Redirecionar para outro site é bloqueio, salvo para os de `access.redirect_sites` da fonte."""
     if pace:
         pace.wait()
     try:
@@ -85,7 +94,7 @@ def _open(
         if error.code in (403, 405, 429):
             raise SourceBlocked(f"{url}: HTTP {error.code}", error.code) from error
         raise
-    if _site(response.url) != _site(url):
+    if _site(response.url) not in (_site(url), *sites):
         response.close()
         raise SourceBlocked(f"{url}: redirecionou para {response.url}")
     if suffix != "html" and "text/html" in (response.headers.get("Content-Type") or "").lower():
@@ -131,6 +140,7 @@ def download(
     suffix: str = "csv",
     name: str | None = None,
     pace: Pace | None = None,
+    sites: tuple[str, ...] = (),
 ) -> tuple[Path, str, int]:
     """Baixa sem alterar. Devolve o caminho (com o hash no nome), o SHA-256 e o tamanho em bytes.
 
@@ -139,7 +149,7 @@ def download(
 
     def attempt() -> tuple[str, int]:
         sha, size = hashlib.sha256(), 0
-        with _open(url, headers or {}, "GET", 120, pace, suffix) as r:
+        with _open(url, headers or {}, "GET", 120, pace, suffix, sites) as r:
             folder.mkdir(parents=True, exist_ok=True)  # só depois de aberta: bloqueio não deixa pasta vazia
             with temporary.open("wb") as f:
                 body = _body(r)
@@ -147,9 +157,24 @@ def download(
                     f.write(chunk)
                     sha.update(chunk)
                     size += len(chunk)
+            promised = r.headers.get("Content-Length")
+            # a leitura em pedaços não acusa conexão cortada; sem transporte comprimido o tamanho tem de bater
+            if (
+                promised
+                and promised.isdigit()
+                and not r.headers.get("Content-Encoding")
+                and int(promised) != size
+            ):
+                raise OSError(f"download truncado: recebidos {size} bytes, a fonte informou {promised}")
         return sha.hexdigest(), size
 
-    digest, size = _retrying(attempt)
+    try:
+        digest, size = _retrying(attempt)
+    except BaseException:  # nada incompleto fica no landing: o temporário some e a pasta, se vazia
+        temporary.unlink(missing_ok=True)
+        with suppress(OSError):
+            folder.rmdir()
+        raise
     name = re.sub(r"[^\w.-]+", "_", name or url.rsplit("/", 1)[-1])
     stem, dot, extension = name.rpartition(".")
     stem, extension = (
@@ -185,10 +210,14 @@ def get(url: str, headers: dict[str, str] | None = None) -> tuple[int, bytes]:
 
 
 def head(
-    url: str, headers: dict[str, str] | None = None, pace: Pace | None = None, suffix: str = "csv"
+    url: str,
+    headers: dict[str, str] | None = None,
+    pace: Pace | None = None,
+    suffix: str = "csv",
+    sites: tuple[str, ...] = (),
 ) -> dict[str, str | None]:
     """Pergunta à fonte (HEAD) se o arquivo mudou, sem baixá-lo. Valores ausentes ficam `None`."""
-    with _open(url, headers or {}, "HEAD", 60, pace, suffix) as response:
+    with _open(url, headers or {}, "HEAD", 60, pace, suffix, sites) as response:
         return {
             "etag": response.headers.get("ETag"),
             "last_modified": response.headers.get("Last-Modified"),
@@ -201,7 +230,11 @@ def downloader(contract: SourceContract, dataset: str) -> Downloader:
     custom = getattr(contract.custom, "download", None)
     suffix = "zip" if contract.datasets[dataset].archive == "zip" else contract.format_of(dataset)
     return custom or partial(
-        download, headers=contract.headers_of(dataset), suffix=suffix, pace=pace_of(contract)
+        download,
+        headers=contract.headers_of(dataset),
+        suffix=suffix,
+        pace=pace_of(contract),
+        sites=contract.redirect_sites,
     )
 
 
@@ -209,5 +242,9 @@ def head_request(contract: SourceContract, dataset: str) -> HeadRequest:
     custom = getattr(contract.custom, "head", None)
     suffix = contract.format_of(dataset)
     return custom or partial(
-        head, headers=contract.headers_of(dataset), pace=pace_of(contract), suffix=suffix
+        head,
+        headers=contract.headers_of(dataset),
+        pace=pace_of(contract),
+        suffix=suffix,
+        sites=contract.redirect_sites,
     )

@@ -29,6 +29,25 @@ x-pipeline: &pipeline
     - dagster_home:/dagster_home
 
 services:
+  # Uso único a cada subida, antes do Dagster: copia o `dagster.yaml` de forma atômica e regera o manifesto do dbt
+  # (`dbt parse`, que não abre o warehouse), porque o Dagster carrega os ativos dele e a imagem pode ter mudado.
+  init:
+    <<: *pipeline
+    restart: "no"
+    mem_limit: 1g
+    command:
+      - sh
+      - -c
+      - |
+        cp /app/dagster.yaml "$$DAGSTER_HOME/dagster.yaml.tmp" && mv "$$DAGSTER_HOME/dagster.yaml.tmp" "$$DAGSTER_HOME/dagster.yaml" &&
+        uv run --no-sync python -c "
+        import sys
+        from dado_publico_brasil.core.settings import load_settings
+        from dado_publico_brasil.transformation import dbt
+        out = dbt.invoke(load_settings(), 'parse')
+        print(out.output)
+        sys.exit(out.returncode)"
+
   # Dagster como serviço (ADR 0027): `webserver` (interface) e `daemon` (agendamentos e sensores) dividem a imagem e o
   # estado. A imagem sai do CI (GHCR); o servidor só faz `pull` (docs/02-fazer/04-operar-e-publicar.md). Local, com
   # build: `docker compose up -d --build webserver daemon`.
@@ -40,7 +59,7 @@ services:
     depends_on:
       init: {condition: service_completed_successfully}
     ports:
-      - "${DADO_PUBLICO_BIND:-127.0.0.1}:3000:3000"
+      - "${DADO_PUBLICO_BIND:-127.0.0.1}:${DADO_PUBLICO_PORT:-3000}:3000"
 
   daemon:
     <<: *pipeline
