@@ -23,7 +23,7 @@ access:
   format: csv
   delimiter: ";"
   encoding: latin-1
-  rate_limit: 0.2   # requisições por segundo: uma a cada 5 s (ADR 0038); o portal já nos bloqueou por WAF/CAPTCHA
+  rate_limit: 0.03   # requisições por segundo: uma a cada ~33 s (ADR 0038); o portal bloqueou (HTTP 405) a 5 s após 12 a 17 arquivos de 7 a 9 MB
   # o portal redireciona o download para o domínio de arquivos da própria CGU (conferido em 05/11/2026:
   # 302 para dadosabertos-download.cgu.gov.br); outro destino continua sendo bloqueio
   redirect_sites: [cgu.gov.br]

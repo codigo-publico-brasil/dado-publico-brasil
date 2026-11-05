@@ -10,7 +10,7 @@ MENSAIS = ("despesas", "compras", "compras_itens", "compras_termos_aditivos")
 
 def test_the_contract_is_polite_direct_and_covers_four_years() -> None:
     contrato = contracts.find("transparencia")
-    assert contrato.rate_limit == 0.2  # uma requisição a cada 5 segundos (ADR 0038)
+    assert contrato.rate_limit == 0.03  # uma requisição a cada ~33 segundos (ADR 0038)
     for nome in MENSAIS:
         dataset = contrato.datasets[nome]
         assert (dataset.partition, dataset.first_month) == ("month", 202211)
