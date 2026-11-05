@@ -180,3 +180,29 @@ def test_mascarar_cpf_em_todos_os_modos(
     db: duckdb.DuckDBPyConnection, modo: str, original: str, expected: str
 ) -> None:
     assert one(db, "SELECT mascarar_dado_pessoal(?, ?)", original, modo) == expected
+
+
+TSE_VALORES = [
+    None, "", "   ", "#NULO", "#NULO#", "#NE", "#NE#", "  #NE#  ", "# NE", "#JUNTOS", " #JUNTOS  A ",
+    "a   b", "  Maria  ", "#nulo", "x\t\ny", "#NULO##",
+]  # fmt: skip
+
+
+@pytest.mark.parametrize("valor", TSE_VALORES)
+def test_tse_value_equals_the_reference_rule(db: duckdb.DuckDBPyConnection, valor: str | None) -> None:
+    """Regra de referência: limpa o texto; marcador do TSE ou vazio viram nulo."""
+    esperado = db.execute(
+        "SELECT CASE WHEN c IN ('#NULO', '#NULO#', '#NE', '#NE#') THEN NULL ELSE nullif(c, '') END "
+        "FROM (SELECT clean_text(?) AS c)",
+        [valor],
+    ).fetchone()
+    assert esperado is not None
+    assert one(db, "SELECT tse_value(?)", valor) == esperado[0]
+
+
+def test_tse_value_cleans_the_text_only_once(db: duckdb.DuckDBPyConnection) -> None:
+    """O custo do staging do TSE está na limpeza (`regexp_replace`): ela roda uma vez por valor, não duas."""
+    plano = "\n".join(
+        str(r[1]) for r in db.execute("EXPLAIN SELECT tse_value(x) FROM (SELECT 'a' AS x)").fetchall()
+    )
+    assert plano.count("regexp_replace") <= 1, plano
