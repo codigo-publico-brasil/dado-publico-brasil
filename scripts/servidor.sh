@@ -10,7 +10,7 @@ USO='Uso: scripts/servidor.sh <subcomando> [--dry-run]
   dados [--forcar]               copia landing/, arquivos/ e warehouse.duckdb locais para o servidor
   implantar [--forcar]           baixa a imagem e (re)inicia webserver e daemon; --forcar ignora execução em andamento
   primeira-carga [--forcar]      lança o atualizar_tudo uma vez (só no primeiro uso; nunca é automático)
-  status                         containers, últimas execuções, daemons, memória e endereço
+  status                         containers, últimas execuções, daemons, verificações em erro, memória e endereço
 --dry-run imprime os comandos sem executar.'
 
 ENV_FILE=${SERVIDOR_ENV_FILE:-.env.servidor}
@@ -62,6 +62,7 @@ Q = {
     "ping": "{version}",
     "ativas": "{runsOrError(filter:{statuses:[STARTED,QUEUED,STARTING]}){... on Runs{results{runId status jobName}}}}",
     "lancada": '{runsOrError(filter:{pipelineName:"atualizar_tudo"},limit:1){... on Runs{results{runId}}}}',
+    "erros": "{assetNodes{assetKey{path} assetChecksOrError{... on AssetChecks{checks{name executionForLatestMaterialization{status evaluation{severity}}}}}}}",
     "ultimas": "{runsOrError(limit:3){... on Runs{results{status jobName creationTime}}}"
     " instance{daemonHealth{allDaemonStatuses{daemonType healthy required}}}}",
 }
@@ -72,7 +73,16 @@ if not d.get("data"):
     raise SystemExit(d)
 d = d["data"]
 r = d.get("runsOrError", {}).get("results", [])
-if m == "ativas":
+if m == "erros":
+    n = 0
+    for a in d["assetNodes"]:
+        for c in a["assetChecksOrError"].get("checks", []):
+            e = c["executionForLatestMaterialization"]
+            if e and (e["status"] == "EXECUTION_FAILED" or e["status"] == "FAILED" and e["evaluation"]["severity"] == "ERROR"):
+                n += 1
+                print("  %-45s %-28s %s" % ("/".join(a["assetKey"]["path"]), c["name"], e["status"]))
+    print("Verificações de ativo em erro (última avaliação): %d" % n if n else "Verificações de ativo em erro: nenhuma")
+elif m == "ativas":
     for x in r:
         print(x["runId"][:8], x["status"], x["jobName"])
 elif m == "lancada":
@@ -289,6 +299,8 @@ status() {
   local ids
   run "${DC[@]}" ps -a
   if web_rodando || ((DRY)); then gql ultimas || say "(interface ainda não responde)"; else say "Interface fora do ar (webserver parado)."; fi
+  # só a GraphQL (nunca o warehouse): vale com execução ativa
+  if web_rodando || ((DRY)); then gql erros || true; fi
   ids=$(rd "${DC[@]}" ps -q 2>/dev/null || true)
   # shellcheck disable=SC2086
   if ((DRY)); then show docker --context servidor stats --no-stream "<containers>"

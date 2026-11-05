@@ -20,6 +20,9 @@ access:
   format: csv
   delimiter: ";"
   encoding: latin-1
+  # o portal redireciona o download para o domínio de arquivos da própria CGU (conferido em 05/11/2026:
+  # 302 para dadosabertos-download.cgu.gov.br); outro destino continua sendo bloqueio
+  redirect_sites: [cgu.gov.br]
 
 datasets:
   emendas:

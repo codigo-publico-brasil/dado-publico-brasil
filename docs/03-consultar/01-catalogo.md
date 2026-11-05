@@ -122,7 +122,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_camara__deputados_detalhe` | Cadastro dos deputados (só dos já buscados), uma linha por deputado. | publico-agente-publico |  |
 | `stg_camara__deputados_historico` | Histórico de situação dos deputados (só dos já buscados), uma linha por registro de status. | publico-agente-publico |  |
 | `stg_camara__deputados_ocupacoes` | Ocupações anteriores declaradas por deputado. | publico-agente-publico |  |
-| `stg_camara__deputados_profissoes` | Profissões declaradas por deputado (linhas sem título descartadas pela padronização). | publico-agente-publico |  |
+| `stg_camara__deputados_profissoes` | Profissões declaradas por deputado. Deputado sem profissão declarada vem da fonte com título vazio e fica aqui com `titulo` nulo (lacuna medida, não preenchida); quem consome filtra. | publico-agente-publico |  |
 | `stg_camara__frentes` | Frentes parlamentares, uma por frente. | publico-agente-publico |  |
 | `stg_camara__frentes_membros` | Participação de deputados em frentes parlamentares, uma linha por legislatura e título. Em parte das linhas (coordenações antigas) a fonte não identifica o deputado; elas ficam aqui e saem dos marts. | publico-agente-publico |  |
 | `stg_camara__legislaturas` | Legislaturas, uma linha por legislatura, com datas oficiais. | publico-agente-publico |  |
@@ -807,7 +807,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_partido` | integer | Partido do evento (dim_partidos), quando o tipo exige. |  |
 | `base` | varchar | Como o evento é obtido: informado pela fonte ou derivado de regra do projeto. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto. |  |
-| `fonte` | varchar | Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento, a fonte do cadastro. Vazia no falecimento, que junta fontes sem captura própria (o teste de aviso mede). |  |
+| `fonte` | varchar | Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento e no falecimento, a fonte do cadastro que informa a data. O teste de aviso mede o que ficar sem. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem do fato; vazia quando o evento não tem id_captura. |  |
 
 ### marts.fct_exercicios

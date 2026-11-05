@@ -217,10 +217,24 @@ def test_a_response_compressed_in_transport_is_kept_as_the_document_it_carries(t
 
 
 class Hostile(http.server.BaseHTTPRequestHandler):
+    calls = 0
+
     def do_GET(self) -> None:
         if self.path == "/403":
             self.send_response(403)
             self.end_headers()
+        elif self.path in (
+            "/short",
+            "/flaky",
+        ):  # promete 100 bytes e fecha a conexão antes (/flaky: só na 1ª vez)
+            Hostile.calls += 1
+            full = self.path == "/flaky" and Hostile.calls > 1
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv")
+            self.send_header("Content-Length", "100")
+            self.end_headers()
+            self.wfile.write(b"a" * (100 if full else 40))
+            self.close_connection = True
         elif self.path == "/moved":
             self.send_response(302)
             self.send_header(
@@ -289,3 +303,45 @@ def test_the_courtesy_interval_applies_to_every_request_with_an_injected_clock(
     now[0] = 5.0
     fetch.head(hostile + "/ok.csv", pace=pace)
     assert pauses == [pytest.approx(0.3)]
+
+
+def test_a_redirect_to_another_site_is_accepted_only_when_the_source_declares_it(
+    hostile: str, tmp_path: Path
+) -> None:
+    with pytest.raises(fetch.SourceBlocked):
+        fetch.download(hostile + "/moved", tmp_path)
+    file, _, _ = fetch.download(hostile + "/moved", tmp_path, sites=("localhost",))
+    assert file.read_text(encoding="utf-8") == "a,b\n1,2\n"
+    assert fetch.head(hostile + "/moved", sites=("localhost",))["size"]
+
+
+def test_a_truncated_download_is_retried_and_never_left_in_the_landing(
+    hostile: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+    folder = tmp_path / "landing" / "fonte"
+    with pytest.raises(OSError, match="truncado"):
+        fetch.download(hostile + "/short", folder)
+    assert not folder.exists()  # nem o temporário nem a pasta
+    Hostile.calls = 0
+    file, _, size = fetch.download(hostile + "/flaky", folder)  # a 2ª tentativa vem inteira
+    assert size == 100 == file.stat().st_size and [p.name for p in folder.iterdir()] == [file.name]
+
+
+def test_professions_without_a_title_are_kept_not_rejected_and_the_portal_redirect_is_declared(
+    tmp_path: Path,
+) -> None:
+    from dado_publico_brasil.ingestion import contract as contracts
+
+    camara = contracts.find("camara")
+    dataset = camara.datasets["deputadosProfissoes"]
+    file = tmp_path / "p.csv"  # a fonte lista o deputado sem profissão com título e data vazios
+    file.write_text(
+        "uri;id;dataHora;codTipoProfissao;titulo\n"
+        "u/1;1;2020-01-01T10:00;5;Médico\nu/1;1;2020-01-01T10:00;5;Médico\nu/2;2;;0;\n",
+        encoding="utf-8",
+    )
+    stats = {"read": 0, "filtered": 0, "loaded": 0, "rejected": 0, "conflicting": 0, "replaced": 0}
+    loaded = list(loader.read_rows(file, camara, dataset, 1, stats))
+    assert stats["rejected"] == 0 and stats["loaded"] == len(loaded) == 3
+    assert contracts.find("transparencia").redirect_sites == ("cgu.gov.br",)

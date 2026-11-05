@@ -115,6 +115,7 @@ class SourceContract:
     format: str = "csv"
     headers: dict[str, str] = field(default_factory=dict)  # aceita ${VARIAVEL} do ambiente
     rate_limit: float = 4.0  # requisições por segundo a toda a fonte (cortesia)
+    redirect_sites: tuple[str, ...] = ()  # domínios registráveis para onde o redirecionamento é aceito
     schedule: str | None = None  # cron (5 campos) da captura automática; None: só quando pedido
     custom: ModuleType | None = None
     datasets: dict[str, Dataset] = field(default_factory=dict)
@@ -337,6 +338,7 @@ def load_contract(path: Path) -> SourceContract:
         encoding=access.get("encoding", "utf-8-sig"),
         format=access.get("format", "csv"),
         rate_limit=_rate_limit(access.get("rate_limit", 4), source),
+        redirect_sites=tuple(access.get("redirect_sites", ())),
         schedule=schedule,
         headers=dict(access.get("headers", {})),
         custom=custom,

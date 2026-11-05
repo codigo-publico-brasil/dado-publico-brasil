@@ -118,7 +118,7 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
         [sys.executable, "-c", code], capture_output=True, text=True, env=env, cwd=ROOT, check=False
     )
     assert result.returncode == 0, result.stderr[-1500:]
-    sensors = "['falha_de_execucao', 'verificar_atrasos']"
+    sensors = "['falha_de_execucao', 'verificacoes_em_erro', 'verificar_atrasos']"
     # ativos; agendamento e job por fonte; sensores; dbt e identidade sobem sozinhos, o raw não; atraso por fonte agendada
     assert f"True True True True True {sensors} True True True True True True True True" in result.stdout, (
         result.stdout
