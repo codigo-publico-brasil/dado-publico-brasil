@@ -1,4 +1,7 @@
 # Declaração da fonte: Portal da Transparência do Governo Federal (CGU), arquivos de dados abertos.
+# Despesas e contratos: um .zip por mês na URL direta do host de download (dadosabertos-download.cgu.gov.br; o endereço do
+# portal redireciona para esse host, aceito por `redirect_sites`), de 2022-11 em diante (4 anos), só meses fechados.
+# Contratado pessoa física vem com CPF completo no arquivo: o raw (privado) o guarda como vem; o staging, que vai ao lake, o mascara.
 # Emendas parlamentares: um pacote .zip nacional com três tabelas, atualizado todo dia. Os três datasets usam o
 # mesmo arquivo e se distinguem por um fragmento na URL (`#...`), que nunca vai ao servidor, só ao registro de
 # captura. Os favorecidos entram como a fonte publica, inclusive pessoa física (cidadão comum, com CPF mascarado):
@@ -10,7 +13,7 @@
 source: transparencia
 power: executivo
 level: federal
-description: Portal da Transparência (CGU), emendas parlamentares
+description: Portal da Transparência (CGU), emendas parlamentares, despesas e contratos
 
 # Regra de extração: o portal atualiza todo dia; a execução diária confere os arquivos completos (só baixa se mudaram).
 schedule: "40 1 * * *"            # captura noturna (cron, fuso America/Sao_Paulo; escalonada 01:00-02:20, ADR 0042); sem esta linha, só quando pedido
@@ -20,6 +23,7 @@ access:
   format: csv
   delimiter: ";"
   encoding: latin-1
+  rate_limit: 0.03   # requisições por segundo: uma a cada ~33 s (ADR 0038); o portal bloqueou (HTTP 405) a 5 s após 12 a 17 arquivos de 7 a 9 MB
   # o portal redireciona o download para o domínio de arquivos da própria CGU (conferido em 05/11/2026:
   # 302 para dadosabertos-download.cgu.gov.br); outro destino continua sendo bloqueio
   redirect_sites: [cgu.gov.br]
@@ -69,3 +73,81 @@ datasets:
       ["Código da Emenda", "Código do Autor da Emenda", "Nome do Autor da Emenda", "Número da emenda",
        "Tipo de Emenda", "Ano/Mês", "Código do Favorecido", "Favorecido", "Natureza Jurídica", "Tipo Favorecido",
        "UF Favorecido", "Município Favorecido", "Valor Recebido"]
+
+  despesas:
+    # Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza (valores empenhado, liquidado e pago). Sem favorecido: o arquivo não o traz (issue 11).
+    url: "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/despesas-execucao/{month}_Despesas.zip"
+    max_age_days: 40   # mês fechado não muda; avisa se a última verificação passar de 40 dias
+    load: yearly
+    partition: month
+    first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    archive: zip
+    member: "*_Despesas.csv"
+    write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
+    primary_key: [_row_hash]
+    columns:
+      ["Ano e mês do lançamento", "Código Órgão Superior", "Nome Órgão Superior", "Código Órgão Subordinado",
+       "Nome Órgão Subordinado", "Código Unidade Gestora", "Nome Unidade Gestora", "Código Gestão", "Nome Gestão",
+       "Código Unidade Orçamentária", "Nome Unidade Orçamentária", "Código Função", "Nome Função", "Código Subfução",
+       "Nome Subfunção", "Código Programa Orçamentário", "Nome Programa Orçamentário", "Código Ação", "Nome Ação",
+       "Código Plano Orçamentário", "Plano Orçamentário", "Código Programa Governo", "Nome Programa Governo", "UF",
+       "Município", "Código Subtítulo", "Nome Subtítulo", "Código Localizador", "Nome Localizador",
+       "Sigla Localizador", "Descrição Complementar Localizador", "Código Autor Emenda", "Nome Autor Emenda",
+       "Código Categoria Econômica", "Nome Categoria Econômica", "Código Grupo de Despesa", "Nome Grupo de Despesa",
+       "Código Elemento de Despesa", "Nome Elemento de Despesa", "Código Modalidade da Despesa",
+       "Modalidade da Despesa", "Valor Empenhado (R$)", "Valor Liquidado (R$)", "Valor Pago (R$)",
+       "Valor Restos a Pagar Inscritos (R$)", "Valor Restos a Pagar Cancelado (R$)",
+       "Valor Restos a Pagar Pagos (R$)"]
+
+  compras:
+    # Contratos do governo federal (um por linha): objeto, órgão, vigência e valores. Contratado com CPF completo no raw; mascarado no staging.
+    url: "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/compras/{month}_Compras.zip#compras"
+    max_age_days: 40   # mês fechado não muda; avisa se a última verificação passar de 40 dias
+    load: yearly
+    partition: month
+    first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    archive: zip
+    member: "*_Compras.csv"
+    write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
+    primary_key: [_row_hash]
+    columns:
+      ["Número do Contrato", "Objeto", "Fundamento Legal", "Modalidade Compra", "Situação Contrato",
+       "Código Órgão Superior", "Nome Órgão Superior", "Código Órgão", "Nome Órgão", "Código UG", "Nome UG",
+       "Data Assinatura Contrato", "Data Publicação DOU", "Data Início Vigência", "Data Fim Vigência",
+       "Código Contratado", "Nome Contratado", "Valor Inicial Compra", "Valor Final Compra", "Número Licitação",
+       "Código UG Licitação", "Nome UG Licitação",
+       "Código Modalidade Compra Licitação", "Modalidade Compra Licitação"]
+
+  compras_itens:
+    # Itens de cada contrato.
+    url: "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/compras/{month}_Compras.zip#itens"
+    max_age_days: 40   # mês fechado não muda; avisa se a última verificação passar de 40 dias
+    load: yearly
+    partition: month
+    first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    archive: zip
+    member: "*_ItemCompra.csv"
+    write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
+    primary_key: [_row_hash]
+    columns:
+      ["Código Órgão", "Nome Órgão", "Código UG", "Nome UG", "Número Contrato", "Código Item Compra",
+       "Descrição Item Compra", "Descrição Complementar Item Compra", "Quantidade Item", "Valor Item"]
+
+  compras_termos_aditivos:
+    # Termos aditivos dos contratos.
+    url: "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/compras/{month}_Compras.zip#aditivos"
+    max_age_days: 40   # mês fechado não muda; avisa se a última verificação passar de 40 dias
+    load: yearly
+    partition: month
+    first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    archive: zip
+    member: "*_TermoAditivo.csv"
+    write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
+    primary_key: [_row_hash]
+    columns:
+      ["Número Contrato", "Código Órgão Superior", "Nome Órgão Superior", "Código Órgão", "Nome Órgão", "Código UG",
+       "Nome UG", "Número Termo Aditivo", "Data Publicação", "Objeto"]

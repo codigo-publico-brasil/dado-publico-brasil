@@ -33,6 +33,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0039](0039-marts-como-camada-semantica.md) | Os marts são a camada semântica: regra de negócio nos marts (não nas `app_*`), mudança só aditiva, derivado sempre marcado | proposto (desenho aprovado pelo fundador); altera 0038 (itens 3 e 4) |
 | [0040](0040-ocupacao-de-cargo.md) | Ocupação de cargo como fato (`fct_cargos_ocupacoes`): exercício publicado vence, mandato cobre o resto | proposto (desenho aprovado pelo fundador); complementa 0039 e 0030 |
 | [0041](0041-eleito-completo-e-fim-das-views-app.md) | `fl_eleito` passa a ser o eleito completo (informado ou derivado) e as views `app_*` deixam de existir | aceito; altera 0039 (item sobre `fl_eleito`) e 0038 (item 4) |
+| [0045](0045-meses-fechados-405-e-pacote-unico.md) | Meses fechados (`lag_months`), 405 como bloqueio e um download por pacote | aceito; complementa o [0038 (cortesia)](0038-cortesia-e-bloqueio-na-ingestao.md) |
 
 ### Estrutura do repositório e das camadas
 

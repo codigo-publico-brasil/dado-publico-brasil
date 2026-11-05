@@ -58,6 +58,31 @@ def last_capture(con: Connection, url: str) -> dict[str, Any] | None:
     return found[0] if found else None
 
 
+def same_file(
+    con: Connection,
+    contract: SourceContract,
+    dataset: str,
+    url: str,
+    year: int | None,
+    storage_root: Path,
+    headers: Mapping[str, str | None],
+) -> dict[str, Any] | None:
+    """Captura de outro dataset do mesmo arquivo (URL igual até o `#`) que a fonte diz não ter mudado.
+
+    Vários datasets leem o mesmo pacote (emendas, contratos): baixa-se uma vez, os demais reaproveitam."""
+    base = url.partition("#")[0]
+    found = rows(
+        con,
+        "SELECT * FROM metadata.capturas WHERE fonte = ? AND dataset <> ? "
+        "AND particao IS NOT DISTINCT FROM ? "
+        "AND (url = ? OR url LIKE ?) ORDER BY id_captura DESC LIMIT 1",
+        (contract.source, dataset, year, base, base + "#%"),
+    )
+    if found and (storage_root / found[0]["caminho"]).exists() and unchanged(found[0], headers):
+        return found[0]
+    return None
+
+
 def register_capture(
     con: Connection,
     source: str,
@@ -127,17 +152,22 @@ def partitions(dataset: Dataset, years: list[int] | set[int], today: date | None
     if dataset.partition == "legislature":
         return sorted({legislature_of(y) for y in valid})
     if dataset.partition == "month":
-        now = today or datetime.now(UTC).date()
+        last = current_partition(dataset, today or datetime.now(UTC).date())
         months = (y * 100 + m for y in valid for m in range(1, 13))
-        return sorted(v for v in months if (dataset.first_month or 0) <= v <= now.year * 100 + now.month)
+        return sorted(v for v in months if (dataset.first_month or 0) <= v <= last)
     return sorted(valid)
 
 
 def current_partition(dataset: Dataset, today: date) -> int:
-    """A partição em curso: o ano, o mês (AAAAMM) ou a legislatura de hoje."""
+    """A partição em curso: o ano, o mês (AAAAMM) ou a legislatura de hoje.
+
+    Com `lag_months`, o mês em curso é o último fechado que a fonte já deveria ter publicado."""
     match dataset.partition:
         case "month":
-            return today.year * 100 + today.month
+            month = today.year * 100 + today.month
+            for _ in range(dataset.lag_months):
+                month = previous_month(month)
+            return month
         case "legislature":
             return legislature_of(today.year)
         case _:
@@ -247,7 +277,10 @@ def partition_gaps(
             (contract.source, d.name),
         )
         unavailable = {
-            int(r["particao"]) for r in latest if r["resultado"] == "error" and "404" in str(r["detalhe"])
+            int(r["particao"])
+            for r in latest
+            if r["resultado"] == "error"
+            and ("404" in str(r["detalhe"]) or "ainda não publicado" in str(r["detalhe"]))
         } - got
         if (
             d.partition == "month"
@@ -297,6 +330,16 @@ def record_gaps(con: Connection, contract: SourceContract) -> None:
 # ---------------------------------------------------------------- extração
 
 
+def _not_yet_published(dataset: Dataset, year: int | None, error: fetch.SourceBlocked) -> bool:
+    """403 no arquivo do mês mais recente de um dataset mensal: ainda não publicado (não é bloqueio)."""
+    return (
+        error.status == 403
+        and dataset.partition == "month"
+        and year is not None
+        and year >= current_partition(dataset, datetime.now(UTC).date())
+    )
+
+
 def extract(
     con: Connection,
     settings: Settings,
@@ -326,19 +369,40 @@ def extract(
             mark_checked(con, int(previous["id_captura"]))
             run.rows_in = 1
             return int(previous["id_captura"])
+        reused = (
+            None if force else same_file(con, contract, dataset, url, year, settings.storage_root, headers)
+        )
         try:
-            file, digest, size = downloader(url, folder(settings, contract.source, dataset, year, runs.now()))
+            if reused:  # o pacote já veio por outro dataset: sem novo download
+                file, digest, size = (
+                    settings.storage_root / reused["caminho"],
+                    reused["sha256"],
+                    reused["qtd_bytes"],
+                )
+            else:
+                file, digest, size = downloader(
+                    url, folder(settings, contract.source, dataset, year, runs.now())
+                )
+        except fetch.SourceBlocked as error:
+            if not _not_yet_published(contract.datasets[dataset], year, error):
+                raise
+            monitoring.record(
+                con, contract.source, dataset, year, "availability", "error", f"ainda não publicado ({error})"
+            )
+            return -1
         except (OSError, HTTPException) as error:
             monitoring.record(con, contract.source, dataset, year, "availability", "error", str(error))
             return -1
         if previous is not None and previous["sha256"] == digest:  # mesmo conteúdo: fica o arquivo antigo
             original = settings.storage_root / previous["caminho"]
-            if file != original and lost:  # o arquivo local sumiu: o baixado volta ao `caminho` registrado
+            if reused:
+                pass  # o arquivo é o de outro dataset: não se move nem se apaga
+            elif file != original and lost:  # o arquivo local sumiu: o baixado volta ao `caminho` registrado
                 original.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(file, original)
             elif file != original:
                 file.unlink()
-            if file != original:
+            if file != original and not reused:
                 with suppress(OSError):  # a pasta só some se ficou vazia
                     file.parent.rmdir()
             mark_checked(con, int(previous["id_captura"]))

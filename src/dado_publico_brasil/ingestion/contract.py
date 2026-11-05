@@ -95,6 +95,9 @@ class Dataset:
     raw: bool = True  # false: só o landing (arquivos guardados para uso futuro), sem tabela no raw
     arquivos: Arquivos | None = None  # arquivos servidos ao público, em coleção `arq_` (ADR 0037)
     first_month: int | None = None  # (partition: month) primeiro mês pedido, como AAAAMM
+    lag_months: int = (
+        0  # (partition: month) só meses fechados: 1 = até o mês anterior (a fonte publica depois)
+    )
     step: int = 1  # (yearly) só os anos a cada N a partir de first_year (eleições gerais: 4)
     only: dict[str, tuple[str, ...]] = field(default_factory=dict)  # minimização: só linhas com estes valores
     optional: tuple[str, ...] = ()  # colunas que só existem em anos recentes: ausentes não são erro
@@ -172,6 +175,8 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         raise InvalidContract(f"{where}: write '{data['write']}' inválido ({sorted(WRITES)})")
     if data.get("first_month") and data.get("partition") != "month":
         raise InvalidContract(f"{where}: first_month exige partition: month")
+    if int(data.get("lag_months", 0)) and data.get("partition") != "month":
+        raise InvalidContract(f"{where}: lag_months exige partition: month")
     if data.get("archive") is not None and data["archive"] not in ARCHIVES:
         raise InvalidContract(f"{where}: archive deve ser um de {sorted(ARCHIVES)}")
     if int(data.get("step", 1)) > 1 and data.get("first_year") is None:
@@ -219,6 +224,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         raw=raw,
         arquivos=_arquivos(where, data),
         first_month=int(data["first_month"]) if data.get("first_month") else None,
+        lag_months=int(data.get("lag_months", 0)),
         step=int(data.get("step", 1)),
         only={k: tuple(v) for k, v in data.get("only", {}).items()},
         aliases=dict(data.get("aliases", {})),

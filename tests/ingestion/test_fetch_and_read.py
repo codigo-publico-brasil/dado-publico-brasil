@@ -220,8 +220,8 @@ class Hostile(http.server.BaseHTTPRequestHandler):
     calls = 0
 
     def do_GET(self) -> None:
-        if self.path == "/403":
-            self.send_response(403)
+        if self.path in ("/403", "/405"):
+            self.send_response(int(self.path[1:]))
             self.end_headers()
         elif self.path in (
             "/short",
@@ -268,7 +268,7 @@ def hostile() -> Iterator[str]:
     httpd.shutdown()
 
 
-@pytest.mark.parametrize("path", ["/html.zip", "/403", "/moved"])
+@pytest.mark.parametrize("path", ["/html.zip", "/403", "/405", "/moved"])
 def test_a_block_is_raised_before_anything_is_written_to_the_landing(
     hostile: str, path: str, tmp_path: Path
 ) -> None:
