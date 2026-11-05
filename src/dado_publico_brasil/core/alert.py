@@ -20,6 +20,19 @@ def notify_failure(job: str, run_id: str, steps: list[str], message: str, url: s
         return False
 
 
+def notify_check_errors(items: list[tuple[str, str, str]], url: str | None = None) -> bool:
+    """Avisa por e-mail das verificações de ativo em erro (ativo, verificação, descrição). Nunca falha."""
+    lines = [f"{len(items)} verificação(ões) de ativo em erro desde o último aviso:", ""]
+    lines += [f"- {asset} / {check}: {text[:300]}" for asset, check, text in items]
+    if url:
+        lines += ["", f"Ativos: {url}"]
+    try:
+        return send("Plataforma de dados: verificações de ativo em erro", chr(10).join(lines))
+    except (OSError, smtplib.SMTPException) as error:
+        print(f"Alerta por e-mail não enviado: {error}")
+        return False
+
+
 def send(subject: str, body: str, attachment: Path | None = None) -> bool:
     """Envia o e-mail (com um anexo HTML, se pedido). Devolve False sem SMTP ou destinatário configurados."""
     host, to = os.environ.get("DADO_PUBLICO_SMTP_HOST"), os.environ.get("DADO_PUBLICO_ALERT_TO")

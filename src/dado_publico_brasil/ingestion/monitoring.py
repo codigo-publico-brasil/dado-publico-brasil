@@ -120,7 +120,7 @@ def check_integrity(
 
 
 def check_volume(con: Connection, source: str, dataset: str, partition: int | None, rows: int) -> None:
-    """Avisa se a carga trouxe muito menos linhas que a anterior do mesmo dataset e partição."""
+    """Avisa se a carga trouxe muito menos linhas que a anterior (erro se não trouxe nenhuma)."""
     previous = con.execute(
         "SELECT qtd_linhas_entrada FROM metadata.execucoes WHERE etapa = 'load' AND fonte = ? AND "
         "dataset = ? "
@@ -128,7 +128,8 @@ def check_volume(con: Connection, source: str, dataset: str, partition: int | No
         (source, dataset, partition),
     ).fetchone()
     if previous and previous[0] and rows < VOLUME_DROP * previous[0]:
-        record(con, source, dataset, partition, "volume", "warn", f"de {previous[0]} para {rows} linhas")
+        severity = "error" if rows == 0 else "warn"  # 0 linhas onde havia: carga falha
+        record(con, source, dataset, partition, "volume", severity, f"de {previous[0]} para {rows} linhas")
     else:
         record(con, source, dataset, partition, "volume", "ok", f"{rows} linhas")
 

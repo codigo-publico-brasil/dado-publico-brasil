@@ -59,6 +59,7 @@ from dado_publico_brasil.core import alert, migrations, runs, warehouse
 from dado_publico_brasil.core.settings import DBT_DIR, load_settings
 from dado_publico_brasil.ingestion import contract, landing, loader, monitoring
 from dado_publico_brasil.orchestration import pipeline
+from dado_publico_brasil.orchestration.checks_sensor import failed_checks
 from dado_publico_brasil.orchestration.pipeline import step
 from dado_publico_brasil.transformation import build, describe, export, observability, quality
 from dado_publico_brasil.transformation import dbt as dbt_runner
@@ -378,6 +379,7 @@ freshness = [
 ]
 sensors = [
     failure_email,
+    failed_checks,
     build_sensor_for_freshness_checks(
         freshness_checks=freshness, name="verificar_atrasos", default_status=DefaultSensorStatus.RUNNING
     ),
