@@ -53,7 +53,13 @@ from dagster import (
     run_failure_sensor,
     schedule,
 )
-from dagster_dbt import DagsterDbtTranslator, DbtCliResource, DbtProject, dbt_assets
+from dagster_dbt import (
+    DagsterDbtTranslator,
+    DagsterDbtTranslatorSettings,
+    DbtCliResource,
+    DbtProject,
+    dbt_assets,
+)
 
 from dado_publico_brasil.core import alert, migrations, runs, warehouse
 from dado_publico_brasil.core.settings import DBT_DIR, load_settings
@@ -73,11 +79,27 @@ PROJECT = DbtProject(
 PROJECT.prepare_if_dev()
 
 REFRESH = {pipeline.REFRESH_TAG: "true"}  # nos jobs `atualizar_*`: refaz o que vem depois do raw
+SOURCES = contract.find_all()
 TIMEZONE = pipeline.TIMEZONE  # fuso dos `schedule` das fontes
 
 
 class LayerTranslator(DagsterDbtTranslator):
-    """Grupo = camada do dbt (staging, intermediate, marts)."""
+    """Grupo = camada do dbt (staging, intermediate, marts); tabela aninhada do dlt = ativo do dataset."""
+
+    def get_asset_key(self, dbt_resource_props: Mapping[str, Any]) -> AssetKey:
+        key = super().get_asset_key(dbt_resource_props)
+        if dbt_resource_props["resource_type"] != "source":
+            return key
+        # o dlt grava `dataset__filho` junto com o dataset; sem isto o Dagster cria um stub sem op
+        raw = {
+            AssetKey([s.source, loader.normalize(n)]) for s in SOURCES for n, d in s.datasets.items() if d.raw
+        }
+        parts = key.path[1].split("__")
+        for i in range(len(parts), 0, -1):
+            parent = AssetKey([key.path[0], "__".join(parts[:i])])
+            if parent in raw:
+                return parent
+        return key
 
     def get_group_name(self, dbt_resource_props: Mapping[str, Any]) -> str | None:
         if dbt_resource_props["resource_type"] == "seed":  # o `fqn` de um seed é só o nome dele
@@ -85,8 +107,10 @@ class LayerTranslator(DagsterDbtTranslator):
         return str(dbt_resource_props["fqn"][1])
 
 
-PEOPLE = [AssetKey(["identity", "pessoas"]), AssetKey(["identity", "pessoas_identificadores"])]
-IDS_MODEL = AssetKey("int_pessoas_ids_vistos")
+# várias tabelas aninhadas do dlt apontam ao mesmo ativo (o do dataset), então as chaves de source repetem
+TRANSLATOR = LayerTranslator(DagsterDbtTranslatorSettings(enable_duplicate_source_asset_keys=True))
+PEOPLE = [AssetKey(["identity", n]) for n in ("pessoas", "pessoas_identificadores", "pessoas_fusoes")]
+IDS_MODEL = AssetKey(["intermediate", "int_pessoas_ids_vistos"])  # a chave do dbt inclui a camada
 
 
 class ExtractionConfig(Config):
@@ -213,9 +237,12 @@ def _record_dbt(stage: str, target: Path, context: AssetExecutionContext) -> Non
     manifest=PROJECT.manifest_path,
     select="tag:pre_identity",
     name="dbt_pre_identity",
-    dagster_dbt_translator=LayerTranslator(),
+    dagster_dbt_translator=LayerTranslator(
+        DagsterDbtTranslatorSettings(enable_duplicate_source_asset_keys=True)
+    ),
 )
 def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
+    """Fase 1 do dbt: os modelos de que a identidade precisa (`tag:pre_identity`)."""
     with step(context, "dbt antes da identidade"):
         invocation = dbt.cli(
             ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
@@ -229,6 +256,7 @@ def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Ite
     name="identity",
 )
 def identity_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult[Any]]:
+    """Fase 2: resolve as pessoas de `int_pessoas_ids_vistos`; os modelos seguintes leem `identity.*`."""
     with step(context, "identidade"):
         created = build.resolve_identity(SETTINGS)
     context.log.info(f"identidade: {created} pessoas novas criadas")
@@ -240,9 +268,12 @@ def identity_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult
     manifest=PROJECT.manifest_path,
     exclude="tag:pre_identity",
     name="dbt_post_identity",
-    dagster_dbt_translator=LayerTranslator(),
+    dagster_dbt_translator=LayerTranslator(
+        DagsterDbtTranslatorSettings(enable_duplicate_source_asset_keys=True)
+    ),
 )
 def dbt_post_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
+    """Fase 3 do dbt: o resto dos modelos, que já leem `identity.pessoas` (todos menos `tag:pre_identity`)."""
     with step(context, "dbt depois da identidade"):
         invocation = dbt.cli(
             ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
@@ -296,7 +327,6 @@ def docs_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
     return MaterializeResult(metadata={"paginas": len(pages)})
 
 
-SOURCES = contract.find_all()
 SCHEDULED = [s for s in SOURCES if s.schedule]
 INGESTED = [key for s in SOURCES for key in _keys(s)]  # landing e raw de todas as fontes
 jobs = [

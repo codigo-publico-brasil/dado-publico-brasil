@@ -132,7 +132,8 @@ No download padrão, nada é gravado no landing e o resto da fonte é interrompi
 
 - **HEAD é brando:** qualquer falha do HEAD (403, 405, 429...) vira "sem informação" e o GET decide; só o GET bloqueia.
 - **HTML legítimo:** a regra do HTML não vale quando o formato esperado é `html` (`format: html`).
-- **Mesmo site:** o redirecionamento só bloqueia se sair do domínio registrável (`www.in.gov.br` para `in.gov.br` passa).
+- **Mesmo site:** o redirecionamento só bloqueia se sair do domínio registrável (`www.in.gov.br` para `in.gov.br` passa). Quando o próprio site oficial hospeda os arquivos noutro domínio (o Portal da Transparência redireciona para `dadosabertos-download.cgu.gov.br`), declare-o em `access.redirect_sites: [cgu.gov.br]`; qualquer outro destino segue bloqueado.
+- **Download truncado:** se o corpo recebido não tem o tamanho do `Content-Length` da própria resposta, o download falha e é repetido (três tentativas); nada incompleto é gravado no landing. Se persistir, vira `availability` com erro e a próxima execução tenta de novo.
 
 [ADR 0038](../05-decisoes/0038-cortesia-e-bloqueio-na-ingestao.md). Contornar bloqueio (proxy, troca de IP) está fora do projeto: abra uma issue.
 
