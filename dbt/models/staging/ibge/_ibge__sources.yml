@@ -8,10 +8,6 @@ sources:
       Poder Executivo federal (Decreto 8.777/2016); a página da API não traz termos próprios.
       Fonte oficial: [https://servicodados.ibge.gov.br/api/docs/localidades](https://servicodados.ibge.gov.br/api/docs/localidades).
     schema: raw_federal_ibge
-    loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
-    freshness:
-      warn_after: {count: 400, period: day}
-      error_after: {count: 1500, period: day}
     meta:
       url: https://servicodados.ibge.gov.br/api/docs/localidades
       origin: Instituto Brasileiro de Geografia e Estatística (IBGE)

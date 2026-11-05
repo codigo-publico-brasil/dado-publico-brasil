@@ -8,10 +8,6 @@ sources:
       por parágrafo de texto, na ordem do arquivo.
       Fonte oficial: [https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988](https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988).
     schema: raw_federal_constituicao
-    loaded_at_field: to_timestamp(cast(_dlt_load_id as double))
-    freshness:
-      warn_after: {count: 120, period: day}
-      error_after: {count: 400, period: day}
     meta:
       url: https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988
       origin: Câmara dos Deputados

@@ -26,7 +26,7 @@ Confira: o arquivo está em `data_store/landing/<fonte>/...`, a captura em `meta
 
 ## 3. Declarar o raw no dbt
 
-Em `dbt/models/staging/<fonte>/_<fonte>__sources.yml`: descrição da fonte com o link oficial (`meta.url`), frescor (`freshness`) e as tabelas do raw com descrição. Use [`_tse__sources.yml`](../../dbt/models/staging/tse/_tse__sources.yml) de modelo.
+Em `dbt/models/staging/<fonte>/_<fonte>__sources.yml`: descrição da fonte com o link oficial (`meta.url`) e as tabelas do raw com descrição. Use [`_tse__sources.yml`](../../dbt/models/staging/tse/_tse__sources.yml) de modelo.
 
 ## 4. Staging
 
