@@ -295,3 +295,11 @@ def test_a_seed_has_no_node_dependencies(env: tuple[Connection, Settings]) -> No
         assert pick(env, "transform_post").skip
     finally:
         del MANIFEST["nodes"]["model.p.dim_seed"]
+
+
+def test_a_change_to_the_identity_between_two_runs_also_counts(env: tuple[Connection, Settings]) -> None:
+    settled(env[0])
+    identity_run(env[0], "2026-11-06T04:30:00+00:00", "a", "a")
+    assert pick(env, "transform_post").skip
+    identity_run(env[0], "2026-11-07T04:30:00+00:00", "b", "b")  # mexeram nela fora da etapa
+    assert set(pick(env, "transform_post").names) == {"stg_identity", "mart_camara"}

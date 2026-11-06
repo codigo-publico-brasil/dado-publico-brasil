@@ -154,9 +154,12 @@ def plan(
             "WHERE dt_carga IS NOT NULL GROUP BY 1, 2"
         ).fetchall()
     }
+    # identidade mudou na etapa (antes != depois) ou entre duas etapas (antes != depois da anterior)
     changed_at = con.execute(
-        "SELECT max(dt_fim) FROM metadata.execucoes WHERE etapa = 'identity' AND dt_fim IS NOT NULL "
-        "AND impressao_antes IS DISTINCT FROM impressao_depois"
+        "SELECT max(dt_fim) FROM (SELECT dt_fim, impressao_antes AS antes, impressao_depois AS depois, "
+        "lag(impressao_depois) OVER (ORDER BY id_execucao) AS anterior FROM metadata.execucoes "
+        "WHERE etapa = 'identity') WHERE dt_fim IS NOT NULL AND (antes IS DISTINCT FROM depois "
+        "OR (anterior IS NOT NULL AND antes IS DISTINCT FROM anterior))"
     ).fetchone()
     identity_at = changed_at[0] if changed_at else None
 
