@@ -94,6 +94,16 @@ def run_all(
     return summary
 
 
+def ensure_raw(settings: Settings, log: loader.Log = loader.default_log) -> None:
+    """Garante a tabela do raw (vazia, se preciso) de todo dataset `raw: true` de todas as fontes."""
+    con = migrations.open_warehouse(settings)
+    try:
+        for source in contract.find_all():
+            loader.ensure_tables(settings, source, con, log)
+    finally:
+        con.close()
+
+
 REFRESH_TAG = (
     "dado_publico/refazer"  # tag dos jobs `atualizar_*`: refazem o que depende do raw mesmo sem dado novo
 )

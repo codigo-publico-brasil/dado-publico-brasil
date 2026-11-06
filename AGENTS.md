@@ -79,7 +79,7 @@ Mapa em [`docs/README.md`](docs/README.md): `01-entender` (explica), `02-fazer` 
 ## Lições de experiência
 
 - **Um escritor por vez no DuckDB:** pare o Dagster e container órfão antes de rodar etapas; o `export` e o `transform` falham se algo segura o arquivo. Detalhes e receitas em [Operar e publicar](docs/02-fazer/04-operar-e-publicar.md).
-- **Coluna nova em dataset com `primary_key: [_row_hash]` duplica o raw** (o hash muda); recarregue o dataset ou limpe as duplicatas antes de seguir (issue 156).
+- **Coluna nova em dataset com `primary_key: [_row_hash]` duplica o raw** (o hash muda); recarregue o dataset ou limpe as duplicatas antes de seguir (issue 156). **Trocar a chave para uma coluna que a tabela do raw não tem** (ex.: `_row_hash`) já é detectado: o `load_pending` descarta o dataset e o recarrega do landing, registrando `recarga_por_chave` (ADR 0046).
 - No Windows o `dado-publico.exe` pode ser bloqueado: use `uv run python -m dado_publico_brasil.orchestration <comando>`.
 - **Confira antes de afirmar:** leia o arquivo, rode o comando ou busque no código antes de dizer que algo existe, falta ou está desatualizado.
 - Ao mover arquivos, use `git mv` e reescreva os links (inclusive em código e testes); depois confira que nenhum link relativo ficou quebrado.

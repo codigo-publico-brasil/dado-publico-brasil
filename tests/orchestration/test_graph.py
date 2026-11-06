@@ -1,4 +1,5 @@
-"""O grafo do Dagster: nenhum ativo executável depende de ativo-stub, e o job `processar_tudo` segue a ordem."""
+"""O grafo do Dagster: nenhum ativo executável depende de ativo-stub, o `processar_tudo` segue a ordem e a
+publicação é uma execução à parte."""
 
 import json
 import os
@@ -43,9 +44,18 @@ def step_of(*path):
 
 
 chain = [step_of("intermediate", "int_pessoas_ids_vistos"), step_of("identity", "pessoas"),
-         step_of("marts", "dim_pessoas"),
-         step_of("publicacao", "lake"), step_of("publicacao", "docs")]
-print(json.dumps({"bad": bad, "chain": chain, "linked": [a in ancestors(b) for a, b in zip(chain, chain[1:])]}))
+         step_of("marts", "dim_pessoas")]
+publish = create_execution_plan(defs.resolve_job_def("publicar"))
+publish_steps = [s.key for s in publish.get_all_steps_in_topo_order()]
+in_jobs = {
+    name: any(o.properties.asset_key and o.properties.asset_key.path[0] == "publicacao"
+              for s in create_execution_plan(defs.resolve_job_def(name)).get_all_steps_in_topo_order()
+              for o in s.step_outputs)
+    for name in ("processar_tudo", "atualizar_tudo", "atualizar_camara")
+}
+sensor = defs.get_sensor_def("publicar_apos_processar")
+print(json.dumps({"bad": bad, "chain": chain, "linked": [a in ancestors(b) for a, b in zip(chain, chain[1:])],
+                  "publish": publish_steps, "in_jobs": in_jobs, "request": sensor.job_name}))
 """
 
 
@@ -65,5 +75,9 @@ def test_graph_has_no_stub_dependency_and_processing_follows_the_order(tmp_path:
     out = json.loads(result.stdout.strip().splitlines()[-1])
     stub_links = [b for b in out["bad"] if b.split(" <- ")[1] not in LEGIT_STUBS]
     assert not stub_links, f"ativo executável depende de ativo-stub (sem op): {stub_links}"
-    assert len(set(out["chain"])) == 5, out
-    assert all(out["linked"]), out  # pre -> identity -> post -> lake -> docs
+    assert len(set(out["chain"])) == 3, out
+    assert all(out["linked"]), out  # pre -> identity -> post
+    # a publicação é uma execução própria, pedida pelo sensor depois do processamento (ADR 0046): um modelo
+    # em erro não pode fazer o Dagster pular o export
+    assert not any(out["in_jobs"].values()), out["in_jobs"]
+    assert out["request"] == "publicar" and len(out["publish"]) == 2, out

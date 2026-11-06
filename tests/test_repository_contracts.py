@@ -103,7 +103,7 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
         " sorted(j.name for j in defs.jobs or []) ==  sorted(['atualizar_tudo', 'capturar_tudo', 'processar_tudo', 'publicar'] + [f'{p}_{c.source}' for c in contract.find_all() for p in ('atualizar', 'captura')]),"
         " sorted(s.name for s in defs.sensors or []),"
         " all(graph.get(k).automation_condition is None for k in graph.get_all_asset_keys()),"
-        " {AssetKey(['publicacao', 'lake']), AssetKey(['publicacao', 'docs'])} <= set(defs.resolve_job_def('processar_tudo').asset_layer.executable_asset_keys),"
+        " not ({AssetKey(['publicacao', 'lake']), AssetKey(['publicacao', 'docs'])} & set(defs.resolve_job_def('processar_tudo').asset_layer.executable_asset_keys)) and set(defs.resolve_job_def('publicar').asset_layer.executable_asset_keys) == {AssetKey(['publicacao', 'lake']), AssetKey(['publicacao', 'docs'])},"
         " 'tse' not in scheduled and not [c for c in graph.asset_check_keys if c.asset_key.path == ('landing', 'tse') and c.name != 'saude_da_fonte'],"
         " len([c for c in graph.asset_check_keys if c.name == 'saude_da_fonte']) > 0,"
         " defs.resolve_job_def('atualizar_tudo').tags.get('dado_publico/refazer') == 'true'"
@@ -118,7 +118,7 @@ def test_dagster_definitions_load_with_the_expected_assets(tmp_path: Path) -> No
         [sys.executable, "-c", code], capture_output=True, text=True, env=env, cwd=ROOT, check=False
     )
     assert result.returncode == 0, result.stderr[-1500:]
-    sensors = "['falha_de_execucao', 'verificacoes_em_erro', 'verificar_atrasos']"
+    sensors = "['falha_de_execucao', 'publicar_apos_processar', 'verificacoes_em_erro', 'verificar_atrasos']"
     # ativos; agendamento e job por fonte; sensores; dbt e identidade sobem sozinhos, o raw não; atraso por fonte agendada
     assert f"True True True True True {sensors} True True True True True True True True" in result.stdout, (
         result.stdout
