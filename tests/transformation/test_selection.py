@@ -282,3 +282,16 @@ def test_the_first_build_counts_as_complete_with_the_manifest_the_dbt_wrote_duri
     (target / "manifest.json").write_text(json.dumps(MANIFEST), encoding="utf-8")
     results = [{"unique_id": f"model.p.{n}"} for n in PRE]
     assert plan.completed(results) and not plan.completed(results[:-1])
+
+
+def test_a_seed_has_no_node_dependencies(env: tuple[Connection, Settings]) -> None:
+    seed = {**_model("dim_seed", []), "resource_type": "seed", "depends_on": {"macros": []}}
+    MANIFEST["nodes"]["model.p.dim_seed"] = seed
+    try:
+        file = dbt.target_dir(env[1]) / "manifest.json"
+        file.write_text(json.dumps(MANIFEST), encoding="utf-8")
+        settled(env[0])
+        built(env[0], "transform_post", NIGHT_1, POST | {"dim_seed"})
+        assert pick(env, "transform_post").skip
+    finally:
+        del MANIFEST["nodes"]["model.p.dim_seed"]

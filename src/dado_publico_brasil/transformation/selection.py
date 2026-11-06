@@ -169,7 +169,7 @@ def plan(
         return None
 
     def stale(node: dict[str, Any], built: datetime) -> bool:
-        for dep in node["depends_on"]["nodes"]:
+        for dep in node.get("depends_on", {}).get("nodes", []):
             if dep in nodes:
                 if (parent := latest.get(dep)) and parent[1] > built:
                     return True  # o pai foi refeito depois (por exemplo, na outra fase)
@@ -194,11 +194,15 @@ def plan(
     for i, node in manifest["nodes"].items():  # teste reprovado: o modelo testado é refeito
         if node["resource_type"] == "test" and i in latest and latest[i][0] in FAILED:
             attached = node.get("attached_node")
-            dirty |= {d for d in ([attached] if attached else node["depends_on"]["nodes"]) if d in nodes}
+            dirty |= {
+                d
+                for d in ([attached] if attached else node.get("depends_on", {}).get("nodes", []))
+                if d in nodes
+            }
 
     children: dict[str, set[str]] = {i: set() for i in nodes}
     for i, node in nodes.items():
-        for dep in node["depends_on"]["nodes"]:
+        for dep in node.get("depends_on", {}).get("nodes", []):
             if dep in nodes:
                 children[dep].add(i)
     todo, entering = list(dirty), set(dirty)
