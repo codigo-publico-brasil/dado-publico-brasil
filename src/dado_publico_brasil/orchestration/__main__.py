@@ -150,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
         "--incremental", action="store_true", help="só a partição em curso das fontes com `schedule`"
     )
     p.add_argument("--force", action="store_true", help="baixa mesmo que a fonte diga que não mudou")
-    p.add_argument("--rebuild", action="store_true", help="carrega tudo de novo no raw")
+    p.add_argument("--rebuild", action="store_true", help="carrega tudo de novo no raw e refaz todo o dbt")
     p.add_argument(
         "--old-warehouse",
         help="rebuild: o warehouse antigo, do qual só o metadata é levado (sem ele, o bucket privado)",
@@ -209,11 +209,11 @@ def main(argv: list[str] | None = None) -> int:
             print("metadata levado:", rebuild.start_from(settings, old))
             args.command, args.rebuild = "load", True
             _ingest(settings, args)
-            build.run(settings)
+            build.run(settings, full=True)
             print("warehouse reconstruído do landing (raw, dbt, identidade e dbt)")
         case "transform":
             pipeline.ensure_raw(settings)
-            build.run(settings)
+            build.run(settings, full=args.rebuild)
             print("dbt concluído (staging, intermediate, identidade e marts)")
         case "verify":
             con = migrations.open_warehouse(settings)

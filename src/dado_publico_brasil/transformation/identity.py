@@ -29,9 +29,27 @@ GROUP_METHOD = "candidaturas do mesmo grupo de eleito no TSE"
 GROUP_FUSION = "mesmo grupo de candidaturas do TSE"
 
 
+TABLES = ("pessoas", "pessoas_identificadores", "pessoas_fusoes")
+
+
+def fingerprint(con: Connection) -> str:
+    """Impressão digital da identidade: contagem e soma do hash das linhas das três tabelas (segundos).
+
+    Mudou = alguma pessoa, ligação ou fusão mudou, e todo modelo que lê `identity.*` precisa ser refeito."""
+    return ";".join(
+        f"{t}:{n}:{h}"
+        for t in TABLES
+        for n, h in [
+            con.execute(f"SELECT count(*), coalesce(sum(hash(t)::HUGEINT), 0) FROM identity.{t} t").fetchone()
+            or (0, 0)
+        ]
+    )
+
+
 def resolve(con: Connection) -> tuple[int, int]:
     """Cria as pessoas que ainda não existem. Devolve (identificadores vistos, pessoas novas)."""
     with runs.track(con, "identity") as run:
+        run.impressao_antes = fingerprint(con)
         con.execute(
             "CREATE OR REPLACE TEMP TABLE new_people AS "
             "SELECT nextval('identity.seq_pessoas') AS id_pessoa, s.fonte, s.id_tipo, s.id_na_fonte "
@@ -51,6 +69,7 @@ def resolve(con: Connection) -> tuple[int, int]:
         seen = int(scalar(con, f"SELECT COUNT(*) FROM {SEEN}"))
         created = int(scalar(con, "SELECT COUNT(*) FROM new_people")) + tse_created
         run.rows_in, run.rows_out = seen, created
+        run.impressao_depois = fingerprint(con)
         return seen, created
 
 

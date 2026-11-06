@@ -17,6 +17,7 @@ from pathlib import Path
 import duckdb
 import pytest
 
+from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, scalar
 from dado_publico_brasil.ingestion import arquivos, landing
@@ -932,3 +933,88 @@ def test_a_table_that_never_reached_the_lake_and_failed_is_not_published(
         for t in json.loads((settings.storage_root / "lake/manifesto.json").read_text())["tabelas"]
     }
     assert result["excluidas"] == 1 and "int_x" not in names and "fct_votos" in names
+
+
+def build_at(settings: Settings, when: str, results: dict[str, str]) -> None:
+    """Uma execução do dbt que começou em `when` (ISO), com o resultado de cada nó."""
+    live = duckdb.connect(str(settings.warehouse))
+    row = live.execute(
+        "INSERT INTO metadata.execucoes (etapa, fonte, dt_inicio, resultado) "
+        "VALUES ('transform_post', 'dbt', ?, 'ok') RETURNING id_execucao",
+        (when,),
+    ).fetchone()
+    assert row is not None
+    live.executemany(
+        "INSERT INTO metadata.testes_resultados (id_execucao, id_no, tipo, resultado, dt_registro) "
+        "VALUES (?, ?, 'model', ?, now())",
+        [(row[0], k, v) for k, v in results.items()],
+    )
+    live.close()
+
+
+def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_again(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], con: Connection, settings: Settings
+) -> None:
+    """ADR 0047: o manifesto sai idêntico ao do export completo, sem ler a tabela que o dbt não refez."""
+    monkeypatch.setattr(runs, "code_version", lambda: "abc123")  # a árvore de trabalho suja nunca reaproveita
+    out, _ = run(con, settings)
+    dbt_nodes(
+        settings,
+        {
+            "model.x.int_x": {"resource_type": "model", "name": "int_x", "schema": "intermediate"},
+            "model.x.fct_votos": {**MODELS["nodes"]["model.x.fct_votos"], "schema": "marts"},
+        },
+    )
+    complete = manifest(out)["tabelas"]
+    build_at(
+        settings, "2020-01-01T00:00:00+00:00", {"model.x.int_x": "success", "model.x.fct_votos": "success"}
+    )
+    seen: list[str] = []
+    original = export._fingerprint
+
+    def spy(con_: object, schema: str, table: str, *rest: object) -> object:
+        seen.append(f"{schema}.{table}")
+        return original(con_, schema, table, *rest)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(export, "_fingerprint", spy)
+    capsys.readouterr()
+    result = export.export(settings)
+    assert sorted(seen) == [  # só as sem nó do dbt no manifesto (staging e a captura): sempre recalculadas
+        "metadata.capturas",
+        "staging.stg_camara__base",
+        "staging.stg_camara__visao",
+        "staging.stg_tse__x",
+    ]
+    assert manifest(out)["tabelas"] == complete and result["gravadas"] == 0
+    assert "int_x: reaproveitada" in capsys.readouterr().out
+    assert export.verify(settings) == []
+
+    # refeita depois do manifesto: a impressão é recalculada e o dado novo é publicado
+    change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
+    build_at(settings, "2999-01-01T00:00:00+00:00", {"model.x.int_x": "success"})
+    seen.clear()
+    result = export.export(settings)
+    assert "intermediate.int_x" in seen and "marts.fct_votos" not in seen and result["gravadas"] == 1
+
+
+def test_a_new_code_version_fingerprints_everything_again(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    monkeypatch.setattr(runs, "code_version", lambda: "abc123")
+    run(con, settings)
+    dbt_nodes(settings, {"model.x.fct_votos": {**MODELS["nodes"]["model.x.fct_votos"], "schema": "marts"}})
+    build_at(settings, "2020-01-01T00:00:00+00:00", {"model.x.fct_votos": "success"})
+    calls: list[str] = []
+    original = export._fingerprint
+
+    def spy(c: object, s: str, t: str, *a: object) -> object:
+        calls.append(t)
+        return original(c, s, t, *a)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(export, "_fingerprint", spy)
+    export.export(settings)
+    assert "fct_votos" not in calls
+    calls.clear()
+    monkeypatch.setattr(runs, "code_version", lambda: "outro-commit")  # descrições e chaves vêm do código
+    export.export(settings)
+    assert "fct_votos" in calls

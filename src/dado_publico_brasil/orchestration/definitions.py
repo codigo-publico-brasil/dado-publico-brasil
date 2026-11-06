@@ -69,7 +69,7 @@ from dado_publico_brasil.ingestion import contract, landing, loader, monitoring
 from dado_publico_brasil.orchestration import pipeline
 from dado_publico_brasil.orchestration.checks_sensor import failed_checks
 from dado_publico_brasil.orchestration.pipeline import step
-from dado_publico_brasil.transformation import build, describe, export, observability, quality
+from dado_publico_brasil.transformation import build, describe, export, observability, quality, selection
 from dado_publico_brasil.transformation import dbt as dbt_runner
 
 SETTINGS = load_settings()
@@ -219,26 +219,60 @@ def _cadence_slack(cron: str) -> timedelta:
     return timedelta(seconds=(second - first).total_seconds() * 1.5)
 
 
-def _record_dbt(stage: str, invocation: Any, context: AssetExecutionContext, started: str) -> None:
+def _record_dbt(
+    stage: str, invocation: Any, context: AssetExecutionContext, started: str, plan: selection.Plan
+) -> None:
     """Grava o resultado dos modelos e testes em `metadata.testes_resultados`, como a linha de comando faz.
 
     Nó em erro não falha o passo (ADR 0046): fica no log como erro, no relatório do `observe` e no e-mail, e o
     `export` não publica a tabela dele. Falha do dbt SEM nó reprovado (não iniciou, caiu) continua
-    falhando."""
+    falhando. Sem `invocation` (fase sem nada a construir, ADR 0047) só registra a execução vazia."""
     con = warehouse.connect(SETTINGS)
     try:
-        results = dbt_runner.read_results(SETTINGS, target=invocation.target_path)
-        bad = quality.record_stage(con, stage, results, started)
+        target = invocation.target_path if invocation else dbt_runner.target_dir(SETTINGS)
+        results = dbt_runner.read_results(SETTINGS, target=target) if invocation else []
+        bad = quality.record_stage(con, stage, results, started, plan)
         context.log.info(f"dbt {stage}: {len(results)} resultados de modelos e testes gravados")
         for r in bad:  # visível na aba Runs; o e-mail de `observability.notify` e o `observe` listam também
             context.log.error(f"dbt {stage}: {r['unique_id']}: {r['status']} {(r['message'] or '')[:300]}")
-        if not bad and not invocation.is_successful():
+        if not bad and invocation and not invocation.is_successful():
             raise invocation.get_error() or RuntimeError(f"dbt {stage} terminou com erro")
         if stage == "transform_post":
-            describe.raw(con, invocation.target_path)
+            describe.raw(con, target)
             observability.notify(con, pipeline.freshness_limits())
     finally:
         con.close()
+
+
+def _dbt_phase(context: AssetExecutionContext, dbt: DbtCliResource, stage: str) -> Iterator[Any]:
+    """Uma fase do dbt: só os modelos com entrada nova (`selection`, ADR 0047), ou todos na rede de segurança.
+
+    Os pulados são entregues ao Dagster como materializados (estão em dia): sem isso o passo seguinte, que
+    depende deles, seria pulado também."""
+    started = runs.now()  # a execução mede o `dbt build` inteiro
+    con = warehouse.connect(SETTINGS)
+    try:
+        plan = selection.plan(con, SETTINGS, stage)
+    finally:
+        con.close()
+    context.log.info(f"dbt {stage}: {'completo' if plan.full else 'seletivo'} ({plan.reason})")
+    invocation = None
+    if not plan.skip:
+        invocation = dbt.cli(
+            ["build", *plan.args],
+            context=context,
+            target_path=DBT_TARGET,
+            raise_on_error=False,  # ADR 0046: nó em erro não derruba o passo (resultado gravado e alertado)
+        )
+    try:
+        if invocation:
+            yield from invocation.stream()
+        for schema, name in plan.skipped:
+            key = AssetKey([schema, name])
+            if key in context.selected_asset_keys:
+                yield MaterializeResult(asset_key=key, metadata={"pulado": "sem entrada nova"})
+    finally:  # também se o passo for interrompido: resultados e tempos dos nós nunca se perdem
+        _record_dbt(stage, invocation, context, started, plan)
 
 
 @dbt_assets(
@@ -251,19 +285,9 @@ def _record_dbt(stage: str, invocation: Any, context: AssetExecutionContext, sta
 )
 def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
     """Fase 1 do dbt: os modelos de que a identidade precisa (`tag:pre_identity`)."""
-    started = runs.now()  # a execução mede o `dbt build` inteiro
     with step(context, "dbt antes da identidade"):
         pipeline.ensure_raw(SETTINGS, context.log.info)  # fonte sem captura: tabela vazia, não erro
-        invocation = dbt.cli(
-            ["build", "--indirect-selection", "cautious"],
-            context=context,
-            target_path=DBT_TARGET,
-            raise_on_error=False,  # ADR 0046: nó em erro não derruba o passo (resultado gravado e alertado)
-        )
-        try:
-            yield from invocation.stream()
-        finally:  # também se o passo for interrompido: resultados e tempos dos nós nunca se perdem
-            _record_dbt("transform_pre", invocation, context, started)
+        yield from _dbt_phase(context, dbt, "transform_pre")
 
 
 @multi_asset(
@@ -289,18 +313,8 @@ def identity_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult
 )
 def dbt_post_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
     """Fase 3 do dbt: o resto dos modelos, que já leem `identity.pessoas` (todos menos `tag:pre_identity`)."""
-    started = runs.now()
     with step(context, "dbt depois da identidade"):
-        invocation = dbt.cli(
-            ["build", "--indirect-selection", "cautious"],
-            context=context,
-            target_path=DBT_TARGET,
-            raise_on_error=False,
-        )
-        try:
-            yield from invocation.stream()
-        finally:  # também se o passo for interrompido: resultados e tempos dos nós nunca se perdem
-            _record_dbt("transform_post", invocation, context, started)
+        yield from _dbt_phase(context, dbt, "transform_post")
 
 
 @run_failure_sensor(name="falha_de_execucao", default_status=DefaultSensorStatus.RUNNING)

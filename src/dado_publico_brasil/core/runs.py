@@ -46,6 +46,9 @@ class Run:
     rows_out: int = 0
     result: str = "ok"  # `error` aqui registra a execução como falha sem lançar exceção (nós do dbt em erro)
     message: str | None = None
+    completa: bool | None = None  # fase do dbt que reconstruiu todos os modelos (ADR 0047)
+    impressao_antes: str | None = None  # identidade antes e depois da etapa `identity`
+    impressao_depois: str | None = None
 
 
 @contextmanager
@@ -80,7 +83,17 @@ def track(
 def _close(con: Connection, run: Run, status: str, message: str | None) -> None:
     con.execute(
         "UPDATE metadata.execucoes SET dt_fim = ?, qtd_linhas_entrada = ?, qtd_linhas_saida = ?, "
-        "resultado = ?, "
-        "mensagem = ? WHERE id_execucao = ?",
-        (now(), run.rows_in, run.rows_out, status, message, run.id),
+        "resultado = ?, mensagem = ?, fl_completa = ?, impressao_antes = ?, impressao_depois = ? "
+        "WHERE id_execucao = ?",
+        (
+            now(),
+            run.rows_in,
+            run.rows_out,
+            status,
+            message,
+            run.completa,
+            run.impressao_antes,
+            run.impressao_depois,
+            run.id,
+        ),
     )
