@@ -101,13 +101,13 @@ def test_selective_nights_end_with_the_same_tables_as_a_complete_rebuild(
     assert {"stg_camara__deputados", "dim_pessoas_cadastro"} <= ran
     assert not {m for m in ran if m.startswith("stg_tse__")}  # o TSE não mudou: nenhum ramo dele
 
-    # noite 2: a identidade muda (um identificador perde a pessoa e ganha outra)
+    # noite 2: a identidade muda (uma pessoa e um identificador novos, sem mexer no raw)
     for settings in both:
+        sql(settings, "INSERT INTO identity.pessoas SELECT nextval('identity.seq_pessoas'), now()")
         sql(
             settings,
-            "DELETE FROM identity.pessoas_identificadores WHERE (fonte, id_tipo, id_na_fonte) = ("
-            "SELECT fonte, id_tipo, id_na_fonte FROM identity.pessoas_identificadores "
-            "WHERE fonte = 'camara' ORDER BY id_na_fonte LIMIT 1)",
+            "INSERT INTO identity.pessoas_identificadores SELECT 'camara', 'deputado', '999999', "
+            "max(id_pessoa), 'teste', 'teste', now() FROM identity.pessoas",
         )
     build.run(selective)
     ran = models_of_last_night(selective)
