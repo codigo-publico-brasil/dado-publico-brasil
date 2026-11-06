@@ -96,14 +96,8 @@ def read_rows(
         yield row
 
 
-def resource(
-    file: Path,
-    contract: SourceContract,
-    dataset: Dataset,
-    file_id: int,
-    stats: dict[str, int],
-    log: Log = default_log,
-) -> DltResource:
+def _hints(dataset: Dataset) -> dict[str, Any]:
+    """Nome, chave, disposição e colunas do recurso do dlt: os mesmos na carga e na tabela vazia."""
     key = [normalize(c) for c in dataset.primary_key]
     # Tudo texto (o dbt converte), assim a coluna existe mesmo que venha toda vazia; as listas (`nested`)
     # ficam sem tipo: o dlt cria as tabelas filhas.
@@ -119,14 +113,24 @@ def resource(
         "data_type": "timestamp",
         "nullable": True,
     }  # nulo só se o preenchimento retroativo faltar
-    return dlt.resource(  # type: ignore[call-overload,no-any-return]
-        lambda: read_rows(file, contract, dataset, file_id, stats, log),
-        name=normalize(dataset.name),
+    return {
+        "name": normalize(dataset.name),
         # replace_partition: o dlt só acrescenta; as linhas das versões antigas saem em `load_file`
-        write_disposition="append" if dataset.write == "replace_partition" else dataset.write,
-        primary_key=key or None,
-        columns=columns,
-    )
+        "write_disposition": "append" if dataset.write == "replace_partition" else dataset.write,
+        "primary_key": key or None,
+        "columns": columns,
+    }
+
+
+def resource(
+    file: Path,
+    contract: SourceContract,
+    dataset: Dataset,
+    file_id: int,
+    stats: dict[str, int],
+    log: Log = default_log,
+) -> DltResource:
+    return dlt.resource(lambda: read_rows(file, contract, dataset, file_id, stats, log), **_hints(dataset))
 
 
 def pipeline(settings: Settings, contract: SourceContract, con: Connection | None = None) -> Any:
@@ -186,7 +190,11 @@ def load_file(
         _delete_rows(p, table, [file_id])
     started = time.monotonic()
     log(f"{contract.source}.{dataset.name}: carga de {file.name} ({file.stat().st_size / 2**20:,.0f} MB)")
-    p.run(resource(file, contract, dataset, file_id, stats, log), loader_file_format="parquet")
+    try:
+        p.run(resource(file, contract, dataset, file_id, stats, log), loader_file_format="parquet")
+    except Exception:
+        p.drop_pending_packages()  # o pacote da carga que falhou não trava a próxima; o landing refaz
+        raise
     if swap:
         stats["replaced"] = _delete_rows(p, table, superseded)
     log(
@@ -298,6 +306,60 @@ def recheck_headers(con: Connection, settings: Settings, contract: SourceContrac
     return n
 
 
+def _table_columns(con: Connection, contract: SourceContract, dataset: Dataset) -> set[str]:
+    """Colunas da tabela do dataset no raw (vazio se a tabela não existe)."""
+    found = con.execute(
+        "SELECT column_name FROM duckdb_columns() WHERE schema_name = ? AND table_name = ?",
+        (contract.schema, normalize(dataset.name)),
+    ).fetchall()
+    return {r[0] for r in found}
+
+
+def ensure_tables(
+    settings: Settings, contract: SourceContract, con: Connection, log: Log = default_log
+) -> list[str]:
+    """Cria, vazia, a tabela do raw de todo dataset `raw: true` que ainda não a tem (mesmo sem captura).
+
+    Assim os modelos do dbt rodam com zero linhas e os testes medem a lacuna, em vez de falhar por tabela
+    inexistente. A tabela sai do mesmo recurso da carga (nome, chave, colunas e tipos), com
+    `dlt.mark.materialize_table_schema()`, então a carga seguinte não muda o esquema.
+    Devolve os datasets criados."""
+
+    def empty() -> Iterator[Any]:
+        yield dlt.mark.materialize_table_schema()
+
+    created: list[str] = []
+    for name, dataset in contract.datasets.items():
+        if not dataset.raw or _table_columns(con, contract, dataset):
+            continue
+        try:
+            pipeline(settings, contract, con).run(
+                dlt.resource(empty, **_hints(dataset)),
+                loader_file_format="parquet",
+            )
+        except Exception as error:  # um dataset sem tabela não impede os outros
+            _failed(con, contract, name, None, "criar a tabela vazia", error, log)
+            continue
+        log(f"{contract.source}.{name}: tabela vazia criada no raw (ainda sem captura)")
+        created.append(name)
+    return created
+
+
+def _failed(
+    con: Connection,
+    contract: SourceContract,
+    dataset: str,
+    partition: int | None,
+    action: str,
+    error: Exception,
+    log: Log,
+) -> None:
+    """Registra a falha de um dataset em `metadata.fontes_verificacoes` (erro visível); os outros seguem."""
+    detail = f"falha ao {action}: {type(error).__name__}: {str(error)[:500]}"
+    monitoring.record(con, contract.source, dataset, partition, "carga", "error", detail)
+    log(f"{contract.source}.{dataset}: {detail}")
+
+
 def load_pending(
     con: Connection,
     settings: Settings,
@@ -308,19 +370,42 @@ def load_pending(
 ) -> tuple[int, int]:
     """Carrega as capturas vigentes não carregadas (todas com `rebuild`; um dataset com `only_dataset`).
 
+    Tabela do raw que não tem uma coluna da chave do contrato (a chave mudou, por exemplo para `_row_hash`) é
+    descartada e recarregada do landing, e a recarga fica em `fontes_verificacoes`. Dataset sem tabela ganha
+    uma vazia. Um dataset que falha é registrado (erro em `fontes_verificacoes`) e os demais seguem.
+
     Devolve (capturas carregadas, linhas carregadas).
     """
     captures = rows = 0
-    reset: set[str] = set()
+    reset: set[str] = set()  # datasets recarregados do zero (todas as capturas vigentes entram)
+    failed: set[str] = set()
+    for name, dataset in contract.datasets.items():
+        found = _table_columns(con, contract, dataset)
+        lacking = [c for c in map(normalize, dataset.primary_key) if c not in found]
+        if dataset.raw and found and lacking and only_dataset in (None, name):
+            detail = (
+                f"a tabela não tem a coluna da chave ({', '.join(lacking)}): "
+                "descartada e recarregada do landing"
+            )
+            monitoring.record(con, contract.source, name, None, "recarga_por_chave", "ok", detail)
+            log(f"{contract.source}.{name}: {detail}")
+            reset_dataset(settings, contract, dataset, con)
+            reset.add(name)
+    ensure_tables(settings, contract, con, log)
     for capture in landing.current_captures(con, contract.source):
-        if only_dataset not in (None, capture["dataset"]) or not contract.datasets[capture["dataset"]].raw:
+        name = capture["dataset"]
+        if only_dataset not in (None, name) or not contract.datasets[name].raw or name in failed:
             continue
-        if capture["dt_carga"] is not None and not rebuild:
+        if capture["dt_carga"] is not None and not rebuild and name not in reset:
             continue
-        if rebuild and capture["dataset"] not in reset:
-            reset.add(capture["dataset"])
-            reset_dataset(settings, contract, contract.datasets[capture["dataset"]], con)
-        rows += load_capture(con, settings, contract, capture, log)
-        captures += 1
+        try:
+            if rebuild and name not in reset:
+                reset.add(name)
+                reset_dataset(settings, contract, contract.datasets[name], con)
+            rows += load_capture(con, settings, contract, capture, log)
+            captures += 1
+        except Exception as error:
+            failed.add(name)
+            _failed(con, contract, name, capture["particao"], f"carregar {capture['caminho']}", error, log)
     log(f"{contract.source}: {captures} capturas e {rows:,} linhas carregadas no raw")
     return captures, rows

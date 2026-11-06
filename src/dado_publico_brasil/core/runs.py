@@ -44,6 +44,8 @@ class Run:
     id: int
     rows_in: int = 0
     rows_out: int = 0
+    result: str = "ok"  # `error` aqui registra a execução como falha sem lançar exceção (nós do dbt em erro)
+    message: str | None = None
 
 
 @contextmanager
@@ -72,7 +74,7 @@ def track(
     except BaseException as error:
         _close(con, run, "error", str(error))
         raise
-    _close(con, run, "ok", None)
+    _close(con, run, run.result, run.message)
 
 
 def _close(con: Connection, run: Run, status: str, message: str | None) -> None:

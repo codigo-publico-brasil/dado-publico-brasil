@@ -89,7 +89,7 @@ O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md))
 | O que | Como |
 | --- | --- |
 | **Captura noturna** | cada fonte com `schedule` no YAML tem um agendamento `captura_<fonte>` (landing e raw), escalonado de madrugada. Mudar a cadência é mudar o cron no YAML |
-| **Ciclo a jusante** | `processar_e_publicar`, às 04:00, roda o job `processar_tudo`: dbt, identidade, dbt pós-identidade, export do lake e docs, nessa ordem; a publicação é o último passo. Só roda se o raw recebeu dado desde o último ciclo completo (consulta o log do Dagster, sem abrir o warehouse). Não há disparo por evento ([ADR 0042](../05-decisoes/0042-ciclo-noturno-de-processamento-e-publicacao.md)) |
+| **Ciclo a jusante** | `processar_e_publicar`, às 04:00, roda o job `processar_tudo`: dbt, identidade e dbt pós-identidade; ao terminar com sucesso, o sensor `publicar_apos_processar` pede o job `publicar` (export do lake e docs), o último passo ([ADR 0046](../05-decisoes/0046-publicacao-tolerante-a-falhas-de-nos-isolados.md)). Só roda se o raw recebeu dado desde o último ciclo completo (consulta o log do Dagster, sem abrir o warehouse). Não há disparo por evento ([ADR 0042](../05-decisoes/0042-ciclo-noturno-de-processamento-e-publicacao.md)) |
 | **No máximo uma vez por dia** | cada agendamento pula se o job já teve execução com sucesso (ou em andamento) desde 00:00 de São Paulo. **Execução que falhou não conta**: pode ser relançada à mão ou pelo tique do dia seguinte; não há `run_retries` (`dagster.yaml`) e os sensores de falha só avisam |
 | **Atraso** | cada fonte agendada tem uma verificação de frescor: sem captura por mais de 1,5 intervalo do cron, o ativo `landing/<fonte>` aparece como atrasado |
 | **Uma execução por vez** | `dagster.yaml` limita a fila a uma execução (o DuckDB aceita um escritor) |
@@ -107,15 +107,15 @@ O Dagster ([ADR 0027](../05-decisoes/0027-orquestracao-automatica-por-fonte.md))
 | `captura_tse` | sem agendamento | desativado após as eleições; só manual (`captura_tse`, `atualizar_tse`). Para reativar, volte o cron ao YAML. O TSE segue no ciclo a jusante com o que há no raw |
 | `processar_e_publicar` | 04:00 (`pipeline.CYCLE_CRON`) | depois da última captura, com folga; se uma captura passar das 04:00 o ciclo espera na fila (FIFO, uma execução por vez) |
 
-Uma captura que falha não impede o ciclo: ele roda com o que há no raw, e o atraso aparece na verificação de frescor e no aviso da execução que falhou. A publicação (`publicacao/lake`, `publicacao/docs`) só sai do ciclo e do job manual `publicar`.
+Uma captura que falha não impede o ciclo: ele roda com o que há no raw, e o atraso aparece na verificação de frescor e no aviso da execução que falhou. A publicação (`publicacao/lake`, `publicacao/docs`) só sai do job `publicar`, pedido pelo sensor depois de um job que processa, ou à mão.
 
-**Jobs** (na interface, aba *Jobs*, *Launch run*): `atualizar_<fonte>` refaz tudo o que vem da fonte (por exemplo, `atualizar_tse`: captura, raw, dbt, identidade, publicação); `captura_<fonte>` só captura; `atualizar_tudo` refaz tudo; `capturar_tudo` captura todas as fontes sem processar; `processar_tudo` roda dbt, identidade e publicação com o que já está no raw, sem capturar nada; `publicar` só publica (o lake no R2 e as docs) o que já está pronto no warehouse, sem capturar nem transformar, para rodar quando você quiser. Para um ano ou modo diferente, abra o *launchpad* do job e ajuste `mode` (`incremental`, `historical`, `years`).
+**Jobs** (na interface, aba *Jobs*, *Launch run*): `atualizar_<fonte>` refaz tudo o que vem da fonte (por exemplo, `atualizar_tse`: captura, raw, dbt, identidade, publicação); `captura_<fonte>` só captura; `atualizar_tudo` refaz tudo; `capturar_tudo` captura todas as fontes sem processar; `processar_tudo` roda dbt e identidade com o que já está no raw, sem capturar nada (a publicação vem em seguida, pelo sensor); `publicar` só publica (o lake no R2 e as docs) o que já está pronto no warehouse, sem capturar nem transformar, para rodar quando você quiser. Para um ano ou modo diferente, abra o *launchpad* do job e ajuste `mode` (`incremental`, `historical`, `years`).
 
-**Por que o dbt roda em duas fases, com a identidade no meio.** A identidade (`identity.pessoas`) é código Python e precisa de modelos do dbt que a precedem (`int_pessoas_ids_vistos`, a lista de identificadores vistos nas fontes); os modelos seguintes (`dim_pessoas`, mandatos, votos...) precisam de `identity.pessoas` já pronta. Um único `dbt build` não expressa isso, então o dbt é dividido por tag (`pre_identity`, em `dbt_project.yml`; ver [Camadas](../01-entender/03-camadas.md)). No job `processar_tudo` as operações saem nesta ordem (e um teste confere):
+**Por que o dbt roda em duas fases, com a identidade no meio.** A identidade (`identity.pessoas`) é código Python e precisa de modelos do dbt que a precedem (`int_pessoas_ids_vistos`, a lista de identificadores vistos nas fontes); os modelos seguintes (`dim_pessoas`, mandatos, votos...) precisam de `identity.pessoas` já pronta. Um único `dbt build` não expressa isso, então o dbt é dividido por tag (`pre_identity`, em `dbt_project.yml`; ver [Camadas](../01-entender/03-camadas.md)). No job `processar_tudo` as operações saem nesta ordem (e um teste confere; a publicação é uma execução à parte porque o Dagster pula o passo cujo insumo não foi materializado):
 
 ```text
-dbt_pre_identity -> identity -> dbt_post_identity -> publicacao/lake -> publicacao/docs
-(modelos tag:pre_identity)  (identity.pessoas, ..._identificadores, ..._fusoes)  (os demais modelos)  (export Parquet)  (docs)
+dbt_pre_identity -> identity -> dbt_post_identity      (depois, em outra execução: publicacao/lake -> publicacao/docs)
+(modelos tag:pre_identity)  (identity.pessoas, ..._identificadores, ..._fusoes)  (os demais modelos)  (export Parquet, docs)
 ```
 
 A linhagem por modelo na interface do Dagster mostra modelos e ativos, não essas fases: as fases são as **operações** do job (aba *Runs*, cada passo leva o nome acima). A ligação é pelo grafo: `identity/*` depende de `intermediate/int_pessoas_ids_vistos` e os modelos que leem `source('identity', ...)` dependem de `identity/*`. Uma chave de ativo errada vira um ativo-stub sem op e quebra a ordem em silêncio; o teste `tests/orchestration/test_graph.py` falha se um ativo executável depender de stub. O único stub que resta é `metadata/capturas` (tabela gravada por todas as fontes, sem ativo próprio). As tabelas aninhadas do dlt (`dataset__filho`, gravadas junto com o dataset) apontam ao ativo de raw do dataset pelo tradutor do dbt em `definitions.py`.
@@ -199,6 +199,19 @@ O arquivo e o hash no landing não mudam; só se marca a captura como não carre
 2. `dado-publico load` (carrega só o que está pendente), depois `transform` e `export`.
 
 Dataset com chave natural (candidaturas) se atualiza por `merge`. Dataset com chave por hash tem uma armadilha (próxima seção).
+
+## Quando um modelo ou teste falha
+
+Desenho no [ADR 0046](../05-decisoes/0046-publicacao-tolerante-a-falhas-de-nos-isolados.md). Nó isolado em erro **não** derruba o ciclo:
+
+- **O que acontece.** O passo do dbt termina, grava o resultado e o tempo de todos os nós (também os com erro, aviso ou pulados, e também se o passo for interrompido) em `metadata.testes_resultados` e a execução em `metadata.execucoes` (`error`, com a duração real). A identidade, o dbt seguinte e a publicação seguem. O `export` **não publica versão nova** da tabela cujo modelo falhou ou foi pulado, nem da tabela com teste em erro; ela fica na versão anterior no lake. O restante sai.
+- **Como ver.** Aba *Runs* do Dagster (uma linha de erro por nó), `dado-publico observe` e o e-mail do ciclo; no lake, `excluida_por` da tabela no `manifesto.json` e o aviso "versão anterior" no comentário da view do `catalogo.duckdb`. Consulta: `select id_no, resultado, mensagem from metadata.testes_resultados where resultado in ('error','fail') order by id_execucao desc`.
+- **Como corrigir.** Corrija o modelo, o teste ou o dado; rode `processar_tudo` (ou `dado-publico transform`) e o `publicar`. A tabela volta a ser publicada e o `excluida_por` some. Falha do dbt sem nó reprovado (não iniciou) e falha da identidade ainda param o ciclo, sem publicar.
+- **Limite.** Se um modelo `pre_identity` falhar, o Dagster pula o `dbt_post_identity` (ele depende das saídas daquele modelo): os marts ficam na versão anterior.
+
+### Recarregar um dataset por mudança de chave
+
+Mudou a chave (`primary_key`) do dataset, por exemplo para `_row_hash`? Nada a fazer: ao carregar, se a tabela do raw não tem uma coluna da chave, o `load_pending` descarta o dataset e o recarrega de todas as capturas vigentes do landing (o raw é espelho do landing), e registra `recarga_por_chave` em `metadata.fontes_verificacoes`. Pelo comando: `dado-publico load --rebuild --dataset <nome>` faz o mesmo à força. Dataset sem tabela ganha uma vazia (com as colunas declaradas), então os modelos do dbt rodam com zero linhas e os testes medem a lacuna. Se um dataset falhar ao carregar, o erro vai para `fontes_verificacoes` (`carga`) e os demais da fonte seguem.
 
 ## Armadilhas operacionais
 

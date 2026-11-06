@@ -25,7 +25,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0006](0006-adotar-dlt-dbt-e-dagster.md) | Adotar dlt, dbt-core e Dagster | vigente (pastas e nomes: [0007](0007-dois-pacotes-e-camadas-de-mercado.md)) |
 | [0014](0014-warehouse-lake-duckdb-e-postgres-de-servico.md) | DuckDB calcula, PostgreSQL serve | em parte (o PostgreSQL de serviço foi substituído pelo [0038](0038-lake-como-unica-publicacao.md)) |
 | [0034](0034-manter-duckdb-e-postgres.md) | Manter DuckDB e PostgreSQL; sem DuckLake nem arquivos separados por ora, com gatilhos para reabrir | substituído pelo [0038](0038-lake-como-unica-publicacao.md) |
-| [0035](0035-lakehouse-publico-no-r2.md) | Lakehouse público no R2: Parquet em caminho estável, staging a marts, catálogo e manifesto; DuckDB só calcula | proposto; altera 0014 (item 1 e gatilho 6a) e 0033; item 7 detalhado no 0036 |
+| [0035](0035-lakehouse-publico-no-r2.md) | Lakehouse público no R2: Parquet em caminho estável, staging a marts, catálogo e manifesto; DuckDB só calcula | proposto; altera 0014 (item 1 e gatilho 6a) e 0033; item 7 detalhado no 0036; item 6 alterado pelo [0046](0046-publicacao-tolerante-a-falhas-de-nos-isolados.md) |
 | [0036](0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md) | R2 privado é a fonte da verdade da identidade e do metadata; disco local descartável; landing só local por ora (risco aceito) | proposto; complementa 0014 (item 4) e 0035 (item 7) |
 | [0037](0037-arquivos-no-lake-com-prefixo-arq.md) | Arquivos (DOU, fotos) no lake público: pasta `arq_` na camada da fonte, com tabela de controle `arq_<nome>.parquet`; publicar é opt-in por dataset | proposto (decisão do fundador); altera 0035 (item 7) e 0036 (fotos) |
 | [0038](0038-cortesia-e-bloqueio-na-ingestao.md) | Cortesia em toda requisição, bloqueio sem insistência e partição mensal | aceito; complementa o [0012](0012-dataset-por-item-lotes-com-envelope.md) |
@@ -34,6 +34,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0040](0040-ocupacao-de-cargo.md) | Ocupação de cargo como fato (`fct_cargos_ocupacoes`): exercício publicado vence, mandato cobre o resto | proposto (desenho aprovado pelo fundador); complementa 0039 e 0030 |
 | [0041](0041-eleito-completo-e-fim-das-views-app.md) | `fl_eleito` passa a ser o eleito completo (informado ou derivado) e as views `app_*` deixam de existir | aceito; altera 0039 (item sobre `fl_eleito`) e 0038 (item 4) |
 | [0045](0045-meses-fechados-405-e-pacote-unico.md) | Meses fechados (`lag_months`), 405 como bloqueio e um download por pacote | aceito; complementa o [0038 (cortesia)](0038-cortesia-e-bloqueio-na-ingestao.md) |
+| [0046](0046-publicacao-tolerante-a-falhas-de-nos-isolados.md) | Publicação por tabela tolerante a falhas de nós isolados, raw sempre presente e recarga por mudança de chave | proposto; altera 0035 (item 6) e 0042 (itens 2 e 6) |
 
 ### Estrutura do repositório e das camadas
 
@@ -57,7 +58,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0021](0021-landing-por-fonte-dataset-e-data.md) | Landing por fonte, dataset, referência e data | vigente |
 | [0024](0024-regras-de-extracao-por-fonte.md) | Regras de extração e carga diária | em parte (`refresh` virou `schedule`: [0027](0027-orquestracao-automatica-por-fonte.md)) |
 | [0027](0027-orquestracao-automatica-por-fonte.md) | Agendamento por fonte, propagação automática e serviço contínuo | em parte (propagação por evento: [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md), proposto) |
-| [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) | Ciclo noturno: capturas escalonadas, um processamento e uma publicação por dia | proposto |
+| [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) | Ciclo noturno: capturas escalonadas, um processamento e uma publicação por dia | proposto; itens 2 e 6 alterados pelo [0046](0046-publicacao-tolerante-a-falhas-de-nos-isolados.md) |
 | [0043](0043-raw-em-parquet-substituicao-por-particao-e-logs.md) | Raw carregado em Parquet (`pyarrow`), `write: replace_partition` para arquivo anual completo e logs no Dagster | proposto; altera 0011, 0012 e 0024 |
 | [0044](0044-ciclo-rapido-staging-do-tse-em-tabela-e-tempos.md) | Ciclo mais rápido: staging do TSE em tabela, tempo de cada nó; propostas de `threads` e de reconstrução parcial | proposto; altera o 0007 (item 3: staging = views); Proposta B detalhada no [0047](0047-reconstrucao-incremental-e-export-por-particao.md)
 | [0047](0047-reconstrucao-incremental-e-export-por-particao.md) | Reconstruir só o que mudou (seleção por dado novo, staging do TSE incremental por captura) e export por partição (manifesto v2) | proposto; altera 0044 (Proposta B), 0042 (item 5) e 0035 (itens 4 e 6) |

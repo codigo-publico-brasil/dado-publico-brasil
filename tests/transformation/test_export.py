@@ -826,3 +826,109 @@ def test_a_partial_r2_configuration_fails_instead_of_exporting_locally(
     monkeypatch.setenv(var, "x")
     with pytest.raises(ValueError, match="R2 incompleto"):
         export.export(settings)
+
+
+def dbt_nodes(settings: Settings, nodes: dict[str, dict[str, object]]) -> None:
+    """Manifesto do dbt sintético com os nós dados, além do mart de votos."""
+    target = settings.state_dir / "dbt" / "target"
+    full = {**MODELS["nodes"], **nodes}
+    (target / "manifest.json").write_text(json.dumps({"nodes": full}), encoding="utf-8")
+
+
+def record_results(settings: Settings, stage: str, results: dict[str, str]) -> None:
+    live = duckdb.connect(str(settings.warehouse))
+    row = live.execute(
+        "INSERT INTO metadata.execucoes (etapa, fonte, dt_inicio, resultado) VALUES (?, 'dbt', now(), 'ok') "
+        "RETURNING id_execucao",
+        (stage,),
+    ).fetchone()
+    assert row is not None
+    run_id = row[0]
+    live.executemany(
+        "INSERT INTO metadata.testes_resultados (id_execucao, id_no, tipo, resultado, dt_registro) "
+        "VALUES (?, ?, ?, ?, now())",
+        [(run_id, k, "test" if k.startswith("test.") else "model", v) for k, v in results.items()],
+    )
+    live.close()
+
+
+def test_a_failing_model_or_test_keeps_its_previous_version_and_the_rest_is_published(
+    con: Connection, settings: Settings
+) -> None:
+    out, first = run(con, settings)
+    dbt_nodes(
+        settings,
+        {
+            "model.x.int_x": {"resource_type": "model", "name": "int_x", "schema": "intermediate"},
+            "model.x.fct_votos": {**MODELS["nodes"]["model.x.fct_votos"], "schema": "marts"},
+            "model.x.stg_camara__base": {
+                "resource_type": "model",
+                "name": "stg_camara__base",
+                "schema": "staging",
+            },
+            "test.x.not_null_votos": {
+                "resource_type": "test",
+                "name": "not_null_votos",
+                "attached_node": "model.x.fct_votos",
+                "depends_on": {"nodes": ["model.x.fct_votos"]},
+            },
+            "test.x.singular_dos_dois": {
+                "resource_type": "test",
+                "name": "singular_dos_dois",
+                "depends_on": {"nodes": ["model.x.int_x", "model.x.stg_camara__base"]},
+            },
+        },
+    )
+    change(settings, "UPDATE marts.fct_votos SET qtd = qtd + 1")  # esta versão não pode sair (teste em erro)
+    change(settings, "UPDATE staging.stg_camara__base SET nome = 'novo'")  # esta sai
+    change(settings, "UPDATE intermediate.int_x SET a = 2")  # modelo em erro: fica a anterior
+    record_results(
+        settings,
+        "transform_post",
+        {
+            "test.x.not_null_votos": "fail",
+            "model.x.int_x": "error",
+            "model.x.stg_camara__base": "success",
+            "test.x.singular_dos_dois": "pass",
+        },
+    )
+    before = {t["tabela"]: t for t in manifest(out)["tabelas"]}
+    result = export.export(settings)
+    after = {t["tabela"]: t for t in manifest(out)["tabelas"]}
+    assert result["excluidas"] == 2 and result["gravadas"] == 2  # a base e a view sobre ela
+    assert after["fct_votos"]["impressao"] == before["fct_votos"]["impressao"]  # a anterior, intacta
+    assert "teste not_null_votos: fail" in str(after["fct_votos"]["excluida_por"])
+    assert "modelo int_x: error" in str(after["int_x"]["excluida_por"])
+    assert "excluida_por" not in after["stg_camara__base"]
+    assert after["stg_camara__base"]["impressao"] != before["stg_camara__base"]["impressao"]
+    assert export.verify(settings) == []  # o publicado continua íntegro, inclusive as versões mantidas
+    catalog = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
+    comment = catalog.execute("SELECT comment FROM duckdb_views() WHERE view_name = 'fct_votos'").fetchone()
+    assert comment is not None and "versão anterior" in comment[0]
+    catalog.close()
+    record_results(  # corrigido na execução seguinte: volta a ser publicado, sem o motivo
+        settings,
+        "transform_post",
+        {"test.x.not_null_votos": "pass", "model.x.int_x": "success"},
+    )
+    export.export(settings)
+    fixed = {t["tabela"]: t for t in manifest(out)["tabelas"]}
+    assert "excluida_por" not in fixed["fct_votos"] and "excluida_por" not in fixed["int_x"]
+    assert fixed["fct_votos"]["impressao"] != before["fct_votos"]["impressao"]
+
+
+def test_a_table_that_never_reached_the_lake_and_failed_is_not_published(
+    con: Connection, settings: Settings
+) -> None:
+    build(con, settings)
+    con.close()
+    dbt_nodes(
+        settings, {"model.x.int_x": {"resource_type": "model", "name": "int_x", "schema": "intermediate"}}
+    )
+    record_results(settings, "transform_pre", {"model.x.int_x": "skipped"})
+    result = export.export(settings)
+    names = {
+        t["tabela"]
+        for t in json.loads((settings.storage_root / "lake/manifesto.json").read_text())["tabelas"]
+    }
+    assert result["excluidas"] == 1 and "int_x" not in names and "fct_votos" in names

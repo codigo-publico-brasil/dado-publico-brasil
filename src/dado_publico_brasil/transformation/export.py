@@ -217,6 +217,46 @@ def _describe(con: warehouse.Connection, schema: str, table: str) -> tuple[str, 
     ]
 
 
+FAILED = ("error", "fail", "runtime error", "skipped")  # resultados do dbt que impedem a publicação nova
+
+
+def blocked(con: warehouse.Connection, settings: Settings) -> dict[tuple[str, str], str]:
+    """Tabelas que NÃO podem ser publicadas agora, com o motivo (ADR 0046).
+
+    Lê o resultado de cada nó do dbt na última execução de cada fase (`metadata.testes_resultados`) e o
+    manifesto: o modelo que falhou ou foi pulado (porque uma entrada a montante falhou) e o modelo testado por
+    um teste reprovado (`attached_node`; teste singular: todos os modelos de que depende). Sem manifesto ou
+    sem execução registrada, nada é barrado."""
+    file = dbt.target_dir(settings) / "manifest.json"
+    if not file.exists():
+        return {}
+    nodes = json.loads(file.read_text(encoding="utf-8"))["nodes"]
+    found = con.execute(
+        "SELECT id_no, resultado FROM metadata.testes_resultados "
+        "WHERE tipo <> 'freshness' AND id_execucao IN "
+        "(SELECT max(id_execucao) FROM metadata.execucoes WHERE fonte = 'dbt' AND etapa LIKE 'transform%' "
+        f"GROUP BY etapa) AND resultado IN ({','.join('?' * len(FAILED))}) ORDER BY id_no",
+        FAILED,
+    ).fetchall()
+    out: dict[tuple[str, str], str] = {}
+    for unique_id, result in found:
+        node = nodes.get(unique_id)
+        if not node:
+            continue
+        if node["resource_type"] == "model":
+            targets, reason = [node], f"modelo {node['name']}: {result}"
+        elif node["resource_type"] == "test" and result != "skipped":
+            attached = node.get("attached_node") or None
+            ids = [attached] if attached else node.get("depends_on", {}).get("nodes", [])
+            targets = [nodes[i] for i in ids if i in nodes and nodes[i]["resource_type"] == "model"]
+            reason = f"teste {node['name']}: {result}"
+        else:
+            continue
+        for target in targets:
+            out.setdefault((target["schema"], target["name"]), reason)
+    return out
+
+
 def _manifest(con: warehouse.Connection, root: str) -> dict[str, Any]:
     """O manifesto que está na raiz (vazio se ainda não houver)."""
     try:
@@ -313,8 +353,13 @@ def _catalog(entries: list[dict[str, Any]], file: Path, base: str, meta: dict[st
         name = f'{e["camada"]}."{e["tabela"]}"'
         urls = ", ".join(f"'{_q(base.rstrip('/'))}/{f['arquivo']}'" for f in e["arquivos"])
         cat.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet([{urls}], hive_partitioning = false)")
-        if e["descricao"]:
-            cat.execute(f"COMMENT ON VIEW {name} IS '{_q(e['descricao'])}'")
+        note = (
+            f" ATENÇÃO: versão anterior, não atualizada nesta publicação ({e['excluida_por']})."
+            if e.get("excluida_por")
+            else ""
+        )
+        if e["descricao"] or note:
+            cat.execute(f"COMMENT ON VIEW {name} IS '{_q(e['descricao'] + note)}'")
         for c in e["colunas"]:
             if c["descricao"]:
                 cat.execute(f"COMMENT ON COLUMN {name}.\"{c['nome']}\" IS '{_q(c['descricao'])}'")
@@ -680,7 +725,10 @@ def _control(
 def export(
     settings: Settings, base_url: str | None = None, max_bytes: int = MAX_BYTES, prune: bool = False
 ) -> dict[str, int]:
-    """Exporta o lake para a raiz (R2 ou pasta local). Devolve tabelas, gravadas, ignoradas, órfãos, bytes.
+    """Exporta o lake para a raiz (R2 ou pasta local).
+
+    Devolve tabelas, gravadas, ignoradas, excluídas (teste ou modelo em erro: ficam na versão anterior),
+    órfãos e bytes.
 
     Recusa, sem apagar nem publicar nada, se faltar no warehouse uma tabela do manifesto anterior (warehouse
     errado ou incompleto); `prune=True` autoriza a retirada dela do lake.
@@ -698,7 +746,7 @@ def export(
     models = _models(settings)
     entries: list[dict[str, Any]] = []
     tempos: dict[str, dict[str, Any]] = {}  # tempo por tabela, guardado em `state_dir/export_tempos.json`
-    written = ignored = size = 0
+    written = ignored = excluded = size = 0
     con = _connect(settings, warehouse_file=True)
     try:
         published = _manifest(con, root)
@@ -726,8 +774,14 @@ def export(
             )
         keys = {r: _key(models, *r) for r in relations}  # falha cedo, antes de gravar qualquer arquivo
         exprs = {r: models.get(r[1], {}).get("config", {}).get("meta", {}).get("particao") for r in relations}
+        held = blocked(con, settings)  # teste ou modelo em erro: fica a versão anterior, com o motivo
         with _phase("impressões digitais"), ThreadPoolExecutor(FINGERPRINTS) as pool:
-            prints = list(pool.map(lambda r: _fingerprint(con, r[0], r[1], keys[r], exprs[r]), relations))
+            prints = list(
+                pool.map(
+                    lambda r: None if r in held else _fingerprint(con, r[0], r[1], keys[r], exprs[r]),
+                    relations,
+                )
+            )
         state = {"entries": old_entries, "base": published.get("base")}
 
         def commit(current: list[dict[str, Any]]) -> None:
@@ -754,6 +808,12 @@ def export(
         changed: set[str] = set()  # tudo o que foi gravado, para as linhas de progresso
         with _phase("escrita"):
             for rel, found in zip(relations, prints, strict=True):
+                if rel in held:
+                    _say(f"  {rel[0]}.{rel[1]}: mantida a versão anterior ({held[rel]})")
+                    excluded += 1
+                    if rel in before:  # nunca publicada: nada a manter
+                        entries.append({**before[rel], "excluida_por": held[rel]})
+                    continue
                 if not found:
                     continue
                 (schema, table), key, expr = rel, keys[rel], exprs[rel]
@@ -880,6 +940,7 @@ def export(
         "tabelas": len(entries),
         "gravadas": written,
         "ignoradas": ignored,
+        "excluidas": excluded,
         "orfaos": orphans,
         "bytes": size,
     }

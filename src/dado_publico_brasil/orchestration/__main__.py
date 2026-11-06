@@ -212,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
             build.run(settings)
             print("warehouse reconstruído do landing (raw, dbt, identidade e dbt)")
         case "transform":
+            pipeline.ensure_raw(settings)
             build.run(settings)
             print("dbt concluído (staging, intermediate, identidade e marts)")
         case "verify":

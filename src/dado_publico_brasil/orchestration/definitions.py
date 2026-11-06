@@ -20,7 +20,6 @@ import json
 import os
 from collections.abc import Iterator, Mapping
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 from croniter import croniter  # type: ignore[import-untyped]  # já vem com o Dagster
@@ -34,12 +33,14 @@ from dagster import (
     AssetSelection,
     AssetSpec,
     Config,
+    DagsterRunStatus,
     DefaultScheduleStatus,
     DefaultSensorStatus,
     Definitions,
     MaterializeResult,
     RunFailureSensorContext,
     RunRequest,
+    RunStatusSensorContext,
     ScheduleDefinition,
     ScheduleEvaluationContext,
     SkipReason,
@@ -51,6 +52,7 @@ from dagster import (
     multi_asset,
     multi_asset_check,
     run_failure_sensor,
+    run_status_sensor,
     schedule,
 )
 from dagster_dbt import (
@@ -217,18 +219,24 @@ def _cadence_slack(cron: str) -> timedelta:
     return timedelta(seconds=(second - first).total_seconds() * 1.5)
 
 
-def _record_dbt(stage: str, target: Path, context: AssetExecutionContext, started: str) -> None:
-    """Grava o resultado dos modelos e testes em `metadata.testes_resultados`, como a linha de comando faz."""
+def _record_dbt(stage: str, invocation: Any, context: AssetExecutionContext, started: str) -> None:
+    """Grava o resultado dos modelos e testes em `metadata.testes_resultados`, como a linha de comando faz.
+
+    Nó em erro não falha o passo (ADR 0046): fica no log como erro, no relatório do `observe` e no e-mail, e o
+    `export` não publica a tabela dele. Falha do dbt SEM nó reprovado (não iniciou, caiu) continua
+    falhando."""
     con = warehouse.connect(SETTINGS)
     try:
-        with runs.track(con, stage, "dbt", started=started) as run:
-            results = dbt_runner.read_results(SETTINGS, target=target)
-            quality.record(con, run.id, results)
-            run.rows_in = len(results)
-            context.log.info(f"dbt {stage}: {len(results)} resultados de modelos e testes gravados")
-            if stage == "transform_post":
-                describe.raw(con, target)
-                observability.notify(con, pipeline.freshness_limits())
+        results = dbt_runner.read_results(SETTINGS, target=invocation.target_path)
+        bad = quality.record_stage(con, stage, results, started)
+        context.log.info(f"dbt {stage}: {len(results)} resultados de modelos e testes gravados")
+        for r in bad:  # visível na aba Runs; o e-mail de `observability.notify` e o `observe` listam também
+            context.log.error(f"dbt {stage}: {r['unique_id']}: {r['status']} {(r['message'] or '')[:300]}")
+        if not bad and not invocation.is_successful():
+            raise invocation.get_error() or RuntimeError(f"dbt {stage} terminou com erro")
+        if stage == "transform_post":
+            describe.raw(con, invocation.target_path)
+            observability.notify(con, pipeline.freshness_limits())
     finally:
         con.close()
 
@@ -245,11 +253,17 @@ def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Ite
     """Fase 1 do dbt: os modelos de que a identidade precisa (`tag:pre_identity`)."""
     started = runs.now()  # a execução mede o `dbt build` inteiro
     with step(context, "dbt antes da identidade"):
+        pipeline.ensure_raw(SETTINGS, context.log.info)  # fonte sem captura: tabela vazia, não erro
         invocation = dbt.cli(
-            ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
+            ["build", "--indirect-selection", "cautious"],
+            context=context,
+            target_path=DBT_TARGET,
+            raise_on_error=False,  # ADR 0046: nó em erro não derruba o passo (resultado gravado e alertado)
         )
-        yield from invocation.stream()
-    _record_dbt("transform_pre", invocation.target_path, context, started)
+        try:
+            yield from invocation.stream()
+        finally:  # também se o passo for interrompido: resultados e tempos dos nós nunca se perdem
+            _record_dbt("transform_pre", invocation, context, started)
 
 
 @multi_asset(
@@ -278,10 +292,15 @@ def dbt_post_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> It
     started = runs.now()
     with step(context, "dbt depois da identidade"):
         invocation = dbt.cli(
-            ["build", "--indirect-selection", "cautious"], context=context, target_path=DBT_TARGET
+            ["build", "--indirect-selection", "cautious"],
+            context=context,
+            target_path=DBT_TARGET,
+            raise_on_error=False,
         )
-        yield from invocation.stream()
-    _record_dbt("transform_post", invocation.target_path, context, started)
+        try:
+            yield from invocation.stream()
+        finally:  # também se o passo for interrompido: resultados e tempos dos nós nunca se perdem
+            _record_dbt("transform_post", invocation, context, started)
 
 
 @run_failure_sensor(name="falha_de_execucao", default_status=DefaultSensorStatus.RUNNING)
@@ -331,25 +350,45 @@ def docs_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
 
 SCHEDULED = [s for s in SOURCES if s.schedule]
 INGESTED = [key for s in SOURCES for key in _keys(s)]  # landing e raw de todas as fontes
-jobs = [
-    define_asset_job("atualizar_tudo", selection="*", tags=REFRESH),
-    # captura tudo (landing e raw de todas as fontes), sem processar
-    define_asset_job("capturar_tudo", selection=AssetSelection.assets(*INGESTED)),
-    # só publica (lake no R2 e docs) o que já está pronto no warehouse, sem capturar nem transformar
+# A publicação não fica dentro dos jobs que processam: o Dagster pula o passo cujo insumo (um modelo do dbt)
+# não foi materializado, e um modelo em erro travaria o lake inteiro. O sensor `publicar_apos_processar` a
+# pede, numa execução própria, quando o processamento termina com sucesso (ADR 0046).
+PUBLISH = AssetSelection.assets(AssetKey(["publicacao", "lake"]), AssetKey(["publicacao", "docs"]))
+publish_job = define_asset_job("publicar", selection=PUBLISH)  # só publica, sem capturar nem transformar
+process_jobs = [
+    define_asset_job("atualizar_tudo", selection=AssetSelection.all() - PUBLISH, tags=REFRESH),
+    # processa tudo (dbt, identidade) a partir do que já está no raw, sem capturar nada
     define_asset_job(
-        "publicar",
-        selection=AssetSelection.assets(AssetKey(["publicacao", "lake"]), AssetKey(["publicacao", "docs"])),
+        "processar_tudo", selection=AssetSelection.all() - AssetSelection.assets(*INGESTED) - PUBLISH
     ),
-    # processa tudo (dbt, identidade, publicação) a partir do que já está no raw, sem capturar nada
-    define_asset_job("processar_tudo", selection=AssetSelection.all() - AssetSelection.assets(*INGESTED)),
     *(
         define_asset_job(
-            f"atualizar_{s.source}", selection=AssetSelection.assets(*_keys(s)).downstream(), tags=REFRESH
+            f"atualizar_{s.source}",
+            selection=AssetSelection.assets(*_keys(s)).downstream() - PUBLISH,
+            tags=REFRESH,
         )
         for s in SOURCES
     ),
+]
+jobs = [
+    # captura tudo (landing e raw de todas as fontes), sem processar
+    define_asset_job("capturar_tudo", selection=AssetSelection.assets(*INGESTED)),
+    publish_job,
+    *process_jobs,
     *(define_asset_job(f"captura_{s.source}", selection=AssetSelection.assets(*_keys(s))) for s in SOURCES),
 ]
+
+
+@run_status_sensor(
+    name="publicar_apos_processar",
+    run_status=DagsterRunStatus.SUCCESS,
+    monitored_jobs=process_jobs,
+    request_job=publish_job,
+    default_status=DefaultSensorStatus.RUNNING,
+)
+def publish_after_processing(context: RunStatusSensorContext) -> RunRequest:
+    """Pede a publicação (lake e docs) quando um job que processa termina com sucesso (uma por execução)."""
+    return RunRequest(run_key=context.dagster_run.run_id)
 
 
 def _latest(context: ScheduleEvaluationContext, key: AssetKey) -> float | None:
@@ -411,6 +450,7 @@ freshness = [
 ]
 sensors = [
     failure_email,
+    publish_after_processing,
     failed_checks,
     build_sensor_for_freshness_checks(
         freshness_checks=freshness, name="verificar_atrasos", default_status=DefaultSensorStatus.RUNNING

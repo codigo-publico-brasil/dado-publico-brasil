@@ -10,7 +10,7 @@ from synthetic_camara import fake_downloader, no_headers, synthetic_files
 from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, columns, rows, scalar, tables
-from dado_publico_brasil.ingestion import landing, loader
+from dado_publico_brasil.ingestion import landing, loader, monitoring
 from dado_publico_brasil.ingestion.contract import InvalidContract, SourceContract, load_contract
 
 
@@ -474,3 +474,93 @@ def test_the_load_reports_file_size_rows_and_time_through_the_log_callback(
     assert "retratos: carga de log1.csv" in text and "MB" in text
     assert "2 linhas carregadas de 2 lidas" in text and "capturas e 2 linhas carregadas no raw" in text
     assert capture["id_captura"]
+
+
+def _capture_of(
+    con: Connection, settings: Settings, dataset: str, url: str, text: str, sha: str
+) -> dict[str, Any]:
+    file = settings.storage_root / f"landing/{sha}.csv"
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(text, encoding="utf-8")
+    landing.register_capture(con, "teste", dataset, None, url, sha, len(text), f"landing/{sha}.csv", 1)
+    return rows(con, "SELECT * FROM metadata.capturas WHERE sha256 = ?", (sha,))[0]
+
+
+def test_every_raw_dataset_has_its_table_even_without_a_capture_and_a_later_load_fits_it(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    created = loader.ensure_tables(settings, contract, con)
+    assert sorted(created) == ["fixos", "lancamentos", "pessoas", "retratos"]
+    assert loader.ensure_tables(settings, contract, con) == []  # idempotente: a existente não é tocada
+    pessoas = [c[0] for c in con.execute("DESCRIBE SELECT * FROM raw_municipal_teste.pessoas").fetchall()]
+    assert {"codigo", "nome", "_source_file_id", "_ingested_at", "_dlt_load_id", "_dlt_id"} <= set(pessoas)
+    assert "_row_hash" in [
+        c[0] for c in con.execute("DESCRIBE SELECT * FROM raw_municipal_teste.lancamentos").fetchall()
+    ]
+    for name in ("pessoas", "lancamentos", "retratos", "fixos"):
+        assert scalar(con, f"SELECT count(*) FROM raw_municipal_teste.{name}") == 0
+    capture = _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n2,Bia\n", "p1")
+    loader.load_capture(con, settings, contract, capture)  # sem erro de esquema sobre a tabela vazia
+    assert scalar(con, "SELECT count(*) FROM raw_municipal_teste.pessoas") == 2
+    again = _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n3,Caio\n", "p2")
+    loader.load_capture(con, settings, contract, again)
+    assert scalar(con, "SELECT count(*) FROM raw_municipal_teste.pessoas") == 3
+
+
+def test_a_table_without_the_column_the_new_key_needs_is_reloaded_instead_of_failing(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    old = make_contract(tmp_path)
+    capture = _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n1,Ana\n2,Bia\n", "k1")
+    loader.load_pending(con, settings, old, only_dataset="pessoas")
+    file = tmp_path / "contract.yml"  # a chave da tabela já carregada passa a ser o conteúdo da linha
+    file.write_text(
+        file.read_text(encoding="utf-8").replace("primary_key: [codigo]", "primary_key: [_row_hash]")
+    )
+    new = load_contract(file)
+    messages: list[str] = []
+    loader.load_pending(con, settings, new, only_dataset="pessoas", log=messages.append)
+    assert rows(con, "SELECT codigo, _source_file_id FROM raw_municipal_teste.pessoas ORDER BY 1") == [
+        {"codigo": "1", "_source_file_id": capture["id_captura"]},
+        {"codigo": "1", "_source_file_id": capture["id_captura"]},
+        {"codigo": "2", "_source_file_id": capture["id_captura"]},
+    ]  # recarregada do landing: as linhas idênticas da fonte ficam todas
+    assert any("recarreg" in m for m in messages)
+    logged = rows(
+        con,
+        "SELECT resultado, detalhe FROM metadata.fontes_verificacoes WHERE verificacao = 'recarga_por_chave'",
+    )
+    assert len(logged) == 1 and "_row_hash" in logged[0]["detalhe"]
+    loader.load_pending(con, settings, new, only_dataset="pessoas")  # a seguinte não recarrega de novo
+    assert scalar(con, "SELECT count(*) FROM raw_municipal_teste.pessoas") == 3
+    assert (
+        scalar(
+            con, "SELECT count(*) FROM metadata.fontes_verificacoes WHERE verificacao = 'recarga_por_chave'"
+        )
+        == 1
+    )
+
+
+def test_a_dataset_that_fails_to_load_is_recorded_and_the_others_still_load(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n", "f1")
+    _capture_of(con, settings, "fixos", "http://x/f", "codigo\n7\n", "f2")
+    real = loader.load_file
+
+    def flaky(settings: Settings, contract: SourceContract, dataset: Any, *args: Any, **kwargs: Any) -> Any:
+        if dataset.name == "pessoas":
+            raise RuntimeError("esquema incompatível")
+        return real(settings, contract, dataset, *args, **kwargs)
+
+    monkeypatch.setattr(loader, "load_file", flaky)
+    captures, _ = loader.load_pending(con, settings, contract)
+    assert captures == 1 and scalar(con, "SELECT count(*) FROM raw_municipal_teste.fixos") == 1
+    status, details = monitoring.latest_status(con, "teste", "pessoas")
+    assert status == "error" and "esquema incompatível" in details[0]
+    assert scalar(con, "SELECT count(*) FROM metadata.capturas WHERE dt_carga IS NULL") == 1  # tenta de novo
+    monkeypatch.undo()
+    assert loader.load_pending(con, settings, contract)[0] == 1  # a próxima carga recupera
+    assert monitoring.latest_status(con, "teste", "pessoas")[0] == "ok"
