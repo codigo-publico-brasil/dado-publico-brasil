@@ -42,7 +42,12 @@ O inventário de todos os modelos está no [anexo](#anexo-inventário); as class
 
 ## Experimento (dados sintéticos)
 
-(em andamento)
+Projeto dbt mínimo fora do repositório (dbt-core 1.12.6, dbt-duckdb 1.11.0, DuckDB 2.0.0), com um raw de votação em três URLs e a troca por captura do ADR 0043. Código do adaptador lido em `dbt/include/duckdb/macros/materializations/incremental_strategy/`.
+
+- **`delete+insert`** com `unique_key` de uma coluna gera `delete from alvo where (url_fonte) in (select url_fonte from tmp)` e depois `insert`: troca a partição inteira, inclusive linhas que sumiram da fonte. Confirmado: republicar um ano (valor mudado, linha retirada, linha nova) deu tabela **idêntica** à reconstrução completa (contagem e soma de `hash` por coluna); a linha de 2016 que vinha no arquivo de outra URL foi preservada (um `unique_key` por ano a teria apagado); com o `post_hook`, retirar uma URL do raw também deu tabela idêntica; e `--full-refresh` depois disso deu o mesmo que o incremental.
+- **`microbatch`** é `delete` + `insert` por intervalo de `event_time`, um comando por lote (na primeira construção, um lote por ano de `begin` até hoje: 11 consultas para 3 anos com dado). Confirmado: republicado 2016, a execução normal só refez 2025 e 2026 (`lookback`) e a tabela ficou **diferente** da completa; com `--event-time-start 2016-01-01` o ano voltou a bater, mas a URL retirada continuou lá (nenhum lote a apaga). O filtro por lote só entra na leitura de quem declara `event_time` (`... where dt_ref >= '2016-01-01' and dt_ref < '2017-01-01'` no SQL compilado); sem ele, cada lote lê a tabela de cima inteira. O raw não tem coluna de data (o ano é texto do arquivo), então cada lote leria o raw inteiro.
+- **Testes do dbt** sobre o incremental: o SQL compilado do `not_null` lê a tabela inteira (`select votos from stg_inc where votos is null`), em toda execução em que o modelo entra.
+- **Não confirmado:** tempo do `delete` de uma URL em 46 milhões de linhas no HD do servidor; se o `delete` e o `insert` correm na mesma transação no dbt-duckdb (uma queda entre os dois deixaria a URL sem linhas até a próxima execução, que a refaz porque a captura não estará na tabela); se o filtro de lote do `microbatch` atravessa a macro `tse_source` (irrelevante, pois ele foi descartado); e a equivalência do pulo de ramos no pipeline sintético do projeto, que só existe depois do passo 2 do plano.
 
 ## Alternativas consideradas
 
