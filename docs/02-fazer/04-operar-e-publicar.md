@@ -265,7 +265,31 @@ Depois de uma noite, três consultas respondem ([ADR 0044](../05-decisoes/0044-c
 uv run dado-publico query --sql "SELECT id_no, tipo, qtd_segundos FROM metadata.testes_resultados WHERE id_execucao = (SELECT max(id_execucao) FROM metadata.execucoes WHERE etapa = 'transform_post') ORDER BY qtd_segundos DESC LIMIT 20"
 ```
 
-O staging do TSE é tabela, recalculada no `transform_pre`: carregar o raw sem rodar o dbt deixa o staging do TSE com o raw anterior.
+O staging do TSE é tabela, recalculada no `transform_pre` quando o raw do TSE recebe carga: carregar o raw sem rodar o dbt deixa o staging do TSE com o raw anterior.
+
+## Reconstrução seletiva: o que cada noite refaz
+
+Para quem opera o ciclo e quer saber por que um modelo não rodou ([ADR 0047](../05-decisoes/0047-reconstrucao-incremental-e-export-por-particao.md), itens 1, 2, 4 e 6.1). Antes de cada fase do dbt, `transformation/selection.py` lê o `manifest.json` e o histórico em `metadata` e monta a lista. Os modelos que ficam de fora vão em `--exclude` (o log mostra `dbt transform_pre: seletivo (12 de 40 modelos)`). Um modelo **entra** se, desde o início da última execução que o construiu com sucesso (`metadata.testes_resultados` + `metadata.execucoes.dt_inicio`):
+
+- o raw que ele lê recebeu carga (`max(metadata.capturas.dt_carga)` por fonte e dataset; `stg_metadata__capturas` não conta);
+- a identidade mudou: a etapa `identity` guarda em `metadata.execucoes` a impressão (contagem e soma de `hash`) de `pessoas`, `pessoas_identificadores` e `pessoas_fusoes` antes e depois (`impressao_antes`, `impressao_depois`); diferentes = mudou, e entra quem lê `identity.*`;
+- o período mudou: modelos com a tag `data_atual` e `meta.periodo: ano | mes` (`int_tse_eleitos`, `fct_mandatos`, `agg_composicoes`) entram na virada do ano ou do mês, não toda noite;
+- um pai dele foi construído depois dele (por exemplo, na outra fase);
+- ele, ou um teste dele, não terminou com sucesso, ou nunca rodou.
+
+Entram junto **todos os descendentes**. Regra que nada quebra: nenhum modelo é pulado com entrada alterada, e nenhum `id_pessoa` fica velho; na dúvida, entra.
+
+**Reconstrução completa** (sem seleção, `fl_completa` em `metadata.execucoes`): quando não há manifesto nem reconstrução completa anterior da fase; quando o `versao_commit` mudou ou o código tem alteração não commitada (isso cobre os seeds); no primeiro domingo desde a última completa; e por pedido (`dado-publico transform --rebuild`, `rebuild`, `run --rebuild`). Uma completa que não deixou resultado de todos os modelos da fase (o dbt caiu no meio) não conta, e a seguinte refaz tudo. O comando `transform` e o Dagster usam a mesma seleção.
+
+**Noite sem dado novo:** a fase não chama o dbt (só grava a execução vazia, roda `describe` e o aviso por e-mail). Para ver o que a última noite construiu:
+
+```bash
+uv run dado-publico query --sql "SELECT etapa, fl_completa, qtd_linhas_entrada AS nos, dt_inicio FROM metadata.execucoes WHERE fonte = 'dbt' ORDER BY id_execucao DESC LIMIT 6"
+```
+
+**Export:** a tabela que o dbt não refez desde o export que gerou o `manifesto.json` publicado (último resultado do modelo = sucesso e execução anterior ao `dt_exportacao`, mesmo `versao_commit`) não é lida de novo: reaproveita a entrada do manifesto (`export_tempos.json` mostra `reaproveitada`). Sem manifesto do dbt, com outro commit ou código não commitado, tudo é recalculado. Para forçar, apague o `manifesto.json` do destino ou rode uma reconstrução completa.
+
+**Limites desta etapa:** o staging do TSE ainda é tabela inteira (o incremental por captura é o passo 4 do plano do ADR); a seleção só pula o que o raw, a identidade e o período não tocam. Os modelos dos pacotes (Elementary) não entram na lista: só rodam nas reconstruções completas, e os ganchos `on-run-end` seguem gravando os resultados.
 
 ## Como saber o que está desatualizado
 

@@ -257,6 +257,30 @@ def blocked(con: warehouse.Connection, settings: Settings) -> dict[tuple[str, st
     return out
 
 
+def unchanged(
+    con: warehouse.Connection, settings: Settings, published: dict[str, Any]
+) -> set[tuple[str, str]]:
+    """Tabelas que o dbt não refez desde o manifesto publicado: a impressão digital delas não muda (ADR 0047).
+
+    Uma tabela só entra se o último resultado do modelo foi sucesso e a execução que o produziu começou
+    ANTES do export que gerou o manifesto, e se o código é o mesmo (descrições e chaves entram na
+    impressão). Sem manifesto do dbt ou do lake, ou com o código diferente, nenhuma: tudo é recalculado."""
+    file = dbt.target_dir(settings) / "manifest.json"
+    exported = published.get("dt_exportacao")
+    same_code = published.get("versao_commit") == runs.code_version()
+    if not (file.exists() and exported and same_code) or runs.code_version().endswith("+dirty"):
+        return set()
+    since = datetime.fromisoformat(exported).astimezone(UTC).replace(tzinfo=None)
+    nodes = json.loads(file.read_text(encoding="utf-8"))["nodes"]
+    found = con.execute(
+        "SELECT t.id_no FROM metadata.testes_resultados t JOIN metadata.execucoes e USING (id_execucao) "
+        "WHERE t.tipo = 'model' GROUP BY t.id_no HAVING arg_max(t.resultado, t.id_execucao) = 'success' "
+        "AND arg_max(e.dt_inicio, t.id_execucao) < ?",
+        (since,),
+    ).fetchall()
+    return {(n["schema"], n["name"]) for (i,) in found if (n := nodes.get(i)) and "schema" in n}
+
+
 def _manifest(con: warehouse.Connection, root: str) -> dict[str, Any]:
     """O manifesto que está na raiz (vazio se ainda não houver)."""
     try:
@@ -775,10 +799,17 @@ def export(
         keys = {r: _key(models, *r) for r in relations}  # falha cedo, antes de gravar qualquer arquivo
         exprs = {r: models.get(r[1], {}).get("config", {}).get("meta", {}).get("particao") for r in relations}
         held = blocked(con, settings)  # teste ou modelo em erro: fica a versão anterior, com o motivo
+        reuse = {  # o dbt não refez: a entrada do manifesto anterior vale, sem ler a tabela (ADR 0047)
+            r
+            for r in unchanged(con, settings, published)
+            if r in before and "excluida_por" not in before[r] and r not in held
+        }
         with _phase("impressões digitais"), ThreadPoolExecutor(FINGERPRINTS) as pool:
             prints = list(
                 pool.map(
-                    lambda r: None if r in held else _fingerprint(con, r[0], r[1], keys[r], exprs[r]),
+                    lambda r: (
+                        None if r in held or r in reuse else _fingerprint(con, r[0], r[1], keys[r], exprs[r])
+                    ),
                     relations,
                 )
             )
@@ -813,6 +844,16 @@ def export(
                     excluded += 1
                     if rel in before:  # nunca publicada: nada a manter
                         entries.append({**before[rel], "excluida_por": held[rel]})
+                    continue
+                if rel in reuse:
+                    entries.append(before[rel])
+                    ignored += 1
+                    tempos[f"{rel[0]}.{rel[1]}"] = {
+                        "impressao_s": 0.0,
+                        "escrita_s": 0.0,
+                        "resultado": "reaproveitada",
+                    }
+                    _say(f"  {rel[0]}.{rel[1]}: reaproveitada (o dbt não a refez desde o último export)")
                     continue
                 if not found:
                     continue

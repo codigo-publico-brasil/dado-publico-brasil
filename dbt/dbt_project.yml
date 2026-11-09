@@ -70,6 +70,9 @@ models:
       +meta:
         sensitivity: publico-agente-publico
         owner: fundador do projeto
+      int_tse_eleitos:
+        +tags: [data_atual]  # lê a data de hoje: entra na reconstrução quando o período muda, não toda noite (ADR 0047)
+        +meta: {periodo: ano}
     marts:
       +schema: marts
       +materialized: table
@@ -77,6 +80,13 @@ models:
         enforced: true
       +meta:
         owner: fundador do projeto
+      eleicoes:
+        fct_mandatos:
+          +tags: [data_atual]
+          +meta: {periodo: ano}
+        agg_composicoes:
+          +tags: [data_atual]
+          +meta: {periodo: mes}
 
 seeds:
   dado_publico_brasil:

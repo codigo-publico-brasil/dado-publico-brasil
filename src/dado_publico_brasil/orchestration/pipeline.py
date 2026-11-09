@@ -89,7 +89,7 @@ def run_all(
     finally:
         con.close()
     if summary.captures_loaded or rebuild or not built:
-        summary.new_people = build.run(settings)
+        summary.new_people = build.run(settings, full=rebuild)
         summary.transformed = True
     return summary
 
