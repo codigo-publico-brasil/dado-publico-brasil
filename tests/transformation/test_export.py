@@ -839,7 +839,7 @@ def dbt_nodes(settings: Settings, nodes: dict[str, dict[str, object]]) -> None:
 def record_results(settings: Settings, stage: str, results: dict[str, str]) -> None:
     live = duckdb.connect(str(settings.warehouse))
     row = live.execute(
-        "INSERT INTO metadata.execucoes (etapa, fonte, dt_inicio, resultado) VALUES (?, 'dbt', now(), 'ok') "
+        "INSERT INTO metadata.execucoes (etapa, fonte, dt_inicio, resultado) VALUES (?, 'dbt', now() AT TIME ZONE 'UTC', 'ok') "
         "RETURNING id_execucao",
         (stage,),
     ).fetchone()
