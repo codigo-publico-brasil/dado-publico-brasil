@@ -206,3 +206,97 @@ models:
       - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
       - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+  - name: stg_transparencia__licitacoes
+    description: "Licitações do governo federal (SIASG), uma por linha, de 2022-11 em diante, só meses fechados."
+    meta: {sensitivity: publico-agente-publico, grain: "unidade gestora, modalidade e número da licitação"}
+    columns:
+      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: ["not_null"]}
+      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: ["not_null"]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: ["not_null"]}
+      - {name: ug, description: "Nome da unidade gestora responsável pela licitação."}
+      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: ["not_null"]}
+      - {name: modalidade, description: "Modalidade de compra, como a fonte informa."}
+      - {name: numero_processo, description: "Número do processo administrativo da licitação, como a fonte informa."}
+      - {name: objeto, description: "Objeto da licitação, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing)."}
+      - {name: situacao, description: "Situação da licitação, como a fonte informa (por exemplo, Publicado, Encerrado)."}
+      - {name: cd_orgao_superior, description: "Código SIAFI do órgão superior (ministério ou equivalente)."}
+      - {name: orgao_superior, description: "Nome do órgão superior."}
+      - {name: cd_orgao, description: "Código SIAFI do órgão da unidade gestora."}
+      - {name: orgao, description: "Nome do órgão da unidade gestora."}
+      - {name: uf, description: "UF da unidade gestora."}
+      - {name: municipio, description: "Município da unidade gestora."}
+      - {name: dt_resultado, description: "Data do resultado da compra (homologação publicada no Diário Oficial da União, segundo o dicionário do portal)."}
+      - {name: dt_abertura, description: "Data de abertura para envio de propostas; vazia onde a fonte não informa."}
+      - {name: valor, description: "Valor total licitado, em reais, com as quatro casas que a fonte publica."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+  - name: stg_transparencia__licitacoes_itens
+    description: "Itens das licitações do governo federal, com o vencedor. Vencedor pessoa física vem com CPF completo na fonte e sai mascarado aqui."
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "linha da fonte: item e vencedor (a fonte repete linhas idênticas e deixa o código do item vazio em parte delas)"}
+    columns:
+      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: ["not_null"]}
+      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: ["not_null"]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: ["not_null"]}
+      - {name: ug, description: "Nome da unidade gestora responsável pela licitação."}
+      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: ["not_null"]}
+      - {name: modalidade, description: "Modalidade de compra, como a fonte informa."}
+      - {name: numero_processo, description: "Número do processo administrativo da licitação, como a fonte informa."}
+      - {name: cd_orgao, description: "Código SIAFI do órgão da unidade gestora."}
+      - {name: orgao, description: "Nome do órgão da unidade gestora."}
+      - {name: cd_item, description: "Código do item da compra (22 dígitos: unidade gestora, modalidade, número da licitação no ano, ano e sequencial do item, segundo o dicionário do portal); vazio em parte das linhas da fonte."}
+      - {name: item, description: "Descrição do item, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing)."}
+      - {name: quantidade, description: "Quantidade do item, com as quatro casas que a fonte publica."}
+      - {name: valor, description: "Valor total do item, em reais, com as quatro casas que a fonte publica."}
+      - {name: cd_vencedor, meta: {pii: true}, description: "CNPJ do vencedor, como a fonte publica. CPF (11 dígitos, completo na fonte) sai mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing e no raw (privados)."}
+      - {name: vencedor, meta: {pii: true}, description: "Nome do vencedor (pessoa física inclusive), como a fonte publica; número de CPF no texto é mascarado pelo projeto."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+  - name: stg_transparencia__licitacoes_participantes
+    description: "Participantes dos itens das licitações do governo federal, com a marca de vencedor. Participante pessoa física vem com CPF completo na fonte e sai mascarado aqui."
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "linha da fonte: item e participante (a fonte repete linhas idênticas)"}
+    columns:
+      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: ["not_null"]}
+      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: ["not_null"]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: ["not_null"]}
+      - {name: ug, description: "Nome da unidade gestora responsável pela licitação."}
+      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: ["not_null"]}
+      - {name: modalidade, description: "Modalidade de compra, como a fonte informa."}
+      - {name: numero_processo, description: "Número do processo administrativo da licitação, como a fonte informa."}
+      - {name: cd_orgao, description: "Código SIAFI do órgão da unidade gestora."}
+      - {name: orgao, description: "Nome do órgão da unidade gestora."}
+      - {name: cd_item, description: "Código do item da compra (liga a `stg_transparencia__licitacoes_itens`); vazio em parte das linhas da fonte."}
+      - {name: item, description: "Descrição do item, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing)."}
+      - {name: cd_participante, meta: {pii: true}, description: "Código do participante: CNPJ na maioria das linhas; a fonte traz também CPF (sai mascarado, ***.nnn.nnn-**) e códigos curtos que o dicionário do portal não descreve. Como a fonte publica."}
+      - {name: participante, meta: {pii: true}, description: "Nome do participante (pessoa física inclusive), como a fonte publica; número de CPF no texto é mascarado pelo projeto."}
+      - {name: fl_vencedor, description: "Verdadeiro quando o participante venceu o item (SIM na fonte); falso quando não (NÃO).", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+  - name: stg_transparencia__licitacoes_empenhos
+    description: "Empenhos relacionados às licitações do governo federal."
+    meta: {sensitivity: publico-agente-publico, grain: "licitação e empenho"}
+    columns:
+      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: ["not_null"]}
+      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: ["not_null"]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: ["not_null"]}
+      - {name: ug, description: "Nome da unidade gestora responsável pela licitação."}
+      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: ["not_null"]}
+      - {name: modalidade, description: "Modalidade de compra, como a fonte informa."}
+      - {name: numero_processo, description: "Número do processo administrativo da licitação, como a fonte informa."}
+      - {name: cd_empenho, description: "Código do empenho relacionado à licitação, como a fonte informa.", tests: ["not_null"]}
+      - {name: dt_emissao, description: "Data de emissão do empenho."}
+      - {name: observacao, description: "Observação do empenho, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing)."}
+      - {name: valor, description: "Valor do empenho, em reais, com as quatro casas que a fonte publica."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
