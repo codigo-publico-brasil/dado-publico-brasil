@@ -146,15 +146,46 @@ def download(
 
     O nome do arquivo vem do fim da URL, ou de `name` quando a URL não termina no nome do arquivo."""
     temporary = folder / "download.tmp"
+    temporary.unlink(missing_ok=True)  # sobra de uma execução interrompida não é retomada
 
     def attempt() -> tuple[str, int]:
-        sha, size = hashlib.sha256(), 0
-        with _open(url, headers or {}, "GET", 120, pace, suffix, sites) as r:
+        have = temporary.stat().st_size if temporary.exists() else 0  # bytes de uma tentativa cortada
+        extra = {"Range": f"bytes={have}-"} if have else {}
+        try:
+            response = _open(url, {**(headers or {}), **extra}, "GET", 120, pace, suffix, sites)
+        except urllib.error.HTTPError as error:
+            if error.code == 416:  # o pedaço guardado não serve mais: recomeça do zero
+                temporary.unlink(missing_ok=True)
+                raise OSError(f"{url}: HTTP 416 ao retomar") from error
+            raise
+        with response as r:
+            # só retoma se a fonte respondeu 206 a partir de onde paramos; 200 manda o arquivo todo de novo
+            resumed = (
+                have > 0
+                and r.status == 206
+                and (r.headers.get("Content-Range") or "").startswith(f"bytes {have}-")
+            )
+            if not resumed:
+                have = 0
+            sha, size = hashlib.sha256(), have
+            if resumed:
+                with temporary.open("rb") as f:
+                    while chunk := f.read(CHUNK):
+                        sha.update(chunk)
             folder.mkdir(parents=True, exist_ok=True)  # só depois de aberta: bloqueio não deixa pasta vazia
-            with temporary.open("wb") as f:
+            with temporary.open("ab" if resumed else "wb") as f:
                 body = _body(r)
-                while chunk := body.read(CHUNK):
+                while True:
+                    try:
+                        chunk = body.read(CHUNK)
+                    except (OSError, HTTPException):  # conexão cortada: o que chegou fica para a retomada
+                        if r.headers.get("Content-Encoding"):
+                            temporary.unlink(missing_ok=True)  # transporte comprimido não se retoma
+                        raise
+                    if not chunk:
+                        break
                     f.write(chunk)
+                    f.flush()
                     sha.update(chunk)
                     size += len(chunk)
             promised = r.headers.get("Content-Length")
@@ -163,9 +194,11 @@ def download(
                 promised
                 and promised.isdigit()
                 and not r.headers.get("Content-Encoding")
-                and int(promised) != size
+                and have + int(promised) != size
             ):
-                raise OSError(f"download truncado: recebidos {size} bytes, a fonte informou {promised}")
+                raise OSError(
+                    f"download truncado: recebidos {size} bytes, a fonte informou {have + int(promised)}"
+                )
         return sha.hexdigest(), size
 
     try:
