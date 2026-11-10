@@ -233,6 +233,8 @@ def _record_dbt(
         results = dbt_runner.read_results(SETTINGS, target=target) if invocation else []
         bad = quality.record_stage(con, stage, results, started, plan)
         context.log.info(f"dbt {stage}: {len(results)} resultados de modelos e testes gravados")
+        for line in selection.phase_log(plan, results):
+            context.log.info(line)
         for r in bad:  # visível na aba Runs; o e-mail de `observability.notify` e o `observe` listam também
             context.log.error(f"dbt {stage}: {r['unique_id']}: {r['status']} {(r['message'] or '')[:300]}")
         if not bad and invocation and not invocation.is_successful():

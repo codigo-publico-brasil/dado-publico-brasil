@@ -312,3 +312,16 @@ def test_a_change_to_the_identity_between_two_runs_also_counts(env: tuple[Connec
     assert pick(env, "transform_post").skip
     identity_run(env[0], "2026-11-07T04:30:00+00:00", "b", "b")  # mexeram nela fora da etapa
     assert set(pick(env, "transform_post").names) == {"stg_identity", "mart_camara"}
+
+
+def test_phase_log_summarises_skipped_and_built_models_with_minutes() -> None:
+    plan = selection.Plan("transform_post", False, "x", frozenset(), skipped=(("staging", "stg_a"),))
+    results = [
+        {"unique_id": "model.p.m_b", "status": "success", "seconds": 90.0},
+        {"unique_id": "model.p.m_c", "status": "error", "seconds": 6.0},
+        {"unique_id": "test.p.t", "status": "pass", "seconds": 1.0},
+    ]
+    lines = selection.phase_log(plan, results)
+    assert lines[0] == "dbt transform_post: 1 pulados, 2 reconstruídos (1,6 min somados), 1 com erro"
+    assert "  stg_a: pulado" in lines
+    assert lines[2] == "  m_b: success (1,5 min)" and "  m_c: error (0,1 min)" in lines
