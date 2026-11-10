@@ -20,7 +20,7 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
-      - name: Testes com cobertura (relatório, sem piso: ADR 0048)
+      - name: Testes com cobertura (relatório, sem piso, ADR 0048)
         run: uv run pytest --cov --cov-report=term-missing:skip-covered --cov-report=xml
       - name: Resumo da cobertura por arquivo
         if: always()
