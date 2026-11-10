@@ -78,18 +78,6 @@ models:
       - {name: proponente, description: "1 quando consta como proponente; 0 caso contrário."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
       - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
-  - name: int_pessoas_atividade_agregada
-    meta: {fonte_oficial: "Câmara dos Deputados; Senado Federal"}
-    description: Uma linha por pessoa, com votos, propostas e legislaturas.
-    columns:
-      - {name: id_pessoa, description: "Chave própria e estável da pessoa (schema identity).", tests: ["unique", "not_null"]}
-      - {name: qtd_votos, description: "Quantidade de votos nominais registrados."}
-      - {name: qtd_propostas, description: "Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado)."}
-      - {name: ultimo_partido, description: "Partido no voto mais recente."}
-      - {name: ultima_uf, description: "UF no voto mais recente."}
-      - {name: dt_ultimo_voto, description: "Data e hora do voto mais recente."}
-      - {name: primeira_legislatura_com_voto, description: "Primeira legislatura em que há voto registrado."}
-      - {name: ultima_legislatura_com_voto, description: "Última legislatura em que há voto registrado."}
   - name: int_pessoas_profissoes_agregadas
     meta: {fonte_oficial: "Câmara dos Deputados"}
     description: Uma linha por pessoa, com as profissões declaradas.
