@@ -1,6 +1,6 @@
 # ADR 0047: Reconstruir só o que mudou (pular ramos, incremental por captura) e publicar só as partições alteradas
 
-- **Status:** proposto (2026-11-06), para revisão do fundador
+- **Status:** proposto (2026-11-06); ordem aprovada pelo fundador (pular ramos primeiro, completa aos domingos); passos 2 e 3 implementados no PR #242
 - **Data:** 2026-11-06
 - **Altera:** a Proposta B do [ADR 0044](0044-ciclo-rapido-staging-do-tse-em-tabela-e-tempos.md) (vira decisão, sem `dbt source freshness`) e o item "Tabela incremental" das alternativas dele (passa a valer para o staging do TSE); o item 5 do [ADR 0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) (o ciclo deixa de ser tudo ou nada: roda só os nós com entrada nova); os itens 4 e 6 do [ADR 0035](0035-lakehouse-publico-no-r2.md) (impressão e envio por partição, manifesto versão 2). Convive com o [ADR 0046](0046-publicacao-tolerante-a-falhas-de-nos-isolados.md) (branch `ciclo-tolerante`, publicação por tabela).
 
@@ -74,6 +74,14 @@ Projeto dbt mínimo fora do repositório (dbt-core 1.12.6, dbt-duckdb 1.11.0, Du
 4. **Piloto incremental: `stg_tse__votacao` (item 3).** Aceite: equivalência com `--full-refresh` nos cenários de republicação e de URL retirada; tempo com um ano novo menor que o completo (medir com a carga de um ano).
 5. **Manifesto v2 e escrita por partição (6.2 e 6.3), piloto `fct_candidaturas` e `stg_tse__votacao`.** Aceite: `verify` passa; consumidor da v1 lê o mesmo; republicar um ano grava só aquele `ano=`.
 6. **Demais staging do TSE e, se a medição pedir, `fct_resultados` e `fct_campanhas`** (b\*), por custo.
+
+## Registro de implementação (passos 2 e 3, PR #242)
+
+Duas decisões da implementação diferem do texto acima; o resto vale como escrito.
+
+- **A execução seletiva usa `--exclude` dos modelos pulados, não `--select` da lista a construir.** O `dagster-dbt` une o `--select` próprio com o que passamos e reconstruiria a fase inteira; vários `--exclude` se unem corretamente. Os modelos pulados chegam ao Dagster como `MaterializeResult` com metadado `pulado`, para o passo seguinte não ser pulado.
+- **A identidade conta como mudada também quando a impressão difere entre duas etapas** (o "antes" desta execução contra o "depois" da anterior), não só antes e depois da etapa `identity`. A prova de equivalência mostrou que uma alteração feita fora da etapa (restauração, correção manual) deixava `id_pessoa` velho nos modelos pulados.
+- Ainda não medido em execução real do Dagster; o ganho de tempo só aparece a partir da segunda noite depois do deploy.
 
 ## Anexo: inventário
 

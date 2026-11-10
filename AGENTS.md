@@ -86,3 +86,5 @@ Mapa em [`docs/README.md`](docs/README.md): `01-entender` (explica), `02-fazer` 
 - O `uv` pode não estar no PATH do shell do agente (no Windows fica em `~/.local/bin`).
 - Os testes que montam o pipeline sintético levam minutos; rode os arquivos afetados antes da suíte completa.
 - Branch empilhada sobre outra ainda não mergeada: diga isso no PR.
+- **No servidor, liste antes de agir:** veja as execuções ativas antes de disparar, cancelar ou recarregar, e só aja com autorização da pessoa; comando que deu timeout pode ter sido aceito, então confira antes de repetir (criou execução duplicada). Sintomas e remédios: [diagnóstico](docs/02-fazer/04-operar-e-publicar.md#diagnóstico-sintoma-causa-e-o-que-fazer).
+- **Atalho incremental precisa de prova:** quem pula ou reaproveita trabalho (seleção por dado novo, export por partição) prova que o resultado é idêntico ao completo (contagem e soma de hash por tabela, no pipeline sintético). O cenário do teste mantém o dado consistente, senão o teste reprova pelo motivo errado.

@@ -61,7 +61,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) | Ciclo noturno: capturas escalonadas, um processamento e uma publicação por dia | proposto; itens 2 e 6 alterados pelo [0046](0046-publicacao-tolerante-a-falhas-de-nos-isolados.md) |
 | [0043](0043-raw-em-parquet-substituicao-por-particao-e-logs.md) | Raw carregado em Parquet (`pyarrow`), `write: replace_partition` para arquivo anual completo e logs no Dagster | proposto; altera 0011, 0012 e 0024 |
 | [0044](0044-ciclo-rapido-staging-do-tse-em-tabela-e-tempos.md) | Ciclo mais rápido: staging do TSE em tabela, tempo de cada nó; propostas de `threads` e de reconstrução parcial | proposto; altera o 0007 (item 3: staging = views); Proposta B detalhada no [0047](0047-reconstrucao-incremental-e-export-por-particao.md)
-| [0047](0047-reconstrucao-incremental-e-export-por-particao.md) | Reconstruir só o que mudou (seleção por dado novo, staging do TSE incremental por captura) e export por partição (manifesto v2) | proposto; altera 0044 (Proposta B), 0042 (item 5) e 0035 (itens 4 e 6) |
+| [0047](0047-reconstrucao-incremental-e-export-por-particao.md) | Reconstruir só o que mudou (seleção por dado novo, staging do TSE incremental por captura) e export por partição (manifesto v2) | proposto (aprovado pelo fundador); passos 2 e 3 implementados; altera 0044 (Proposta B), 0042 (item 5) e 0035 (itens 4 e 6) |
 
 ### Nomes, qualidade e dados pessoais
 
@@ -87,5 +87,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0031](0031-pessoas-de-todo-eleito.md) | Pessoas de todo eleito, ancoradas na candidatura (F3 do 0030) | proposto (aprovado pelo fundador); altera 0004 e 0013 |
 | [0032](0032-partido-da-pessoa-por-fonte-e-filiacao.md) | O partido da pessoa vem de fontes oficiais (candidatura, histórico da Câmara, votos); a filiação por data fica de fora | proposto (decisão do fundador); altera o item 10 do 0030 |
 | [0033](0033-marts-com-a-terminologia-da-dbt-labs.md) | Uma só camada publicada, `marts`, com a terminologia da dbt Labs (`dim_`, `fct_`, `brg_`, `agg_`, `app_`) | proposto (decisão do fundador); altera a organização em esquemas do 0030 e o 0007; item 2 alterado pelo [0038](0038-lake-como-unica-publicacao.md) |
+
+**Número repetido:** existem dois ADRs 0038 (`cortesia-e-bloqueio` e `lake-como-unica-publicacao`), criados em paralelo em sessões diferentes; os links usam o nome completo do arquivo. Confira `git ls-tree origin/main docs/05-decisoes/` antes de escolher o próximo número.
 
 Ao criar um ADR, acrescente uma linha aqui e, se ele substituir outro, atualize a situação do antigo.
