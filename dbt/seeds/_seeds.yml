@@ -88,6 +88,30 @@ seeds:
       - {name: regra_legal, description: "Artigo e emenda que fixam a data, com a vigência.", data_tests: [not_null]}
       - {name: fonte_url, description: "Texto oficial no Planalto.", data_tests: [not_null]}
 
+  - name: dim_cargos_posse_uf
+    description: >
+      Data de posse (dia e mês) de deputado estadual e distrital por UF, com a vigência por ano de eleição. A Constituição
+      Federal não fixa essa data: cada constituição estadual (ou, no DF, a norma da Câmara Legislativa) diz o dia, e a data
+      do arquivo de vagas do TSE não é confiável. Cada linha traz o artigo e o link do texto oficial lido. Só entram UFs
+      com a regra conferida no texto; as demais ficam de fora e o início do mandato fica vazio (o teste
+      mandatos_estaduais_sem_posse_da_uf mede a lacuna). Nas constituições que dizem "a partir de 1º de fevereiro", a posse
+      é tomada nesse dia, como se faz com a Constituição Federal (art. 57, § 4º). Hoje vale só para as eleições de 2026; as
+      anteriores usam a data do TSE quando plausível. Curado à mão.
+    meta: {sensitivity: publico, grain: cargo, UF e vigência, owner: fundador do projeto, freshness: a cada emenda à constituição estadual, fonte_oficial: "Constituições estaduais e normas das Assembleias", auditoria_excecao: "Referência curada do projeto, com a fonte oficial em fonte_url."}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [id_cargo, id_territorio, ano_eleicao_de]}}
+    columns:
+      - {name: id_cargo, description: "Cargo (dim_cargos): deputado_estadual ou deputado_distrital.", data_tests: [not_null, {accepted_values: {arguments: {values: [deputado_estadual, deputado_distrital]}}}, {relationships: {to: ref('dim_cargos'), field: id_cargo}}]}
+      - {name: id_territorio, description: "UF (dim_territorios), pelo código do IBGE.", data_tests: [not_null, {relationships: {to: ref('dim_territorios'), field: id_territorio}}]}
+      - {name: sigla_uf, description: "Sigla da UF, para leitura.", data_tests: [not_null]}
+      - {name: ano_eleicao_de, description: "Primeiro ano de eleição em que a regra vale.", data_tests: [not_null]}
+      - {name: ano_eleicao_ate, description: "Último ano de eleição em que a regra vale (9999 enquanto vigente).", data_tests: [not_null]}
+      - {name: mes_posse, description: "Mês da posse.", data_tests: [not_null]}
+      - {name: dia_posse, description: "Dia da posse.", data_tests: [not_null]}
+      - {name: regra_legal, description: "Artigo da constituição estadual (ou da norma da Assembleia) e a emenda que fixam a data, com a versão do texto lido.", data_tests: [not_null]}
+      - {name: fonte_url, description: "Texto oficial lido, no site da Assembleia ou do governo do estado (a exceção, hospedada por tribunal, está dita em regra_legal).", data_tests: [not_null]}
+      - {name: dt_captura, description: "Data em que o texto foi lido na fonte.", data_tests: [not_null]}
+
   - name: partidos_eventos
     meta: {owner: fundador do projeto, sensitivity: publico, fonte_oficial: "Tribunal Superior Eleitoral", auditoria_excecao: "Referência curada do projeto, com a fonte oficial em fonte_url."}
     description: Mudanças de nome, fusões e incorporações de partidos, conferidas à mão no TSE, com a página oficial de cada evento. Alimenta partidos_linhagem. Uma linha por partido de origem e evento.
