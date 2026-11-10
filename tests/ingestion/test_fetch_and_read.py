@@ -345,3 +345,54 @@ def test_professions_without_a_title_are_kept_not_rejected_and_the_portal_redire
     loaded = list(loader.read_rows(file, camara, dataset, 1, stats))
     assert stats["rejected"] == 0 and stats["loaded"] == len(loaded) == 3
     assert contracts.find("transparencia").redirect_sites == ("cgu.gov.br",)
+
+
+class Resumable(http.server.BaseHTTPRequestHandler):
+    """Corta a 1ª resposta na metade; depois atende `Range` (206) ou, se `ranges` for falso, manda tudo."""
+
+    payload = bytes(range(256)) * 400
+    cuts = 1
+    ranges = True
+    requests: list[str | None] = []
+
+    def do_GET(self) -> None:
+        Resumable.requests.append(self.headers.get("Range"))
+        start = int(self.headers["Range"].split("=")[1].rstrip("-")) if self.headers["Range"] else 0
+        resume = Resumable.ranges and start > 0
+        body = self.payload[start:] if resume else self.payload
+        self.send_response(206 if resume else 200)
+        if resume:
+            end = len(self.payload) - 1
+            self.send_header("Content-Range", f"bytes {start}-{end}/{len(self.payload)}")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if Resumable.cuts > 0:
+            Resumable.cuts -= 1
+            body = body[: len(body) // 2]
+            self.close_connection = True
+        self.wfile.write(body)
+
+    def log_message(self, *args: object) -> None:
+        pass
+
+
+@pytest.fixture
+def resumable() -> Iterator[str]:
+    Resumable.cuts, Resumable.ranges, Resumable.requests = 1, True, []
+    httpd = http.server.HTTPServer(("127.0.0.1", 0), Resumable)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{httpd.server_port}"
+    httpd.shutdown()
+
+
+@pytest.mark.parametrize("ranges", [True, False])
+def test_a_cut_download_resumes_with_range_or_restarts_and_registers_only_the_whole_file(
+    resumable: str, ranges: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+    Resumable.ranges = ranges
+    file, digest, size = fetch.download(resumable + "/grande.csv", tmp_path / "landing")
+    assert file.read_bytes() == Resumable.payload and size == len(Resumable.payload)
+    assert digest == hashlib.sha256(Resumable.payload).hexdigest()
+    assert Resumable.requests[1] == f"bytes={len(Resumable.payload) // 2}-"  # pede só o que falta
+    assert [p.name for p in file.parent.iterdir()] == [file.name]
