@@ -265,12 +265,14 @@ def _dbt_phase(context: AssetExecutionContext, dbt: DbtCliResource, stage: str) 
             raise_on_error=False,  # ADR 0046: nó em erro não derruba o passo (resultado gravado e alertado)
         )
     try:
-        if invocation:
-            yield from invocation.stream()
+        # Os pulados primeiro: nenhum depende de um reconstruído, e o Dagster exige o pai antes do filho
+        # (`plan.skipped` já vem em ordem topológica; o `dbt` entrega os reconstruídos na dele).
         for schema, name in plan.skipped:
             key = AssetKey([schema, name])
             if key in context.selected_asset_keys:
                 yield MaterializeResult(asset_key=key, metadata={"pulado": "sem entrada nova"})
+        if invocation:
+            yield from invocation.stream()
     finally:  # também se o passo for interrompido: resultados e tempos dos nós nunca se perdem
         _record_dbt(stage, invocation, context, started, plan)
 

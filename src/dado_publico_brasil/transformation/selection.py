@@ -17,6 +17,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from graphlib import TopologicalSorter
 from pathlib import Path
 from typing import Any
 
@@ -215,6 +216,7 @@ def plan(
             todo.append(child)
 
     chosen = entering & in_phase
+    skipped = sorted(in_phase - chosen)  # ordem topológica: o Dagster exige o pai antes do filho
     return Plan(
         stage,
         False,
@@ -222,5 +224,13 @@ def plan(
         models,
         frozenset(chosen),
         tuple(sorted(nodes[i]["name"] for i in chosen)),
-        tuple(sorted((nodes[i]["schema"], nodes[i]["name"]) for i in in_phase - chosen)),
+        tuple(
+            (nodes[i]["schema"], nodes[i]["name"])
+            for i in TopologicalSorter(
+                {
+                    i: [d for d in nodes[i].get("depends_on", {}).get("nodes", []) if d in skipped]
+                    for i in skipped
+                }
+            ).static_order()
+        ),
     )
