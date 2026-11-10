@@ -189,6 +189,15 @@ def test_new_data_selects_its_readers_and_their_descendants_only_within_the_phas
     assert {name for _, name in pre.skipped} == {"stg_tse", "stg_capturas"}
 
 
+def test_the_skipped_come_parent_before_child_because_dagster_requires_it(
+    env: tuple[Connection, Settings],
+) -> None:
+    settled(env[0])
+    loaded(env[0], "tse", "votacao", "2026-11-07T01:00:00+00:00")
+    order = [name for _, name in pick(env, "transform_pre").skipped]
+    assert order.index("stg_camara") < order.index("int_camara")  # alfabética seria o contrário
+
+
 def test_the_captures_table_is_not_a_trigger_and_a_source_without_loads_does_not_select(
     env: tuple[Connection, Settings],
 ) -> None:
