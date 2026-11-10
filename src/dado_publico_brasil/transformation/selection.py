@@ -81,6 +81,29 @@ class Plan:
         return self.full and bool(models) and models <= {r["unique_id"] for r in results}
 
 
+def _minutes(seconds: float) -> str:
+    return f"{seconds / 60:.1f}".replace(".", ",") + " min"
+
+
+def phase_log(plan: Plan, results: list[dict[str, Any]]) -> list[str]:
+    """Linhas de log da fase: um resumo e uma linha por modelo (pulado, reconstruído com o tempo, ou erro).
+
+    O Dagster mostra a fase como um passo só; isto deixa no log o que cada modelo fez."""
+    built = {
+        r["unique_id"].split(".")[-1]: r for r in results if r["unique_id"].startswith(("model.", "seed."))
+    }
+    errors = [n for n, r in built.items() if r["status"] not in SUCCESS]
+    total = sum(r["seconds"] or 0 for r in built.values())
+    lines = [
+        f"dbt {plan.stage}: {len(plan.skipped)} pulados, {len(built)} reconstruídos "
+        f"({_minutes(total)} somados), {len(errors)} com erro"
+    ]
+    lines += [f"  {name}: pulado" for _, name in plan.skipped]
+    for name, r in sorted(built.items(), key=lambda kv: -(kv[1]["seconds"] or 0)):
+        lines.append(f"  {name}: {r['status']} ({_minutes(r['seconds'] or 0)})")
+    return lines
+
+
 def _project_nodes(manifest: dict[str, Any]) -> dict[str, Any]:
     project = manifest.get("metadata", {}).get("project_name")
     return {
