@@ -14,6 +14,10 @@ with textos as (
     union all select 'stg_senado__votacoes.descricao', descricao from {{ ref('stg_senado__votacoes') }}
     union all select 'stg_transparencia__emendas_favorecidos.favorecido', favorecido from {{ ref('stg_transparencia__emendas_favorecidos') }}
     union all select 'fct_emendas_favorecidos.favorecido', favorecido from {{ ref('fct_emendas_favorecidos') }}
+    union all select 'fct_licitacoes.objeto', objeto from {{ ref('fct_licitacoes') }}
+    union all select 'fct_licitacoes_itens.item', item from {{ ref('fct_licitacoes_itens') }}
+    union all select 'fct_licitacoes_participantes.item', item from {{ ref('fct_licitacoes_participantes') }}
+    union all select 'brg_licitacoes_empenhos.observacao', observacao from {{ ref('brg_licitacoes_empenhos') }}
 
 )
 
@@ -27,3 +31,9 @@ where regexp_matches(favorecido, '(^|[^0-9])[0-9]{11}([^0-9]|$)') or regexp_matc
 union all
 select 'fct_emendas_favorecidos', favorecido from {{ ref('fct_emendas_favorecidos') }}
 where regexp_matches(favorecido, '(^|[^0-9])[0-9]{11}([^0-9]|$)') or regexp_matches(cd_favorecido, '^[0-9]{11}$')
+union all
+select 'fct_licitacoes_itens', vencedor from {{ ref('fct_licitacoes_itens') }}
+where regexp_matches(vencedor, '(^|[^0-9])[0-9]{11}([^0-9]|$)') or regexp_matches(cd_vencedor, '^[0-9]{11}$')
+union all
+select 'fct_licitacoes_participantes', participante from {{ ref('fct_licitacoes_participantes') }}
+where regexp_matches(participante, '(^|[^0-9])[0-9]{11}([^0-9]|$)') or regexp_matches(cd_participante, '^[0-9]{11}$')

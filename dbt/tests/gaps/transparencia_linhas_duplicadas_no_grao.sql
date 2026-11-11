@@ -21,3 +21,13 @@ select 'compras_termos_aditivos', count(*)
 from {{ ref('stg_transparencia__compras_termos_aditivos') }}
 group by numero_contrato, cd_ug, numero_termo_aditivo
 having count(*) > 1
+union all
+select 'licitacoes', count(*)
+from {{ ref('stg_transparencia__licitacoes') }}
+group by id_licitacao
+having count(*) > 1
+union all
+select 'licitacoes_empenhos', count(*)
+from {{ ref('stg_transparencia__licitacoes_empenhos') }}
+group by id_licitacao, cd_empenho
+having count(*) > 1

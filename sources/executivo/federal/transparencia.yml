@@ -1,5 +1,5 @@
 # Declaração da fonte: Portal da Transparência do Governo Federal (CGU), arquivos de dados abertos.
-# Despesas e contratos: um .zip por mês na URL direta do host de download (dadosabertos-download.cgu.gov.br; o endereço do
+# Despesas, contratos e licitações: um .zip por mês na URL direta do host de download (dadosabertos-download.cgu.gov.br; o endereço do
 # portal redireciona para esse host, aceito por `redirect_sites`), de 2022-11 em diante (4 anos), só meses fechados.
 # Contratado pessoa física vem com CPF completo no arquivo: o raw (privado) o guarda como vem; o staging, que vai ao lake, o mascara.
 # Emendas parlamentares: um pacote .zip nacional com três tabelas, atualizado todo dia. Os três datasets usam o
@@ -13,7 +13,7 @@
 source: transparencia
 power: executivo
 level: federal
-description: Portal da Transparência (CGU), emendas parlamentares, despesas e contratos
+description: Portal da Transparência (CGU), emendas parlamentares, despesas, contratos e licitações
 
 # Regra de extração: o portal atualiza todo dia; a execução diária confere os arquivos completos (só baixa se mudaram).
 schedule: "40 1 * * *"            # captura noturna (cron, fuso America/Sao_Paulo; escalonada 01:00-02:20, ADR 0042); sem esta linha, só quando pedido
@@ -151,3 +151,73 @@ datasets:
     columns:
       ["Número Contrato", "Código Órgão Superior", "Nome Órgão Superior", "Código Órgão", "Nome Órgão", "Código UG",
        "Nome UG", "Número Termo Aditivo", "Data Publicação", "Objeto"]
+
+  licitacoes:
+    # Licitações do governo federal (SIASG): uma por linha, com modalidade, objeto, situação e valor. O zip do mês traz quatro CSVs
+    # (licitações, itens, participantes e empenhos), um dataset para cada, que leem o mesmo arquivo (ADR 0045). O nome de cada CSV
+    # tem acento (`AAAAMM_Licitação.csv`), por isso o `member` casa só o começo. Participante e vencedor podem ser CPF (pessoa física): o raw guarda como vem; o staging mascara.
+    url: "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/licitacoes/{month}_Licitacoes.zip#licitacoes"
+    max_age_days: 40   # mês fechado não muda; avisa se a última verificação passar de 40 dias
+    load: yearly
+    partition: month
+    first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    archive: zip
+    member: "*_Licita*.csv"
+    write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
+    primary_key: [_row_hash]
+    columns:
+      ["Número Licitação", "Código UG", "Nome UG", "Código Modalidade Compra", "Modalidade Compra",
+       "Número Processo", "Objeto", "Situação Licitação", "Código Órgão Superior", "Nome Órgão Superior",
+       "Código Órgão", "Nome Órgão", "UF", "Município", "Data Resultado Compra", "Data Abertura",
+       "Valor Licitação"]
+
+  licitacoes_itens:
+    # Itens de cada licitação, com o vencedor (uma linha por item e vencedor).
+    url: "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/licitacoes/{month}_Licitacoes.zip#itens"
+    max_age_days: 40   # mês fechado não muda; avisa se a última verificação passar de 40 dias
+    load: yearly
+    partition: month
+    first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    archive: zip
+    member: "*_ItemLicita*.csv"
+    write: replace_partition   # o zip do mês é a foto completa (ADR 0043)
+    primary_key: [_row_hash]
+    columns:
+      ["Número Licitação", "Código UG", "Nome UG", "Código Modalidade Compra", "Modalidade Compra",
+       "Número Processo", "Código Órgão", "Nome Órgão", "Código Item Compra", "Descrição", "Quantidade Item",
+       "Valor Item", "Código Vencedor", "Nome Vencedor"]
+
+  licitacoes_participantes:
+    # Participantes de cada item de licitação, com a marca de vencedor.
+    url: "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/licitacoes/{month}_Licitacoes.zip#participantes"
+    max_age_days: 40   # mês fechado não muda; avisa se a última verificação passar de 40 dias
+    load: yearly
+    partition: month
+    first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    archive: zip
+    member: "*_ParticipantesLicita*.csv"
+    write: replace_partition   # o zip do mês é a foto completa (ADR 0043)
+    primary_key: [_row_hash]
+    columns:
+      ["Número Licitação", "Código UG", "Nome UG", "Código Modalidade Compra", "Modalidade Compra",
+       "Número Processo", "Código Órgão", "Nome Órgão", "Código Item Compra", "Descrição Item Compra",
+       "Código Participante", "Nome Participante", "Flag Vencedor"]
+
+  licitacoes_empenhos:
+    # Empenhos relacionados a cada licitação.
+    url: "https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/licitacoes/{month}_Licitacoes.zip#empenhos"
+    max_age_days: 40   # mês fechado não muda; avisa se a última verificação passar de 40 dias
+    load: yearly
+    partition: month
+    first_month: 202211
+    lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    archive: zip
+    member: "*_EmpenhosRelacionados.csv"
+    write: replace_partition   # o zip do mês é a foto completa (ADR 0043)
+    primary_key: [_row_hash]
+    columns:
+      ["Número Licitação", "Código UG", "Nome UG", "Código Modalidade Compra", "Modalidade Compra",
+       "Número Processo", "Código Empenho", "Data Emissão Empenho", "Observação Empenho", "Valor Empenho (R$)"]

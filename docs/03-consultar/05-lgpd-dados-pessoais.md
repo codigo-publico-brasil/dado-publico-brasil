@@ -13,6 +13,7 @@ Regra de partida: **dado publicado oficialmente continua sendo dado pessoal.** P
 | Nome social, grau de instrução, estado civil | `fct_candidaturas` | pessoal (`meta: pii`) | declarados no registro de candidatura; o TSE protege alguns como "não divulgável" |
 | Bens, receitas e despesas de campanha | `fct_campanhas`, `fct_candidaturas_bens` | pessoal patrimonial | prestação de contas obrigatória por lei |
 | Favorecidos de emendas, pessoa física | `fct_emendas_favorecidos` | pessoal de terceiros (`publico-dados-pessoais-de-terceiros`) | CPF mascarado como o portal publica |
+| Vencedor e participante de licitação, pessoa física | `fct_licitacoes_itens`, `fct_licitacoes_participantes` | pessoal de terceiros (`publico-dados-pessoais-de-terceiros`) | CPF mascarado pelo projeto (a fonte o publica completo); `fl_contem_dado_pessoal` marca a linha |
 | Foto oficial do candidato | arquivos extraídos do pacote do TSE | pessoal | a hospedagem pública depende da decisão do VPS (#30) |
 | Identidade (`id_pessoa`) | `identity.*` | chave interna | não se reconstrói; não é publicada |
 
@@ -25,6 +26,7 @@ Ficam fora do projeto, por regra: CPF, título de eleitor, e-mail, telefone pess
 | Agentes públicos e candidatos: nome, nascimento, cargo, mandato, partido, votos, campanha | dado de acesso público (LGPD, art. 7º, §§ 3º e 4º), com finalidade de controle social e transparência; e legítimo interesse (art. 7º, IX) | responder quem governa, por que e como, com a fonte sempre rastreável |
 | Filiação partidária (sensível) | tratamento limitado ao partido de quem se candidatou ou exerceu mandato, que consta do próprio registro público de candidatura | mostrar a trajetória partidária de agente público |
 | Favorecidos de emendas, pessoa física | dado publicado pelo Portal da Transparência (art. 7º, § 4º), CPF mascarado | rastrear o destino do dinheiro público |
+| Vencedor e participante de licitação, pessoa física | dado publicado pelo Portal da Transparência (art. 7º, § 4º), CPF mascarado | rastrear quem contrata com o poder público |
 | Fotos | idem, só a foto oficial do registro | identificar o candidato |
 
 Princípios que o projeto já cumpre: finalidade, adequação, necessidade (só o que responde à pergunta do projeto), transparência (toda linha com fonte, URL e data), segurança e não discriminação (sem ranking, nota nem inferência sobre pessoas).

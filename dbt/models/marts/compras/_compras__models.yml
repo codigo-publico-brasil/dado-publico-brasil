@@ -1,0 +1,82 @@
+version: 2
+
+# Compras públicas federais (Portal da Transparência): licitações, itens, participantes e empenhos.
+# Os marts são o contrato com a aplicação: colunas e tipos são garantidos (contract.enforced).
+
+models:
+  - name: fct_licitacoes
+    description: Licitações do governo federal (SIASG), de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora, modalidade e número da licitação; se a fonte repete a licitação em mais de um mês, vale a captura mais recente.
+    meta: {sensitivity: publico-agente-publico, grain: licitação (unidade gestora, modalidade e número), owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    data_tests: &monitoramento
+      - elementary.volume_anomalies: {config: {severity: warn}}
+      - elementary.schema_changes: {config: {severity: warn}}
+      - elementary.all_columns_anomalies: {column_anomalies: [null_percent], config: {severity: warn}}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: id_licitacao, data_type: varchar, tests: [unique, not_null], description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen. Liga os itens, participantes e empenhos."}
+      - {name: numero, data_type: varchar, description: "Número da licitação no SIASG, como a fonte informa (único só junto com a unidade gestora e a modalidade)."}
+      - {name: cd_ug, data_type: varchar, description: "Código SIAFI da unidade gestora responsável pela licitação."}
+      - {name: ug, data_type: varchar, description: "Nome da unidade gestora responsável pela licitação."}
+      - {name: cd_modalidade, data_type: varchar, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal)."}
+      - {name: modalidade, data_type: varchar, description: "Modalidade de compra, como a fonte informa."}
+      - {name: numero_processo, data_type: varchar, description: "Número do processo administrativo da licitação, como a fonte informa."}
+      - {name: objeto, data_type: varchar, description: "Objeto da licitação, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing)."}
+      - {name: situacao, data_type: varchar, description: "Situação da licitação, como a fonte informa (por exemplo, Publicado, Encerrado)."}
+      - {name: cd_orgao_superior, data_type: varchar, description: "Código SIAFI do órgão superior (ministério ou equivalente)."}
+      - {name: orgao_superior, data_type: varchar, description: "Nome do órgão superior."}
+      - {name: cd_orgao, data_type: varchar, description: "Código SIAFI do órgão da unidade gestora."}
+      - {name: orgao, data_type: varchar, description: "Nome do órgão da unidade gestora."}
+      - {name: uf, data_type: varchar, description: "UF da unidade gestora."}
+      - {name: municipio, data_type: varchar, description: "Município da unidade gestora."}
+      - {name: dt_resultado, data_type: date, description: "Data do resultado da compra (homologação publicada no Diário Oficial da União, segundo o dicionário do portal)."}
+      - {name: dt_abertura, data_type: date, description: "Data de abertura para envio de propostas; vazia onde a fonte não informa."}
+      - {name: valor, data_type: "decimal(18,4)", description: "Valor total licitado, em reais, com as quatro casas que a fonte publica."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: fct_licitacoes_itens
+    description: Itens das licitações do governo federal, com o vencedor, uma linha por item e vencedor como a fonte publica (a fonte repete linhas idênticas e deixa o código do item vazio em parte delas; o teste de lacunas as mede). Vencedor pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas.
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: item e vencedor, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: id_licitacao, data_type: varchar, tests: [not_null, {relationships: {to: ref('fct_licitacoes'), field: id_licitacao, config: {severity: warn}}}], description: "Licitação do item (fct_licitacoes)."}
+      - {name: cd_item, data_type: varchar, description: "Código do item da compra (22 dígitos: unidade gestora, modalidade, número da licitação no ano, ano e sequencial do item, segundo o dicionário do portal); vazio em parte das linhas da fonte."}
+      - {name: item, data_type: varchar, description: "Descrição do item, texto livre da fonte (CPF no texto é mascarado pelo projeto)."}
+      - {name: quantidade, data_type: "decimal(18,4)", description: "Quantidade do item, com as quatro casas que a fonte publica."}
+      - {name: valor, data_type: "decimal(18,4)", description: "Valor total do item, em reais, com as quatro casas que a fonte publica."}
+      - {name: cd_vencedor, data_type: varchar, meta: {pii: true}, description: "CNPJ do vencedor, como a fonte publica. CPF (11 dígitos, completo na fonte) sai mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing."}
+      - {name: vencedor, data_type: varchar, meta: {pii: true}, description: "Nome do vencedor (pessoa física inclusive), como a fonte publica; número de CPF no texto é mascarado pelo projeto."}
+      - {name: fl_contem_dado_pessoal, data_type: boolean, description: "Verdadeiro quando o vencedor é pessoa física (código com CPF mascarado)."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: fct_licitacoes_participantes
+    description: Participantes dos itens das licitações do governo federal, com a marca de vencedor, uma linha por item e participante como a fonte publica (a fonte repete linhas idênticas). Participante pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas.
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: item e participante, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: id_licitacao, data_type: varchar, tests: [not_null, {relationships: {to: ref('fct_licitacoes'), field: id_licitacao, config: {severity: warn}}}], description: "Licitação do item (fct_licitacoes)."}
+      - {name: cd_item, data_type: varchar, description: "Código do item da compra (liga a fct_licitacoes_itens); vazio em parte das linhas da fonte."}
+      - {name: item, data_type: varchar, description: "Descrição do item, texto livre da fonte (CPF no texto é mascarado pelo projeto)."}
+      - {name: cd_participante, data_type: varchar, meta: {pii: true}, description: "Código do participante: CNPJ na maioria das linhas; a fonte traz também CPF (sai mascarado, ***.nnn.nnn-**) e códigos curtos que o dicionário do portal não descreve. Como a fonte publica."}
+      - {name: participante, data_type: varchar, meta: {pii: true}, description: "Nome do participante (pessoa física inclusive), como a fonte publica; número de CPF no texto é mascarado pelo projeto."}
+      - {name: fl_vencedor, data_type: boolean, description: "Verdadeiro quando o participante venceu o item (SIM na fonte); falso quando não (NÃO)."}
+      - {name: fl_contem_dado_pessoal, data_type: boolean, description: "Verdadeiro quando o participante é pessoa física (código com CPF mascarado)."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: brg_licitacoes_empenhos
+    description: Ponte entre as licitações do governo federal e os empenhos relacionados a elas, como o Portal da Transparência publica. Uma linha por licitação e empenho.
+    meta: {sensitivity: publico-agente-publico, grain: licitação e empenho, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: id_licitacao, data_type: varchar, tests: [not_null, {relationships: {to: ref('fct_licitacoes'), field: id_licitacao, config: {severity: warn}}}], description: "Licitação a que o empenho se relaciona (fct_licitacoes)."}
+      - {name: cd_empenho, data_type: varchar, tests: [not_null], description: "Código do empenho, como a fonte informa."}
+      - {name: dt_emissao, data_type: date, description: "Data de emissão do empenho."}
+      - {name: observacao, data_type: varchar, description: "Observação do empenho, texto livre da fonte (CPF no texto é mascarado pelo projeto)."}
+      - {name: valor, data_type: "decimal(18,4)", description: "Valor do empenho, em reais, com as quatro casas que a fonte publica."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
