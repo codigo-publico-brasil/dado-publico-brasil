@@ -32,6 +32,15 @@ WRITES = {"merge", "replace", "replace_partition"}
 ROW_HASH = "_row_hash"
 ITEM = "_item"  # nos datasets `foreach`: o item que deu origem à linha
 IDENTIFIER = re.compile(r"^\w+$")
+# Chaves aceitas no YAML: a desconhecida (erro de digitação) falha, em vez de virar o padrão em silêncio.
+TOP_KEYS = {"source", "power", "level", "description", "licenca", "schedule", "access", "datasets"}
+ACCESS_KEYS = {"base_url", "format", "delimiter", "encoding", "headers", "rate_limit", "redirect_sites"}
+DATASET_KEYS = {
+    "url", "load", "write", "columns", "primary_key", "extra_years", "first_year", "partition", "records",
+    "nested", "format", "headers", "foreach", "archive", "member", "raw", "arquivos", "first_month",
+    "lag_months", "step", "only", "optional", "aliases", "on_demand", "max_age_days", "rejeitadas_toleradas",
+}  # fmt: skip
+FOREACH_KEYS = {"from", "item", "where", "recent_by", "version", "refresh_after_days", "batch_size"}
 FORBIDDEN_COLUMNS = {"cpf", "rg", "tituloeleitor", "cnh", "passaporte"}
 
 
@@ -123,6 +132,7 @@ class SourceContract:
     power: str
     level: str
     description: str
+    licenca: str | None  # licença declarada pela fonte, como a doc de fontes registra (texto curto)
     base_url: str
     delimiter: str
     encoding: str
@@ -274,6 +284,12 @@ def _on_demand(where: str, value: Any) -> bool:
     return value
 
 
+def _licenca(where: str, value: Any) -> str | None:
+    if value is not None and (not isinstance(value, str) or not value.strip()):
+        raise InvalidContract(f"{where}: licenca deve ser um texto curto (ex.: 'CC BY 4.0')")
+    return value.strip() if value else None
+
+
 def _max_age(where: str, value: Any) -> int | None:
     if value is None:
         return None
@@ -339,9 +355,22 @@ def _rate_limit(value: Any, where: str) -> float:
     return float(value)
 
 
+def _known(path: Path, where: str, block: Any, allowed: set[str]) -> None:
+    unknown = sorted(set(block) - allowed) if isinstance(block, dict) else []
+    if unknown:
+        raise InvalidContract(
+            f"{path.name}: {where} tem chave desconhecida {unknown} (aceitas: {sorted(allowed)})"
+        )
+
+
 def load_contract(path: Path) -> SourceContract:
     """Lê e valida o contrato de uma fonte."""
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    _known(path, "a fonte", data, TOP_KEYS)
+    _known(path, "access", data.get("access"), ACCESS_KEYS)
+    for name, block in data["datasets"].items():
+        _known(path, f"o dataset '{name}'", block, DATASET_KEYS)
+        _known(path, f"o dataset '{name}' (foreach)", block.get("foreach"), FOREACH_KEYS)
     access = data.get("access", {})
     source = data["source"]
     if access.get("format", "csv") not in FORMATS:
@@ -371,6 +400,7 @@ def load_contract(path: Path) -> SourceContract:
         power=data["power"],
         level=data["level"],
         description=data.get("description", source),
+        licenca=_licenca(source, data.get("licenca")),
         base_url=access["base_url"],
         delimiter=access.get("delimiter", ";"),
         encoding=access.get("encoding", "utf-8-sig"),

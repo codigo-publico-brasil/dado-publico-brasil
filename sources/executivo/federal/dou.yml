@@ -2,6 +2,7 @@ source: dou
 power: executivo
 level: federal
 description: Diário Oficial da União, arquivos XML mensais por seção, como a Imprensa Nacional publica
+licenca: "CC BY-ND 3.0"
 # Regra de extração: o DOU publica todo dia útil; a execução diária confere só o mês em curso (o zip do mês é reescrito a
 # cada atualização, e cada versão fica no landing). Meses anteriores só quando pedidos (`--years`, a partir de first_month).
 schedule: "0 2 * * *"            # captura noturna (cron, fuso America/Sao_Paulo; escalonada 01:00-02:20, ADR 0042); sem esta linha, só quando pedido

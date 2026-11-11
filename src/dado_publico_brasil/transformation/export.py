@@ -165,6 +165,17 @@ def _source(model: str) -> str | None:
     return m.group(1) if m else None
 
 
+def _licenca(key: str) -> str | None:
+    """Licença do YAML da fonte de uma tabela de staging (`staging/<poder>/<esfera>/<fonte>/...`)."""
+    parts = key.split("/")
+    file = SOURCES_DIR.joinpath(*parts[1:4]).with_suffix(".yml") if parts[0] == "staging" else None
+    if file is None or not file.exists():
+        return None  # intermediate e marts misturam fontes: sem licença única
+    return (
+        str(licenca) if (licenca := yaml.safe_load(file.read_text(encoding="utf-8")).get("licenca")) else None
+    )
+
+
 def _models(settings: Settings) -> dict[str, dict[str, Any]]:
     """Modelos do `manifest.json` do dbt por nome (pasta e `config.meta`); vazio se ainda não houver."""
     file = dbt.target_dir(settings) / "manifest.json"
@@ -817,6 +828,7 @@ def export(
 
         def commit(current: list[dict[str, Any]]) -> None:
             """Troca catálogo e manifesto (por último, depois dos arquivos) se diferirem do publicado."""
+            current = [{**e, "licenca": _licenca(e["caminho"])} for e in current]
             if json.loads(json.dumps(current)) == state["entries"] and state["base"] == (base or root):
                 return  # nada mudou: o publicado já é este
             catalog = settings.state_dir / "catalogo.duckdb"
