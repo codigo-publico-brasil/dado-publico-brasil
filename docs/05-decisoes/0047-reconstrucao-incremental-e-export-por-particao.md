@@ -1,6 +1,6 @@
 # ADR 0047: Reconstruir só o que mudou (pular ramos, incremental por captura) e publicar só as partições alteradas
 
-- **Status:** proposto (2026-11-06); ordem aprovada pelo fundador (pular ramos primeiro, completa aos domingos); passos 2 e 3 implementados no PR #242
+- **Status:** aceito (2026-11-11); passos 2 e 3 implementados no PR #242
 - **Data:** 2026-11-06
 - **Altera:** a Proposta B do [ADR 0044](0044-ciclo-rapido-staging-do-tse-em-tabela-e-tempos.md) (vira decisão, sem `dbt source freshness`) e o item "Tabela incremental" das alternativas dele (passa a valer para o staging do TSE); o item 5 do [ADR 0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) (o ciclo deixa de ser tudo ou nada: roda só os nós com entrada nova); os itens 4 e 6 do [ADR 0035](0035-lakehouse-publico-no-r2.md) (impressão e envio por partição, manifesto versão 2). Convive com o [ADR 0046](0046-publicacao-tolerante-a-falhas-de-nos-isolados.md) (branch `ciclo-tolerante`, publicação por tabela).
 

@@ -1,6 +1,6 @@
 # ADR 0001: Trabalhar em fases com portões verificáveis, sem datas
 
-- **Status:** proposto
+- **Status:** aceito (2026-11-11)
 - **Contexto do projeto:** uma pessoa desenvolvendo com apoio de agentes de IA, com cerca de 10 horas por semana.
 
 ## Contexto

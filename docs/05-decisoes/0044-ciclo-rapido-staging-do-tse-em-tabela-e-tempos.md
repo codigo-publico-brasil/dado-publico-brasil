@@ -1,6 +1,6 @@
 # ADR 0044: Ciclo mais rápido: staging do TSE em tabela, tempo de cada nó e propostas de `threads` e de reconstrução parcial
 
-- **Status:** proposto (2026-11-05), para revisão do fundador
+- **Status:** aceito (2026-11-11)
 - **Data:** 2026-11-05
 - **Altera:** o [ADR 0007](0007-dois-pacotes-e-camadas-de-mercado.md), item 3 ("staging = views"): passa a ter exceção para o staging pesado. As propostas A e B abaixo não são decisão.
 

@@ -1,6 +1,6 @@
 # ADR 0050: dado pessoal que a fonte oficial publica vem para o lake como a fonte publica
 
-- **Status:** proposto, decisão do fundador de 2026-11-11
+- **Status:** aceito (2026-11-11); revisão jurídica pendente (issue 38)
 - **Data:** 2026-11-11
 - **Complementa:** [ADR 0017](0017-revisao-de-filtros-e-dados-pessoais.md) (CPF e documentos pessoais continuam fora) e [ADR 0032](0032-partido-da-pessoa-por-fonte-e-filiacao.md).
 - **Para quem é:** quem decide o que o lake pode publicar e quem opera o projeto. Responde: que dado pessoal entra como a fonte publica, com que base e o que isso exige depois. Rascunho jurídico por tabela: [LGPD e dados pessoais](../03-consultar/05-lgpd-dados-pessoais.md).

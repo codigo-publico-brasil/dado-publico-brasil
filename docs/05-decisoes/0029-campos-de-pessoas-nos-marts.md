@@ -1,6 +1,6 @@
 # ADR 0029: campos de pessoas que entram no raw e nos marts
 
-- **Status:** proposto (2026-10-26); aprovado pelo fundador na conversa de 26/10/2026
+- **Status:** aceito (2026-11-11)
 - **Data:** 2026-10-26
 - **Altera:** [ADR 0013](0013-tse-ligacao-por-nome-civil-e-nascimento.md), itens 2 (o nome social nunca entra no raw) e 6 (e-mail, telefone e endereço do gabinete do Senado não são lidos). Os demais itens do 0013 continuam valendo. Responde à issue #96 e à decisão de #13.
 

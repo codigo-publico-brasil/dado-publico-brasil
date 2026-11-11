@@ -1,6 +1,6 @@
 # ADR 0051: Raw em Parquet por captura e estado em arquivo próprio
 
-- **Status:** proposto (decisão do fundador de 2026-11-11: todo o raw em Parquet; detalhes para aceite)
+- **Status:** aceito (2026-11-11)
 - **Data:** 2026-11-11
 - **Altera:** o [ADR 0014](0014-warehouse-lake-duckdb-e-postgres-de-servico.md) (itens 2 e 4: o raw sai do arquivo DuckDB e a identidade passa a morar em `estado.duckdb`) e o [ADR 0043](0043-raw-em-parquet-substituicao-por-particao-e-logs.md) (a carga continua Parquet, mas o Parquet deixa de ser etapa e vira o destino; `replace_partition` vira remoção de pasta). Complementa o [ADR 0036](0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md) (item 1: a cópia de trabalho da identidade e do metadata muda de arquivo; a fonte da verdade no bucket privado não muda).
 - **Para quem é:** quem opera ou implementa a plataforma. Responde: onde mora o raw, o que o `warehouse.duckdb` ainda guarda e o que se prova antes de migrar.

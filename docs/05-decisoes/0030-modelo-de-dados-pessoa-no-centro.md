@@ -1,6 +1,6 @@
 # ADR 0030: modelo de dados com a pessoa no centro, eventos tipados e composições
 
-- **Status:** proposto (2026-10-27); aprovado pelo fundador na conversa de 27/10/2026
+- **Status:** defasado (2026-11-11): já implementado de outra forma, segundo o fundador; vale como registro
 - **Data:** 2026-10-27
 - **Altera:** [ADR 0023](0023-eleitos-escopo-regras-e-fontes.md) (o mart `eleitos` e os derivados dele serão substituídos, fase a fase) e a organização de marts da [ADR 0007](0007-dois-pacotes-e-camadas-de-mercado.md) (os marts por pergunta dão lugar a esquemas por papel). As regras de ligação de pessoas ([0013](0013-tse-ligacao-por-nome-civil-e-nascimento.md), [0025](0025-historico-do-eleito-ligacao-entre-eleicoes-do-tse.md), [0026](0026-segunda-chave-nome-de-urna-e-nascimento.md)) continuam valendo.
 

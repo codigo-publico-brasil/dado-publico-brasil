@@ -1,6 +1,6 @@
 # ADR 0003: Ferramentas de segurança do CI
 
-- **Status:** proposto
+- **Status:** aceito (2026-11-11)
 - **Data:** 2026-10-20
 - **Origem:** feature 001, tarefa T002 (`specs/001-ambiente-reproduzivel-ci/`)
 - **Contexto do projeto:** uma pessoa desenvolvendo com apoio de agentes de IA. A porta de qualidade precisa barrar dependência vulnerável, listar componentes por versão, medir a saúde de segurança do repositório e propor atualizações, sem custo de licença e com o mínimo de dependências.
