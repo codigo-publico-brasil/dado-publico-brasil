@@ -1,0 +1,237 @@
+version: 2
+
+# Testes unitários de fct_eventos (dados sintéticos e genéricos). Rodam com `dbt test --select test_type:unit`.
+unit_tests:
+  - name: evento_de_vida_nasce_so_com_data_conhecida_e_o_primeiro_de_janeiro_do_tse_fica_sem_dia
+    description: >
+      O nascimento vira evento com o ano sempre; o dia só vale quando a fonte o dá: o 1º de janeiro vindo do TSE é
+      marcador de dia desconhecido e fica sem dia (o de outra fonte e outras datas do TSE ficam). O falecimento vem do
+      cadastro da Câmara primeiro, depois do Senado, com a captura do cadastro que o informa; sem data não há evento.
+    model: fct_eventos
+    given:
+      - input: ref('dim_pessoas')
+        rows:
+          - {id_pessoa: 1, dt_nascimento: "1980-05-10", fonte_dt_nascimento: camara}
+          - {id_pessoa: 2, dt_nascimento: "1975-01-01", fonte_dt_nascimento: tse}
+          - {id_pessoa: 3, dt_nascimento: "1975-01-01", fonte_dt_nascimento: camara}
+          - {id_pessoa: 4, dt_nascimento: "1970-01-02", fonte_dt_nascimento: tse}
+          - {id_pessoa: 5, dt_nascimento: null, fonte_dt_nascimento: null}
+      - input: ref('int_pessoas_unidas_cadastro')
+        rows:
+          - {id_pessoa: 1, dt_falecimento: "2020-03-03", id_captura: 1}
+          - {id_pessoa: 7, dt_falecimento: null, id_captura: 1}
+      - input: ref('int_pessoas_senado_unidas')
+        rows:
+          - {id_pessoa: 1, dt_falecimento: "2020-04-04", id_captura: 2}
+          - {id_pessoa: 6, dt_falecimento: "2021-02-02", id_captura: 2}
+      - input: ref('fct_candidaturas')
+        rows: []
+      - input: ref('stg_tse__candidaturas')
+        rows: []
+      - input: ref('dim_disputas')
+        rows: []
+      - input: ref('fct_mandatos')
+        rows: []
+      - input: ref('fct_exercicios')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows: []
+      - input: ref('stg_metadata__capturas')
+        rows:
+          - {id_captura: 1, fonte: camara, dt_captura: "2026-10-21 10:00:00"}
+          - {id_captura: 2, fonte: senado, dt_captura: "2026-10-22 10:00:00"}
+    expect:
+      rows:
+        - {id_evento: "nascimento:dim_pessoas:1", id_pessoa: 1, id_tipo_evento: nascimento, ano_evento: 1980, dt_evento: "1980-05-10", fonte: camara, dt_captura: null}
+        - {id_evento: "nascimento:dim_pessoas:2", id_pessoa: 2, id_tipo_evento: nascimento, ano_evento: 1975, dt_evento: null, fonte: tse, dt_captura: null}
+        - {id_evento: "nascimento:dim_pessoas:3", id_pessoa: 3, id_tipo_evento: nascimento, ano_evento: 1975, dt_evento: "1975-01-01", fonte: camara, dt_captura: null}
+        - {id_evento: "nascimento:dim_pessoas:4", id_pessoa: 4, id_tipo_evento: nascimento, ano_evento: 1970, dt_evento: "1970-01-02", fonte: tse, dt_captura: null}
+        - {id_evento: "falecimento:dim_pessoas:1", id_pessoa: 1, id_tipo_evento: falecimento, ano_evento: 2020, dt_evento: "2020-03-03", fonte: camara, dt_captura: "2026-10-21"}
+        - {id_evento: "falecimento:dim_pessoas:6", id_pessoa: 6, id_tipo_evento: falecimento, ano_evento: 2021, dt_evento: "2021-02-02", fonte: senado, dt_captura: "2026-10-22"}
+
+  - name: evento_de_candidatura_traz_registro_situacao_resultado_e_segundo_turno_so_de_quem_tem_pessoa
+    description: >
+      Toda candidatura de quem tem pessoa e ano de eleição gera o registro (só o ano). A situação deferida (Deferido ou
+      Apto), indeferida ou cassada gera um evento próprio, e as demais não. Não eleito e suplente levam o dia da
+      votação (o partido só no suplente), e o segundo turno é marcado por qtd_turnos = 2. O resultado Eleito não gera
+      evento aqui (vem do mandato). O cargo e o território vêm da disputa, vazios quando ela não existe.
+    model: fct_eventos
+    given:
+      - input: ref('dim_pessoas')
+        rows: []
+      - input: ref('int_pessoas_unidas_cadastro')
+        rows: []
+      - input: ref('int_pessoas_senado_unidas')
+        rows: []
+      - input: ref('fct_candidaturas')
+        rows:
+          - {id_candidatura: k1, id_pessoa: 1, id_disputa: d1, id_partido: 4, situacao_candidatura: Deferido, resultado: Suplente, qtd_turnos: 1, dt_eleicao: "2022-10-02"}
+          - {id_candidatura: k2, id_pessoa: 2, id_disputa: d1, id_partido: 4, situacao_candidatura: Apto, resultado: Não eleito, qtd_turnos: 2, dt_eleicao: "2022-10-02"}
+          - {id_candidatura: k3, id_pessoa: 3, id_disputa: d1, id_partido: 4, situacao_candidatura: Indeferido com recurso, resultado: Eleito, qtd_turnos: 1, dt_eleicao: "2022-10-02"}
+          - {id_candidatura: k4, id_pessoa: 4, id_disputa: d1, id_partido: 4, situacao_candidatura: Cassado, resultado: null, qtd_turnos: 1, dt_eleicao: "2022-10-02"}
+          - {id_candidatura: k5, id_pessoa: 5, id_disputa: sem_disputa, id_partido: 4, situacao_candidatura: Renúncia, resultado: Nao eleito, qtd_turnos: 1, dt_eleicao: "2022-10-02"}
+          - {id_candidatura: k6, id_pessoa: null, id_disputa: d1, id_partido: 4, situacao_candidatura: Deferido, resultado: Suplente, qtd_turnos: 2, dt_eleicao: "2022-10-02"}
+          - {id_candidatura: k7, id_pessoa: 7, id_disputa: d1, id_partido: 4, situacao_candidatura: Deferido, resultado: Suplente, qtd_turnos: 1, dt_eleicao: "2022-10-02"}
+      - input: ref('stg_tse__candidaturas')
+        rows:
+          - {id_candidatura: k1, ano_eleicao: 2022}
+          - {id_candidatura: k1, ano_eleicao: 2022}
+          - {id_candidatura: k2, ano_eleicao: 2022}
+          - {id_candidatura: k3, ano_eleicao: 2022}
+          - {id_candidatura: k4, ano_eleicao: 2022}
+          - {id_candidatura: k5, ano_eleicao: 2022}
+          - {id_candidatura: k6, ano_eleicao: 2022}
+      - input: ref('dim_disputas')
+        rows:
+          - {id_disputa: d1, id_cargo: vereador, id_territorio: A}
+      - input: ref('fct_mandatos')
+        rows: []
+      - input: ref('fct_exercicios')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows: []
+      - input: ref('stg_metadata__capturas')
+        rows: []
+    expect:
+      rows:
+        - {id_evento: "candidatura_registrada:fct_candidaturas:k1", ano_evento: 2022, dt_evento: null, id_cargo: vereador, id_territorio: A, id_partido: 4, base: informado}
+        - {id_evento: "candidatura_deferida:fct_candidaturas:k1", ano_evento: 2022, dt_evento: null, id_cargo: vereador, id_territorio: A, id_partido: null, base: informado}
+        - {id_evento: "suplente_eleito:fct_candidaturas:k1", ano_evento: 2022, dt_evento: "2022-10-02", id_cargo: vereador, id_territorio: A, id_partido: 4, base: informado}
+        - {id_evento: "candidatura_registrada:fct_candidaturas:k2", ano_evento: 2022, dt_evento: null, id_cargo: vereador, id_territorio: A, id_partido: 4, base: informado}
+        - {id_evento: "candidatura_deferida:fct_candidaturas:k2", ano_evento: 2022, dt_evento: null, id_cargo: vereador, id_territorio: A, id_partido: null, base: informado}
+        - {id_evento: "nao_eleito:fct_candidaturas:k2", ano_evento: 2022, dt_evento: "2022-10-02", id_cargo: vereador, id_territorio: A, id_partido: null, base: informado}
+        - {id_evento: "segundo_turno_disputado:fct_candidaturas:k2", ano_evento: 2022, dt_evento: "2022-10-02", id_cargo: vereador, id_territorio: A, id_partido: null, base: informado}
+        - {id_evento: "candidatura_registrada:fct_candidaturas:k3", ano_evento: 2022, dt_evento: null, id_cargo: vereador, id_territorio: A, id_partido: 4, base: informado}
+        - {id_evento: "candidatura_indeferida:fct_candidaturas:k3", ano_evento: 2022, dt_evento: null, id_cargo: vereador, id_territorio: A, id_partido: null, base: informado}
+        - {id_evento: "candidatura_registrada:fct_candidaturas:k4", ano_evento: 2022, dt_evento: null, id_cargo: vereador, id_territorio: A, id_partido: 4, base: informado}
+        - {id_evento: "candidatura_cassada:fct_candidaturas:k4", ano_evento: 2022, dt_evento: null, id_cargo: vereador, id_territorio: A, id_partido: null, base: informado}
+        - {id_evento: "candidatura_registrada:fct_candidaturas:k5", ano_evento: 2022, dt_evento: null, id_cargo: null, id_territorio: null, id_partido: 4, base: informado}
+        - {id_evento: "nao_eleito:fct_candidaturas:k5", ano_evento: 2022, dt_evento: "2022-10-02", id_cargo: null, id_territorio: null, id_partido: null, base: informado}
+
+  - name: evento_de_mandato_traz_eleito_e_posse_com_a_base_de_cada_um_e_so_com_data_de_posse_conhecida
+    description: >
+      O eleito nasce do mandato que tem candidatura no TSE (ano da eleição) e leva o dia da votação e a base da eleição
+      (informado ou derivado); a posse só existe com data de início e leva a base da data. Os dois são independentes:
+      sem candidatura no TSE não há evento de eleito, e sem data de início não há posse. Mandato sem pessoa não entra.
+    model: fct_eventos
+    given:
+      - input: ref('dim_pessoas')
+        rows: []
+      - input: ref('int_pessoas_unidas_cadastro')
+        rows: []
+      - input: ref('int_pessoas_senado_unidas')
+        rows: []
+      - input: ref('fct_candidaturas')
+        rows:
+          - {id_candidatura: m1, id_pessoa: null, dt_eleicao: "2022-10-02"}
+      - input: ref('stg_tse__candidaturas')
+        rows:
+          - {id_candidatura: m1, ano_eleicao: 2022}
+          - {id_candidatura: m3, ano_eleicao: 2022}
+      - input: ref('dim_disputas')
+        rows: []
+      - input: ref('fct_mandatos')
+        rows:
+          - {id_candidatura: m1, id_pessoa: 1, id_disputa: d1, id_cargo: vereador, id_territorio: A, id_partido: 4, base_eleicao: derivado, dt_inicio: "2023-02-01", base_dt_inicio: informado}
+          - {id_candidatura: m2, id_pessoa: 2, id_disputa: d1, id_cargo: vereador, id_territorio: A, id_partido: 4, base_eleicao: informado, dt_inicio: null, base_dt_inicio: null}
+          - {id_candidatura: m3, id_pessoa: null, id_disputa: d1, id_cargo: vereador, id_territorio: A, id_partido: 4, base_eleicao: informado, dt_inicio: "2023-02-01", base_dt_inicio: informado}
+      - input: ref('fct_exercicios')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows: []
+      - input: ref('stg_metadata__capturas')
+        rows: []
+    expect:
+      rows:
+        - {id_evento: "eleito:fct_mandatos:m1", id_pessoa: 1, ano_evento: 2022, dt_evento: "2022-10-02", id_disputa: d1, id_cargo: vereador, id_territorio: A, id_partido: 4, base: derivado}
+        - {id_evento: "posse:fct_mandatos:m1", id_pessoa: 1, ano_evento: 2023, dt_evento: "2023-02-01", id_disputa: d1, id_cargo: vereador, id_territorio: A, id_partido: 4, base: informado}
+
+  - name: evento_de_exercicio_traz_assuncao_por_suplencia_e_o_tipo_de_fim_pela_causa_exceto_retorno_do_titular
+    description: >
+      Assume por suplência quem entra como suplente ou efetivado (sem diferença de caixa); titular não. O fim do
+      exercício vira término de mandato, renúncia, cassação ou afastamento (causa vazia ou outra) conforme a causa, e o
+      retorno do titular não é evento; sem data de fim não há evento de fim. Exercício sem pessoa não entra. O dia e a
+      captura vêm do exercício.
+    model: fct_eventos
+    given:
+      - input: ref('dim_pessoas')
+        rows: []
+      - input: ref('int_pessoas_unidas_cadastro')
+        rows: []
+      - input: ref('int_pessoas_senado_unidas')
+        rows: []
+      - input: ref('fct_candidaturas')
+        rows: []
+      - input: ref('stg_tse__candidaturas')
+        rows: []
+      - input: ref('dim_disputas')
+        rows: []
+      - input: ref('fct_mandatos')
+        rows: []
+      - input: ref('fct_exercicios')
+        rows:
+          - {id_exercicio: e1, id_pessoa: 1, id_cargo: senador, condicao_na_fonte: 1º Suplente, dt_inicio: "2020-03-01", dt_fim: "2020-09-01", causa_fim: Retorno do titular, id_captura: 1}
+          - {id_exercicio: e2, id_pessoa: 2, id_cargo: senador, condicao_na_fonte: EFETIVADO, dt_inicio: "2020-03-01", dt_fim: "2021-01-31", causa_fim: Renúncia ao mandato, id_captura: 1}
+          - {id_exercicio: e3, id_pessoa: 3, id_cargo: senador, condicao_na_fonte: Titular, dt_inicio: "2019-02-01", dt_fim: null, causa_fim: Término, id_captura: 1}
+          - {id_exercicio: e4, id_pessoa: 4, id_cargo: senador, condicao_na_fonte: Titular, dt_inicio: "2019-02-01", dt_fim: "2023-01-31", causa_fim: Término de mandato, id_captura: 1}
+          - {id_exercicio: e5, id_pessoa: 5, id_cargo: senador, condicao_na_fonte: Titular, dt_inicio: "2019-02-01", dt_fim: "2020-05-05", causa_fim: Cassação do mandato, id_captura: 1}
+          - {id_exercicio: e6, id_pessoa: 6, id_cargo: senador, condicao_na_fonte: Titular, dt_inicio: "2019-02-01", dt_fim: "2020-06-06", causa_fim: Licença médica, id_captura: 1}
+          - {id_exercicio: e7, id_pessoa: 7, id_cargo: senador, condicao_na_fonte: Titular, dt_inicio: "2019-02-01", dt_fim: "2020-07-07", causa_fim: null, id_captura: 1}
+          - {id_exercicio: e8, id_pessoa: null, id_cargo: senador, condicao_na_fonte: Suplente, dt_inicio: "2019-02-01", dt_fim: "2020-07-07", causa_fim: null, id_captura: 1}
+      - input: ref('fct_pessoas_partidos')
+        rows: []
+      - input: ref('stg_metadata__capturas')
+        rows:
+          - {id_captura: 1, fonte: senado, dt_captura: "2026-10-22 10:00:00"}
+    expect:
+      rows:
+        - {id_evento: "assuncao_por_suplencia:fct_exercicios:e1", id_pessoa: 1, ano_evento: 2020, dt_evento: "2020-03-01", id_cargo: senador, base: informado, fonte: senado, dt_captura: "2026-10-22"}
+        - {id_evento: "assuncao_por_suplencia:fct_exercicios:e2", id_pessoa: 2, ano_evento: 2020, dt_evento: "2020-03-01", id_cargo: senador, base: informado, fonte: senado, dt_captura: "2026-10-22"}
+        - {id_evento: "renuncia:fct_exercicios:e2", id_pessoa: 2, ano_evento: 2021, dt_evento: "2021-01-31", id_cargo: senador, base: informado, fonte: senado, dt_captura: "2026-10-22"}
+        - {id_evento: "termino_de_mandato:fct_exercicios:e4", id_pessoa: 4, ano_evento: 2023, dt_evento: "2023-01-31", id_cargo: senador, base: informado, fonte: senado, dt_captura: "2026-10-22"}
+        - {id_evento: "cassacao_de_mandato:fct_exercicios:e5", id_pessoa: 5, ano_evento: 2020, dt_evento: "2020-05-05", id_cargo: senador, base: informado, fonte: senado, dt_captura: "2026-10-22"}
+        - {id_evento: "afastamento:fct_exercicios:e6", id_pessoa: 6, ano_evento: 2020, dt_evento: "2020-06-06", id_cargo: senador, base: informado, fonte: senado, dt_captura: "2026-10-22"}
+        - {id_evento: "afastamento:fct_exercicios:e7", id_pessoa: 7, ano_evento: 2020, dt_evento: "2020-07-07", id_cargo: senador, base: informado, fonte: senado, dt_captura: "2026-10-22"}
+
+  - name: evento_de_troca_de_partido_compara_com_o_partido_anterior_da_pessoa_ignorando_linha_sem_partido
+    description: >
+      Troca de partido é o momento em que o partido difere do anterior da mesma pessoa, na ordem do ano, da data (sem
+      data vem primeiro) e da fonte. A primeira linha, a repetição do mesmo partido e a pessoa sem uma segunda linha não
+      geram evento; a linha sem partido (ou sem pessoa) é descartada antes de comparar, então não esconde a troca.
+    model: fct_eventos
+    given:
+      - input: ref('dim_pessoas')
+        rows: []
+      - input: ref('int_pessoas_unidas_cadastro')
+        rows: []
+      - input: ref('int_pessoas_senado_unidas')
+        rows: []
+      - input: ref('fct_candidaturas')
+        rows: []
+      - input: ref('stg_tse__candidaturas')
+        rows: []
+      - input: ref('dim_disputas')
+        rows: []
+      - input: ref('fct_mandatos')
+        rows: []
+      - input: ref('fct_exercicios')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows:
+          - {id_pessoa: 1, id_pessoa_partido: r1, fonte: camara, ano_referencia: 2019, dt_inicio: "2019-02-01", id_partido: 1}
+          - {id_pessoa: 1, id_pessoa_partido: r3, fonte: camara, ano_referencia: 2020, dt_inicio: "2020-02-01", id_partido: null}
+          - {id_pessoa: 1, id_pessoa_partido: r2, fonte: camara, ano_referencia: 2021, dt_inicio: "2021-02-01", id_partido: 2}
+          - {id_pessoa: 1, id_pessoa_partido: r4, fonte: camara, ano_referencia: 2022, dt_inicio: "2022-02-01", id_partido: 2}
+          - {id_pessoa: 1, id_pessoa_partido: r5, fonte: tse, ano_referencia: 2023, dt_inicio: null, id_partido: 1}
+          - {id_pessoa: 2, id_pessoa_partido: s1, fonte: tse, ano_referencia: 2018, dt_inicio: null, id_partido: 1}
+          - {id_pessoa: 2, id_pessoa_partido: s2, fonte: camara, ano_referencia: 2018, dt_inicio: "2018-03-01", id_partido: 2}
+          - {id_pessoa: 3, id_pessoa_partido: t1, fonte: camara, ano_referencia: 2018, dt_inicio: "2018-03-01", id_partido: 1}
+          - {id_pessoa: null, id_pessoa_partido: u1, fonte: camara, ano_referencia: 2018, dt_inicio: "2018-03-01", id_partido: 1}
+          - {id_pessoa: null, id_pessoa_partido: u2, fonte: camara, ano_referencia: 2019, dt_inicio: "2019-03-01", id_partido: 2}
+      - input: ref('stg_metadata__capturas')
+        rows: []
+    expect:
+      rows:
+        - {id_evento: "troca_de_partido:fct_pessoas_partidos:r2", id_pessoa: 1, ano_evento: 2021, dt_evento: "2021-02-01", id_partido: 2, base: informado}
+        - {id_evento: "troca_de_partido:fct_pessoas_partidos:r5", id_pessoa: 1, ano_evento: 2023, dt_evento: null, id_partido: 1, base: informado}
+        - {id_evento: "troca_de_partido:fct_pessoas_partidos:s2", id_pessoa: 2, ano_evento: 2018, dt_evento: "2018-03-01", id_partido: 2, base: informado}

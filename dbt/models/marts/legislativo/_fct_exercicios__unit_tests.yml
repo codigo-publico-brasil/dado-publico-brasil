@@ -1,0 +1,207 @@
+version: 2
+
+# Testes unitários de fct_exercicios (dados sintéticos e genéricos). Rodam com `dbt test --select test_type:unit`.
+# O caso feliz (janela de 31 dias, suplente sem candidatura, partido informado e derivado) está em
+# marts/_fct__unit_tests.yml; aqui ficam as regras de período da Câmara e as bordas.
+unit_tests:
+  - name: periodo_da_camara_vai_da_entrada_em_exercicio_ate_a_primeira_saida_seguinte_dentro_da_legislatura
+    description: >
+      O período começa na entrada em exercício e termina na primeira saída seguinte (licença, afastamento, vacância,
+      suplência, fim de mandato), com a causa dessa saída; uma segunda entrada ou saída em seguida não abre nem fecha
+      outro período. Registro sem situação ou de convocação não é entrada nem saída. O período em curso fica sem fim e
+      sem causa, o fim do mandato é o da legislatura, e a saída de uma legislatura não fecha o período da seguinte.
+      O território é a UF (só o tipo uf) e a pessoa vem do identificador do deputado.
+    model: fct_exercicios
+    given:
+      - input: ref('stg_camara__deputados_historico')
+        rows:
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-02-01 10:00:00", situacao: Exercício, condicao_eleitoral: Titular, descricao: null, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-03-01 10:00:00", situacao: "", condicao_eleitoral: null, descricao: Registro de início, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-04-01 10:00:00", situacao: CONVOCADO, condicao_eleitoral: Suplente, descricao: Convocação, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-05-01 10:00:00", situacao: Exercício, condicao_eleitoral: Titular, descricao: null, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-06-01 10:00:00", situacao: Licença, condicao_eleitoral: Titular, descricao: Licença A, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-06-15 10:00:00", situacao: Licença, condicao_eleitoral: Titular, descricao: Licença B, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-09-01 10:00:00", situacao: Exercício, condicao_eleitoral: Titular, descricao: null, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-12-01 10:00:00", situacao: SUPLENCIA, condicao_eleitoral: Suplente, descricao: Saída por suplência, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2020-02-01 10:00:00", situacao: Exercício, condicao_eleitoral: Titular, descricao: null, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 57, dt_registro: "2023-02-01 10:00:00", situacao: Exercício, condicao_eleitoral: Titular, descricao: null, uf_sigla: SP, id_captura: 1}
+      - input: ref('stg_senado__exercicios')
+        rows: []
+      - input: ref('dim_legislaturas')
+        rows:
+          - {id_legislatura: 56, dt_fim: "2023-01-31"}
+          - {id_legislatura: 57, dt_fim: "2027-01-31"}
+      - input: ref('stg_metadata__capturas')
+        rows: []
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows:
+          - {fonte: camara, id_tipo: deputado, id_na_fonte: "10", id_pessoa: 1}
+      - input: ref('dim_territorios')
+        rows:
+          - {id_territorio: "35", tipo: uf, sigla: SP}
+          - {id_territorio: "3550", tipo: municipio, sigla: SP}
+      - input: ref('fct_mandatos')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows: []
+    expect:
+      rows:
+        - {id_exercicio: camara-10-56-201902011000, fonte: camara, id_pessoa: 1, id_cargo: deputado_federal, id_territorio: "35", condicao_na_fonte: Titular, id_legislatura: 56, dt_inicio: "2019-02-01", dt_fim: "2019-06-01", dt_mandato_fim: "2023-01-31", causa_fim: Licença A}
+        - {id_exercicio: camara-10-56-201909011000, fonte: camara, id_pessoa: 1, id_cargo: deputado_federal, id_territorio: "35", condicao_na_fonte: Titular, id_legislatura: 56, dt_inicio: "2019-09-01", dt_fim: "2019-12-01", dt_mandato_fim: "2023-01-31", causa_fim: Saída por suplência}
+        - {id_exercicio: camara-10-56-202002011000, fonte: camara, id_pessoa: 1, id_cargo: deputado_federal, id_territorio: "35", condicao_na_fonte: Titular, id_legislatura: 56, dt_inicio: "2020-02-01", dt_fim: null, dt_mandato_fim: "2023-01-31", causa_fim: null}
+        - {id_exercicio: camara-10-57-202302011000, fonte: camara, id_pessoa: 1, id_cargo: deputado_federal, id_territorio: "35", condicao_na_fonte: Titular, id_legislatura: 57, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_fim: null}
+
+  - name: registros_no_mesmo_instante_valem_um_so_e_a_condicao_mais_informativa_vence
+    description: >
+      Dois registros de entrada no mesmo instante valem um só, com a condição mais informativa (efetivado, depois
+      titular, depois as demais). Entrada e saída no mesmo instante contam como entrada (o período continua). A saída
+      anterior à entrada não fecha o período; só as seguintes, e o fim de mandato também é saída. Deputado sem
+      identificador fica sem pessoa.
+    model: fct_exercicios
+    given:
+      - input: ref('stg_camara__deputados_historico')
+        rows:
+          - {id_deputado: 11, id_legislatura: 57, dt_registro: "2023-02-01 10:00:00", situacao: Exercício, condicao_eleitoral: Titular, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 11, id_legislatura: 57, dt_registro: "2023-02-01 10:00:00", situacao: Exercício, condicao_eleitoral: EFETIVADO, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 11, id_legislatura: 57, dt_registro: "2023-02-01 10:00:00", situacao: Exercício, condicao_eleitoral: Suplente, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 11, id_legislatura: 57, dt_registro: "2023-03-01 10:00:00", situacao: Exercício, condicao_eleitoral: Titular, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 11, id_legislatura: 57, dt_registro: "2023-03-01 10:00:00", situacao: Licença, condicao_eleitoral: Titular, descricao: Licença X, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 11, id_legislatura: 57, dt_registro: "2023-08-01 10:00:00", situacao: Afastado, condicao_eleitoral: Titular, descricao: Afastado B, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 11, id_legislatura: 57, dt_registro: "2023-09-01 10:00:00", situacao: SUSPENSO, condicao_eleitoral: Titular, descricao: Suspenso C, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 11, id_legislatura: 57, dt_registro: "2023-10-01 10:00:00", situacao: Exercício, condicao_eleitoral: Titular, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 12, id_legislatura: 57, dt_registro: "2023-02-01 10:00:00", situacao: VACANCIA, condicao_eleitoral: Suplente, descricao: Vacância anterior, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 12, id_legislatura: 57, dt_registro: "2023-05-01 10:00:00", situacao: Exercício, condicao_eleitoral: Suplente, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 13, id_legislatura: 57, dt_registro: "2023-02-01 10:00:00", situacao: Exercício, condicao_eleitoral: Titular, uf_sigla: SP, id_captura: 1}
+          - {id_deputado: 13, id_legislatura: 57, dt_registro: "2027-01-31 10:00:00", situacao: FIM_MANDATO, condicao_eleitoral: Titular, descricao: Fim do mandato, uf_sigla: SP, id_captura: 1}
+      - input: ref('stg_senado__exercicios')
+        rows: []
+      - input: ref('dim_legislaturas')
+        rows:
+          - {id_legislatura: 57, dt_fim: "2027-01-31"}
+      - input: ref('stg_metadata__capturas')
+        rows: []
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows:
+          - {fonte: camara, id_tipo: deputado, id_na_fonte: "11", id_pessoa: 2}
+          - {fonte: camara, id_tipo: deputado, id_na_fonte: "12", id_pessoa: 3}
+      - input: ref('dim_territorios')
+        rows: []
+      - input: ref('fct_mandatos')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows: []
+    expect:
+      rows:
+        - {id_exercicio: camara-11-57-202302011000, id_pessoa: 2, condicao_na_fonte: EFETIVADO, dt_inicio: "2023-02-01", dt_fim: "2023-08-01", causa_fim: Afastado B}
+        - {id_exercicio: camara-11-57-202310011000, id_pessoa: 2, condicao_na_fonte: Titular, dt_inicio: "2023-10-01", dt_fim: null, causa_fim: null}
+        - {id_exercicio: camara-12-57-202305011000, id_pessoa: 3, condicao_na_fonte: Suplente, dt_inicio: "2023-05-01", dt_fim: null, causa_fim: null}
+        - {id_exercicio: camara-13-57-202302011000, id_pessoa: null, condicao_na_fonte: Titular, dt_inicio: "2023-02-01", dt_fim: "2027-01-31", causa_fim: Fim do mandato}
+
+  - name: mandato_cumprido_aceita_o_limite_de_31_dias_e_o_ultimo_dia_e_escolhe_o_mais_recente_do_mesmo_cargo
+    description: >
+      O exercício cumpre o mandato da mesma pessoa e do mesmo cargo se começa entre 31 dias antes da posse e o fim
+      previsto, com os dois limites incluídos; 32 dias antes, um dia depois do fim, outro cargo ou pessoa sem
+      identificador não cumprem. Com dois mandatos possíveis vence o de posse mais recente. A UF sem linha em
+      dim_territorios deixa o território vazio.
+    model: fct_exercicios
+    given:
+      - input: ref('stg_camara__deputados_historico')
+        rows: []
+      - input: ref('stg_senado__exercicios')
+        rows:
+          - {id_exercicio: y1, id_senador: "1", participacao: Titular, uf: SP, dt_inicio: "2019-01-01", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: y2, id_senador: "2", participacao: Titular, uf: ZZ, dt_inicio: "2018-12-31", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: y3, id_senador: "3", participacao: Titular, uf: SP, dt_inicio: "2027-01-31", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: y4, id_senador: "4", participacao: Titular, uf: SP, dt_inicio: "2027-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: y5, id_senador: "5", participacao: Titular, uf: SP, dt_inicio: "2024-01-01", dt_fim: null, dt_mandato_fim: "2031-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: y6, id_senador: "6", participacao: Titular, uf: SP, dt_inicio: "2019-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: y7, id_senador: "7", participacao: Titular, uf: SP, dt_inicio: "2019-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+      - input: ref('dim_legislaturas')
+        rows: []
+      - input: ref('stg_metadata__capturas')
+        rows: []
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows:
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "1", id_pessoa: 1}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "2", id_pessoa: 2}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "3", id_pessoa: 3}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "4", id_pessoa: 4}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "5", id_pessoa: 5}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "6", id_pessoa: 6}
+      - input: ref('dim_territorios')
+        rows:
+          - {id_territorio: "35", tipo: uf, sigla: SP}
+      - input: ref('fct_mandatos')
+        rows:
+          - {id_candidatura: mand1, id_pessoa: 1, id_cargo: senador, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31"}
+          - {id_candidatura: mand2, id_pessoa: 2, id_cargo: senador, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31"}
+          - {id_candidatura: mand3, id_pessoa: 3, id_cargo: senador, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31"}
+          - {id_candidatura: mand4, id_pessoa: 4, id_cargo: senador, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31"}
+          - {id_candidatura: mand5a, id_pessoa: 5, id_cargo: senador, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31"}
+          - {id_candidatura: mand5b, id_pessoa: 5, id_cargo: senador, dt_inicio: "2023-02-01", dt_fim_prevista: "2031-01-31"}
+          - {id_candidatura: mand6, id_pessoa: 6, id_cargo: deputado_federal, dt_inicio: "2019-02-01", dt_fim_prevista: "2027-01-31"}
+      - input: ref('fct_pessoas_partidos')
+        rows: []
+    expect:
+      rows:
+        - {id_exercicio: senado-y1, id_pessoa: 1, id_territorio: "35", id_candidatura: mand1}
+        - {id_exercicio: senado-y2, id_pessoa: 2, id_territorio: null, id_candidatura: null}
+        - {id_exercicio: senado-y3, id_pessoa: 3, id_territorio: "35", id_candidatura: mand3}
+        - {id_exercicio: senado-y4, id_pessoa: 4, id_territorio: "35", id_candidatura: null}
+        - {id_exercicio: senado-y5, id_pessoa: 5, id_territorio: "35", id_candidatura: mand5b}
+        - {id_exercicio: senado-y6, id_pessoa: 6, id_territorio: "35", id_candidatura: null}
+        - {id_exercicio: senado-y7, id_pessoa: null, id_territorio: "35", id_candidatura: null}
+
+  - name: partido_informado_vale_so_para_periodo_do_historico_que_contem_o_inicio_e_o_derivado_olha_ate_o_ano_do_inicio
+    description: >
+      O partido é informado quando um período do histórico da Câmara (só essa base, com partido) contém o início do
+      exercício, com os dois limites incluídos, e vence o de início mais recente se houver dois. Sem período que o
+      contenha, o derivado é o da linha mais recente até o ano do início, de qualquer base, sem usar anos futuros. Sem
+      nenhuma linha até lá, partido e base ficam vazios.
+    model: fct_exercicios
+    given:
+      - input: ref('stg_camara__deputados_historico')
+        rows: []
+      - input: ref('stg_senado__exercicios')
+        rows:
+          - {id_exercicio: z1, id_senador: "1", participacao: Titular, uf: SP, dt_inicio: "2020-01-10", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: z2, id_senador: "2", participacao: Titular, uf: SP, dt_inicio: "2020-03-10", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: z3, id_senador: "3", participacao: Titular, uf: SP, dt_inicio: "2020-01-11", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: z4, id_senador: "4", participacao: Titular, uf: SP, dt_inicio: "2020-06-01", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: z5, id_senador: "5", participacao: Titular, uf: SP, dt_inicio: "2020-06-01", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+          - {id_exercicio: z6, id_senador: "6", participacao: Titular, uf: SP, dt_inicio: "2020-06-01", dt_fim: null, dt_mandato_fim: "2027-01-31", causa_afastamento: null, id_captura: 1}
+      - input: ref('dim_legislaturas')
+        rows: []
+      - input: ref('stg_metadata__capturas')
+        rows: []
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows:
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "1", id_pessoa: 1}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "2", id_pessoa: 2}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "3", id_pessoa: 3}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "4", id_pessoa: 4}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "5", id_pessoa: 5}
+          - {fonte: senado, id_tipo: senador, id_na_fonte: "6", id_pessoa: 6}
+      - input: ref('dim_territorios')
+        rows: []
+      - input: ref('fct_mandatos')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows:
+          - {id_pessoa: 1, base: historico_de_deputados, id_partido: 5, ano_referencia: 2020, dt_inicio: "2020-01-10", dt_ultimo_registro: "2020-03-10"}
+          - {id_pessoa: 2, base: historico_de_deputados, id_partido: 5, ano_referencia: 2020, dt_inicio: "2020-01-10", dt_ultimo_registro: "2020-03-10"}
+          - {id_pessoa: 3, base: historico_de_deputados, id_partido: 7, ano_referencia: 2020, dt_inicio: "2020-01-01", dt_ultimo_registro: "2020-01-10"}
+          - {id_pessoa: 3, base: candidatura, id_partido: 9, ano_referencia: 2018}
+          - {id_pessoa: 3, base: historico_de_deputados, id_partido: 6, ano_referencia: 2021, dt_inicio: "2021-01-01", dt_ultimo_registro: "2021-02-01"}
+          - {id_pessoa: 4, base: votos, id_partido: 8, ano_referencia: 2020, dt_inicio: "2020-01-01", dt_ultimo_registro: "2020-12-31"}
+          - {id_pessoa: 5, base: votos, id_partido: 8, ano_referencia: 2021, dt_inicio: "2021-01-01", dt_ultimo_registro: "2021-12-31"}
+          - {id_pessoa: 6, base: historico_de_deputados, id_partido: 1, ano_referencia: 2019, dt_inicio: "2019-01-01", dt_ultimo_registro: "2020-12-31"}
+          - {id_pessoa: 6, base: historico_de_deputados, id_partido: 2, ano_referencia: 2020, dt_inicio: "2020-01-01", dt_ultimo_registro: "2020-12-31"}
+    expect:
+      rows:
+        - {id_exercicio: senado-z1, id_pessoa: 1, id_partido: 5, base_partido: informado}
+        - {id_exercicio: senado-z2, id_pessoa: 2, id_partido: 5, base_partido: informado}
+        - {id_exercicio: senado-z3, id_pessoa: 3, id_partido: 7, base_partido: derivado}
+        - {id_exercicio: senado-z4, id_pessoa: 4, id_partido: 8, base_partido: derivado}
+        - {id_exercicio: senado-z5, id_pessoa: 5, id_partido: null, base_partido: null}
+        - {id_exercicio: senado-z6, id_pessoa: 6, id_partido: 2, base_partido: informado}
