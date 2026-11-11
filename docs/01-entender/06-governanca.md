@@ -71,7 +71,9 @@ Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta
 | Nenhum segredo, chave ou dado pessoal no repositório (`gitleaks` na esteira, binário com soma SHA-256 conferida) | ativo |
 | Actions do CI fixadas por hash de commit (a versão fica em comentário; o Dependabot propõe a troca) | ativo |
 | Auditoria das dependências travadas no `uv.lock` (`uv audit`, base OSV; reprova em qualquer vulnerabilidade conhecida) | ativo |
-| Imagem do pipeline publicada com SBOM e atestado de procedência (assinatura não: exige plano que o repositório privado não tem) | ativo |
+| Imagem do pipeline publicada com SBOM e atestado de procedência, assinada com cosign sem chave (OIDC do GitHub; `cosign verify` confere a identidade do fluxo) | ativo |
+| SBOM do Python (`uv export --format cyclonedx1.5`) como artefato de cada execução do CI, com as dependências da imagem | ativo |
+| OpenSSF Scorecard semanal (`scorecard.yml`), resultado como artefato do fluxo; sem publicação em scorecard.dev por ora | ativo |
 | Regras `S` (segurança), `SIM` e `C90` (complexidade) do ruff; pré-commit opcional em `.pre-commit-config.yaml` | ativo |
 | Dados fora do git (`data_store/` ignorado) | ativo |
 | O Dagster escuta só em `127.0.0.1`; a interface não tem login e não deve ser exposta sem autenticação na frente | ativo |
