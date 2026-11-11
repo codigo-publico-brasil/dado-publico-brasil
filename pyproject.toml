@@ -1,6 +1,8 @@
 [project]
 name = "dado-publico-brasil"
 version = "0.0.0"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 description = "Plataforma de dados públicos abertos: captura das fontes oficiais, transformação em camadas, identidade de pessoas, documentos e vetores."
 requires-python = ">=3.13"
 # Base mínima; cada motor traz o que precisa em um extra (`uv sync --all-extras` instala tudo).

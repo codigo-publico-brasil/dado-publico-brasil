@@ -88,6 +88,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0032](0032-partido-da-pessoa-por-fonte-e-filiacao.md) | O partido da pessoa vem de fontes oficiais (candidatura, histórico da Câmara, votos); a filiação por data fica de fora | aceito; altera o item 10 do 0030 |
 | [0033](0033-marts-com-a-terminologia-da-dbt-labs.md) | Uma só camada publicada, `marts`, com a terminologia da dbt Labs (`dim_`, `fct_`, `brg_`, `agg_`, `app_`) | aceito; altera a organização em esquemas do 0030 e o 0007; item 2 alterado pelo [0055](0055-lake-como-unica-publicacao.md) |
 | [0048](0048-cobertura-de-testes-sem-piso.md) | Medir a cobertura dos testes no CI (`pytest-cov`), sem piso a princípio | aceito |
+| [0049](0049-licenca-apache-2-para-o-codigo-e-cc-by-para-os-dados.md) | Apache-2.0 para o código e CC BY 4.0 para os dados curados, respeitando a licença de cada fonte | proposto (decisão do fundador) |
 | [0050](0050-dado-pessoal-publicado-pela-fonte-vem-como-esta.md) | Dado pessoal que a fonte oficial publica (data de nascimento, conta em descrição) vem como está, com fonte; CPF continua fora | proposto (decisão do fundador de 2026-11-11); revisão jurídica pendente; complementa 0017 |
 
 **Numeração:** o ADR do lake nasceu como um segundo `0038` e foi renumerado para 0055; os números 0049 a 0054 estão reservados para outros ADRs. Confira `git ls-tree origin/main docs/05-decisoes/` antes de escolher o próximo número.
