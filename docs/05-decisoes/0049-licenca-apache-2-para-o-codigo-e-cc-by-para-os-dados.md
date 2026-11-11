@@ -1,6 +1,6 @@
 # ADR 0049: Apache-2.0 para o código e CC BY 4.0 para os dados curados
 
-- **Status:** proposto (decisão do fundador de 2026-11-11), para aceite
+- **Status:** aceito (2026-11-11)
 - **Data:** 2026-11-11
 
 Para quem decide, contribui ou quer reutilizar o projeto. Responde: qual licença vale, por quê e o que ela não resolve.
