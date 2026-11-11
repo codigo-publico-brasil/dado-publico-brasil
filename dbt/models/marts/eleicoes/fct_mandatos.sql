@@ -3,7 +3,8 @@
 -- mandato nasce da eleição, não do exercício. Quem assume depois como suplente é exercício (fct_exercicios).
 -- Início, por ordem: (1) a regra da Constituição para o cargo, com a vigência por ano de eleição (dim_cargos_posse; derivado,
 -- porque a data do TSE traz 1º de janeiro para deputados e senadores e posse de 2026 que não bate com a Constituição);
--- (2) sem regra na Constituição (vereador, deputado estadual), a data de posse que o TSE informa na disputa, só se cai no
+-- (2) deputado estadual e distrital: a posse que a constituição estadual (ou a norma da Assembleia) fixa, por UF e vigência
+-- (dim_cargos_posse_uf, só as UFs com fonte conferida; derivado); (3) sem regra (vereador, UF sem fonte), a data de posse que o TSE informa na disputa, só se cai no
 -- ano seguinte ao da eleição e a eleição não é a do ano corrente (o arquivo de vagas traz data provisória); fora disso o início
 -- fica vazio e o teste mede a lacuna. A data original do TSE fica em dt_posse_tse. O fim é sempre derivado da duração do
 -- mandato na Constituição.
@@ -48,14 +49,19 @@ left join {{ ref('dim_cargos') }} as k on k.id_cargo = d.id_cargo
 left join {{ ref('dim_cargos_posse') }} as p
     on p.id_cargo = d.id_cargo and el.ano_eleicao between p.ano_eleicao_de and p.ano_eleicao_ate
 
+left join {{ ref('dim_cargos_posse_uf') }} as pu
+    on pu.id_cargo = d.id_cargo and pu.id_territorio = d.id_territorio
+    and el.ano_eleicao between pu.ano_eleicao_de and pu.ano_eleicao_ate
+
 cross join lateral (
     select
         case
             when p.id_cargo is not null then make_date(el.ano_eleicao + 1, p.mes_posse, p.dia_posse)
+            when pu.id_cargo is not null then make_date(el.ano_eleicao + 1, pu.mes_posse, pu.dia_posse)
             when year(d.dt_posse) = el.ano_eleicao + 1 and el.ano_eleicao < year(current_date) then d.dt_posse
         end as dt_inicio,
         case
-            when p.id_cargo is not null then 'derivado'
+            when p.id_cargo is not null or pu.id_cargo is not null then 'derivado'
             when year(d.dt_posse) = el.ano_eleicao + 1 and el.ano_eleicao < year(current_date) then 'informado'
         end as base_dt_inicio
 ) as i
