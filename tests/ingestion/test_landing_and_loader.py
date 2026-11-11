@@ -1,5 +1,8 @@
 """Landing (arquivos intactos com hash) e raw (carga fiel pelo dlt)."""
 
+import hashlib
+from collections import Counter
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -564,3 +567,57 @@ def test_a_dataset_that_fails_to_load_is_recorded_and_the_others_still_load(
     monkeypatch.undo()
     assert loader.load_pending(con, settings, contract)[0] == 1  # a próxima carga recupera
     assert monitoring.latest_status(con, "teste", "pessoas")[0] == "ok"
+
+
+def _serving(versions: list[bytes]) -> Any:
+    """Downloader que serve, a cada chamada, a próxima versão do arquivo (a fonte mudando e voltando)."""
+    calls = iter(versions)
+
+    def download(url: str, folder: Path) -> tuple[Path, str, int]:
+        content = next(calls)
+        digest = hashlib.sha256(content).hexdigest()
+        folder.mkdir(parents=True, exist_ok=True)
+        file = folder / f"deputados-{digest[:12]}.csv"
+        file.write_bytes(content)
+        return file, digest, len(content)
+
+    return download
+
+
+def test_a_source_that_goes_back_to_an_old_content_becomes_a_new_capture_and_the_raw_follows(
+    con: Connection, settings: Settings, contract: SourceContract, tmp_path: Path
+) -> None:
+    original = synthetic_files(tmp_path / "origin")[contract.url("deputados")].read_bytes()
+    a, b = original, original + b"\n"
+    download = _serving([a, b, a, a])
+    ids = [
+        landing.extract(con, settings, contract, "deputados", downloader=download, head_request=no_headers)
+        for _ in range(4)
+    ]
+    assert len(set(ids[:3])) == 3  # A, B e a volta a A são três capturas, o histórico não é reescrito
+    assert ids[3] == ids[2]  # o ciclo seguinte (ainda A) não cria outra
+    current = landing.current_captures(con, contract.source)
+    assert [(c["id_captura"], c["sha256"]) for c in current] == [(ids[2], hashlib.sha256(a).hexdigest())]
+    assert current[0]["dt_carga"] is None  # ainda não carregada: o loader a carrega e o raw volta a A
+    assert scalar(con, "SELECT count(*) FROM metadata.capturas") == 3
+
+
+def test_rows_whose_values_only_shift_between_columns_are_different_rows(tmp_path: Path) -> None:
+    contract = make_contract(tmp_path)
+    dataset = contract.datasets["lancamentos"]
+    file = tmp_path / "lancamentos.csv"
+    file.write_text("codigo,valor\nab,c\na,bc\nx,\n,x\n", encoding="utf-8")
+    hashes = [r["_row_hash"].split(":")[0] for r in loader.read_rows(file, contract, dataset, 1, Counter())]
+    assert len(set(hashes)) == len(hashes) == 4
+
+
+def test_the_landing_clock_is_brasilia_not_utc_at_the_turn_of_the_year(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Utc2027(datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> "Utc2027":  # 22h30 de 31/12/2026 em Brasília
+            return cls(2027, 1, 1, 1, 30, tzinfo=UTC).astimezone(tz)
+
+    monkeypatch.setattr(runs, "datetime", Utc2027)
+    assert landing.current_year() == 2026
