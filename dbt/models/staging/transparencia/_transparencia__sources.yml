@@ -34,10 +34,14 @@ sources:
         meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Termos aditivos dos contratos do governo federal.
       - name: licitacoes
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: "Licitações do governo federal (SIASG), uma por linha. Fonte: saida/licitacoes/AAAAMM_Licitacoes.zip, membro AAAAMM_Licitação.csv."
       - name: licitacoes_itens
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: "Itens das licitações, com o vencedor (CPF completo se pessoa física). Mesmo zip, membro AAAAMM_ItemLicitação.csv."
       - name: licitacoes_participantes
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: "Participantes dos itens das licitações (CPF completo se pessoa física). Mesmo zip, membro AAAAMM_ParticipantesLicitação.csv."
       - name: licitacoes_empenhos
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: "Empenhos relacionados às licitações. Mesmo zip, membro AAAAMM_EmpenhosRelacionados.csv."
