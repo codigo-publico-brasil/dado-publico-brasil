@@ -1,10 +1,13 @@
 """Alerta por e-mail (SMTP), configurado por variável de ambiente; sem configuração, não envia."""
 
+import logging
 import os
 import smtplib
 import ssl
 from email.message import EmailMessage
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def notify_failure(job: str, run_id: str, steps: list[str], message: str, url: str | None = None) -> bool:
@@ -16,7 +19,7 @@ def notify_failure(job: str, run_id: str, steps: list[str], message: str, url: s
     try:
         return send(f"Plataforma de dados: a execução de {job} falhou", chr(10).join(lines))
     except (OSError, smtplib.SMTPException) as error:
-        print(f"Alerta por e-mail não enviado: {error}")
+        logger.warning("Alerta por e-mail não enviado: %s", error)
         return False
 
 
@@ -29,7 +32,7 @@ def notify_check_errors(items: list[tuple[str, str, str]], url: str | None = Non
     try:
         return send("Plataforma de dados: verificações de ativo em erro", chr(10).join(lines))
     except (OSError, smtplib.SMTPException) as error:
-        print(f"Alerta por e-mail não enviado: {error}")
+        logger.warning("Alerta por e-mail não enviado: %s", error)
         return False
 
 

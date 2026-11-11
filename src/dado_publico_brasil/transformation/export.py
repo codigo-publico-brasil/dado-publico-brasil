@@ -36,6 +36,7 @@ import hashlib
 import hmac
 import http.client
 import json
+import logging
 import mimetypes
 import os
 import re
@@ -59,6 +60,8 @@ from dado_publico_brasil.core import privado, runs, warehouse
 from dado_publico_brasil.core.settings import DBT_DIR, SITE_DIR, SOURCES_DIR, Settings
 from dado_publico_brasil.core.warehouse import scalar
 from dado_publico_brasil.transformation import dbt, observability
+
+logger = logging.getLogger(__name__)
 
 LAYERS = ("staging", "intermediate", "marts")
 EXTRA = (("metadata", "capturas"),)  # único lugar do nome da tabela de capturas
@@ -105,7 +108,7 @@ def _q(text: str) -> str:
 
 
 def _say(text: str) -> None:
-    print(text, flush=True)
+    logger.info(text)
 
 
 @contextmanager

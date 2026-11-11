@@ -9,6 +9,7 @@ pronto já está registrado, então uma execução interrompida continua de onde
 """
 
 import hashlib
+import logging
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -22,6 +23,8 @@ from dado_publico_brasil.core.warehouse import Connection, rows, tables
 from dado_publico_brasil.ingestion import batch, fetch, landing, monitoring
 from dado_publico_brasil.ingestion.contract import SourceContract
 from dado_publico_brasil.ingestion.loader import normalize
+
+logger = logging.getLogger(__name__)
 
 Get = Callable[[str], tuple[int, bytes]]
 MAX = 10**12  # "todos"
@@ -125,7 +128,7 @@ def capture(
                 envelopes.append((batch.envelope(item, url, status, body, runs.now()), version))
             _register(con, settings, contract, name, run.id, n, envelopes)
             done += len(chunk)
-            print(f"{name}: {done}/{len(todo)} itens", flush=True)
+            logger.info("%s: %s/%s itens", name, done, len(todo))
         run.rows_in = run.rows_out = done
     if done:
         counts = coverage(con, contract, name)

@@ -11,6 +11,7 @@ Três maneiras de montar o que baixar (o plano):
   da fonte que declara `schedule`; sem `schedule`, só roda quando pedido.
 """
 
+import logging
 import shutil
 from collections.abc import Mapping
 from contextlib import suppress
@@ -25,6 +26,8 @@ from dado_publico_brasil.core.warehouse import Connection, rows, scalar
 from dado_publico_brasil.ingestion import arquivos, fetch, monitoring
 from dado_publico_brasil.ingestion.contract import Dataset, SourceContract
 from dado_publico_brasil.ingestion.fetch import Downloader, HeadRequest
+
+logger = logging.getLogger(__name__)
 
 Item = tuple[str, int | None]
 
@@ -455,7 +458,7 @@ def extract_plan(
         items = [*items, *(i for i in plan_recovery(con, contract) if i not in items)]
     done = 0
     for dataset, year in items:
-        print(f"Extraindo {dataset} {year or ''}".strip(), flush=True)
+        logger.info("Extraindo %s", f"{dataset} {year or ''}".strip())
         try:
             extract(con, settings, contract, dataset, year, downloader, head_request, force)
             done += 1
@@ -470,8 +473,10 @@ def extract_plan(
                 monitoring.record(con, contract.source, dataset, year, "bloqueio", "ok")
         except fetch.SourceBlocked as error:  # sem retry: o próximo agendamento tenta de novo
             monitoring.record(con, contract.source, dataset, year, "bloqueio", "error", str(error))
-            print(
-                f"Fonte {contract.source} bloqueou ({error}); o resto da fonte fica para a próxima execução"
+            logger.warning(
+                "Fonte %s bloqueou (%s); o resto da fonte fica para a próxima execução",
+                contract.source,
+                error,
             )
             break
     record_gaps(con, contract)
