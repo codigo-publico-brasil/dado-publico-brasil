@@ -96,6 +96,7 @@ Ordem de leitura e regras em [`docs/README.md`](docs/README.md).
 - **Dúvida, erro ou sugestão:** abra uma [issue](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues). Para corrigir um dado, inclua o link da fonte oficial.
 - **Código e documentação:** veja [`CONTRIBUTING.md`](CONTRIBUTING.md). Quem revisa e faz o merge é sempre uma pessoa.
 - **Vulnerabilidade ou dado pessoal exposto:** veja [`SECURITY.md`](SECURITY.md).
+- **Conduta, decisões e versões:** [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`GOVERNANCE.md`](GOVERNANCE.md), [`CHANGELOG.md`](CHANGELOG.md) e a [política de estabilidade](docs/03-consultar/06-consumir-o-lake.md#estabilidade-e-versionamento).
 
 ## Licença
 
