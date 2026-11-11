@@ -1,6 +1,6 @@
 # ADR 0048: medir a cobertura dos testes no CI, sem piso a princípio
 
-- **Status:** proposto (2026-11-10), para revisão do fundador
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-10), para revisão do fundador)
 - **Data:** 2026-11-10
 
 ## Contexto

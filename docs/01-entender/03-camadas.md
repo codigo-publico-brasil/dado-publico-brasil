@@ -118,7 +118,7 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 
 O arquivo DuckDB é só o motor de cálculo. Um único arquivo DuckDB, com um esquema por camada (`raw_<esfera>_<fonte>`, `staging`, `intermediate`, `marts`, `identity`, `metadata`). Limite do DuckDB em arquivo: um processo escritor por vez. Por isso o dbt roda em outro processo, com a conexão do chamador fechada, e a aplicação abre em modo somente leitura. 
 
-**Sem banco de serviço** ([ADR 0038](../05-decisoes/0038-lake-como-unica-publicacao.md)). O dbt roda só no DuckDB e o `export` grava o lake; cada aplicação lê os marts do Parquet e monta as suas próprias consultas, no banco que quiser.
+**Sem banco de serviço** ([ADR 0055](../05-decisoes/0055-lake-como-unica-publicacao.md)). O dbt roda só no DuckDB e o `export` grava o lake; cada aplicação lê os marts do Parquet e monta as suas próprias consultas, no banco que quiser.
 
 **Os marts são a camada semântica** ([ADR 0039](../05-decisoes/0039-marts-como-camada-semantica.md)). A regra de negócio vive neles, com teste de dado e unit test; a aplicação só junta nomes e filtra. Mudança de mart é aditiva, e o que não vem da fonte é marcado `derivado`. Exemplo: quem ocupa cada cargo está em `fct_cargos_ocupacoes` ([ADR 0040](../05-decisoes/0040-ocupacao-de-cargo.md)) ([ADR 0041](../05-decisoes/0041-eleito-completo-e-fim-das-views-app.md): as views `app_*` deixaram de existir).
 

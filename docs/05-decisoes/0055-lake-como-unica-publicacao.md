@@ -1,6 +1,6 @@
-# ADR 0038: o lake é a única publicação; sem PostgreSQL de serviço e cada aplicação monta as suas consultas
+# ADR 0055: o lake é a única publicação; sem PostgreSQL de serviço e cada aplicação monta as suas consultas
 
-- **Status:** proposto (2026-11-03); decisão do fundador na conversa de 03/11/2026
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-03); decisão do fundador na conversa de 03/11/2026)
 - **Data:** 2026-11-03
 - **Substitui:** [ADR 0014](0014-warehouse-lake-duckdb-e-postgres-de-servico.md) (a parte do PostgreSQL de serviço) e [ADR 0034](0034-manter-duckdb-e-postgres.md) (manter o PostgreSQL)
 - **Altera:** [ADR 0033](0033-marts-com-a-terminologia-da-dbt-labs.md) (item 2: `marts` deixa de ser publicado no PostgreSQL; o contrato com as aplicações passa a ser o Parquet do lake)

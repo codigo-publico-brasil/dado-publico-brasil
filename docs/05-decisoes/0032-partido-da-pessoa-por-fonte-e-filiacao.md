@@ -1,6 +1,6 @@
 # ADR 0032: o partido de cada pessoa vem de fontes oficiais, e a filiação por data fica de fora
 
-- **Status:** proposto (2026-10-27); decisão do fundador na conversa de 27/10/2026
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-10-27); decisão do fundador na conversa de 27/10/2026)
 - **Data:** 2026-10-27
 - **Altera:** o item 10 do [ADR 0030](0030-modelo-de-dados-pessoa-no-centro.md) (que adiava a filiação do TSE e só valia o histórico da Câmara).
 

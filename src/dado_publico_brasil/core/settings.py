@@ -1,4 +1,4 @@
-"""Configuração do ambiente por variável: armazenamento, warehouse e PostgreSQL de serviço.
+"""Configuração do ambiente por variável: pasta de dados e warehouse DuckDB.
 
 Fontes: `sources/`. Transformação: `dbt/`. Tabelas próprias: `ddl/`.
 """

@@ -1,13 +1,13 @@
 # ADR 0039: os marts são a camada semântica; regra de negócio vive neles e a aplicação só consulta
 
-- **Status:** proposto (2026-11-03); desenho aprovado pelo fundador
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-03); desenho aprovado pelo fundador)
 - **Data:** 2026-11-03
-- **Altera:** [ADR 0038](0038-lake-como-unica-publicacao.md) (itens 3 e 4: a regra de `app_cargo_ocupantes` passa a um `fct_`, e a view vira junção pura; as outras duas `app_*` seguem até serem refeitas só sobre os marts).
-- **Numeração:** o PR 207 (sobre o qual este empilha) e o PR 208 criaram, cada um, um `0038` diferente. Este usa o próximo número livre depois de conferir as branches e os PRs abertos; resolver a colisão do 0038 é de quem mergeia.
+- **Altera:** [ADR 0055](0055-lake-como-unica-publicacao.md) (itens 3 e 4: a regra de `app_cargo_ocupantes` passa a um `fct_`, e a view vira junção pura; as outras duas `app_*` seguem até serem refeitas só sobre os marts).
+- **Numeração:** o ADR do lake nasceu como outro `0038` (colisão de PRs paralelos) e foi renumerado para 0055.
 
 ## Contexto
 
-O ADR 0038 fez do lake a única publicação: cada aplicação monta as suas consultas sobre o Parquet dos marts. Isso só funciona se o mart carregar o que uma consulta não deve decidir. Hoje não carrega: a regra "quem ocupa o cargo" (exercício publicado ou mandato, suplente, janela de 31 dias, tipo do mandato, partido na data) estava dentro de `app_cargo_ocupantes`, e uma aplicação nova teria de copiá-la. Faltavam também, nos fatos, chaves de ligação (eleição da candidatura, território e partido do exercício) e a captura de alguns fatos, o que obrigava a consulta a refazer a ligação e escondia a fonte.
+O ADR 0055 fez do lake a única publicação: cada aplicação monta as suas consultas sobre o Parquet dos marts. Isso só funciona se o mart carregar o que uma consulta não deve decidir. Hoje não carrega: a regra "quem ocupa o cargo" (exercício publicado ou mandato, suplente, janela de 31 dias, tipo do mandato, partido na data) estava dentro de `app_cargo_ocupantes`, e uma aplicação nova teria de copiá-la. Faltavam também, nos fatos, chaves de ligação (eleição da candidatura, território e partido do exercício) e a captura de alguns fatos, o que obrigava a consulta a refazer a ligação e escondia a fonte.
 
 ## Decisão
 
@@ -19,11 +19,11 @@ O ADR 0038 fez do lake a única publicação: cada aplicação monta as suas con
 ## Alternativas consideradas
 
 - **Deixar a regra na view `app_*`:** cada aplicação nova a reescreve, e a regra diverge sem teste que a una.
-- **Uma tabela larga por aplicação no repositório:** é o que o 0038 recusou (o repositório de dados passa a responder pelo formato de consumo de cada app).
+- **Uma tabela larga por aplicação no repositório:** é o que o 0055 recusou (o repositório de dados passa a responder pelo formato de consumo de cada app).
 - **Mudar o significado de colunas existentes (por exemplo, `fl_eleito` com a regra derivada):** quebra consumidores sem aviso; a coluna `base_eleicao` carrega a distinção sem mexer nela.
 
 ## Consequências
 
-- O contrato para as aplicações cresce só por adição; o teste de contrato de cada aplicação (0038, item 5) continua suficiente.
+- O contrato para as aplicações cresce só por adição; o teste de contrato de cada aplicação (0055, item 5) continua suficiente.
 - `app_cargo_ocupantes` mantém colunas e linhas. Única diferença medida no warehouse real: em 152 exercícios sem mandato eleito, o partido passa a ser o do histórico da Câmara quando existe, em vez do último registro até o ano.
 - Quando as outras duas `app_*` puderem ser refeitas só sobre os marts, saem, e este ADR se cumpre por inteiro.

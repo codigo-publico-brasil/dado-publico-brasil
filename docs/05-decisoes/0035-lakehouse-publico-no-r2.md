@@ -1,6 +1,6 @@
 # ADR 0035: Lakehouse público no R2, em Parquet, com caminho estável
 
-- **Status:** proposto (2026-11-02)
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-02))
 - **Data:** 2026-11-02
 - **Altera:** [ADR 0014](0014-warehouse-lake-duckdb-e-postgres-de-servico.md) (item 1 e gatilho 6a) e [ADR 0033](0033-marts-com-a-terminologia-da-dbt-labs.md) (a camada publicada no lake passa a incluir staging e intermediate; o PostgreSQL continua recebendo só os marts).
 - **Complementa:** [ADR 0034](0034-manter-duckdb-e-postgres.md) (DuckDB calcula e PostgreSQL serve; sem DuckLake).

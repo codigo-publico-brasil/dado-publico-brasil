@@ -2,11 +2,11 @@
 
 - **Status:** aceito (2026-11-03)
 - **Data:** 2026-11-03
-- **Altera:** [ADR 0039](0039-marts-como-camada-semantica.md) (o item sobre `fl_eleito`) e [ADR 0038](0038-lake-como-unica-publicacao.md) (item 4).
+- **Altera:** [ADR 0039](0039-marts-como-camada-semantica.md) (o item sobre `fl_eleito`) e [ADR 0055](0055-lake-como-unica-publicacao.md) (item 4).
 
 ## Contexto
 
-O ADR 0039 recusou mudar o significado de `fl_eleito` (quebraria consumidores sem aviso) e deixou a distinção em `base_eleicao`; a vencedora derivada só aparecia na view `app_pessoa_campanhas`. Com isso "eleito" tinha duas respostas: uma no mart, outra na view. O ADR 0038 (item 4) mandou as views `app_*` saírem quando a aplicação pudesse viver só dos marts, e a regra de ocupação já está em `fct_cargos_ocupacoes` ([ADR 0040](0040-ocupacao-de-cargo.md)).
+O ADR 0039 recusou mudar o significado de `fl_eleito` (quebraria consumidores sem aviso) e deixou a distinção em `base_eleicao`; a vencedora derivada só aparecia na view `app_pessoa_campanhas`. Com isso "eleito" tinha duas respostas: uma no mart, outra na view. O ADR 0055 (item 4) mandou as views `app_*` saírem quando a aplicação pudesse viver só dos marts, e a regra de ocupação já está em `fct_cargos_ocupacoes` ([ADR 0040](0040-ocupacao-de-cargo.md)).
 
 ## Decisão
 
@@ -18,4 +18,4 @@ O ADR 0039 recusou mudar o significado de `fl_eleito` (quebraria consumidores se
 
 - Aviso ao app: as `app_*` somem do warehouse e do lake; `fl_eleito` mudou de significado (120 a mais) e `fl_eleito_informado` mantém o antigo. Quem filtrava `base_eleicao` para o derivado continua funcionando.
 - Menos um nível de modelos para manter; o teste de lacuna da ficha passa a olhar `dim_pessoas` (`pessoas_sem_dado_que_o_tse_tem`).
-- Alternativa recusada: manter as views como compatibilidade. Perpetua a segunda resposta e o dono do formato de consumo seria este repositório (ADR 0038).
+- Alternativa recusada: manter as views como compatibilidade. Perpetua a segunda resposta e o dono do formato de consumo seria este repositório (ADR 0055).

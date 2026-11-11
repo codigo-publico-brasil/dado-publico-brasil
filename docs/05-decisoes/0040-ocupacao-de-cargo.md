@@ -1,6 +1,6 @@
 # ADR 0040: ocupação de cargo como fato (`fct_cargos_ocupacoes`), com exercício vencendo o mandato
 
-- **Status:** proposto (2026-11-03); desenho aprovado pelo fundador
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-03); desenho aprovado pelo fundador)
 - **Data:** 2026-11-03
 - **Complementa:** [ADR 0039](0039-marts-como-camada-semantica.md) e [ADR 0030](0030-modelo-de-dados-pessoa-no-centro.md) (mandato e exercício como fatos).
 
