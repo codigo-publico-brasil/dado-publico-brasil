@@ -1,6 +1,6 @@
 # ADR 0026: segunda chave de ligação, nome de urna e data de nascimento
 
-- **Status:** proposto (2026-10-26); aprovado pelo fundador na conversa de 26/10/2026
+- **Status:** defasado (2026-11-11): já implementado de outra forma, segundo o fundador; vale como registro
 - **Data:** 2026-10-26
 - **Complementa:** [ADR 0013](0013-tse-ligacao-por-nome-civil-e-nascimento.md) (ligação com a Câmara e o Senado) e [ADR 0025](0025-historico-do-eleito-ligacao-entre-eleicoes-do-tse.md) (histórico do eleito). Não troca a regra de base: acrescenta uma chave.
 

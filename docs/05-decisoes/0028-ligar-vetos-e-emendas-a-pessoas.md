@@ -1,6 +1,6 @@
 # ADR 0028: ligar os votos dos vetos e as emendas parlamentares a pessoas
 
-- **Status:** proposto (2026-10-26); depende de aprovação do fundador
+- **Status:** defasado (2026-11-11): já implementado de outra forma, segundo o fundador; vale como registro
 - **Data:** 2026-10-26
 - **Complementa:** [ADR 0013](0013-tse-ligacao-por-nome-civil-e-nascimento.md) (regra de base), [ADR 0015](0015-normas-vetos-e-constituicao.md) e [ADR 0016](0016-bens-votos-e-emendas.md), que deixaram vetos e emendas sem ligação. Responde às issues #15 e #16.
 

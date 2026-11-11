@@ -1,6 +1,6 @@
 # ADR 0025: histórico do eleito pela ligação entre as eleições do TSE
 
-- **Status:** proposto (2026-10-26); aprovado pelo fundador na conversa de 26/10/2026
+- **Status:** defasado (2026-11-11): já implementado de outra forma, segundo o fundador; vale como registro
 - **Data:** 2026-10-26
 - **Complementa:** [ADR 0013](0013-tse-ligacao-por-nome-civil-e-nascimento.md) (ligação com a Câmara e o Senado) e [ADR 0023](0023-eleitos-escopo-regras-e-fontes.md) (eleitos).
 
