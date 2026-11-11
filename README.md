@@ -99,4 +99,4 @@ Ordem de leitura e regras em [`docs/README.md`](docs/README.md).
 
 ## Licença
 
-Pretende-se AGPL-3.0 para o código e CC BY 4.0 para os dados curados, **ainda não confirmadas**: por isso o repositório não traz um arquivo `LICENSE` e nenhuma permissão de uso está concedida até a decisão. Os dados de origem seguem os termos de cada fonte oficial.
+O código é **Apache-2.0** ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)) e os dados curados são **CC BY 4.0**: cite o projeto e o `id_execucao` da publicação ([`CITATION.cff`](CITATION.cff)). Os dados de origem seguem os termos de cada fonte oficial, que o manifesto declara por tabela. Decisão e alternativas: [ADR 0049](docs/05-decisoes/0049-licenca-apache-2-para-o-codigo-e-cc-by-para-os-dados.md).
