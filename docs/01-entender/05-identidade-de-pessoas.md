@@ -48,6 +48,8 @@ Decidida na spec 008: um erro de ligação (juntar duas pessoas diferentes, ou s
 
 ### Fusão de chaves
 
+A resolução inteira roda numa transação: se cair no meio de uma fusão, nada muda (a ponte nunca aponta para pessoa apagada). A cópia imutável da identidade é tirada antes e depois dela, e a cópia anterior é o ponto de volta.
+
 Quando a regra mostra que um deputado e um senador são a mesma pessoa, a chave mais **nova** é absorvida pela mais **antiga**: os identificadores passam a apontar para a sobrevivente, a chave absorvida sai de `identity.pessoas` e **nunca é reaproveitada**, e a fusão fica em `identity.pessoas_fusoes` (`fct_pessoas_fusoes` em `marts`) para quem guardou a chave antiga resolver a atual. `dim_pessoas_cadastro` tem uma linha por pessoa (dados da Câmara quando está nas duas casas; coluna `fontes` com todas).
 
 Câmara, Senado e TSE entram na identidade: a ligação por identificador oficial vale dentro de cada casa, e entre fontes valem as regras 2 a 4. O código está em [`identity.py`](../../src/dado_publico_brasil/transformation/identity.py) e as tabelas são criadas por [migração](../../ddl/0002_identity.sql). Os dados da pessoa (nome, foto, nascimento) e o mandato são modelos SQL do dbt ([`int_pessoas_unidas_cadastro`](../../dbt/models/intermediate/int_pessoas_unidas_cadastro.sql) e [`fct_mandatos`](../../dbt/models/marts/eleicoes/fct_mandatos.sql)).
