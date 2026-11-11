@@ -46,6 +46,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0009](0009-repositorio-de-dados-pacote-unico.md) | Um só pacote Python, motores como subpacotes | vigente |
 | [0010](0010-duas-pastas-env-e-specs-fora.md) | `.env` para conexões; duas pastas | em parte (repositório próprio: [0020](0020-repositorio-proprio-dado-publico-brasil.md)) |
 | [0020](0020-repositorio-proprio-dado-publico-brasil.md) | Repositório próprio `dado-publico-brasil` | vigente |
+| [0053](0053-nucleo-sem-nomes-de-fonte.md) | Núcleo sem nomes de fonte: partição por sequência no YAML, papel das fontes na identidade em seed, verificações com colunas próprias | proposto; complementa 0011 |
 
 ### Captura e landing
 
