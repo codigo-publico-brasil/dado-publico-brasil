@@ -75,8 +75,6 @@ models:
         +meta: {periodo: ano}
     marts:
       +schema: marts
-      dim_cargos_posse_uf:
-        +column_types: {id_cargo: varchar, id_territorio: varchar, sigla_uf: varchar, ano_eleicao_de: integer, ano_eleicao_ate: integer, mes_posse: integer, dia_posse: integer, regra_legal: varchar, fonte_url: varchar, dt_captura: date}
       +materialized: table
       +contract:
         enforced: true
@@ -100,6 +98,8 @@ seeds:
     +column_types: {cd_cargo_tse: integer, duracao_anos: integer, id_partido: integer, id_partido_sucessor: integer, ano_fim: integer, nr_partido: integer, ano_inicio: integer, ano_eleicao_de: integer, ano_eleicao_ate: integer, mes_posse: integer, dia_posse: integer}
     marts:
       +schema: marts
+      dim_cargos_posse_uf:
+        +column_types: {id_territorio: varchar}  # casa com dim_territorios.id_territorio (varchar, tem 'BR'); sem isso o CSV infere inteiro
     intermediate:
       vinculos_aprovados:
         +full_refresh: true  # sem isso, o seed criado vazio fica com tipos inferidos errados quando entra a primeira linha
