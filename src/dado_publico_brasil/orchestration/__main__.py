@@ -34,7 +34,8 @@ from dado_publico_brasil.core import settings as settings_module
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.ingestion import contract, foreach, landing, loader
 from dado_publico_brasil.orchestration import pipeline
-from dado_publico_brasil.transformation import build, catalog, dbt, export, observability, snapshot
+from dado_publico_brasil.transformation import build, catalog, dbt, export, lake, observability, snapshot
+from dado_publico_brasil.transformation import verify as lake_verify
 
 COMMANDS = (
     "run",
@@ -207,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 "lake:", export.export(settings)
             )  # depois dos testes do dbt (build.run falha antes se algum quebrar)
-            print("docs:", export.publish_docs(settings))  # warehouse livre: dbt docs e edr abrem o arquivo
+            print("docs:", lake.publish_docs(settings))  # warehouse livre: dbt docs e edr abrem o arquivo
         case "rebuild":
             old = Path(args.old_warehouse) if args.old_warehouse else None
             print("metadata levado:", rebuild.start_from(settings, old))
@@ -243,12 +244,12 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{build.resolve_identity(settings)} pessoas novas")
         case "export":
             if args.verificar:
-                found = export.verify(settings)
+                found = lake_verify.verify(settings)
                 print(chr(10).join(found) or "lake íntegro: todos os arquivos do manifesto conferem")
                 return 1 if found else 0
             print(export.export(settings, prune=args.prune))
         case "publish-docs":
-            pages = export.publish_docs(settings)
+            pages = lake.publish_docs(settings)
             print(pages or "R2 não configurado: nada publicado")
         case _:
             _ingest(settings, args)

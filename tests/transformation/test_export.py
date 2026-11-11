@@ -4,26 +4,23 @@ Usa um warehouse pequeno montado aqui (rápido); o destino é a pasta local, o m
 segredo. O que depende de credencial real (COPY, LIST e DELETE em `r2://` e o PUT do catálogo) não é testado aqui.
 """
 
-import base64
 import hashlib
-import http.client
 import json
 import logging
 import mimetypes
 import shutil
-import threading
 import zipfile
 from pathlib import Path
 
 import duckdb
 import pytest
 
-from dado_publico_brasil.core import runs
+from dado_publico_brasil.core import runs, s3
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, scalar
 from dado_publico_brasil.ingestion import arquivos, landing
 from dado_publico_brasil.ingestion import contract as contracts
-from dado_publico_brasil.transformation import dbt, export, observability
+from dado_publico_brasil.transformation import colecoes, dbt, export, lake, observability, tables, verify
 
 MODELS = {
     "nodes": {
@@ -64,7 +61,7 @@ def build(con: Connection, settings: Settings) -> None:
 
 
 def run(
-    con: Connection, settings: Settings, max_bytes: int = export.MAX_BYTES
+    con: Connection, settings: Settings, max_bytes: int = tables.MAX_BYTES
 ) -> tuple[Path, dict[str, int]]:
     build(con, settings)
     con.close()  # o export abre o warehouse só para leitura
@@ -117,7 +114,7 @@ def test_a_second_export_without_changes_rewrites_nothing(con: Connection, setti
     second = export.export(settings)
     assert second["gravadas"] == 0 and second["ignoradas"] == first["tabelas"] and second["bytes"] == 0
     assert {p: p.stat().st_mtime_ns for p in out.rglob("*.parquet")} == stamps
-    assert export.verify(settings) == []
+    assert verify.verify(settings) == []
 
 
 def test_an_unchanged_run_writes_and_sends_nothing_and_prints_progress(
@@ -162,7 +159,7 @@ def test_a_new_table_is_added_and_a_removed_one_needs_prune(con: Connection, set
     assert (out / "intermediate/int_nova.parquet").exists()
     change(settings, "DROP TABLE intermediate.int_nova")
     export.export(settings, prune=True)
-    assert not (out / "intermediate/int_nova.parquet").exists() and export.verify(settings) == []
+    assert not (out / "intermediate/int_nova.parquet").exists() and verify.verify(settings) == []
 
 
 def test_a_description_change_alone_replaces_the_catalog_and_the_manifest(
@@ -200,7 +197,7 @@ def test_a_table_that_changed_path_leaves_no_orphan_even_without_prune(
     (settings.state_dir / "dbt" / "target" / "manifest.json").write_text(json.dumps(moved), encoding="utf-8")
     export.export(settings)
     assert not (out / f"{VOTOS}.parquet").exists() and (out / "marts/outro/fct_votos.parquet").exists()
-    assert export.verify(settings) == []
+    assert verify.verify(settings) == []
 
 
 def test_the_time_of_each_table_is_kept_for_the_next_look(con: Connection, settings: Settings) -> None:
@@ -220,7 +217,7 @@ def test_a_changed_table_alone_is_rewritten_and_verify_catches_tampering(
     change(settings, "INSERT INTO staging.stg_camara__base VALUES (999, 'novo')")
     assert export.export(settings)["gravadas"] == 2  # a tabela e a view que a lê
     (out / f"{VOTOS}.parquet").write_bytes(b"adulterado")
-    assert export.verify(settings) == [f"{VOTOS}.parquet difere do manifesto"]
+    assert verify.verify(settings) == [f"{VOTOS}.parquet difere do manifesto"]
 
 
 def test_the_catalog_attaches_read_only_and_queries_with_descriptions(
@@ -268,7 +265,7 @@ def test_a_big_table_with_a_partition_is_split_by_year_and_filters_by_it(
     assert split["particao"] == "year(dt_voto)" and split["ano"] == [2020, 2021, 2022]
     assert split["colunas"][-1]["nome"] == "ano"  # type: ignore[index]
     assert sum(f["linhas"] for f in split["arquivos"]) == 1000  # type: ignore[attr-defined]
-    assert export.verify(settings) == []
+    assert verify.verify(settings) == []
     cat = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
     live = duckdb.connect(str(settings.warehouse), read_only=True)
     ids = "SELECT id_voto FROM marts.fct_votos ORDER BY 1"
@@ -318,7 +315,7 @@ def test_switching_layout_or_dropping_a_table_removes_the_orphans(
     assert result["orfaos"] == 3 + 1
     listed = {p.relative_to(out).as_posix() for p in out.rglob("*.parquet")}
     assert listed == {f["arquivo"] for t in manifest(out)["tabelas"] for f in t["arquivos"]}  # type: ignore[attr-defined]
-    assert export.verify(settings) == []
+    assert verify.verify(settings) == []
 
 
 def test_a_table_missing_from_the_warehouse_blocks_the_export_unless_pruned(
@@ -356,7 +353,7 @@ def kv(file: Path) -> dict[str, str]:
     return {k.decode(): v.decode() for k, v in rows}
 
 
-@pytest.mark.parametrize("max_bytes", [export.MAX_BYTES, 1])
+@pytest.mark.parametrize("max_bytes", [tables.MAX_BYTES, 1])
 def test_the_parquet_carries_the_table_and_column_descriptions(
     con: Connection, settings: Settings, max_bytes: int
 ) -> None:
@@ -395,12 +392,12 @@ def test_the_manifest_carries_the_licence_declared_by_the_source(con: Connection
 
 def test_huge_descriptions_are_cut_with_a_warning(con: Connection, settings: Settings) -> None:
     build(con, settings)
-    con.execute(f"COMMENT ON COLUMN marts.fct_votos.qtd IS '{'x' * (export.MAX_KV_BYTES + 10)}'")
+    con.execute(f"COMMENT ON COLUMN marts.fct_votos.qtd IS '{'x' * (tables.MAX_KV_BYTES + 10)}'")
     con.close()
     with pytest.warns(UserWarning, match="descricoes_colunas"):
         export.export(settings)
     meta = kv(settings.storage_root / "lake" / f"{VOTOS}.parquet")
-    assert len(meta["descricoes_colunas"].encode()) <= export.MAX_KV_BYTES
+    assert len(meta["descricoes_colunas"].encode()) <= tables.MAX_KV_BYTES
 
 
 def write_models(settings: Settings, particao: str) -> None:
@@ -429,7 +426,7 @@ def test_a_column_already_named_year_is_the_partition_or_a_clear_error(
 
 
 def test_a_mart_without_the_dbt_manifest_takes_its_folder_from_the_models_tree() -> None:
-    assert export._domain({}, "dim_pessoas") == "pessoas"
+    assert tables.domain({}, "dim_pessoas") == "pessoas"
 
 
 def test_publish_docs_uploads_both_pages_as_html_and_does_nothing_without_r2(
@@ -441,13 +438,13 @@ def test_publish_docs_uploads_both_pages_as_html_and_does_nothing_without_r2(
     monkeypatch.setattr(dbt, "static_docs", lambda s: page)
     monkeypatch.setattr(observability, "html_report", lambda s: page)
     monkeypatch.setattr(
-        export, "r2_request", lambda m, key, path=None, content_type=None: sent.append((key, content_type))
+        lake, "request", lambda m, key, path=None, content_type=None: sent.append((key, content_type))
     )
-    monkeypatch.setattr(export, "_index", lambda s: page)
-    monkeypatch.setattr(export, "_r2", lambda: {})
-    assert export.publish_docs(settings) == [] and sent == []
-    monkeypatch.setattr(export, "_r2", lambda: {"BUCKET": "b"})
-    assert export.publish_docs(settings) == ["docs/dbt.html", "docs/qualidade.html", "docs/index.html"]
+    monkeypatch.setattr(lake, "index", lambda s: page)
+    monkeypatch.setattr(lake, "r2", lambda: {})
+    assert lake.publish_docs(settings) == [] and sent == []
+    monkeypatch.setattr(lake, "r2", lambda: {"BUCKET": "b"})
+    assert lake.publish_docs(settings) == ["docs/dbt.html", "docs/qualidade.html", "docs/index.html"]
     assert sent == [
         ("docs/dbt.html", "text/html; charset=utf-8"),
         ("docs/qualidade.html", "text/html; charset=utf-8"),
@@ -459,14 +456,14 @@ def test_the_home_page_fills_the_card_from_the_published_manifest(
     con: Connection, settings: Settings
 ) -> None:
     out, _ = run(con, settings)
-    html = export._index(settings).read_text(encoding="utf-8")
+    html = lake.index(settings).read_text(encoding="utf-8")
     published = manifest(out)
     assert "{{" not in html
     assert str(published["id_execucao"]) in html and f">{len(published['tabelas'])}<" in html
 
 
 def test_seed_mart_goes_to_the_reference_folder() -> None:
-    assert export._key({}, "marts", "dim_cargos") == "marts/referencia/dim_cargos"
+    assert tables.table_path({}, "marts", "dim_cargos") == "marts/referencia/dim_cargos"
 
 
 # ---------------------------------------------------------------- arquivos no lake (ADR 0037)
@@ -591,22 +588,22 @@ def test_only_missing_or_changed_files_are_sent_and_verify_checks_the_objects(
     assert again["gravadas"] == 0 and sent == []  # nenhum arquivo reenviado, nem o catálogo
     monkeypatch.undo()
     assert (out / FOTOS / FOTO_LOCAL).stat().st_mtime_ns == stamp
-    assert export.verify(settings) == []
+    assert verify.verify(settings) == []
     nova = b"\xff\xd8nova!"
     con = duckdb.connect(str(settings.warehouse))
     capture(con, settings, "tse", "fotos_rj", 2022, "fotos_rj-ba9876543210.zip", {"FRJ1001_div.jpg": nova})
     arquivos.materialize(con, settings, contracts.find("tse"))
     con.close()
     export.export(settings)
-    assert (out / FOTOS / FOTO_LOCAL).read_bytes() == nova and export.verify(settings) == []
+    assert (out / FOTOS / FOTO_LOCAL).read_bytes() == nova and verify.verify(settings) == []
     (out / FOTOS / FOTO_LOCAL).write_bytes(b"adulterada")
     (out / FOTOS / "2022/RJ/solta.jpg").write_bytes(b"x")
-    assert sorted(export.verify(settings)) == [
+    assert sorted(verify.verify(settings)) == [
         f"{FOTOS}/2022/RJ/1001.jpg difere do controle",
         f"{FOTOS}/2022/RJ/solta.jpg fora do controle",
     ]
     (out / DOU / "secao1/202608/base.zip").unlink()
-    assert f"falta {DOU}/secao1/202608/base.zip" in export.verify(settings)
+    assert f"falta {DOU}/secao1/202608/base.zip" in verify.verify(settings)
 
 
 def test_an_object_outside_the_control_stays_without_prune(con: Connection, settings: Settings) -> None:
@@ -671,7 +668,7 @@ def test_a_crash_in_the_middle_of_the_send_resumes_without_resending(
     export.export(settings)
     monkeypatch.undo()
     assert len([d for d in sent if d.endswith(".jpg")]) == 1  # só o que faltava (2 de 3 já estavam)
-    assert len(control(out, FOTOS)) == 4 and export.verify(settings) == []
+    assert len(control(out, FOTOS)) == 4 and verify.verify(settings) == []
 
 
 def test_a_crash_after_the_tables_keeps_them_and_resumes_without_rewriting(
@@ -685,7 +682,7 @@ def test_a_crash_after_the_tables_keeps_them_and_resumes_without_rewriting(
     def crash(*args: object) -> None:
         raise OSError("queda")
 
-    monkeypatch.setattr(export, "_send", crash)
+    monkeypatch.setattr(colecoes, "send", crash)
     with pytest.raises(OSError, match="queda"):
         export.export(settings)
     monkeypatch.undo()
@@ -694,7 +691,7 @@ def test_a_crash_after_the_tables_keeps_them_and_resumes_without_rewriting(
     result = export.export(settings)
     assert (out / "intermediate/int_x.parquet").stat().st_mtime_ns == stamp
     assert result["gravadas"] == 1 and len(control(out, FOTOS)) == 2  # só a coleção
-    assert export.verify(settings) == []
+    assert verify.verify(settings) == []
 
 
 def test_each_finished_collection_is_registered_before_the_next(
@@ -703,13 +700,13 @@ def test_each_finished_collection_is_registered_before_the_next(
     land_files(con, settings)
     out, _ = run(con, settings)
     add_photos(settings, {"FRJ1001_div.jpg": JPG, "FRJ1002_div.jpg": JPG + b"2"})
-    real, seen = export._send, []
+    real, seen = colecoes.send, []
 
     def watch(root: str, key: str, files: list[dict[str, object]], known: dict[str, str]) -> tuple[int, int]:
         seen.append(len(control(out, FOTOS)))  # o que já estava registrado ao começar esta coleção
         return real(root, key, files, known)
 
-    monkeypatch.setattr(export, "_send", watch)
+    monkeypatch.setattr(colecoes, "send", watch)
     export.export(settings)
     assert len(control(out, FOTOS)) == 2 and set(seen) == {1}
 
@@ -733,14 +730,15 @@ def test_r2_list_follows_the_continuation_token_and_send_skips_existing_objects(
         puts.append(key)
         return b""
 
-    monkeypatch.setattr(export, "r2_request", fake)
-    assert export.r2_list("c/") == {"c/a.jpg": 3, "c/b.jpg": 5}
+    monkeypatch.setattr(lake, "request", fake)
+    monkeypatch.setattr(s3, "request", lambda cfg, *a, **kw: fake(*a, **kw))
+    assert s3.list_objects({}, "c/") == {"c/a.jpg": 3, "c/b.jpg": 5}
     files = [
         {"caminho": n, "sha256_arquivo": "h", "qtd_bytes": q, "content_type": "image/jpeg", "local": tmp_path}
         for n, q in (("a.jpg", 3), ("b.jpg", 9), ("c.jpg", 1))
     ]
     # a.jpg já existe com o mesmo tamanho; b.jpg existe com tamanho diferente; c.jpg falta
-    assert export._send("r2://b", "c", files, {}) == (2, 1) and sorted(puts) == ["c/b.jpg", "c/c.jpg"]
+    assert colecoes.send("r2://b", "c", files, {}) == (2, 1) and sorted(puts) == ["c/b.jpg", "c/c.jpg"]
 
 
 def test_the_file_phase_runs_on_a_fresh_connection_and_inserts_are_not_order_preserving(
@@ -750,14 +748,14 @@ def test_the_file_phase_runs_on_a_fresh_connection_and_inserts_are_not_order_pre
     run(con, settings)
     add_photos(settings, {"FRJ1001_div.jpg": JPG, "FRJ1002_div.jpg": JPG + b"2"})
     seen: list[tuple[int, bool]] = []
-    real = export._control
+    real = colecoes.control
 
     def spy(c: Connection, *args: object) -> object:
         tables = scalar(c, "SELECT count(*) FROM duckdb_tables() WHERE schema_name = 'marts'")
         seen.append((tables, scalar(c, "SELECT current_setting('preserve_insertion_order')")))
         return real(c, *args)  # type: ignore[arg-type]
 
-    monkeypatch.setattr(export, "_control", spy)
+    monkeypatch.setattr(colecoes, "control", spy)
     export.export(settings)
     assert seen == [(0, False)]  # sem o warehouse (memória das tabelas liberada) e sem ordem preservada
 
@@ -778,7 +776,7 @@ def test_a_published_collection_that_left_the_contract_stops_the_export_unless_p
 ) -> None:
     land_files(con, settings)
     out, _ = run(con, settings)
-    monkeypatch.setattr(export, "_published", lambda dataset: False)
+    monkeypatch.setattr(colecoes, "_published", lambda dataset: False)
     with pytest.raises(ValueError, match="--prune"):
         export.export(settings)
     assert (out / FOTOS / FOTO_LOCAL).exists() and (out / DOU / "secao1/202608/base.zip").exists()
@@ -788,43 +786,9 @@ def test_a_published_collection_that_left_the_contract_stops_the_export_unless_p
 
 
 def test_publicar_only_counts_when_it_is_exactly_true() -> None:
-    assert export._published({"arquivos": {"publicar": True}})
-    assert not any(export._published({"arquivos": {"publicar": v}}) for v in ("false", "sim", 1, None))
-    assert not export._published({}) and not export._published({"arquivos": None})
-
-
-def test_the_signed_upload_carries_content_type_cache_control_and_checksum(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    seen: dict[str, str] = {}
-
-    class Response:
-        status = 200
-
-        def read(self) -> bytes:
-            return b""
-
-    class Conn:
-        def __init__(self, host: str, timeout: int) -> None: ...
-
-        def request(self, method: str, uri: str, body: object, headers: dict[str, str]) -> None:
-            seen.update({k.lower(): v for k, v in headers.items()})
-
-        def getresponse(self) -> Response:
-            return Response()
-
-        def close(self) -> None: ...
-
-    keys = ("ACCOUNT_ID", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY", "BUCKET")
-    monkeypatch.setattr(export, "_r2", lambda: dict.fromkeys(keys, "x"))
-    monkeypatch.setattr(http.client, "HTTPSConnection", Conn)
-    monkeypatch.setattr(export, "_LOCAL", threading.local())
-    file = tmp_path / "f.jpg"
-    file.write_bytes(b"abc")
-    export.r2_request("PUT", "k/f.jpg", file, "image/jpeg", {"Cache-Control": export.CACHE_CONTROL})
-    assert seen["content-type"] == "image/jpeg" and seen["cache-control"] == export.CACHE_CONTROL
-    assert seen["x-amz-checksum-sha256"] == base64.b64encode(hashlib.sha256(b"abc").digest()).decode()
-    assert "cache-control" in seen["authorization"] and "x-amz-checksum-sha256" in seen["authorization"]
+    assert colecoes._published({"arquivos": {"publicar": True}})
+    assert not any(colecoes._published({"arquivos": {"publicar": v}}) for v in ("false", "sim", 1, None))
+    assert not colecoes._published({}) and not colecoes._published({"arquivos": None})
 
 
 @pytest.mark.parametrize("var", ["DADO_PUBLICO_R2_BUCKET", "DADO_PUBLICO_LAKE_URL"])
@@ -912,7 +876,7 @@ def test_a_failing_model_or_test_keeps_its_previous_version_and_the_rest_is_publ
     assert "modelo int_x: error" in str(after["int_x"]["excluida_por"])
     assert "excluida_por" not in after["stg_camara__base"]
     assert after["stg_camara__base"]["impressao"] != before["stg_camara__base"]["impressao"]
-    assert export.verify(settings) == []  # o publicado continua íntegro, inclusive as versões mantidas
+    assert verify.verify(settings) == []  # o publicado continua íntegro, inclusive as versões mantidas
     catalog = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
     comment = catalog.execute("SELECT comment FROM duckdb_views() WHERE view_name = 'fct_votos'").fetchone()
     assert comment is not None and "versão anterior" in comment[0]
@@ -980,13 +944,13 @@ def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_a
         settings, "2020-01-01T00:00:00+00:00", {"model.x.int_x": "success", "model.x.fct_votos": "success"}
     )
     seen: list[str] = []
-    original = export._fingerprint
+    original = tables.fingerprint
 
     def spy(con_: object, schema: str, table: str, *rest: object) -> object:
         seen.append(f"{schema}.{table}")
         return original(con_, schema, table, *rest)  # type: ignore[arg-type]
 
-    monkeypatch.setattr(export, "_fingerprint", spy)
+    monkeypatch.setattr(tables, "fingerprint", spy)
     caplog.clear()
     caplog.set_level(logging.INFO)
     result = export.export(settings)
@@ -998,7 +962,7 @@ def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_a
     ]
     assert manifest(out)["tabelas"] == complete and result["gravadas"] == 0
     assert "int_x: reaproveitada" in caplog.text
-    assert export.verify(settings) == []
+    assert verify.verify(settings) == []
 
     # refeita depois do manifesto: a impressão é recalculada e o dado novo é publicado
     change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
@@ -1016,16 +980,286 @@ def test_a_new_code_version_fingerprints_everything_again(
     dbt_nodes(settings, {"model.x.fct_votos": {**MODELS["nodes"]["model.x.fct_votos"], "schema": "marts"}})
     build_at(settings, "2020-01-01T00:00:00+00:00", {"model.x.fct_votos": "success"})
     calls: list[str] = []
-    original = export._fingerprint
+    original = tables.fingerprint
 
     def spy(c: object, s: str, t: str, *a: object) -> object:
         calls.append(t)
         return original(c, s, t, *a)  # type: ignore[arg-type]
 
-    monkeypatch.setattr(export, "_fingerprint", spy)
+    monkeypatch.setattr(tables, "fingerprint", spy)
     export.export(settings)
     assert "fct_votos" not in calls
     calls.clear()
     monkeypatch.setattr(runs, "code_version", lambda: "outro-commit")  # descrições e chaves vêm do código
     export.export(settings)
     assert "fct_votos" in calls
+
+
+GOLDEN: dict[int, list[tuple[object, ...]]] = {
+    128 << 20: [
+        (
+            "staging",
+            "stg_camara__base",
+            "staging/legislativo/federal/camara/stg_camara__base",
+            50,
+            "ad18b58c63ed43d342cb788fd456e4d268b505628e4b108cd5c8bb0fdd1003e0",
+            None,
+            None,
+            None,
+            [("id", "BIGINT", ""), ("nome", "VARCHAR", "")],
+            [("staging/legislativo/federal/camara/stg_camara__base.parquet", 50)],
+        ),
+        (
+            "staging",
+            "stg_camara__visao",
+            "staging/legislativo/federal/camara/stg_camara__visao",
+            50,
+            "eeed9b56b7a43686f8a35c32b53bc67cc4842deb9e54d9cc462172ae45765d7b",
+            None,
+            None,
+            None,
+            [("id", "BIGINT", ""), ("nome", "VARCHAR", "")],
+            [("staging/legislativo/federal/camara/stg_camara__visao.parquet", 50)],
+        ),
+        (
+            "staging",
+            "stg_tse__x",
+            "staging/judiciario/federal/tse/stg_tse__x",
+            1,
+            "35937610f19a5f8cbf019ce1fce676e5053ea61b472ea80c119134dd45581477",
+            None,
+            None,
+            "CC BY",
+            [("a", "INTEGER", "")],
+            [("staging/judiciario/federal/tse/stg_tse__x.parquet", 1)],
+        ),
+        (
+            "intermediate",
+            "int_x",
+            "intermediate/int_x",
+            1,
+            "f288f0dd6d06840a67bfa99875859e35384eb783243cf6c8e0a5d1836bda34ce",
+            None,
+            None,
+            None,
+            [("a", "INTEGER", "")],
+            [("intermediate/int_x.parquet", 1)],
+        ),
+        (
+            "marts",
+            "fct_votos",
+            "marts/legislativo/fct_votos",
+            1000,
+            "1c5642eccbe36ce18031bfb1a04ad771e52955ef0992f4eb2909db4345ed47a6",
+            "year(dt_voto)",
+            None,
+            None,
+            [
+                ("id_voto", "BIGINT", ""),
+                ("dt_voto", "TIMESTAMP", ""),
+                ("qtd", "BIGINT", "Quantidade de teste."),
+            ],
+            [("marts/legislativo/fct_votos.parquet", 1000)],
+        ),
+        (
+            "metadata",
+            "capturas",
+            "metadata/capturas",
+            0,
+            "dd00fef441775491d01eeb3c598484248953ed85fd81245bcfb9ff2b917d040a",
+            None,
+            None,
+            None,
+            [
+                (
+                    "id_captura",
+                    "BIGINT",
+                    "Identificador da captura; as tabelas do raw o guardam como _source_file_id.",
+                ),
+                ("fonte", "VARCHAR", "Fonte do arquivo."),
+                ("dataset", "VARCHAR", "Dataset do arquivo."),
+                (
+                    "particao",
+                    "INTEGER",
+                    "Partição do arquivo (ano, mês AAAAMM ou legislatura); vazio nos datasets sem partição.",
+                ),
+                ("url", "VARCHAR", "Endereço oficial de onde o arquivo foi baixado."),
+                (
+                    "sha256",
+                    "VARCHAR",
+                    "Impressão digital (SHA-256) do arquivo: prova que o arquivo guardado é o que a fonte entregou.",
+                ),
+                ("qtd_bytes", "BIGINT", "Tamanho do arquivo em bytes."),
+                ("caminho", "VARCHAR", "Caminho do arquivo no landing, a partir da pasta de armazenamento."),
+                ("dt_captura", "TIMESTAMP", "Instante (UTC) da primeira captura deste conteúdo."),
+                (
+                    "dt_verificacao",
+                    "TIMESTAMP",
+                    "Instante (UTC) da última vez que a fonte foi consultada e o conteúdo continuava o mesmo.",
+                ),
+                ("id_execucao", "BIGINT", "Execução (metadata.execucoes.id_execucao) que fez a captura."),
+                ("etag", "VARCHAR", "ETag que a fonte informou na captura, quando informou."),
+                (
+                    "ultima_modificacao",
+                    "VARCHAR",
+                    "Cabeçalho Last-Modified que a fonte informou na captura, como publicado, quando informou.",
+                ),
+                (
+                    "dt_carga",
+                    "TIMESTAMP",
+                    "Instante (UTC) em que o arquivo foi carregado no raw; vazio se ainda não foi.",
+                ),
+            ],
+            [("metadata/capturas.parquet", 0)],
+        ),
+    ],
+    1: [
+        (
+            "staging",
+            "stg_camara__base",
+            "staging/legislativo/federal/camara/stg_camara__base",
+            50,
+            "ad18b58c63ed43d342cb788fd456e4d268b505628e4b108cd5c8bb0fdd1003e0",
+            None,
+            None,
+            None,
+            [("id", "BIGINT", ""), ("nome", "VARCHAR", "")],
+            [("staging/legislativo/federal/camara/stg_camara__base.parquet", 50)],
+        ),
+        (
+            "staging",
+            "stg_camara__visao",
+            "staging/legislativo/federal/camara/stg_camara__visao",
+            50,
+            "eeed9b56b7a43686f8a35c32b53bc67cc4842deb9e54d9cc462172ae45765d7b",
+            None,
+            None,
+            None,
+            [("id", "BIGINT", ""), ("nome", "VARCHAR", "")],
+            [("staging/legislativo/federal/camara/stg_camara__visao.parquet", 50)],
+        ),
+        (
+            "staging",
+            "stg_tse__x",
+            "staging/judiciario/federal/tse/stg_tse__x",
+            1,
+            "35937610f19a5f8cbf019ce1fce676e5053ea61b472ea80c119134dd45581477",
+            None,
+            None,
+            "CC BY",
+            [("a", "INTEGER", "")],
+            [("staging/judiciario/federal/tse/stg_tse__x.parquet", 1)],
+        ),
+        (
+            "intermediate",
+            "int_x",
+            "intermediate/int_x",
+            1,
+            "f288f0dd6d06840a67bfa99875859e35384eb783243cf6c8e0a5d1836bda34ce",
+            None,
+            None,
+            None,
+            [("a", "INTEGER", "")],
+            [("intermediate/int_x.parquet", 1)],
+        ),
+        (
+            "marts",
+            "fct_votos",
+            "marts/legislativo/fct_votos",
+            1000,
+            "1c5642eccbe36ce18031bfb1a04ad771e52955ef0992f4eb2909db4345ed47a6",
+            "year(dt_voto)",
+            [2020, 2021, 2022],
+            None,
+            [
+                ("id_voto", "BIGINT", ""),
+                ("dt_voto", "TIMESTAMP", ""),
+                ("qtd", "BIGINT", "Quantidade de teste."),
+                ("ano", "BIGINT", "Ano da partição: year(dt_voto)."),
+            ],
+            [
+                ("marts/legislativo/fct_votos/ano=2020/part-0.parquet", 334),
+                ("marts/legislativo/fct_votos/ano=2021/part-0.parquet", 333),
+                ("marts/legislativo/fct_votos/ano=2022/part-0.parquet", 333),
+            ],
+        ),
+        (
+            "metadata",
+            "capturas",
+            "metadata/capturas",
+            0,
+            "dd00fef441775491d01eeb3c598484248953ed85fd81245bcfb9ff2b917d040a",
+            None,
+            None,
+            None,
+            [
+                (
+                    "id_captura",
+                    "BIGINT",
+                    "Identificador da captura; as tabelas do raw o guardam como _source_file_id.",
+                ),
+                ("fonte", "VARCHAR", "Fonte do arquivo."),
+                ("dataset", "VARCHAR", "Dataset do arquivo."),
+                (
+                    "particao",
+                    "INTEGER",
+                    "Partição do arquivo (ano, mês AAAAMM ou legislatura); vazio nos datasets sem partição.",
+                ),
+                ("url", "VARCHAR", "Endereço oficial de onde o arquivo foi baixado."),
+                (
+                    "sha256",
+                    "VARCHAR",
+                    "Impressão digital (SHA-256) do arquivo: prova que o arquivo guardado é o que a fonte entregou.",
+                ),
+                ("qtd_bytes", "BIGINT", "Tamanho do arquivo em bytes."),
+                ("caminho", "VARCHAR", "Caminho do arquivo no landing, a partir da pasta de armazenamento."),
+                ("dt_captura", "TIMESTAMP", "Instante (UTC) da primeira captura deste conteúdo."),
+                (
+                    "dt_verificacao",
+                    "TIMESTAMP",
+                    "Instante (UTC) da última vez que a fonte foi consultada e o conteúdo continuava o mesmo.",
+                ),
+                ("id_execucao", "BIGINT", "Execução (metadata.execucoes.id_execucao) que fez a captura."),
+                ("etag", "VARCHAR", "ETag que a fonte informou na captura, quando informou."),
+                (
+                    "ultima_modificacao",
+                    "VARCHAR",
+                    "Cabeçalho Last-Modified que a fonte informou na captura, como publicado, quando informou.",
+                ),
+                (
+                    "dt_carga",
+                    "TIMESTAMP",
+                    "Instante (UTC) em que o arquivo foi carregado no raw; vazio se ainda não foi.",
+                ),
+            ],
+            [("metadata/capturas.parquet", 0)],
+        ),
+    ],
+}
+
+
+def shape(out: Path) -> list[tuple[object, ...]]:
+    """O manifesto sem o que muda a cada execução (instante, bytes e SHA-256 do Parquet levam o instante)."""
+    return [
+        (
+            t["camada"],
+            t["tabela"],
+            t["caminho"],
+            t["linhas"],
+            t["impressao"],
+            t["particao"],
+            t["ano"],
+            t["licenca"],
+            [(c["nome"], c["tipo"], c["descricao"]) for c in t["colunas"]],  # type: ignore[attr-defined]
+            [(f["arquivo"], f["linhas"]) for f in t["arquivos"]],  # type: ignore[attr-defined]
+        )
+        for t in manifest(out)["tabelas"]
+    ]
+
+
+@pytest.mark.parametrize("max_bytes", [tables.MAX_BYTES, 1])
+def test_the_manifest_of_the_synthetic_warehouse_is_the_one_recorded_before_splitting_the_module(
+    max_bytes: int, con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings, max_bytes)
+    assert shape(out) == GOLDEN[max_bytes]

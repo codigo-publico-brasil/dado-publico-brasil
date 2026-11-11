@@ -5,7 +5,7 @@ import re
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, rows
 from dado_publico_brasil.ingestion import contract as contracts
-from dado_publico_brasil.transformation import catalog, export
+from dado_publico_brasil.transformation import catalog, colecoes
 
 CONVENTION = "docs/03-consultar/02-convencao-de-nomes.md"
 OWN_LAYERS = ("staging", "intermediate", "marts", "identity", "metadata")
@@ -135,11 +135,13 @@ def test_file_collections_follow_the_convention() -> None:
             if dataset.arquivos:
                 name = f"arq_{dataset.arquivos.colecao}"
                 wrong += [f"{name}: conectivo"] if CONNECTIVES & set(name.split("_")) else []
-    for name, kind, description in export.CONTROL_COLUMNS:
+    for name, kind, description in colecoes.CONTROL_COLUMNS:
         if kind.startswith(("DATE", "TIMESTAMP")) != name.startswith("dt_") or (
             kind == "BOOLEAN"
         ) != name.startswith("fl_"):
             wrong.append(f"{name} ({kind}): prefixo")
         if not description:
             wrong.append(f"{name}: sem descrição")
-    assert export.CONTROL_DESCRIPTION % "x" and wrong == [], f"arq_ fora da convenção ({CONVENTION}): {wrong}"
+    assert colecoes.CONTROL_DESCRIPTION % "x" and wrong == [], (
+        f"arq_ fora da convenção ({CONVENTION}): {wrong}"
+    )
