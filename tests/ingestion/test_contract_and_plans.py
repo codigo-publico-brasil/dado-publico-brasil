@@ -230,15 +230,15 @@ def test_raw_schema_carries_the_level_and_the_source(tmp_path: Path) -> None:
         ("{collection: x, path: '{name}', member: 'a'}", "archive: zip"),
     ],
 )
-def test_contract_with_a_bad_arquivos_block_is_refused(tmp_path: Path, block: str, message: str) -> None:
-    text = TEMPLATE.format(extra="") + f"    arquivos: {block}" + chr(10)
+def test_contract_with_a_bad_files_block_is_refused(tmp_path: Path, block: str, message: str) -> None:
+    text = TEMPLATE.format(extra="") + f"    files: {block}" + chr(10)
     with pytest.raises(InvalidContract, match=message):
         contract_from(tmp_path, text=text)
 
 
-def test_arquivos_block_is_read_and_the_member_groups_become_path_fields(tmp_path: Path) -> None:
+def test_files_block_is_read_and_the_member_groups_become_path_fields(tmp_path: Path) -> None:
     block = "{collection: x, path: '{partition}/{uf}/{name}', member: '^(?P<uf>[A-Z]{2})', publish: true}"
-    text = TEMPLATE.format(extra="") + f"    archive: zip\n    arquivos: {block}" + chr(10)
+    text = TEMPLATE.format(extra="") + f"    archive: zip\n    files: {block}" + chr(10)
     spec = contract_from(tmp_path, text=text).datasets["pessoas"].files
     assert spec is not None and spec.publish and spec.collection == "x"
     published = {
