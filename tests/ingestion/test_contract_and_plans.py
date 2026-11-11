@@ -245,3 +245,33 @@ def test_on_demand_must_be_a_boolean(tmp_path: Path) -> None:
         contract_from(tmp_path, text=text("sim"))
     assert contract_from(tmp_path, text=text("true")).datasets["pessoas"].on_demand
     assert not contract_from(tmp_path).datasets["pessoas"].on_demand
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "typo", "where"),
+    [
+        ("schedule", "shedule", "shedule", "a fonte"),
+        ("access:", "acess:", "acess", "a fonte"),
+        ("primary_key:", "primay_key:", "primay_key", "dataset"),
+        ("encoding: utf-8}", "encoding: utf-8, delimeter: ';'}", "delimeter", "access"),
+    ],
+)
+def test_an_unknown_key_is_refused_naming_the_key_and_the_file(
+    tmp_path: Path, old: str, new: str, typo: str, where: str
+) -> None:
+    text = TEMPLATE.format(extra="").replace(
+        "level: municipal", "level: municipal" + chr(10) + "schedule: '0 6 * * *'"
+    )
+    with pytest.raises(InvalidContract, match=f"contract.yml.*{where}.*{typo}"):
+        contract_from(tmp_path, text=text.replace(old, new, 1))
+
+
+def test_an_unknown_foreach_key_is_refused(tmp_path: Path) -> None:
+    text = TEMPLATE.format(extra="") + "    foreach: {from: a, item: b, wher: 'true'}" + chr(10)
+    with pytest.raises(InvalidContract, match="wher"):
+        contract_from(tmp_path, text=text)
+
+
+def test_licenca_is_optional_text() -> None:
+    assert contracts.find("tse").licenca == "CC BY"
+    assert contracts.find("camara").licenca is None  # a doc de fontes não registra licença formal

@@ -1,6 +1,6 @@
 # ADR 0031: pessoas de todo eleito, ancoradas na candidatura
 
-- **Status:** proposto (2026-10-27); fase F3 do [ADR 0030](0030-modelo-de-dados-pessoa-no-centro.md), aprovada pelo fundador na conversa de 27/10/2026
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-10-27); fase F3 do [ADR 0030](0030-modelo-de-dados-pessoa-no-centro.md), aprovada pelo fundador na conversa de 27/10/2026)
 - **Data:** 2026-10-27
 - **Altera:** [ADR 0004](0004-camadas-da-plataforma-de-dados.md) e [0013](0013-tse-ligacao-por-nome-civil-e-nascimento.md): a identidade deixa de criar pessoa só pelo identificador da Câmara e do Senado. A regra de ligação (nome civil e nascimento únicos, ADRs [0025](0025-historico-do-eleito-ligacao-entre-eleicoes-do-tse.md) e [0026](0026-segunda-chave-nome-de-urna-e-nascimento.md)) continua valendo.
 

@@ -70,11 +70,10 @@ Toda linha aponta para a captura de origem (`id_captura`), e toda captura aponta
 | --- | --- |
 | Nenhum segredo, chave ou dado pessoal no repositório (`gitleaks` na esteira) | ativo |
 | Dados fora do git (`data_store/` ignorado) | ativo |
-| A aplicação abre o warehouse só para leitura e lê só os marts; não importa o código da camada de dados | ativo e testado |
 | O Dagster escuta só em `127.0.0.1`; a interface não tem login e não deve ser exposta sem autenticação na frente | ativo |
-| Texto exibido sempre escapado contra injeção de HTML | ativo, com teste |
-| Poucas dependências (a camada de dados usa só a biblioteca padrão do Python) | ativo |
-| Permissão por esquema no banco (o papel `leitor` só lê `marts`, criado pela infraestrutura; TLS obrigatório fora do banco local, issue 37) | ativo no compose; o banco de produção ainda não existe (issue 30) |
+| Poucas dependências: o núcleo usa só `pyyaml` e `duckdb`; dlt, dbt e Dagster ficam em extras opcionais (`pyproject.toml`) | ativo |
+| Sem banco de serviço: o dado público é o Parquet do lake, de leitura anônima e só dos marts, staging e intermediate; não há papel nem credencial de leitura ([ADR 0055](../05-decisoes/0055-lake-como-unica-publicacao.md)) | ativo |
+| Escrita no lake e no bucket privado só com token da máquina de produção; bucket privado sem domínio nem `r2.dev` ([ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)) | ativo |
 | Download com identificação (`User-Agent`) e sem credencial | ativo; sem limite de taxa conhecido, ver [fontes](../03-consultar/03-fontes-de-dados.md) |
 
 > **Conceito: privilégio mínimo.** Cada componente recebe só o acesso de que precisa. A aplicação não precisa ler o raw nem escrever em nada; por isso não terá permissão para isso.
@@ -104,4 +103,4 @@ Ementas às vezes são difíceis de entender. Um resumo em linguagem simples ger
 | Qualidade | testes de erro e de medida | contrato com respostas gravadas; amostra contra páginas oficiais |
 | Frescor | medido por captura, agendado por fonte no Dagster, com alerta por e-mail de execução que falha | e-mail para captura velha (issue 26) |
 | Linhagem | completa até o arquivo do landing e, nos datasets por item, até a resposta de cada item (`verify` confere) | exibir a linhagem na página |
-| Segurança | leitura somente, segredos varridos, papel `leitor` | banco de produção com TLS e um papel por aplicação (issues 30 e 37) |
+| Segurança | segredos varridos, lake de leitura anônima, escrita só com token do servidor | login para a interface do Dagster; canal do titular e revisão jurídica (issue 38) |

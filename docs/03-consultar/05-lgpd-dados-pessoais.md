@@ -39,12 +39,12 @@ Princípios que o projeto já cumpre: finalidade, adequação, necessidade (só 
 
 ## Direitos dos titulares e canal
 
-A LGPD dá ao titular acesso, correção, anonimização, eliminação e oposição. **O canal ainda não existe**: precisa ser decidido (por exemplo, uma caixa de e-mail do projeto ou um formulário no site) e divulgado no portal. Até lá, o pedido entra como issue sem dado pessoal no corpo, e a resposta é registrada.
+A LGPD dá ao titular acesso, correção, anonimização, eliminação e oposição. O canal é o relato privado do GitHub (aba **Security** do repositório), descrito em [`SECURITY.md`](../../SECURITY.md); o pedido não deve trazer o dado pessoal, só onde ele está. Ainda não há e-mail nem formulário, e falta divulgá-lo no site. A resposta é registrada.
 
 ## Decisões pendentes
 
-1. Revisão jurídica das bases acima.
-2. Canal de pedidos de titulares.
-3. Se `dim_pessoas` (322.749 pessoas em 30/10/2026, a maioria vereadores) entra na publicação e com quais campos (data de nascimento completa ou só o ano).
+1. Revisão jurídica das bases acima (fundador, issue 38).
+2. Canal de pedidos de titulares: decidido que é o relato privado da aba Security do repositório, sem enviar o dado pessoal ([`SECURITY.md`](../../SECURITY.md)); falta divulgá-lo no site.
+3. Decidido pelo fundador em 11/11/2026: `dim_pessoas` fica com a data de nascimento completa, e o dado pessoal que a fonte publica vem como está ([ADR 0050](../05-decisoes/0050-dado-pessoal-publicado-pela-fonte-vem-como-esta.md), proposto). Falta decidir se a máscara de conta bancária do staging do TSE sai, por coerência.
 4. Se o arquivo de filiados do TSE algum dia entra (o ADR 0032 diz que não, por ora).
 5. Retenção de pessoa que foi eleita e teve o resultado anulado.

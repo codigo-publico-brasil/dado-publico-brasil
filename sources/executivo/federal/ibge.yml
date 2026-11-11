@@ -7,6 +7,7 @@ source: ibge
 power: executivo
 level: federal
 description: IBGE, API de localidades (municípios)
+licenca: "Política de dados abertos do Poder Executivo federal (Decreto 8.777/2016)"
 
 schedule: "10 2 1 * *"  # mensal, dia 1, noturna (cron, fuso America/Sao_Paulo; ADR 0042): a lista muda pouco e o arquivo só é baixado se mudou
 

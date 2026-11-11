@@ -82,9 +82,10 @@ def check_freshness(settings: Settings) -> None:
 
 
 def resolve_identity(settings: Settings) -> int:
-    """Cria as pessoas novas e guarda a cópia imutável da identidade. Devolve quantas foram criadas."""
+    """Cria as pessoas novas, com a cópia da identidade antes e depois. Devolve quantas foram criadas."""
     con = warehouse.connect(settings)
     try:
+        snapshot.take(con, settings)  # o ponto de volta, caso a resolução (ou o que a segue) dê errado
         created = identity.resolve(con)[1]
         snapshot.take(con, settings)
         return created

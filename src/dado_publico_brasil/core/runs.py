@@ -8,14 +8,22 @@ import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from functools import cache
+from zoneinfo import ZoneInfo
 
 from dado_publico_brasil.core.warehouse import Connection
+
+TIMEZONE = "America/Sao_Paulo"  # fuso do "dia" (agendamentos e partição em curso); os carimbos ficam em UTC
 
 
 def now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def today() -> date:
+    """O dia de hoje no fuso do projeto (não em UTC: entre 21h e meia-noite o dia UTC já é o seguinte)."""
+    return datetime.now(ZoneInfo(TIMEZONE)).date()
 
 
 @cache

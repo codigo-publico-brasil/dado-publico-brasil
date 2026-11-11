@@ -1,6 +1,6 @@
 # ADR 0043: Raw carregado em Parquet, substituição por partição e logs no Dagster
 
-- **Status:** proposto (2026-11-04), para revisão do fundador
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-04), para revisão do fundador)
 - **Data:** 2026-11-04
 - **Altera:** o [ADR 0011](0011-buscar-ler-custom-e-chave-por-fonte.md) (a chave por fonte ganha a escrita `replace_partition`), o [ADR 0012](0012-dataset-por-item-lotes-com-envelope.md) (nada muda nos datasets por item, que seguem em `merge`) e o [ADR 0024](0024-regras-de-extracao-por-fonte.md) (a carga diária de arquivo anual completo deixa de somar versões). Complementa o [ADR 0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) (o que se vê da captura e do ciclo na aba Runs). Relacionado: issues 154 (Parquet) e 155 (versões somadas).
 - **Dependência nova:** `pyarrow` (extra `dlt[duckdb,parquet]`), que este ADR autoriza.

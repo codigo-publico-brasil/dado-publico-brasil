@@ -1,6 +1,6 @@
 # ADR 0037: Arquivos no lake público, com prefixo `arq_` e tabela de controle
 
-- **Status:** proposto (2026-11-03); aprovado pelo fundador
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-03); aprovado pelo fundador)
 - **Data:** 2026-11-03
 - **Altera:** [ADR 0035](0035-lakehouse-publico-no-r2.md) (item 7: o landing deixa de ser "nunca público") e [ADR 0036](0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md) (as fotos passam do disco local ao R2).
 

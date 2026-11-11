@@ -383,6 +383,13 @@ def test_a_changed_description_rewrites_the_table(con: Connection, settings: Set
     assert json.loads(meta["descricoes_colunas"])["qtd"] == "Outra descrição."
 
 
+def test_the_manifest_carries_the_licence_declared_by_the_source(con: Connection, settings: Settings) -> None:
+    out, _ = run(con, settings)
+    found = {t["tabela"]: t["licenca"] for t in manifest(out)["tabelas"]}
+    assert found["stg_tse__x"] == "CC BY"
+    assert found["stg_camara__base"] is None and found["fct_votos"] is None  # sem licença registrada / mart
+
+
 def test_huge_descriptions_are_cut_with_a_warning(con: Connection, settings: Settings) -> None:
     build(con, settings)
     con.execute(f"COMMENT ON COLUMN marts.fct_votos.qtd IS '{'x' * (export.MAX_KV_BYTES + 10)}'")

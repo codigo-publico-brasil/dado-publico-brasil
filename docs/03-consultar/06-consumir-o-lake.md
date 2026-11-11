@@ -15,7 +15,7 @@ Tudo é Parquet (ZSTD) em `https://datalake.codigopublicobrasil.com.br` (a pági
 | `staging/<poder>/<esfera>/<fonte>/arq_<coleção>/<caminho>` | **arquivos** que não são tabela (zip original do DOU, fotos dos candidatos), uma pasta `arq_` por coleção; o prefixo `arq_` distingue arquivo de tabela. A lista de cada coleção é a tabela `arq_<coleção>.parquet`, ao lado da pasta |
 | `<caminho>/ano=AAAA/part-0.parquet` | as tabelas grandes que o dbt declara com partição: uma pasta por ano no lugar do arquivo único |
 | `catalogo.duckdb` | porta de entrada: uma view por tabela, com descrições |
-| `manifesto.json` | para quem não usa DuckDB: caminho, arquivos, linhas, bytes, SHA-256, esquema, descrições, `particao`, `ano` e `camada_medalhao` |
+| `manifesto.json` | para quem não usa DuckDB: caminho, arquivos, linhas, bytes, SHA-256, esquema, descrições, `licenca` (da fonte, só no staging), `particao`, `ano` e `camada_medalhao` |
 
 **Equivalência com o medalhão** (os nomes do projeto são os da dbt Labs; o `manifesto.json` traz `camada_medalhao` em cada tabela):
 

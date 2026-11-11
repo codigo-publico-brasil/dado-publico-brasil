@@ -9,6 +9,7 @@ source: camara                      # nome curto: prefixo dos modelos stg_camara
 power: legislativo                  # legislativo | executivo | judiciario
 level: federal                      # federal | estadual | municipal: o raw vira raw_federal_camara
 description: Câmara dos Deputados, dados abertos (arquivos em lote)
+# licenca: "CC BY"           # opcional: a licença que a fonte declara (texto curto); vai ao manifesto.json de cada tabela da fonte. Sem licença registrada na doc de fontes, omita
 schedule: "0 6 * * *"             # quando capturar (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
 
 access:
@@ -157,11 +158,14 @@ O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósi
 - **`write: replace_partition`** é para o arquivo que é a **foto completa** de uma partição (o ano de uma eleição, um mês): a captura nova entra e as linhas das capturas anteriores **da mesma URL** saem. Várias partições convivem na mesma tabela (outras URLs nunca são tocadas) e o raw espelha a versão atual; o histórico fica no landing. Não pede coluna de partição: a partição é a própria captura (`_source_file_id`), então vale para qualquer fonte e não muda o esquema. Não compara linha com linha (barato em dezenas de milhões de linhas); `primary_key: [_row_hash]` segue valendo para manter as linhas idênticas da fonte e dar chave ao dbt. Não aceita `nested`. Recarregar a mesma captura é idempotente. Em tabela que já existe não há migração: todas as linhas já levam o id da captura; na próxima captura nova de cada arquivo, as linhas antigas saem (a primeira carga depois de trocar de `merge` para `replace_partition` pode ainda ter linhas de versões que o `merge` somou: o `load --rebuild --dataset` do dataset as limpa) ([ADR 0043](../05-decisoes/0043-raw-em-parquet-substituicao-por-particao-e-logs.md)).
 - **Valores como texto, vazio como nulo.** Tipos e limpeza ficam no staging.
 - Toda linha do raw leva `_source_file_id`, o id da captura (arquivo do landing) de onde veio, e `_ingested_at`, o instante em que chegou ao raw.
+- **Chave desconhecida falha.** Um erro de digitação (`shedule`, `primay_key`) recusa o contrato, com o nome da chave e do arquivo, em vez de virar o valor padrão em silêncio. Chave nova do contrato entra nas listas de `ingestion/contract.py`.
+- **`licenca`** é a licença que a própria fonte declara, como [`03-fontes-de-dados.md`](../03-consultar/03-fontes-de-dados.md) a registra; não se inventa. O `export` a leva ao `manifesto.json` nas tabelas de staging da fonte (marts e intermediate misturam fontes e não a levam).
+- **Revisão:** um PR em `sources/` executa código: `foreach.where` é SQL rodado sobre o raw, e `${VARIAVEL}` lê o ambiente. Revise-o com o mesmo rigor de um PR em Python.
 - Erros do contrato (tipo, chave ou `load` inválidos) dizem onde está o problema.
 
 ## Receitas
 
-**Acrescentar uma coluna:** uma linha em `columns`. Na próxima carga o dlt cria a coluna (linhas antigas ficam vazias até recarregar a captura). **Atenção com a chave:** se o dataset usa `primary_key: [_row_hash]` (votação e prestação de contas do TSE), acrescentar uma coluna muda o hash de toda linha, e recarregar a captura **duplica** as linhas em vez de atualizá-las; veja as [armadilhas operacionais](04-operar-e-publicar.md#diagnóstico-sintoma-causa-e-o-que-fazer) antes de recarregar. Em dataset com chave natural a recarga só atualiza. Para usá-la, acrescente-a ao modelo de staging e, se for exibida, ao mart e ao seu `schema.yml` (o contrato do mart falha se faltar).
+**Acrescentar uma coluna:** uma linha em `columns`. Na próxima carga o dlt cria a coluna (linhas antigas ficam vazias até recarregar a captura). **Atenção com a chave:** se o dataset usa `primary_key: [_row_hash]` (votação e prestação de contas do TSE), acrescentar uma coluna muda o hash de toda linha, e recarregar a captura **duplica** as linhas em vez de atualizá-las; veja as [armadilhas operacionais](04-operar-e-publicar.md#diagnóstico-sintoma-causa-e-o-que-fazer) antes de recarregar. Em dataset com chave natural a recarga só atualiza. O `_row_hash` é o SHA-256 do JSON da lista de valores das colunas, na ordem de `columns` (o limite entre colunas e o nulo ficam no texto, então ("ab","c") e ("a","bc") não colidem); mudar essa fórmula troca o hash de toda linha e exige recarga. Para usá-la, acrescente-a ao modelo de staging e, se for exibida, ao mart e ao seu `schema.yml` (o contrato do mart falha se faltar).
 
 **Remover uma coluna:** apague de `columns` e rode `load --rebuild`; o dlt recria a tabela do landing. O `dbt build` acusa os modelos que a usavam.
 
