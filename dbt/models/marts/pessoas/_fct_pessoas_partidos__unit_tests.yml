@@ -1,0 +1,177 @@
+version: 2
+
+# Testes unitários de fct_pessoas_partidos (dados sintéticos e genéricos). Rodam com `dbt test --select test_type:unit`.
+unit_tests:
+  - name: partido_historico_da_camara_agrupa_registros_do_mesmo_partido_em_periodos_e_ignora_registro_sem_situacao
+    description: >
+      Um período é uma sequência de registros datados do mesmo partido (a sigla vale sem espaço e sem diferença de
+      caixa); trocar de partido, mesmo voltando ao anterior, abre outro período. O registro sem situação (início da
+      legislatura) e o sem partido não entram nem quebram o período. A sigla de dois partidos vale a do período mais
+      próximo do ano do registro; sigla sem mapa fica sem id_partido, e sem identificador a pessoa fica vazia. Só a
+      linha mais recente da pessoa é marcada, e quem tem período não ganha linha de início de legislatura.
+    model: fct_pessoas_partidos
+    given:
+      - input: ref('stg_camara__deputados_historico')
+        rows:
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-02-01 10:00:00", situacao: Exercício, partido_sigla: PAX, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-03-01 10:00:00", situacao: "", partido_sigla: PDX, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-04-01 10:00:00", situacao: Exercício, partido_sigla: null, id_captura: 1}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-06-01 10:00:00", situacao: Licença, partido_sigla: "Pa x", id_captura: 2}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2019-06-10 10:00:00", situacao: Licença, partido_sigla: PAX, id_captura: 2}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2020-03-01 10:00:00", situacao: Exercício, partido_sigla: PBX, id_captura: 2}
+          - {id_deputado: 10, id_legislatura: 56, dt_registro: "2021-01-01 10:00:00", situacao: Exercício, partido_sigla: PAX, id_captura: 2}
+          - {id_deputado: 11, id_legislatura: 52, dt_registro: "2003-05-01 10:00:00", situacao: Exercício, partido_sigla: PAX, id_captura: 1}
+          - {id_deputado: 12, id_legislatura: 56, dt_registro: "2019-02-01 10:00:00", situacao: Exercício, partido_sigla: PCX, id_captura: 1}
+      - input: ref('partidos_siglas')
+        rows:
+          - {id_partido: 1, sigla_na_fonte: PAX, ano_inicio: 1990, ano_fim: 2005}
+          - {id_partido: 3, sigla_na_fonte: PAX, ano_inicio: 2015, ano_fim: 2100}
+          - {id_partido: 2, sigla_na_fonte: PBX, ano_inicio: 1990, ano_fim: 2100}
+      - input: ref('int_votacoes_votos_ligados')
+        rows: []
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows:
+          - {fonte: camara, id_tipo: deputado, id_na_fonte: "10", id_pessoa: 1}
+          - {fonte: camara, id_tipo: deputado, id_na_fonte: "11", id_pessoa: 2}
+      - input: ref('stg_camara__legislaturas')
+        rows:
+          - {id_legislatura: 56, dt_inicio: "2019-02-01"}
+      - input: ref('fct_candidaturas')
+        rows: []
+      - input: ref('stg_tse__candidaturas')
+        rows: []
+      - input: ref('stg_metadata__capturas')
+        rows:
+          - {id_captura: 2, dt_captura: "2026-10-21 10:00:00"}
+    expect:
+      rows:
+        - {id_pessoa_partido: camara-10-201902011000, base: historico_de_deputados, id_pessoa: 1, id_partido: 3, partido_na_fonte: PAX, ano_referencia: 2019, dt_inicio: "2019-02-01", dt_ultimo_registro: "2019-06-10", id_candidatura: null, fl_mais_recente: false, dt_captura: "2026-10-21"}
+        - {id_pessoa_partido: camara-10-202003011000, base: historico_de_deputados, id_pessoa: 1, id_partido: 2, partido_na_fonte: PBX, ano_referencia: 2020, dt_inicio: "2020-03-01", dt_ultimo_registro: "2020-03-01", id_candidatura: null, fl_mais_recente: false, dt_captura: "2026-10-21"}
+        - {id_pessoa_partido: camara-10-202101011000, base: historico_de_deputados, id_pessoa: 1, id_partido: 3, partido_na_fonte: PAX, ano_referencia: 2021, dt_inicio: "2021-01-01", dt_ultimo_registro: "2021-01-01", id_candidatura: null, fl_mais_recente: true, dt_captura: "2026-10-21"}
+        - {id_pessoa_partido: camara-11-200305011000, base: historico_de_deputados, id_pessoa: 2, id_partido: 1, partido_na_fonte: PAX, ano_referencia: 2003, dt_inicio: "2003-05-01", dt_ultimo_registro: "2003-05-01", id_candidatura: null, fl_mais_recente: true, dt_captura: null}
+        - {id_pessoa_partido: camara-12-201902011000, base: historico_de_deputados, id_pessoa: null, id_partido: null, partido_na_fonte: PCX, ano_referencia: 2019, dt_inicio: "2019-02-01", dt_ultimo_registro: "2019-02-01", id_candidatura: null, fl_mais_recente: true, dt_captura: null}
+
+  - name: partido_no_inicio_da_legislatura_so_vale_para_quem_nao_tem_periodo_e_usa_o_ultimo_registro_sem_situacao
+    description: >
+      Para o deputado sem períodos no histórico, o partido é o do registro sem situação mais recente da legislatura, com
+      a data de início da própria legislatura (não a do registro) e sem data de último registro. Registro sem partido e
+      deputado sem identificador não geram linha; quem tem período (com situação) não ganha esta linha.
+    model: fct_pessoas_partidos
+    given:
+      - input: ref('stg_camara__deputados_historico')
+        rows:
+          - {id_deputado: 20, id_legislatura: 55, dt_registro: "2015-02-01 08:00:00", situacao: null, partido_sigla: PAX, id_captura: 1}
+          - {id_deputado: 20, id_legislatura: 55, dt_registro: "2015-03-01 08:00:00", situacao: "", partido_sigla: PBX, id_captura: 1}
+          - {id_deputado: 20, id_legislatura: 56, dt_registro: "2019-02-01 08:00:00", situacao: "", partido_sigla: null, id_captura: 1}
+          - {id_deputado: 21, id_legislatura: 55, dt_registro: "2015-02-01 08:00:00", situacao: "", partido_sigla: PAX, id_captura: 1}
+          - {id_deputado: 21, id_legislatura: 55, dt_registro: "2015-04-01 08:00:00", situacao: Exercício, partido_sigla: PAX, id_captura: 1}
+          - {id_deputado: 22, id_legislatura: 55, dt_registro: "2015-02-01 08:00:00", situacao: "", partido_sigla: PAX, id_captura: 1}
+      - input: ref('partidos_siglas')
+        rows:
+          - {id_partido: 3, sigla_na_fonte: PAX, ano_inicio: 2000, ano_fim: 2100}
+          - {id_partido: 2, sigla_na_fonte: PBX, ano_inicio: 2000, ano_fim: 2100}
+      - input: ref('int_votacoes_votos_ligados')
+        rows: []
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows:
+          - {fonte: camara, id_tipo: deputado, id_na_fonte: "20", id_pessoa: 20}
+          - {fonte: camara, id_tipo: deputado, id_na_fonte: "21", id_pessoa: 21}
+      - input: ref('stg_camara__legislaturas')
+        rows:
+          - {id_legislatura: 55, dt_inicio: "2015-02-01"}
+          - {id_legislatura: 56, dt_inicio: "2019-02-01"}
+      - input: ref('fct_candidaturas')
+        rows: []
+      - input: ref('stg_tse__candidaturas')
+        rows: []
+      - input: ref('stg_metadata__capturas')
+        rows: []
+    expect:
+      rows:
+        - {id_pessoa_partido: camara-21-201504010800, base: historico_de_deputados, id_pessoa: 21, id_partido: 3, ano_referencia: 2015}
+        - {id_pessoa_partido: camara-leg-20-55, base: inicio_da_legislatura, id_pessoa: 20, id_partido: 2, ano_referencia: 2015}
+
+  - name: partido_pelos_votos_so_vale_para_quem_nao_tem_historico_de_deputado_e_ignora_voto_sem_partido_ou_sem_data
+    description: >
+      O partido de cada voto vale para quem não tem histórico de deputado (senador, ou deputado sem histórico), agrupado
+      em períodos de partido seguido. Voto sem partido ou sem data não entra nem quebra o período. Quem tem período no
+      histórico da Câmara não ganha linha por voto.
+    model: fct_pessoas_partidos
+    given:
+      - input: ref('stg_camara__deputados_historico')
+        rows:
+          - {id_deputado: 40, id_legislatura: 56, dt_registro: "2019-02-01 10:00:00", situacao: Exercício, partido_sigla: PAX, id_captura: 1}
+      - input: ref('partidos_siglas')
+        rows:
+          - {id_partido: 3, sigla_na_fonte: PAX, ano_inicio: 2000, ano_fim: 2100}
+          - {id_partido: 2, sigla_na_fonte: PBX, ano_inicio: 2000, ano_fim: 2100}
+      - input: ref('int_votacoes_votos_ligados')
+        rows:
+          - {fonte: senado, id_pessoa: 30, partido_sigla: PAX, dt_voto: "2020-01-01 10:00:00", id_captura: 1}
+          - {fonte: senado, id_pessoa: 30, partido_sigla: null, dt_voto: "2020-02-01 10:00:00", id_captura: 1}
+          - {fonte: senado, id_pessoa: 30, partido_sigla: "P AX", dt_voto: "2020-03-01 10:00:00", id_captura: 1}
+          - {fonte: senado, id_pessoa: 30, partido_sigla: PBX, dt_voto: "2021-01-01 10:00:00", id_captura: 1}
+          - {fonte: senado, id_pessoa: 31, partido_sigla: PAX, dt_voto: null, id_captura: 1}
+          - {fonte: camara, id_pessoa: 32, partido_sigla: PBX, dt_voto: "2019-05-01 10:00:00", id_captura: 1}
+          - {fonte: camara, id_pessoa: 33, partido_sigla: PCX, dt_voto: "2019-05-01 10:00:00", id_captura: 1}
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows:
+          - {fonte: camara, id_tipo: deputado, id_na_fonte: "40", id_pessoa: 32}
+      - input: ref('stg_camara__legislaturas')
+        rows: []
+      - input: ref('fct_candidaturas')
+        rows: []
+      - input: ref('stg_tse__candidaturas')
+        rows: []
+      - input: ref('stg_metadata__capturas')
+        rows: []
+    expect:
+      rows:
+        - {id_pessoa_partido: senado-voto-30-20200101, fonte: senado, base: votos, id_pessoa: 30, id_partido: 3, partido_na_fonte: PAX, ano_referencia: 2020, dt_inicio: "2020-01-01", dt_ultimo_registro: "2020-03-01"}
+        - {id_pessoa_partido: senado-voto-30-20210101, fonte: senado, base: votos, id_pessoa: 30, id_partido: 2, partido_na_fonte: PBX, ano_referencia: 2021, dt_inicio: "2021-01-01", dt_ultimo_registro: "2021-01-01"}
+        - {id_pessoa_partido: camara-voto-33-20190501, fonte: camara, base: votos, id_pessoa: 33, id_partido: null, partido_na_fonte: PCX, ano_referencia: 2019, dt_inicio: "2019-05-01", dt_ultimo_registro: "2019-05-01"}
+        - {id_pessoa_partido: camara-40-201902011000, fonte: camara, base: historico_de_deputados, id_pessoa: 32, id_partido: 3, partido_na_fonte: PAX, ano_referencia: 2019, dt_inicio: "2019-02-01", dt_ultimo_registro: "2019-02-01"}
+
+  - name: partido_da_candidatura_vem_do_tse_uma_linha_por_candidatura_de_quem_tem_pessoa_e_a_mais_recente_desempata_pela_data
+    description: >
+      Cada candidatura de quem tem pessoa e ano de eleição vira uma linha (sem data, o partido é o da candidatura); sem
+      pessoa ou sem linha no TSE não entra, e linhas repetidas do TSE não duplicam. Na marcação da linha mais recente,
+      o ano manda, e dentro do mesmo ano a linha com data de registro vence a que não tem (a candidatura).
+    model: fct_pessoas_partidos
+    given:
+      - input: ref('stg_camara__deputados_historico')
+        rows:
+          - {id_deputado: 60, id_legislatura: 56, dt_registro: "2022-03-01 10:00:00", situacao: Exercício, partido_sigla: PAX, id_captura: 1}
+      - input: ref('partidos_siglas')
+        rows:
+          - {id_partido: 3, sigla_na_fonte: PAX, ano_inicio: 2000, ano_fim: 2100}
+      - input: ref('int_votacoes_votos_ligados')
+        rows: []
+      - input: ref('stg_identity__pessoas_identificadores')
+        rows:
+          - {fonte: camara, id_tipo: deputado, id_na_fonte: "60", id_pessoa: 51}
+      - input: ref('stg_camara__legislaturas')
+        rows: []
+      - input: ref('fct_candidaturas')
+        rows:
+          - {id_candidatura: c1, id_pessoa: 50, id_partido: 2, partido: PBX, id_captura: 1}
+          - {id_candidatura: c2, id_pessoa: 50, id_partido: 3, partido: PAX, id_captura: 1}
+          - {id_candidatura: c3, id_pessoa: null, id_partido: 3, partido: PAX, id_captura: 1}
+          - {id_candidatura: c4, id_pessoa: 52, id_partido: 3, partido: PAX, id_captura: 1}
+          - {id_candidatura: c5, id_pessoa: 51, id_partido: 2, partido: PBX, id_captura: 1}
+      - input: ref('stg_tse__candidaturas')
+        rows:
+          - {id_candidatura: c1, ano_eleicao: 2018}
+          - {id_candidatura: c1, ano_eleicao: 2018}
+          - {id_candidatura: c2, ano_eleicao: 2022}
+          - {id_candidatura: c3, ano_eleicao: 2022}
+          - {id_candidatura: c5, ano_eleicao: 2022}
+      - input: ref('stg_metadata__capturas')
+        rows:
+          - {id_captura: 1, dt_captura: "2026-10-21 10:00:00"}
+    expect:
+      rows:
+        - {id_pessoa_partido: tse-c1, fonte: tse, base: candidatura, id_pessoa: 50, id_partido: 2, partido_na_fonte: PBX, ano_referencia: 2018, dt_inicio: null, dt_ultimo_registro: null, id_candidatura: c1, fl_mais_recente: false, dt_captura: "2026-10-21"}
+        - {id_pessoa_partido: tse-c2, fonte: tse, base: candidatura, id_pessoa: 50, id_partido: 3, partido_na_fonte: PAX, ano_referencia: 2022, dt_inicio: null, dt_ultimo_registro: null, id_candidatura: c2, fl_mais_recente: true, dt_captura: "2026-10-21"}
+        - {id_pessoa_partido: tse-c5, fonte: tse, base: candidatura, id_pessoa: 51, id_partido: 2, partido_na_fonte: PBX, ano_referencia: 2022, dt_inicio: null, dt_ultimo_registro: null, id_candidatura: c5, fl_mais_recente: false, dt_captura: "2026-10-21"}
+        - {id_pessoa_partido: camara-60-202203011000, fonte: camara, base: historico_de_deputados, id_pessoa: 51, id_partido: 3, partido_na_fonte: PAX, ano_referencia: 2022, dt_inicio: "2022-03-01", dt_ultimo_registro: "2022-03-01", id_candidatura: null, fl_mais_recente: true, dt_captura: "2026-10-21"}
