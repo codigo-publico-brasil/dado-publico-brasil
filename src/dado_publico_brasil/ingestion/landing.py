@@ -146,21 +146,22 @@ def current_year() -> int:
     return runs.today().year
 
 
-def legislature_of(year: int) -> int:
-    """Número da legislatura em curso no ano (a 56ª começou em 2019; cada uma dura quatro anos)."""
-    return 56 + (year - 2019) // 4
+def sequence_of(dataset: Dataset, year: int) -> int:
+    """Valor da partição `sequence` no ano: `first_value + (ano - first_year) // years`."""
+    first_year, first_value, years = dataset.sequence  # type: ignore[misc]
+    return first_value + (year - first_year) // years
 
 
 def partitions(dataset: Dataset, years: list[int] | set[int], today: date | None = None) -> list[int]:
-    """Valores de partição de um dataset para os anos pedidos: os próprios anos ou suas legislaturas."""
+    """Valores de partição de um dataset para os anos pedidos: os anos, os meses ou a sequência."""
     first = dataset.first_year
     valid = [
         y
         for y in years
         if (first is None or y >= first) and (first is None or (y - first) % dataset.step == 0)
     ]
-    if dataset.partition == "legislature":
-        return sorted({legislature_of(y) for y in valid})
+    if dataset.partition == "sequence":
+        return sorted({sequence_of(dataset, y) for y in valid})
     if dataset.partition == "month":
         last = current_partition(dataset, today or runs.today())
         months = (y * 100 + m for y in valid for m in range(1, 13))
@@ -169,7 +170,7 @@ def partitions(dataset: Dataset, years: list[int] | set[int], today: date | None
 
 
 def current_partition(dataset: Dataset, today: date) -> int:
-    """A partição em curso: o ano, o mês (AAAAMM) ou a legislatura de hoje.
+    """A partição em curso: o ano, o mês (AAAAMM) ou o valor da sequência de hoje.
 
     Com `lag_months`, o mês em curso é o último fechado que a fonte já deveria ter publicado."""
     match dataset.partition:
@@ -178,8 +179,8 @@ def current_partition(dataset: Dataset, today: date) -> int:
             for _ in range(dataset.lag_months):
                 month = previous_month(month)
             return month
-        case "legislature":
-            return legislature_of(today.year)
+        case "sequence":
+            return sequence_of(dataset, today.year)
         case _:
             return today.year
 

@@ -137,7 +137,7 @@ def test_each_source_declares_its_schedule_and_the_plan_has_only_the_current_par
         202610,
     }  # o mês em curso e o anterior
     senate = dict(landing.plan_incremental(contracts.find("senado"), today))
-    assert senate["senadores"] == landing.legislature_of(2026) and senate["votacoes"] == 2026
+    assert senate["senadores"] == 57 and senate["votacoes"] == 2026
 
 
 def test_an_invalid_schedule_is_refused(tmp_path: Path) -> None:
@@ -168,24 +168,43 @@ def test_historical_plan_skips_years_before_the_first_year_the_source_publishes(
     assert ("votacoesOrientacoes", 2003) in items
 
 
-def test_legislature_partition_maps_years_to_legislatures_and_builds_the_url(
+def _old_legislature_of(year: int) -> int:
+    """O cálculo que o núcleo fazia antes de a sequência ir para o YAML (só aqui, como prova)."""
+    return 56 + (year - 2019) // 4
+
+
+def test_sequence_partition_gives_the_same_partitions_urls_and_paths_as_the_old_legislature(
     contract: SourceContract,
 ) -> None:
-    assert [landing.legislature_of(y) for y in (2000, 2002, 2003, 2018, 2019, 2022, 2023, 2026, 2027)] == [
-        51,
-        51,
-        52,
-        55,
-        56,
-        56,
-        57,
-        57,
-        58,
-    ]
+    years = list(range(1990, 2041))
+    for source, name in (("camara", "orgaosDeputados"), ("senado", "senadores")):
+        c = contracts.find(source)
+        d = c.datasets[name]
+        assert d.partition == "sequence" and d.sequence == (2019, 56, 4)
+        valid = [y for y in years if d.first_year is None or y >= d.first_year]
+        assert landing.partitions(d, years) == sorted({_old_legislature_of(y) for y in valid})
+        for y in range(1990, 2041):
+            assert landing.current_partition(d, date(y, 6, 1)) == _old_legislature_of(y)
+            v = _old_legislature_of(y)
+            old_url = d.url.replace("{partition}", "{legislature}").format(base_url=c.base_url, legislature=v)
+            assert c.url(name, v) == old_url
     assert contract.url("orgaosDeputados", 57).endswith("/orgaosDeputados/csv/orgaosDeputados-L57.csv")
     items = landing.plan_historical(contract, 2000, 2026)
     assert [v for n, v in items if n == "orgaosDeputados"] == [51, 52, 53, 54, 55, 56, 57]
     assert [v for n, v in landing.plan(contract, [2024]) if n == "orgaosDeputados"] == [57]
+
+
+def test_sequence_partition_needs_its_declaration_and_legislature_is_refused(tmp_path: Path) -> None:
+    base = TEMPLATE.format(extra="")
+    bad_ones = (
+        "partition: legislature",
+        "partition: sequence",
+        "partition: sequence" + chr(10) + "    sequence: {first_year: 2019}",
+    )
+    for bad in bad_ones:
+        text = base.replace("load: yearly", "load: yearly" + chr(10) + "    " + bad)
+        with pytest.raises(InvalidContract, match="partition|sequence"):
+            contract_from(tmp_path, text=text)
 
 
 def test_contract_without_a_valid_power_or_level_is_refused(tmp_path: Path) -> None:

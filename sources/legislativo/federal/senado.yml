@@ -20,10 +20,11 @@ datasets:
   senadores:
     # Um arquivo por legislatura, com os mandatos que a tocam. O mesmo senador aparece em várias; a
     # linha é identificada pelo conteúdo, e o staging fica com uma linha por senador.
-    url: "{base_url}/senador/lista/legislatura/{legislature}"
+    url: "{base_url}/senador/lista/legislatura/{partition}"
     max_age_days: 3   # avisa se a última verificação passar de 3 dias
     load: yearly
-    partition: legislature
+    partition: sequence
+    sequence: {first_year: 2019, first_value: 56, years: 4}   # legislatura federal: a 56ª começou em 2019
     first_year: 1999
     write: merge
     records: ListaParlamentarLegislatura.Parlamentares.Parlamentar

@@ -25,7 +25,7 @@ POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
 ARCHIVES = {"zip"}
-PARTITIONS = {"year", "legislature", "month"}  # month: o valor da partição é AAAAMM
+PARTITIONS = {"year", "sequence", "month"}  # month: o valor da partição é AAAAMM; sequence: ver `sequence`
 WRITES = {"merge", "replace", "replace_partition"}
 # Documentos pessoais nunca são lidos de nenhuma fonte (princípio IX da constituição do projeto).
 # Chave "linha inteira": identifica a linha pelo conteúdo, para arquivos sem chave natural.
@@ -38,7 +38,8 @@ ACCESS_KEYS = {"base_url", "format", "delimiter", "encoding", "headers", "rate_l
 DATASET_KEYS = {
     "url", "load", "write", "columns", "primary_key", "extra_years", "first_year", "partition", "records",
     "nested", "format", "headers", "foreach", "archive", "member", "raw", "arquivos", "first_month",
-    "lag_months", "step", "only", "optional", "aliases", "on_demand", "max_age_days", "rejeitadas_toleradas",
+    "lag_months", "step", "sequence", "only", "optional", "aliases", "on_demand", "max_age_days",
+    "rejeitadas_toleradas",
 }  # fmt: skip
 FOREACH_KEYS = {"from", "item", "where", "recent_by", "version", "refresh_after_days", "batch_size"}
 FORBIDDEN_COLUMNS = {"cpf", "rg", "tituloeleitor", "cnh", "passaporte"}
@@ -107,6 +108,7 @@ class Dataset:
     lag_months: int = (
         0  # (partition: month) só meses fechados: 1 = até o mês anterior (a fonte publica depois)
     )
+    sequence: tuple[int, int, int] | None = None  # (partition: sequence) (first_year, first_value, years)
     step: int = 1  # (yearly) só os anos a cada N a partir de first_year (eleições gerais: 4)
     only: dict[str, tuple[str, ...]] = field(default_factory=dict)  # minimização: só linhas com estes valores
     optional: tuple[str, ...] = ()  # colunas que só existem em anos recentes: ausentes não são erro
@@ -147,13 +149,13 @@ class SourceContract:
     def url(self, dataset: str, year: int | None = None) -> str:
         """Endereço oficial do arquivo de um dataset.
 
-        Nos particionados, `year` é o valor da partição: o ano, em `partition: legislature` o
-        número da legislatura e em `partition: month` o mês (AAAAMM); `{month}` na URL é esse valor.
+        Nos particionados, `year` é o valor da partição: o ano, em `partition: sequence` o número da
+        sequência e em `partition: month` o mês (AAAAMM); `{partition}` na URL é esse valor.
         """
         d = self.datasets[dataset]
         if d.yearly and year is None:
-            raise ValueError(f"{dataset} é particionado: informe o ano ou a legislatura")
-        return d.url.format(base_url=self.base_url, year=year, legislature=year, month=year, item=year)
+            raise ValueError(f"{dataset} é particionado: informe o valor da partição")
+        return d.url.format(base_url=self.base_url, year=year, partition=year, month=year, item=year)
 
     def item_url(self, dataset: str, item: str) -> str:
         """Endereço de um item de um dataset `foreach`."""
@@ -181,6 +183,12 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         raise InvalidContract(f"{where}: load '{data['load']}' inválido ({sorted(LOADS)})")
     if data.get("partition", "year") not in PARTITIONS:
         raise InvalidContract(f"{where}: partition '{data['partition']}' inválido ({sorted(PARTITIONS)})")
+    if (data.get("partition") == "sequence") != ("sequence" in data) or (
+        "sequence" in data and set(data["sequence"]) != {"first_year", "first_value", "years"}
+    ):
+        raise InvalidContract(
+            f"{where}: partition: sequence exige `sequence: {{first_year, first_value, years}}`"
+        )
     if data.get("write", "replace") not in WRITES:
         raise InvalidContract(f"{where}: write '{data['write']}' inválido ({sorted(WRITES)})")
     if data.get("first_month") and data.get("partition") != "month":
@@ -235,6 +243,9 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         arquivos=_arquivos(where, data),
         first_month=int(data["first_month"]) if data.get("first_month") else None,
         lag_months=int(data.get("lag_months", 0)),
+        sequence=tuple(int(data["sequence"][k]) for k in ("first_year", "first_value", "years"))
+        if "sequence" in data
+        else None,  # type: ignore[arg-type]
         step=int(data.get("step", 1)),
         only={k: tuple(v) for k, v in data.get("only", {}).items()},
         aliases=dict(data.get("aliases", {})),
