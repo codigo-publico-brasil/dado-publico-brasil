@@ -192,7 +192,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `int_ementas_siglas_extraidas` | Siglas escritas em maiúsculas dentro de ementas de caixa mista. | publico-agente-publico |  |
 | `int_frentes_membros_ligados` | Participação em frentes ligada à pessoa do projeto. | publico-agente-publico |  |
 | `int_orgaos_membros_ligados` | Participação em órgãos ligada à pessoa do projeto. | publico-agente-publico |  |
-| `int_pessoas_atividade_agregada` | Uma linha por pessoa, com votos, propostas e legislaturas. | publico-agente-publico |  |
 | `int_pessoas_ids_vistos` | Todo identificador de pessoa informado pelas fontes. Entrada do código de identidade. | publico-agente-publico |  |
 | `int_pessoas_profissoes_agregadas` | Uma linha por pessoa, com as profissões declaradas. | publico-agente-publico |  |
 | `int_pessoas_senado_unidas` | Pessoa do projeto unida ao cadastro do Senado. | publico-agente-publico |  |
@@ -212,7 +211,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
-| `agg_composicoes` | Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje), por território e partido. A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes. | publico | corte |
+| `agg_composicoes` | Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje, e a posse de cada legislatura), por território e partido. A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes. | publico | corte |
+| `agg_pessoas_atividade` | O que cada parlamentar fez, derivado dos votos e das autorias: quantidade de votos e de propostas, legislaturas com voto e o partido e a UF do voto mais recente. Fica fora do cadastro (dim_pessoas_cadastro) porque muda a cada carga, enquanto o cadastro só descreve a pessoa. Uma linha por pessoa do cadastro (Câmara e Senado); quem não votou tem zero votos e o resto vazio. O partido e a UF são os do voto, como a fonte informa, e não afirmam filiação. | publico-agente-publico | pessoa |
 | `brg_frentes_membros` | Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título. | publico-agente-publico | pessoa |
 | `brg_licitacoes_empenhos` | Ponte entre as licitações do governo federal e os empenhos relacionados a elas, como o Portal da Transparência publica. Uma linha por licitação e empenho. | publico-agente-publico | licitação e empenho |
 | `brg_normas_relacoes` | Ligações de cada norma com atos posteriores, como o Senado declara (alteração, regulamentação, veto, declaração de constitucionalidade). Só das normas detalhadas (leis, leis complementares, emendas, medidas provisórias e a Constituição). Uma linha por norma, ato posterior e tipo de relação. | publico | norma |
@@ -231,7 +231,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dim_partidos_camara` | Partidos com sigla e nome oficiais. Uma linha por partido. | publico | partido |
 | `dim_partidos_linhagem` | Mudanças de nome, fusões e incorporações de partidos, conforme o TSE, com a página oficial de cada evento. Curada à mão; só o que foi conferido. Uma linha por partido de origem e evento. | publico | partido de origem e evento |
 | `dim_pessoas` | Quem já teve pelo menos um cargo (ADR 0030 e 0031): parlamentar da Câmara ou do Senado e todo eleito do TSE, a partir do momento da eleição. Quem só se candidatou e nunca foi eleito não está aqui. Uma linha por pessoa do projeto, com a chave de identidade que nunca muda nem é reaproveitada. Cada atributo diz de qual fonte veio (a Câmara e o Senado valem mais que o TSE; o TSE vale a candidatura mais recente que o traz). Só o que a fonte publica; nada é inferido. | publico-agente-publico | pessoa |
-| `dim_pessoas_cadastro` | Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação, falecimento e atividade legislativa (contagens e último partido). Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas). | publico-agente-publico | pessoa |
+| `dim_pessoas_cadastro` | Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação e falecimento. A atividade legislativa (contagens e último partido) está em agg_pessoas_atividade. Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas). | publico-agente-publico | pessoa |
 | `dim_territorios` | Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato que fala de lugar (ADR 0030). | publico | território |
 | `fct_campanhas` | A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o arquivo daquele dado não foi carregado ou não traz o candidato. | publico-agente-publico | candidatura |
 | `fct_candidaturas` | Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era, por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer novato. fl_eleito vale para o eleito informado pelo TSE ou derivado dos votos pela Constituição (base_eleicao diz qual; o texto original do TSE segue em resultado); fl_eleito_informado guarda só o informado. | publico-agente-publico | candidatura |
@@ -285,12 +285,25 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Coluna | Tipo | Descrição | Dado pessoal |
 | --- | --- | --- | --- |
-| `dt_corte` | date | Data do corte: 1º de janeiro ou 1º de julho. |  |
+| `dt_corte` | date | Data do corte: 1º de janeiro, 1º de julho ou a posse de uma legislatura (dim_legislaturas). |  |
 | `tipo_composicao` | varchar | eleita (quem foi eleito para o mandato que cobre o corte) ou exercicio (quem de fato exercia o cargo). |  |
 | `id_cargo` | varchar | Cargo (dim_cargos). |  |
 | `id_territorio` | varchar | Território da composição (dim_territorios): município, UF ou país; vazio onde a fonte não liga a um território. |  |
 | `id_partido` | integer | Partido (dim_partidos): o da eleição na composição eleita, o mais recente conhecido até o corte na composição em exercício; vazio quando não se conhece. |  |
 | `qtd_membros` | bigint | Quantas pessoas ocupam o cargo naquele corte, território e partido. |  |
+
+### marts.agg_pessoas_atividade
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_pessoa` | bigint | Pessoa (dim_pessoas_cadastro). |  |
+| `qtd_votos` | bigint | Quantidade de votos nominais registrados. |  |
+| `qtd_propostas` | bigint | Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado). |  |
+| `ultimo_partido` | varchar | Sigla do partido no voto mais recente, como a fonte informa. |  |
+| `ultima_uf` | varchar | UF no voto mais recente. |  |
+| `dt_ultimo_voto` | timestamp | Data e hora do voto mais recente. |  |
+| `primeira_legislatura_com_voto` | integer | Primeira legislatura em que há voto registrado. |  |
+| `ultima_legislatura_com_voto` | integer | Última legislatura em que há voto registrado. |  |
 
 ### marts.brg_frentes_membros
 
@@ -596,14 +609,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `telefone_institucional` | varchar | Telefone institucional do gabinete; no Senado, vários separados por ponto e vírgula. |  |
 | `gabinete_endereco` | varchar | Endereço do gabinete (prédio, sala e andar na Câmara; endereço no Senado). |  |
 | `pagina_url` | varchar | Página oficial da pessoa no Senado; vazia onde a fonte não informa. |  |
-| `primeira_legislatura_com_voto` | integer | Primeira legislatura em que há voto registrado. |  |
-| `ultima_legislatura_com_voto` | integer | Última legislatura em que há voto registrado. |  |
 | `profissoes` | varchar | Profissões declaradas, separadas por ponto e vírgula. |  |
-| `ultimo_partido` | varchar | Partido no voto mais recente. |  |
-| `ultima_uf` | varchar | UF no voto mais recente. |  |
-| `dt_ultimo_voto` | timestamp | Data e hora do voto mais recente. |  |
-| `qtd_propostas` | bigint | Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado). |  |
-| `qtd_votos` | bigint | Quantidade de votos nominais registrados. |  |
 | `dt_captura` | date | Data da captura do cadastro de deputados. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 

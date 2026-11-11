@@ -6,7 +6,13 @@ from dado_publico_brasil.transformation import catalog
 
 
 def person_id(con: Connection, name: str) -> int:
-    return int(scalar(con, "SELECT id_pessoa FROM marts.dim_pessoas_cadastro WHERE nome = ?", (name,)))
+    return int(
+        scalar(
+            con,
+            "SELECT id_pessoa FROM marts.dim_pessoas_cadastro WHERE fonte = 'camara' AND nome = ?",
+            (name,),
+        )
+    )
 
 
 def test_person_has_counts_last_party_search_keys_and_standardized_names(
@@ -16,7 +22,8 @@ def test_person_has_counts_last_party_search_keys_and_standardized_names(
     row = con.execute(
         "SELECT nome, nome_civil, nome_ordem, nome_busca, qtd_propostas, qtd_votos, ultimo_partido, "
         "ultima_uf, profissoes, primeira_legislatura_com_voto, foto_url, dt_nascimento, "
-        "dt_captura IS NOT NULL FROM marts.dim_pessoas_cadastro WHERE nome = 'Ana Árvore'"
+        "dt_captura IS NOT NULL FROM marts.dim_pessoas_cadastro JOIN marts.agg_pessoas_atividade USING (id_pessoa) "
+        "WHERE fonte = 'camara' AND nome = 'Ana Árvore'"
     ).fetchone()
     assert row is not None
     assert tuple(row[:12]) == (

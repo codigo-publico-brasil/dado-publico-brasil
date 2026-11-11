@@ -52,20 +52,10 @@ select
     p.telefone_institucional,
     p.gabinete_endereco,
     p.pagina_url,
-    a.primeira_legislatura_com_voto,
-    a.ultima_legislatura_com_voto,
     pr.profissoes,
-    a.ultimo_partido,
-    a.ultima_uf,
-    a.dt_ultimo_voto,
-    -- autoria só existe para a Câmara: nas demais fontes é desconhecida (vazio), não zero
-    if(p.fonte = '{{ var("source_camara") }}', coalesce(a.qtd_propostas, 0), null) as qtd_propostas,
-    coalesce(a.qtd_votos, 0) as qtd_votos,
     p.id_captura,
     cast(p.dt_captura as date) as dt_captura
 
 from uma_por_pessoa as p
-
-left join {{ ref('int_pessoas_atividade_agregada') }} as a on a.id_pessoa = p.id_pessoa
 
 left join {{ ref('int_pessoas_profissoes_agregadas') }} as pr on pr.id_pessoa = p.id_pessoa

@@ -217,3 +217,52 @@ unit_tests:
         - {id_candidatura: "2022:BR:1", fl_eleito: true, fl_eleito_informado: true, base_eleicao: informado}
         - {id_candidatura: "2006:BR:1", fl_eleito: true, fl_eleito_informado: null, base_eleicao: derivado}
         - {id_candidatura: "2022:BR:2", fl_eleito: false, fl_eleito_informado: false, base_eleicao: null}
+
+  - name: composicao_tem_corte_na_posse_da_legislatura_alem_de_janeiro_e_julho
+    description: >
+      A posse de cada legislatura (dim_legislaturas.dt_inicio) é um corte, além de 1º de janeiro e 1º de julho. O mandato
+      de fevereiro de 2019 só cobre esse corte, e a data de posse fora de 1997 até hoje não vira corte.
+    model: agg_composicoes
+    given:
+      - input: ref('dim_legislaturas')
+        rows:
+          - {id_legislatura: 56, dt_inicio: 2019-02-01}
+          - {id_legislatura: 40, dt_inicio: 1995-02-01}
+      - input: ref('fct_mandatos')
+        rows:
+          - {id_cargo: deputado_federal, id_territorio: "uf:SP", id_partido: 1, dt_inicio: 2019-02-01, dt_fim_prevista: 2019-02-28}
+      - input: ref('fct_exercicios')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows: []
+      - input: ref('dim_territorios')
+        rows: []
+    expect:
+      rows:
+        - {dt_corte: 2019-02-01, tipo_composicao: eleita, id_cargo: deputado_federal, id_territorio: "uf:SP", id_partido: 1, qtd_membros: 1}
+
+  - name: atividade_conta_votos_e_propostas_e_deixa_vazia_a_autoria_do_senado
+    description: >
+      Quem não votou tem zero votos e o resto vazio; o partido e a UF são os do voto mais recente; a autoria só existe
+      para a Câmara (vazio no Senado, zero na Câmara sem proposta).
+    model: agg_pessoas_atividade
+    given:
+      - input: ref('dim_pessoas_cadastro')
+        rows:
+          - {id_pessoa: 1, fonte: camara}
+          - {id_pessoa: 2, fonte: camara}
+          - {id_pessoa: 3, fonte: senado}
+      - input: ref('int_votacoes_votos_ligados')
+        rows:
+          - {id_pessoa: 1, partido_sigla: AAA, uf_sigla: SP, dt_voto: 2020-01-01 10:00:00, id_legislatura: 56}
+          - {id_pessoa: 1, partido_sigla: BBB, uf_sigla: RJ, dt_voto: 2022-01-01 10:00:00, id_legislatura: 57}
+          - {id_pessoa: 3, partido_sigla: CCC, uf_sigla: MG, dt_voto: 2021-01-01 10:00:00, id_legislatura: 57}
+      - input: ref('int_proposicoes_autorias_ligadas')
+        rows:
+          - {id_pessoa: 1}
+          - {id_pessoa: 1}
+    expect:
+      rows:
+        - {id_pessoa: 1, qtd_votos: 2, qtd_propostas: 2, ultimo_partido: BBB, ultima_uf: RJ, dt_ultimo_voto: 2022-01-01 10:00:00, primeira_legislatura_com_voto: 56, ultima_legislatura_com_voto: 57}
+        - {id_pessoa: 2, qtd_votos: 0, qtd_propostas: 0, ultimo_partido: null, ultima_uf: null, dt_ultimo_voto: null, primeira_legislatura_com_voto: null, ultima_legislatura_com_voto: null}
+        - {id_pessoa: 3, qtd_votos: 1, qtd_propostas: null, ultimo_partido: CCC, ultima_uf: MG, dt_ultimo_voto: 2021-01-01 10:00:00, primeira_legislatura_com_voto: 57, ultima_legislatura_com_voto: 57}

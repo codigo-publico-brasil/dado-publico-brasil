@@ -23,14 +23,14 @@ seeds:
   - name: dim_evento_tipos
     description: >
       Catálogo fechado dos tipos de evento da pessoa (nascimento, eleito, posse, troca de partido...). A tabela de eventos
-      só aceita tipo que exista aqui. Cada tipo diz de qual fato nasce, que contexto exige e se o evento é informado pela
+      só aceita tipo que exista aqui. Cada tipo diz de qual tabela dos marts nasce (fct_, brg_ ou dim_), que contexto exige e se o evento é informado pela
       fonte ou derivado de regra do projeto. Tipo novo entra com linha aqui, regra e teste. Desenho aprovado no ADR 0030.
     meta: {sensitivity: publico, grain: tipo de evento, owner: fundador do projeto, freshness: a cada tipo novo, fonte_oficial: "Projeto (ADR 0030)", auditoria_excecao: "Catálogo do projeto (ADR 0030), sem fonte externa."}
     columns:
       - {name: id_tipo_evento, description: "Identificador do tipo, em texto legível (por exemplo, troca_de_partido).", data_tests: [unique, not_null]}
       - {name: categoria, description: "Grupo do tipo: vida, eleicao, mandato, partido, nomeacao ou vinculo.", data_tests: [{accepted_values: {arguments: {values: [vida, eleicao, mandato, partido, nomeacao, vinculo]}}}]}
       - {name: descricao, description: "O que o evento significa.", data_tests: [not_null]}
-      - {name: fato_origem, description: "Tabela de fatos da qual o evento nasce; vazia quando ainda não há fonte aberta."}
+      - {name: fato_origem, description: "Tabela dos marts da qual o evento nasce (fct_, brg_ ou dim_); vazia quando ainda não há fonte aberta."}
       - {name: contexto_exigido, description: "Contexto que o evento precisa trazer (disputa, partido, órgão, cargo, território); vazio quando nenhum."}
       - {name: base, description: "Como o evento é obtido: informado pela fonte, derivado de regra do projeto ou os dois.", data_tests: [{accepted_values: {arguments: {values: [informado, derivado, informado ou derivado]}}}]}
 
