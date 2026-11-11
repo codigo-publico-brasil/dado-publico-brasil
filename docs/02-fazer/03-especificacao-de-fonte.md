@@ -130,6 +130,19 @@ O plano incremental pede o mês em curso **e o anterior**: o mês fechado sem mu
 - **Mês republicado:** os datasets mensais usam `write: replace_partition` ([ADR 0043](../05-decisoes/0043-raw-em-parquet-substituicao-por-particao-e-logs.md)): a captura nova do mês substitui as linhas da anterior (a URL do mês é a partição), então um mês corrigido pela fonte não deixa linha velha no raw. Cada staging declara o grão em `meta.grain` e o teste `warn` `transparencia_linhas_duplicadas_no_grao` mede as duplicatas que a própria fonte traz.
 - **Frequência da conferência:** o plano diário pede os dois últimos meses fechados (dois HEAD por dataset); `max_age_days: 40` evita o alerta de defasagem. Um intervalo próprio para meses fechados é pendência (hoje seria um `schedule` por dataset, que o contrato ainda não tem).
 
+## Partição por sequência (`partition: sequence`)
+
+Para o arquivo numerado por um período que não é o ano (a legislatura, por exemplo): o YAML declara o calendário e o núcleo só calcula `first_value + (ano - first_year) // years`, sem saber o que o número significa. A URL usa `{partition}` (aceito em todo tipo de partição; `{year}` e `{month}` seguem valendo).
+
+```yaml
+    url: "{base_url}/orgaosDeputados/csv/orgaosDeputados-L{partition}.csv"
+    load: yearly
+    partition: sequence
+    sequence: {first_year: 2019, first_value: 56, years: 4}   # a 56ª legislatura começou em 2019 e dura 4 anos
+```
+
+Os três campos são obrigatórios, e `sequence` só vale com `partition: sequence`. O valor da partição é o que vai no caminho do landing e na URL. `partition: legislature` e `{legislature}` deixaram de ser aceitos (o contrato os recusa). [ADR 0053](../05-decisoes/0053-nucleo-sem-nomes-de-fonte.md).
+
 ## Cortesia e bloqueio
 
 `access.rate_limit` (requisições por segundo, padrão 4; deve ser maior que zero) é o intervalo mínimo entre as requisições do **download padrão** (HEAD e GET do arquivo) da fonte. **Não vale** para `fetch.get` (datasets `foreach`, que têm o próprio intervalo) nem para módulos `custom/` que fazem a própria requisição.

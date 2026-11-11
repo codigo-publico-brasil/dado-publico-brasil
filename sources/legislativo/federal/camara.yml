@@ -7,7 +7,7 @@
 # Por dataset:
 #   url               endereço oficial; `{year}` nos anuais
 #   load              full (um arquivo) | yearly (um arquivo por partição)
-#   partition         (yearly) year (padrão, `{year}`) | legislature (`{legislature}`, derivada do ano) | month (AAAAMM)
+#   partition         (yearly) year (padrão, `{year}`) | sequence (`{partition}`, calculada do ano por `sequence`) | month (AAAAMM)
 #   schedule          cron de 5 campos (fuso America/Sao_Paulo) da captura automática; sem ele, só quando pedido
 #   first_year        (yearly) primeiro ano que a fonte publica; anos anteriores não são pedidos
 #   extra_years       (yearly) aceita anos só deste dataset (opção --extra-years)
@@ -150,9 +150,10 @@ datasets:
        descricaoSituacao, casa]
 
   orgaosDeputados:
-    url: "{base_url}/orgaosDeputados/csv/orgaosDeputados-L{legislature}.csv"
+    url: "{base_url}/orgaosDeputados/csv/orgaosDeputados-L{partition}.csv"
     load: yearly
-    partition: legislature
+    partition: sequence
+    sequence: {first_year: 2019, first_value: 56, years: 4}   # legislatura federal: a 56ª começou em 2019
     write: merge
     primary_key: [_row_hash]
     columns:
