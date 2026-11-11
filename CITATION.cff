@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "Se usar os dados ou o código, cite como abaixo e informe o id_execucao da publicação (metadata.exportacao ou manifesto.json)."
+title: "Dado Público Brasil"
+type: software
+abstract: "Plataforma de dados públicos abertos: captura das fontes oficiais, transformação em camadas, identidade de pessoas e lake público em Parquet, com a origem de cada dado rastreável."
+authors:
+  - name: "Código Público Brasil"
+repository-code: "https://github.com/codigo-publico-brasil/dado-publico-brasil"
+url: "https://datalake.codigopublicobrasil.com.br"
+license: Apache-2.0
