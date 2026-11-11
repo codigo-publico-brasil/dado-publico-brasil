@@ -51,26 +51,39 @@ def resolve(con: Connection) -> tuple[int, int]:
     with runs.track(con, "identity") as run:
         run.impressao_antes = fingerprint(con)
         con.execute(
-            "CREATE OR REPLACE TEMP TABLE new_people AS "
-            "SELECT nextval('identity.seq_pessoas') AS id_pessoa, s.fonte, s.id_tipo, s.id_na_fonte "
-            f"FROM {SEEN} s WHERE NOT EXISTS ("
-            "SELECT 1 FROM identity.pessoas_identificadores i "
-            "WHERE i.fonte = s.fonte AND i.id_tipo = s.id_tipo AND i.id_na_fonte = s.id_na_fonte)"
-        )
-        moment = runs.now()
-        con.execute("INSERT INTO identity.pessoas SELECT id_pessoa, ? FROM new_people", (moment,))
-        con.execute(
-            "INSERT INTO identity.pessoas_identificadores "
-            "SELECT fonte, id_tipo, id_na_fonte, id_pessoa, ?, ?, ? FROM new_people",
-            (METHOD, CONFIRMED_BY, moment),
-        )
-        _link(con, moment)
-        tse_created = _tse_people(con, moment)
+            "BEGIN"
+        )  # tudo ou nada: uma queda no meio de uma fusão não deixa ponte para pessoa apagada
+        try:
+            created = _resolve(con)
+        except BaseException:
+            con.execute("ROLLBACK")
+            raise
+        con.execute("COMMIT")
         seen = int(scalar(con, f"SELECT COUNT(*) FROM {SEEN}"))
-        created = int(scalar(con, "SELECT COUNT(*) FROM new_people")) + tse_created
         run.rows_in, run.rows_out = seen, created
         run.impressao_depois = fingerprint(con)
         return seen, created
+
+
+def _resolve(con: Connection) -> int:
+    """Os passos da resolução; quem chama os envolve numa transação. Devolve as pessoas novas."""
+    con.execute(
+        "CREATE OR REPLACE TEMP TABLE new_people AS "
+        "SELECT nextval('identity.seq_pessoas') AS id_pessoa, s.fonte, s.id_tipo, s.id_na_fonte "
+        f"FROM {SEEN} s WHERE NOT EXISTS ("
+        "SELECT 1 FROM identity.pessoas_identificadores i "
+        "WHERE i.fonte = s.fonte AND i.id_tipo = s.id_tipo AND i.id_na_fonte = s.id_na_fonte)"
+    )
+    moment = runs.now()
+    con.execute("INSERT INTO identity.pessoas SELECT id_pessoa, ? FROM new_people", (moment,))
+    con.execute(
+        "INSERT INTO identity.pessoas_identificadores "
+        "SELECT fonte, id_tipo, id_na_fonte, id_pessoa, ?, ?, ? FROM new_people",
+        (METHOD, CONFIRMED_BY, moment),
+    )
+    _link(con, moment)
+    tse_created = _tse_people(con, moment)
+    return int(scalar(con, "SELECT COUNT(*) FROM new_people")) + tse_created
 
 
 def _same(alias: str, *columns: str) -> str:
