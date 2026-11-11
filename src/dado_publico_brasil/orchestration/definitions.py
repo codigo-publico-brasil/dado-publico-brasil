@@ -69,7 +69,15 @@ from dado_publico_brasil.ingestion import contract, landing, loader, monitoring
 from dado_publico_brasil.orchestration import pipeline
 from dado_publico_brasil.orchestration.checks_sensor import failed_checks
 from dado_publico_brasil.orchestration.pipeline import step
-from dado_publico_brasil.transformation import build, describe, export, observability, quality, selection
+from dado_publico_brasil.transformation import (
+    build,
+    describe,
+    export,
+    lake,
+    observability,
+    quality,
+    selection,
+)
 from dado_publico_brasil.transformation import dbt as dbt_runner
 
 SETTINGS = load_settings()
@@ -361,7 +369,7 @@ def export_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
 def docs_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
     """Sobe ao R2 o dbt docs, o relatório do Elementary e a página inicial do lake (sem R2, não faz nada)."""
     with step(context, "publicação das docs"):
-        pages = export.publish_docs(SETTINGS)
+        pages = lake.publish_docs(SETTINGS)
     context.log.info(f"docs: {len(pages)} páginas publicadas")
     return MaterializeResult(metadata={"paginas": len(pages)})
 
