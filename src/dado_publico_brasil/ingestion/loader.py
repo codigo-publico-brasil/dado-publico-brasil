@@ -87,11 +87,9 @@ def read_rows(
         if any(row[k] is None for k in key):
             stats["rejected"] += 1
             continue
-        if (
-            natural_key
-        ):  # a chave natural tem de identificar a linha: mesma chave com conteúdo diferente é perda
-            if seen.setdefault(tuple(row[k] for k in key), digest) != digest:
-                stats["conflicting"] += 1
+        # a chave natural tem de identificar a linha: mesma chave com conteúdo diferente é perda
+        if natural_key and seen.setdefault(tuple(row[k] for k in key), digest) != digest:
+            stats["conflicting"] += 1
         stats["loaded"] += 1
         yield row
 

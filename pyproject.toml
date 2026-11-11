@@ -35,11 +35,23 @@ line-length = 110
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP"]
+select = ["E", "F", "I", "B", "UP", "S", "SIM", "C90"]
+# Regras globais desligadas, cada uma com o motivo (issue 270):
+# S101: `assert` é o jeito de testar e de estreitar tipo para o mypy.
+# S608: o SQL é montado com identificadores do próprio código/YAML versionado, nunca com entrada externa.
+# S603/S607: subprocess com argumentos fixos (git, dbt, uv), sem shell.
+# S310: as URLs abertas vêm da declaração versionada da fonte (`sources/`), não de entrada do usuário.
+# S314: o XML analisado é a resposta do nosso próprio armazenamento de objetos.
+ignore = ["S101", "S608", "S603", "S607", "S310", "S314"]
+
+[tool.ruff.lint.mccabe]
+# Teto acima da maior função atual (22), para barrar piora sem exigir refatoração agora.
+max-complexity = 22
 
 [tool.ruff.lint.per-file-ignores]
 # Testes têm SQL e dados sintéticos em linhas longas.
-"tests/**" = ["E501"]
+# S701 e SIM115 valem para código de produção, não para fixtures.
+"tests/**" = ["E501", "S701", "SIM115"]
 
 [tool.mypy]
 strict = true
