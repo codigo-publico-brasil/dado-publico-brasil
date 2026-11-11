@@ -11,7 +11,7 @@ fonte oficial ─► landing ─► raw ─► staging ─► intermediate ─�
                           identity (Python, entre as duas passadas do dbt)
 ```
 
-O **DuckDB é só o motor de cálculo**, um arquivo descartável que se refaz do landing. O dado público é o **Parquet no lake**, de caminho estável ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)); as aplicações leem os marts dali e montam as suas próprias consultas ([ADR 0038](../05-decisoes/0038-lake-como-unica-publicacao.md)).
+O **DuckDB é só o motor de cálculo**, um arquivo descartável que se refaz do landing. O dado público é o **Parquet no lake**, de caminho estável ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)); as aplicações leem os marts dali e montam as suas próprias consultas ([ADR 0055](../05-decisoes/0055-lake-como-unica-publicacao.md)).
 
 ## Onde cada coisa fica
 
@@ -19,7 +19,9 @@ O **DuckDB é só o motor de cálculo**, um arquivo descartável que se refaz do
 | --- | --- | --- |
 | Servidor de processamento (1 nó, disco local) | Dagster, ingestão, dbt e o arquivo DuckDB (`raw`, `identity`, `metadata`); fila serial, um escritor | privado; só ele sai à rede para baixar as fontes |
 | **Bucket público** (R2, `datalake.codigopublicobrasil.com.br`) | Parquet de `staging`, `intermediate`, `marts` e `metadata.capturas`; `catalogo.duckdb` e `manifesto.json` | leitura anônima, sem listagem; o catálogo enumera os arquivos |
-| **Bucket privado** | landing (guarda campos que o raw descarta, como CPF: **nunca público**; só os arquivos que o contrato manda publicar saem, em `arq_`, no lake público), cópias da identidade, metadados de execução | só o pipeline; com teste de restauração |
+| **Bucket privado** | cópias da identidade (`id_pessoa` não se reconstrói) e `metadata` (capturas, execuções); **nunca público** | só o pipeline; com teste de restauração |
+
+O **landing** (que guarda campos que o raw descarta, como CPF) e os arquivos extraídos ficam **só no disco do servidor**, sem cópia: risco aceito no [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md). Só os arquivos que o contrato manda publicar saem, em `arq_`, no lake público.
 
 Caminhos: `staging/<poder>/<esfera>/<fonte>/<modelo>`, `intermediate/<modelo>`, `marts/<domínio>/<tabela>`, cada um `.parquet` ou, nas tabelas grandes com `meta.particao`, uma pasta `ano=AAAA/part-0.parquet`. Como consumir: [`06-consumir-o-lake.md`](../03-consultar/06-consumir-o-lake.md). Em produção, o provedor é trocável (o código fala S3 e SQL padrão); rede privada, segredos fora do Git, alertas de dados e backup são requisitos, não escolhas fechadas.
 

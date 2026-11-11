@@ -1,6 +1,6 @@
 # ADR 0036: R2 privado como fonte da verdade da identidade e do metadata; disco local descartável
 
-- **Status:** proposto (2026-11-02)
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-02))
 - **Data:** 2026-11-02
 - **Complementa:** [ADR 0035](0035-lakehouse-publico-no-r2.md) (item 7: o bucket privado) e [ADR 0014](0014-warehouse-lake-duckdb-e-postgres-de-servico.md) (item 4: cópia imutável da identidade no armazenamento de objetos, com teste de restauração).
 - **Para quem é:** quem opera ou implementa a plataforma. Responde: o que precisa sobreviver à perda da máquina, onde fica e como se recupera.

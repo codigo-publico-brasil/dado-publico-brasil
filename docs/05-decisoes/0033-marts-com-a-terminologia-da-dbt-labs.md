@@ -1,6 +1,6 @@
 # ADR 0033: uma só camada publicada, `marts`, com a terminologia da dbt Labs
 
-- **Status:** proposto (2026-10-29); decisão do fundador na conversa de 29/10/2026
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-10-29); decisão do fundador na conversa de 29/10/2026)
 - **Data:** 2026-10-29
 - **Altera:** a organização em esquemas do [ADR 0030](0030-modelo-de-dados-pessoa-no-centro.md) (`core`, `fatos`, `analise` e `servico` deixam de existir; o conteúdo e as regras de pessoa, evento e composição seguem valendo), o [ADR 0007](0007-dois-pacotes-e-camadas-de-mercado.md) e o que o Postgres de serviço recebe ([ADR 0014](0014-warehouse-lake-duckdb-e-postgres-de-servico.md)).
 
