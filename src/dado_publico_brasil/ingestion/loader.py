@@ -11,6 +11,7 @@ e registra cada carga (`_dlt_load_id`). A carga usa o formato Parquet do dlt (AD
 """
 
 import hashlib
+import json
 import logging
 import time
 from collections import Counter
@@ -77,8 +78,9 @@ def read_rows(
         }
         row["_source_file_id"] = file_id
         row["_ingested_at"] = ingested_at
+        # JSON: o limite entre colunas e o nulo ficam no texto (senão ("ab","c") e ("a","bc") colidem)
         digest = hashlib.sha256(
-            "".join(str(row[names[c]] or "") for c in dataset.columns).encode()
+            json.dumps([row[names[c]] for c in dataset.columns], ensure_ascii=False, default=str).encode()
         ).hexdigest()
         if ROW_HASH in dataset.primary_key:
             # linhas idênticas no arquivo são todas da fonte: da segunda em diante o contador entra na chave

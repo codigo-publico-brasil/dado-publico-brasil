@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 from dagster import DagsterRunStatus, RunsFilter
 
-from dado_publico_brasil.core import migrations
+from dado_publico_brasil.core import migrations, runs
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.ingestion import contract, fetch, foreach, landing, loader, monitoring
 from dado_publico_brasil.transformation import build
@@ -142,7 +142,7 @@ def needs_cycle(raw: list[float | None], cycle: list[float | None]) -> bool:
     return bool(arrived) and max(arrived) > min(t for t in cycle if t is not None)
 
 
-TIMEZONE = "America/Sao_Paulo"  # fuso dos agendamentos e do "dia" de cada um
+TIMEZONE = runs.TIMEZONE  # fuso dos agendamentos e do "dia" de cada um
 
 
 DONE_OR_RUNNING = [
