@@ -10,7 +10,7 @@ select
     try_cast(nr_ordem_bem_candidato as integer) as ordem,
     try_cast(cd_tipo_bem_candidato as integer) as cd_tipo,
     sentence_case(ds_tipo_bem_candidato) as tipo,
-    mascarar_dado_pessoal(ds_bem_candidato, 'bem') as descricao,
+    mascarar_dado_pessoal(ds_bem_candidato, 'cpf') as descricao,
     try_cast(replace(vr_bem_candidato, ',', '.') as decimal(18, 2)) as valor,
     try_strptime(dt_ult_atual_bem_candidato, '%d/%m/%Y')::date as dt_atualizacao,
     try_cast(cd_eleicao as integer) as cd_eleicao,
