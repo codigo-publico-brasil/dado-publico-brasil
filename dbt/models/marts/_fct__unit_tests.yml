@@ -49,6 +49,8 @@ unit_tests:
           - {id_cargo: vereador, duracao_anos: 4, esfera: municipal}
       - input: ref('dim_cargos_posse')
         rows: []
+      - input: ref('dim_cargos_posse_uf')
+        rows: []
     expect:
       rows:
         - {id_candidatura: a14, ano_inicio: 2015, tipo_mandato: null}
@@ -58,6 +60,53 @@ unit_tests:
         - {id_candidatura: c20, ano_inicio: 2021, tipo_mandato: null}
         - {id_candidatura: c24, ano_inicio: 2025, tipo_mandato: novato}
         - {id_candidatura: d20, ano_inicio: 2021, tipo_mandato: null}
+
+  - name: mandato_estadual_usa_a_posse_da_uf_quando_ha_fonte_e_fica_vazio_quando_nao_ha
+    description: >
+      Deputado estadual ou distrital não tem posse na Constituição Federal: o início vem da tabela por UF
+      (dim_cargos_posse_uf), com a vigência por ano de eleição, e é derivado. Sem linha para a UF ou para o ano, a data
+      do TSE só vale se cair no ano seguinte ao da eleição e a eleição não for a do ano corrente; senão fica vazio.
+    model: fct_mandatos
+    given:
+      - input: ref('fct_candidaturas')
+        rows:
+          - {id_candidatura: u1, id_disputa: d_sp26, id_pessoa: 1, id_captura: 1}
+          - {id_candidatura: u2, id_disputa: d_xx18, id_pessoa: 2, id_captura: 1}
+          - {id_candidatura: u3, id_disputa: d_df26, id_pessoa: 3, id_captura: 1}
+          - {id_candidatura: u4, id_disputa: d_sp22, id_pessoa: 4, id_captura: 1}
+      - input: ref('int_tse_eleitos')
+        rows:
+          - {id_candidatura: u1, base_eleicao: informado}
+          - {id_candidatura: u2, base_eleicao: informado}
+          - {id_candidatura: u3, base_eleicao: informado}
+          - {id_candidatura: u4, base_eleicao: informado}
+      - input: ref('dim_disputas')
+        rows:
+          - {id_disputa: d_sp26, id_eleicao: "2026-1", id_cargo: deputado_estadual, id_territorio: "35", dt_posse: "2027-05-01"}
+          - {id_disputa: d_xx18, id_eleicao: "2018-1", id_cargo: deputado_estadual, id_territorio: "99", dt_posse: "2019-02-01"}
+          - {id_disputa: d_df26, id_eleicao: "2026-1", id_cargo: deputado_distrital, id_territorio: "53"}
+          - {id_disputa: d_sp22, id_eleicao: "2022-1", id_cargo: deputado_estadual, id_territorio: "35"}
+      - input: ref('dim_eleicoes')
+        rows:
+          - {id_eleicao: "2018-1", ano_eleicao: 2018}
+          - {id_eleicao: "2022-1", ano_eleicao: 2022}
+          - {id_eleicao: "2026-1", ano_eleicao: 2026}
+      - input: ref('dim_cargos')
+        rows:
+          - {id_cargo: deputado_estadual, duracao_anos: 4, esfera: estadual}
+          - {id_cargo: deputado_distrital, duracao_anos: 4, esfera: distrital}
+      - input: ref('dim_cargos_posse')
+        rows: []
+      - input: ref('dim_cargos_posse_uf')
+        rows:
+          - {id_cargo: deputado_estadual, id_territorio: "35", ano_eleicao_de: 2026, ano_eleicao_ate: 9999, mes_posse: 2, dia_posse: 1}
+          - {id_cargo: deputado_distrital, id_territorio: "53", ano_eleicao_de: 2026, ano_eleicao_ate: 9999, mes_posse: 1, dia_posse: 6}
+    expect:
+      rows:
+        - {id_candidatura: u1, dt_inicio: "2027-02-01", base_dt_inicio: derivado, dt_fim_prevista: "2031-01-31"}
+        - {id_candidatura: u2, dt_inicio: "2019-02-01", base_dt_inicio: informado, dt_fim_prevista: "2023-01-31"}
+        - {id_candidatura: u3, dt_inicio: "2027-01-06", base_dt_inicio: derivado, dt_fim_prevista: "2031-01-05"}
+        - {id_candidatura: u4, dt_inicio: null, base_dt_inicio: null, dt_fim_prevista: null}
 
   - name: exercicio_cumpre_o_mandato_com_janela_de_31_dias_e_o_suplente_fica_sem_candidatura
     description: >
