@@ -20,7 +20,15 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
-      - run: uv run pytest
+      - name: Testes com cobertura (relatório, sem piso, ADR 0048)
+        run: uv run pytest --cov --cov-report=term-missing:skip-covered --cov-report=xml
+      - name: Resumo da cobertura por arquivo
+        if: always()
+        run: |
+          echo '### Cobertura dos testes' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          uv run coverage report --skip-covered >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   segredos:
     runs-on: ubuntu-latest

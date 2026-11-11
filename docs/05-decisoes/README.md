@@ -87,6 +87,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0031](0031-pessoas-de-todo-eleito.md) | Pessoas de todo eleito, ancoradas na candidatura (F3 do 0030) | proposto (aprovado pelo fundador); altera 0004 e 0013 |
 | [0032](0032-partido-da-pessoa-por-fonte-e-filiacao.md) | O partido da pessoa vem de fontes oficiais (candidatura, histórico da Câmara, votos); a filiação por data fica de fora | proposto (decisão do fundador); altera o item 10 do 0030 |
 | [0033](0033-marts-com-a-terminologia-da-dbt-labs.md) | Uma só camada publicada, `marts`, com a terminologia da dbt Labs (`dim_`, `fct_`, `brg_`, `agg_`, `app_`) | proposto (decisão do fundador); altera a organização em esquemas do 0030 e o 0007; item 2 alterado pelo [0038](0038-lake-como-unica-publicacao.md) |
+| [0048](0048-cobertura-de-testes-sem-piso.md) | Medir a cobertura dos testes no CI (`pytest-cov`), sem piso a princípio | proposto |
 
 **Número repetido:** existem dois ADRs 0038 (`cortesia-e-bloqueio` e `lake-como-unica-publicacao`), criados em paralelo em sessões diferentes; os links usam o nome completo do arquivo. Confira `git ls-tree origin/main docs/05-decisoes/` antes de escolher o próximo número.
 
