@@ -98,6 +98,8 @@ seeds:
     +column_types: {cd_cargo_tse: integer, duracao_anos: integer, id_partido: integer, id_partido_sucessor: integer, ano_fim: integer, nr_partido: integer, ano_inicio: integer, ano_eleicao_de: integer, ano_eleicao_ate: integer, mes_posse: integer, dia_posse: integer}
     marts:
       +schema: marts
+      dim_cargos_posse_uf:
+        +column_types: {id_territorio: varchar}  # casa com dim_territorios.id_territorio (varchar, tem 'BR'); sem isso o CSV infere inteiro
     intermediate:
       vinculos_aprovados:
         +full_refresh: true  # sem isso, o seed criado vazio fica com tipos inferidos errados quando entra a primeira linha
