@@ -137,7 +137,7 @@ def pipeline(settings: Settings, contract: SourceContract, con: Connection | Non
     """Pipeline do dlt para o esquema `raw_<fonte>`. O estado do dlt fica dentro do storage."""
     # A área temporária do dlt (merge/replace) ganha prefixo próprio para não parecer a camada staging do dbt.
     destination = dlt.destinations.duckdb(
-        con if con is not None else str(settings.warehouse),
+        con.cursor() if con is not None else str(settings.warehouse),  # cursor: o dlt troca o `search_path`
         staging_dataset_name_layout="dlt_tmp_%s",
     )
     return dlt.pipeline(

@@ -28,6 +28,19 @@ class Settings:
         return Path(self.warehouse_template.format(root=self.storage_root))
 
     @property
+    def estado(self) -> Path:
+        """`estado.duckdb`, ao lado do warehouse: `metadata` e `identity` (ADR 0051)."""
+        return self.warehouse.with_name("estado.duckdb")
+
+    @property
+    def dbt_env(self) -> dict[str, str]:
+        """Arquivos que o dbt e o `edr` (outros processos) abrem: o warehouse e o estado (só leitura)."""
+        return {
+            "DADO_PUBLICO_WAREHOUSE_FILE": str(self.warehouse.resolve()),
+            "DADO_PUBLICO_ESTADO_FILE": str(self.estado.resolve()),
+        }
+
+    @property
     def landing_dir(self) -> Path:
         return self.storage_root / "landing"
 

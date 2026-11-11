@@ -135,7 +135,7 @@ def html_report(settings: Settings) -> Path:
     command += ["--profiles-dir", str(DBT_DIR), "--file-path", str(file)]
     command += ["--project-name", "Dado Público Brasil", "--disable-samples", "true"]
     command += ["--exclude-elementary-models", "true", "--config-dir", str(DBT_DIR / "edr")]
-    env = {**os.environ, "DADO_PUBLICO_WAREHOUSE_FILE": str(settings.warehouse.resolve())}
+    env = {**os.environ, **settings.dbt_env}
     done = subprocess.run(  # cwd: o edr cria `edr_target`
         command, cwd=folder, env=env, check=False, capture_output=True, text=True, errors="replace"
     )

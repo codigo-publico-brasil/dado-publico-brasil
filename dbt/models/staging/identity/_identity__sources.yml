@@ -5,6 +5,7 @@ sources:
     description: >
       Identidade de pessoas (ADR 0004): tabelas persistentes mantidas pelo código de identidade, que
       não se reconstroem do raw. A chave da pessoa vem de uma sequência e nunca é reaproveitada.
+    database: estado
     schema: identity
     meta:
       sensitivity: publico-agente-publico

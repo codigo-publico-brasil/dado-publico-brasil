@@ -35,14 +35,18 @@ def advance_sequences(con: Connection) -> None:
 def start_from(settings: Settings, old_warehouse: Path | None = None) -> dict[str, int]:
     """Cria o warehouse novo e põe de lado o estado do dlt; devolve as linhas do `metadata`.
 
-    Com `old_warehouse`, leva dele o `metadata` (a identidade é criada de novo). Sem ele, restaura do bucket
-    privado o `metadata` e a identidade, com as mesmas chaves (ADR 0036). Recusa se o novo já existe.
+    O `estado.duckdb` não depende do warehouse: se já existe, fica como está e só as capturas voltam a
+    carregar. Senão, com `old_warehouse` (anterior ao ADR 0051, com o `metadata` dentro), leva dele o
+    `metadata` (a identidade é criada de novo); sem ele, restaura do bucket privado o `metadata` e a
+    identidade, com as mesmas chaves (ADR 0036). Recusa se o warehouse novo já existe.
     """
     from dado_publico_brasil.core import privado  # privado importa este módulo
 
     if settings.warehouse.exists():
         raise FileExistsError(f"{settings.warehouse} já existe: mova o warehouse antigo antes de reconstruir")
-    if old_warehouse is None and privado.root(settings) is None:
+    if old_warehouse is not None and settings.estado.exists():
+        raise FileExistsError(f"{settings.estado} já existe: ele guarda o estado, omita o warehouse antigo")
+    if old_warehouse is None and not settings.estado.exists() and privado.root(settings) is None:
         raise FileNotFoundError(f"sem warehouse antigo e sem {privado.ENV}: nada de onde restaurar")
     if old_warehouse is not None and not old_warehouse.exists():
         raise FileNotFoundError(f"warehouse antigo não encontrado: {old_warehouse}")
@@ -53,8 +57,8 @@ def start_from(settings: Settings, old_warehouse: Path | None = None) -> dict[st
             for table in TABLES:
                 con.execute(f"INSERT INTO metadata.{table} BY NAME SELECT * FROM old.metadata.{table}")
             con.execute("DETACH old")
-            con.execute("UPDATE metadata.capturas SET dt_carga = NULL")  # tudo volta a carregar do landing
             advance_sequences(con)
+        con.execute("UPDATE metadata.capturas SET dt_carga = NULL")  # tudo volta a carregar do landing
         copied = {t: int(scalar(con, f"SELECT count(*) FROM metadata.{t}")) for t in TABLES}
     finally:
         con.close()

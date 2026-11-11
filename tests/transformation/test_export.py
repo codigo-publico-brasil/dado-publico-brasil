@@ -15,7 +15,7 @@ from pathlib import Path
 import duckdb
 import pytest
 
-from dado_publico_brasil.core import runs, s3
+from dado_publico_brasil.core import runs, s3, warehouse
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, scalar
 from dado_publico_brasil.ingestion import arquivos, landing
@@ -70,7 +70,7 @@ def run(
 
 
 def change(settings: Settings, sql: str) -> None:
-    live = duckdb.connect(str(settings.warehouse))
+    live = warehouse.connect(settings)
     live.execute(sql)
     live.close()
 
@@ -95,7 +95,7 @@ def test_every_table_is_exported_with_the_same_rows_and_schema(con: Connection, 
         ("metadata", "capturas", "metadata/capturas", "bronze"),
     }
     assert result["tabelas"] == len(tables) and result["gravadas"] == len(tables)
-    live = duckdb.connect(str(settings.warehouse), read_only=True)
+    live = warehouse.connect(settings, read_only=True)
     for t in tables:
         cols = [c["nome"] for c in t["colunas"]]  # type: ignore[attr-defined]
         for f in t["arquivos"]:  # type: ignore[attr-defined]
@@ -267,7 +267,7 @@ def test_a_big_table_with_a_partition_is_split_by_year_and_filters_by_it(
     assert sum(f["linhas"] for f in split["arquivos"]) == 1000  # type: ignore[attr-defined]
     assert verify.verify(settings) == []
     cat = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
-    live = duckdb.connect(str(settings.warehouse), read_only=True)
+    live = warehouse.connect(settings, read_only=True)
     ids = "SELECT id_voto FROM marts.fct_votos ORDER BY 1"
     assert cat.execute(ids).fetchall() == live.execute(ids).fetchall()
     glob = f"{(out / VOTOS).as_posix()}/**/*.parquet"
@@ -358,7 +358,7 @@ def test_the_parquet_carries_the_table_and_column_descriptions(
     con: Connection, settings: Settings, max_bytes: int
 ) -> None:
     out, _ = run(con, settings, max_bytes=max_bytes)
-    live = duckdb.connect(str(settings.warehouse), read_only=True)
+    live = warehouse.connect(settings, read_only=True)
     comments = dict(
         live.execute(
             "SELECT column_name, comment FROM duckdb_columns() WHERE schema_name = 'marts' "
@@ -590,7 +590,7 @@ def test_only_missing_or_changed_files_are_sent_and_verify_checks_the_objects(
     assert (out / FOTOS / FOTO_LOCAL).stat().st_mtime_ns == stamp
     assert verify.verify(settings) == []
     nova = b"\xff\xd8nova!"
-    con = duckdb.connect(str(settings.warehouse))
+    con = warehouse.connect(settings)
     capture(con, settings, "tse", "fotos_rj", 2022, "fotos_rj-ba9876543210.zip", {"FRJ1001_div.jpg": nova})
     arquivos.materialize(con, settings, contracts.find("tse"))
     con.close()
@@ -610,7 +610,7 @@ def test_an_object_outside_the_control_stays_without_prune(con: Connection, sett
     land_files(con, settings)
     out, _ = run(con, settings)
     (out / FOTOS / "2022/RJ/solta.jpg").write_bytes(b"x")
-    con = duckdb.connect(str(settings.warehouse))
+    con = warehouse.connect(settings)
     capture(
         con,
         settings,
@@ -629,7 +629,7 @@ def test_an_object_outside_the_control_stays_without_prune(con: Connection, sett
 
 
 def add_photos(settings: Settings, members: dict[str, bytes]) -> None:
-    con = duckdb.connect(str(settings.warehouse))
+    con = warehouse.connect(settings)
     capture(con, settings, "tse", "fotos_rj", 2022, "fotos_rj-ba9876543210.zip", members)
     arquivos.materialize(con, settings, contracts.find("tse"))
     con.close()
@@ -811,7 +811,7 @@ def dbt_nodes(settings: Settings, nodes: dict[str, dict[str, object]]) -> None:
 
 
 def record_results(settings: Settings, stage: str, results: dict[str, str]) -> None:
-    live = duckdb.connect(str(settings.warehouse))
+    live = warehouse.connect(settings)
     row = live.execute(
         "INSERT INTO metadata.execucoes (etapa, fonte, dt_inicio, resultado) VALUES (?, 'dbt', now() AT TIME ZONE 'UTC', 'ok') "
         "RETURNING id_execucao",
@@ -911,7 +911,7 @@ def test_a_table_that_never_reached_the_lake_and_failed_is_not_published(
 
 def build_at(settings: Settings, when: str, results: dict[str, str]) -> None:
     """Uma execução do dbt que começou em `when` (ISO), com o resultado de cada nó."""
-    live = duckdb.connect(str(settings.warehouse))
+    live = warehouse.connect(settings)
     row = live.execute(
         "INSERT INTO metadata.execucoes (etapa, fonte, dt_inicio, resultado) "
         "VALUES ('transform_post', 'dbt', ?, 'ok') RETURNING id_execucao",

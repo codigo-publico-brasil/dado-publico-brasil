@@ -70,7 +70,7 @@ Conexões e segredos vão no `.env` (modelo em `.env.example`, fora do git). [Da
 | `src/dado_publico_brasil/` | o código: `core` (base), `ingestion`, `transformation` e `orchestration` (liga os dois) |
 | `dbt/` | modelos SQL: staging, intermediate e marts (`dim_`, `fct_`, `brg_`, `agg_`), com testes |
 | `site/` | página inicial do lake público (`index.html`), publicada por `dado-publico publish-docs` |
-| `ddl/` | migrações das tabelas próprias (`metadata`, `identity`) |
+| `ddl/` | migrações das tabelas próprias (`metadata`, `identity`), aplicadas em `estado.duckdb` |
 | `docs/` | a documentação |
 | `tests/` | testes |
 | `.claude/agents/` | agentes de IA do projeto (arquiteto, engenheiro, auditor, qa) |

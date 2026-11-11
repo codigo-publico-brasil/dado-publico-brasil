@@ -132,4 +132,4 @@ def test_a_failed_restore_on_a_new_warehouse_removes_the_file(
     monkeypatch.setattr(privado, "restore", boom)
     with pytest.raises(RuntimeError, match="R2 fora do ar"):
         migrations.open_warehouse(settings)
-    assert not settings.warehouse.exists()  # senão a próxima subida pularia a restauração
+    assert not settings.estado.exists()  # senão a próxima subida pularia a restauração
