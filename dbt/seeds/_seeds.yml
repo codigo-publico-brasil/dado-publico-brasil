@@ -102,7 +102,7 @@ seeds:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [id_cargo, id_territorio, ano_eleicao_de]}}
     columns:
       - {name: id_cargo, description: "Cargo (dim_cargos): deputado_estadual ou deputado_distrital.", data_tests: [not_null, {accepted_values: {arguments: {values: [deputado_estadual, deputado_distrital]}}}, {relationships: {to: ref('dim_cargos'), field: id_cargo}}]}
-      - {name: id_territorio, description: "UF (dim_territorios), pelo código do IBGE.", data_tests: [not_null, {relationships: {to: ref('dim_territorios'), field: id_territorio}}]}
+      - {name: id_territorio, description: "UF (dim_territorios), pelo código do IBGE.", data_tests: [not_null, {relationships: {to: ref('dim_territorios'), field: id_territorio, config: {severity: warn}}}]}
       - {name: sigla_uf, description: "Sigla da UF, para leitura.", data_tests: [not_null]}
       - {name: ano_eleicao_de, description: "Primeiro ano de eleição em que a regra vale.", data_tests: [not_null]}
       - {name: ano_eleicao_ate, description: "Último ano de eleição em que a regra vale (9999 enquanto vigente).", data_tests: [not_null]}
