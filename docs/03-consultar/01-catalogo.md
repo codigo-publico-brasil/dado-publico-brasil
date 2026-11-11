@@ -696,7 +696,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `ano_eleicao` | integer | Ano da eleição. |  |
 | `ordem` | integer | Número do bem na declaração do candidato. |  |
 | `tipo` | varchar | Tipo do bem (imóvel, veículo, aplicação financeira etc.). |  |
-| `descricao` | varchar | Descrição do bem, como o candidato declarou. CPF (***.nnn.nnn-**) e número de agência e de conta bancária (após rótulo como agência, ag, conta, c/c, cc: 5 dígitos ou mais, ou com dígito verificador; 4 dígitos sem ano só em texto de banco) são mascarados (*****) pelo projeto; ano, cilindrada, placa e outros números não são tocados, e conta escrita fora desses padrões pode ficar visível; o original fica no landing. |  |
+| `descricao` | varchar | Descrição do bem, como o candidato declarou. CPF (***.nnn.nnn-**) é mascarado pelo projeto; o original fica no landing. Agência e conta bancária que o candidato escreveu na descrição vêm como a fonte publica, sem máscara (ADR 0050, issue 289; a republicação desta tabela é do fundador). |  |
 | `valor` | decimal(18,2) | Valor declarado em reais, sem correção. |  |
 | `dt_atualizacao` | date | Data da última atualização do bem na declaração. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |

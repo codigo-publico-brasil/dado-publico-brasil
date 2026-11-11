@@ -16,7 +16,7 @@ select
     try_strptime(dt_prestacao_contas, '%d/%m/%Y')::date as dt_prestacao,
     try_strptime(dt_despesa, '%d/%m/%Y')::date as dt_despesa,
     try_cast(replace(vr_despesa_contratada, ',', '.') as decimal(18, 2)) as valor,
-    mascarar_dado_pessoal(ds_despesa, 'bem') as descricao,
+    mascarar_dado_pessoal(ds_despesa, 'cpf') as descricao,
     _source_file_id as id_captura
 
 from {{ tse_source('despesas_candidatos', ['aa_eleicao', 'st_turno', 'tp_prestacao_contas', 'dt_prestacao_contas', 'sq_prestador_contas', 'sg_uf', 'sg_ue', 'ds_cargo', 'sq_candidato', 'sq_despesa', 'dt_despesa', 'vr_despesa_contratada', 'ds_despesa']) }}

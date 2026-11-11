@@ -465,7 +465,7 @@ models:
       - {name: ano_eleicao, data_type: integer, description: "Ano da eleição."}
       - {name: ordem, data_type: integer, description: "Número do bem na declaração do candidato."}
       - {name: tipo, data_type: varchar, description: "Tipo do bem (imóvel, veículo, aplicação financeira etc.)."}
-      - {name: descricao, data_type: varchar, description: "Descrição do bem, como o candidato declarou. CPF (***.nnn.nnn-**) e número de agência e de conta bancária (após rótulo como agência, ag, conta, c/c, cc: 5 dígitos ou mais, ou com dígito verificador; 4 dígitos sem ano só em texto de banco) são mascarados (*****) pelo projeto; ano, cilindrada, placa e outros números não são tocados, e conta escrita fora desses padrões pode ficar visível; o original fica no landing."}
+      - {name: descricao, data_type: varchar, description: "Descrição do bem, como o candidato declarou. CPF (***.nnn.nnn-**) é mascarado pelo projeto; o original fica no landing. Agência e conta bancária que o candidato escreveu na descrição vêm como a fonte publica, sem máscara (ADR 0050, issue 289; a republicação desta tabela é do fundador)."}
       - {name: valor, data_type: "decimal(18,2)", description: "Valor declarado em reais, sem correção."}
       - {name: dt_atualizacao, data_type: date, description: "Data da última atualização do bem na declaração."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
