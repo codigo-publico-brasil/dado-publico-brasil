@@ -105,6 +105,14 @@ Mesmo caminho para os demais: `fct_candidaturas.id_captura` e `fct_campanhas.id_
 
 Só os marts do lake e `metadata/capturas`. Não há views `app_*` (o prefixo não existe mais, [ADR 0041](../05-decisoes/0041-eleito-completo-e-fim-das-views-app.md)): cada aplicativo monta as suas consultas, e a regra de negócio já está nos marts (ocupação de cargo em `fct_cargos_ocupacoes`, ficha em `dim_pessoas`, eleito em `fct_candidaturas.fl_eleito`).
 
+## Estabilidade e versionamento
+
+Base: [ADR 0039](../05-decisoes/0039-marts-como-camada-semantica.md) (mudança de mart é aditiva). O projeto usa [versionamento semântico](https://semver.org/lang/pt-BR/), com tag `vX.Y.Z` e o [`CHANGELOG.md`](../../CHANGELOG.md); enquanto a versão for `0.x`, mudança que quebra o contrato sobe a versão menor e é anunciada no changelog.
+
+- **Contrato estável:** nomes de tabelas, colunas, tipos e significado dos marts (`dim_`, `fct_`, `brg_`, `agg_`) e de `metadata/capturas`; o formato do `manifesto.json` (chaves, `sha256`, `particao`, `ano`).
+- **Muda sem aviso prévio:** linhas e valores (o dado é o atual, ver Cuidados); `staging` e `intermediate` (publicados para auditoria, não são contrato); colunas e tabelas novas (mudança aditiva, não quebra consulta que nomeia colunas); descrições; ordem de linhas e de colunas; número e tamanho dos arquivos Parquet.
+- **Como se avisa:** coluna ou tabela que sai, é renomeada ou muda de significado entra no `CHANGELOG.md` em **Alterado** ou **Removido**, e um ADR a antecede. Sempre que possível a coluna antiga convive com a nova por uma versão (como `fl_eleito_informado`).
+
 ## Cuidados
 
 - O caminho é sempre o dado **atual**: não há pasta por versão. Para citar um número, anote o `id_execucao` de `metadata.exportacao` (ou do `manifesto.json`) e guarde o resultado.
