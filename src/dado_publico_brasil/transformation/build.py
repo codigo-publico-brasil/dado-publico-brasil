@@ -10,6 +10,8 @@ execução. O resultado de cada nó (modelo ou teste) é gravado em `metadata.te
 ingestão: parte dos schemas `raw_*` e de `metadata.capturas`.
 """
 
+import logging
+
 from dado_publico_brasil.core import migrations, privado, runs, warehouse
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection
@@ -22,6 +24,8 @@ from dado_publico_brasil.transformation import (
     snapshot,
 )
 from dado_publico_brasil.transformation.quality import record
+
+logger = logging.getLogger(__name__)
 
 PRE_IDENTITY = selection.FULL_ARGS["transform_pre"]
 POST_IDENTITY = selection.FULL_ARGS["transform_post"]
@@ -42,11 +46,11 @@ def transform(settings: Settings, stage: str, *args: str, plan: selection.Plan |
     ).close()  # o dbt lê `metadata.capturas`: o esquema precisa estar migrado
     started = runs.now()  # a execução mede o `dbt build` inteiro, não só a gravação dos resultados
     if plan:
-        print(f"== {stage}: {'completo' if plan.full else 'seletivo'} ({plan.reason})", flush=True)
+        logger.info("== %s: %s (%s)", stage, "completo" if plan.full else "seletivo", plan.reason)
     if plan and plan.skip:
         outcome = dbt.Outcome(0, "", [])
     else:
-        print(f"== {stage}: dbt build iniciado", flush=True)
+        logger.info("== %s: dbt build iniciado", stage)
         outcome = dbt.invoke(settings, "build", *(plan.args if plan else args), stream=True)
     con = warehouse.connect(settings)
     try:

@@ -6,6 +6,7 @@ colunas que mudam, nulos). Nada aqui interrompe o pipeline: `dado-publico observ
 saída 1) se houver problema, e `notify` manda o resumo por e-mail quando há.
 """
 
+import logging
 import os
 import re
 import shutil
@@ -17,6 +18,8 @@ from dado_publico_brasil.core import alert
 from dado_publico_brasil.core.settings import DBT_DIR, Settings
 from dado_publico_brasil.core.warehouse import Connection
 from dado_publico_brasil.transformation import branding, health
+
+logger = logging.getLogger(__name__)
 
 ELEMENTARY = "0.26.1"  # a mesma versão do pacote dbt em dbt/packages.yml
 
@@ -151,5 +154,5 @@ def notify(con: Connection, limits: dict[tuple[str, str], int] | None = None) ->
     try:
         return alert.send("Plataforma de dados: problemas nos dados", chr(10).join(lines))
     except (OSError, smtplib.SMTPException) as error:
-        print(f"Alerta por e-mail não enviado: {error}")
+        logger.warning("Alerta por e-mail não enviado: %s", error)
         return False

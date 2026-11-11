@@ -133,3 +133,30 @@ def test_every_compose_dependency_is_a_defined_service() -> None:
         for service, spec in services.items():
             missing = set(spec.get("depends_on") or {}) - set(services)
             assert not missing, f"{name}: {service} depende de {sorted(missing)}, que não está definido"
+
+
+def test_only_the_cli_prints_the_rest_of_the_package_logs() -> None:
+    """Fora do CLI nada usa `print`: o `logging` leva nível e horário e chega à aba Runs do Dagster."""
+    cli = ROOT / "src" / "dado_publico_brasil" / "orchestration" / "__main__.py"
+    printing = [
+        f"{path.relative_to(ROOT)}:{node.lineno}"
+        for path in (ROOT / "src").rglob("*.py")
+        if path != cli
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "print"
+    ]
+    assert printing == []
+
+
+def test_alert_failure_is_logged_as_a_warning(caplog: pytest.LogCaptureFixture) -> None:
+    from dado_publico_brasil.core import alert
+
+    def refuse(*_: object) -> bool:
+        raise OSError("sem rede")
+
+    original, alert.send = alert.send, refuse  # type: ignore[assignment]
+    try:
+        assert alert.notify_failure("job", "run", [], "falhou") is False
+    finally:
+        alert.send = original
+    assert [r.levelname for r in caplog.records] == ["WARNING"] and "sem rede" in caplog.text
