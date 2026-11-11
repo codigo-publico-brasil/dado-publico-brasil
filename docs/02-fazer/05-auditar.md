@@ -25,6 +25,7 @@ Toda execução (`metadata.execucoes`) registra a versão do código (commit), l
 | A fonte respondeu, mudou de colunas, encolheu? | `metadata.fontes_verificacoes` (`availability`, `schema`, `volume`, `coverage`) |
 | O dado está fresco? | `dt_verificacao` em `metadata.capturas` (última verificação da fonte); o atraso por dataset aparece no Dagster e em `dado-publico observe` |
 | Alguma linha se perdeu entre as camadas? | testes de reconciliação do dbt (severidade erro), por exemplo `votos_perdidos_do_staging_aos_marts` |
+| O raw tem linha a mais ou a menos que a captura vigente (ano duplicado)? | `carga_do_raw_diferente_da_captura`: nos datasets `replace_partition` (marcados com `meta.escrita` no YAML de sources do dbt), compara as linhas do raw por partição com as `carregadas` da carga em `metadata.fontes_verificacoes` |
 | Quais lacunas conhecidas existem e de que tamanho? | testes `warn` do dbt (a contagem de linhas que falham mede a lacuna) e [cobertura e lacunas](../03-consultar/04-cobertura-e-lacunas.md) |
 
 `verify` sai com erro se algo não confere, o que serve para agendar. Os testes automatizados cobrem o caso adulterado: um arquivo ou uma resposta alterada depois da captura é apontada.

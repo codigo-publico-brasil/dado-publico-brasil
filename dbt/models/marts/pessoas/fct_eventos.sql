@@ -54,7 +54,7 @@ eventos as (
     select
         id_pessoa,
         'nascimento' as id_tipo_evento,
-        'pessoas' as fato_origem,
+        'dim_pessoas' as fato_origem,
         cast(id_pessoa as varchar) as id_fato_origem,
         year(dt_nascimento) as ano_evento,
         if(
@@ -76,7 +76,7 @@ eventos as (
     union all
 
     select
-        id_pessoa, 'falecimento', 'pessoas', cast(id_pessoa as varchar), year(dt_falecimento), dt_falecimento,
+        id_pessoa, 'falecimento', 'dim_pessoas', cast(id_pessoa as varchar), year(dt_falecimento), dt_falecimento,
         null, null, null, null, 'informado', id_captura
 
     from falecimentos
@@ -85,7 +85,7 @@ eventos as (
     union all
 
     select
-        id_pessoa, 'candidatura_registrada', 'candidaturas', id_candidatura, ano_eleicao, cast(null as date),
+        id_pessoa, 'candidatura_registrada', 'fct_candidaturas', id_candidatura, ano_eleicao, cast(null as date),
         id_disputa, id_cargo, id_territorio, id_partido, 'informado', id_captura
 
     from candidaturas
@@ -99,7 +99,7 @@ eventos as (
             when situacao_candidatura like 'Indeferido%' then 'candidatura_indeferida'
             when situacao_candidatura like 'Cassa%' then 'candidatura_cassada'
         end,
-        'candidaturas', id_candidatura, ano_eleicao, cast(null as date), id_disputa, id_cargo, id_territorio, null,
+        'fct_candidaturas', id_candidatura, ano_eleicao, cast(null as date), id_disputa, id_cargo, id_territorio, null,
         'informado', id_captura
 
     from candidaturas
@@ -113,7 +113,7 @@ eventos as (
     select
         id_pessoa,
         case when resultado like 'N_o eleito%' then 'nao_eleito' when resultado = 'Suplente' then 'suplente_eleito' end,
-        'candidaturas', id_candidatura, ano_eleicao, dt_eleicao, id_disputa, id_cargo, id_territorio,
+        'fct_candidaturas', id_candidatura, ano_eleicao, dt_eleicao, id_disputa, id_cargo, id_territorio,
         if(resultado = 'Suplente', id_partido, null), 'informado', id_captura
 
     from candidaturas
@@ -123,7 +123,7 @@ eventos as (
     union all
 
     select
-        id_pessoa, 'segundo_turno_disputado', 'candidaturas', id_candidatura, ano_eleicao, dt_eleicao,
+        id_pessoa, 'segundo_turno_disputado', 'fct_candidaturas', id_candidatura, ano_eleicao, dt_eleicao,
         id_disputa, id_cargo, id_territorio, null, 'informado', id_captura
 
     from candidaturas
@@ -133,7 +133,7 @@ eventos as (
     union all
 
     select
-        m.id_pessoa, 'eleito', 'mandatos', m.id_candidatura, a.ano_eleicao, fc.dt_eleicao,
+        m.id_pessoa, 'eleito', 'fct_mandatos', m.id_candidatura, a.ano_eleicao, fc.dt_eleicao,
         m.id_disputa, m.id_cargo, m.id_territorio, m.id_partido, m.base_eleicao, m.id_captura
 
     from {{ ref('fct_mandatos') }} as m
@@ -149,7 +149,7 @@ eventos as (
     union all
 
     select
-        id_pessoa, 'posse', 'mandatos', id_candidatura, year(dt_inicio), dt_inicio,
+        id_pessoa, 'posse', 'fct_mandatos', id_candidatura, year(dt_inicio), dt_inicio,
         id_disputa, id_cargo, id_territorio, id_partido, base_dt_inicio, id_captura
 
     from {{ ref('fct_mandatos') }}
@@ -159,7 +159,7 @@ eventos as (
     union all
 
     select
-        id_pessoa, 'assuncao_por_suplencia', 'exercicios', id_exercicio, year(dt_inicio), dt_inicio,
+        id_pessoa, 'assuncao_por_suplencia', 'fct_exercicios', id_exercicio, year(dt_inicio), dt_inicio,
         null, id_cargo, null, null, 'informado', id_captura
 
     from {{ ref('fct_exercicios') }}
@@ -177,7 +177,7 @@ eventos as (
             when lower(causa_fim) like '%cassa%' then 'cassacao_de_mandato'
             else 'afastamento'
         end,
-        'exercicios', id_exercicio, year(dt_fim), dt_fim, null, id_cargo, null, null, 'informado', id_captura
+        'fct_exercicios', id_exercicio, year(dt_fim), dt_fim, null, id_cargo, null, null, 'informado', id_captura
 
     from {{ ref('fct_exercicios') }}
 
@@ -189,7 +189,7 @@ eventos as (
     union all
 
     select
-        id_pessoa, 'troca_de_partido', 'pessoas_partidos', id_pessoa_partido, ano_referencia, dt_inicio,
+        id_pessoa, 'troca_de_partido', 'fct_pessoas_partidos', id_pessoa_partido, ano_referencia, dt_inicio,
         null, null, null, id_partido, 'informado', id_captura
 
     from (

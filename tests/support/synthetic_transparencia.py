@@ -132,6 +132,38 @@ TERMOS_ADITIVOS = [
 ]
 
 
+LICITACOES = [
+    "Número Licitação;Código UG;Nome UG;Código Modalidade Compra;Modalidade Compra;Número Processo;Objeto;"
+    "Situação Licitação;Código Órgão Superior;Nome Órgão Superior;Código Órgão;Nome Órgão;UF;Município;"
+    "Data Resultado Compra;Data Abertura;Valor Licitação",
+    "000012024;200384;UG C;5;Pregão;23000.000001/2024-01;Serviço de limpeza. CPF 123.456.789-09;Publicado;30000;"
+    "Ministério A;30108;Órgão B;DF;BRASÍLIA;24/01/2024;10/01/2024;205690,5000",
+    "000022024;200384;UG C;6;Dispensa;23000.000002/2024-02;Material de consumo;Encerrado;30000;Ministério A;30108;"
+    "Órgão B;DF;BRASÍLIA;25/01/2024;;1000,0000",
+]
+ITENS_LICITACAO = [
+    "Número Licitação;Código UG;Nome UG;Código Modalidade Compra;Modalidade Compra;Número Processo;Código Órgão;"
+    "Nome Órgão;Código Item Compra;Descrição;Quantidade Item;Valor Item;Código Vencedor;Nome Vencedor",
+    "000012024;200384;UG C;5;Pregão;23000.000001/2024-01;30108;Órgão B;200384050000120240001;LIMPEZA;1,5000;"
+    "205690,5000;12345678000199;EMPRESA EXEMPLO LTDA",
+    "000022024;200384;UG C;6;Dispensa;23000.000002/2024-02;30108;Órgão B;200384060000220240001;"
+    "SERVICO DE CPF 987.654.321-00;2,0000;1000,0000;12345678909;PESSOA EXEMPLO",
+]
+PARTICIPANTES_LICITACAO = [
+    "Número Licitação;Código UG;Nome UG;Código Modalidade Compra;Modalidade Compra;Número Processo;Código Órgão;"
+    "Nome Órgão;Código Item Compra;Descrição Item Compra;Código Participante;Nome Participante;Flag Vencedor",
+    "000012024;200384;UG C;5;Pregão;23000.000001/2024-01;30108;Órgão B;200384050000120240001;LIMPEZA;"
+    "12345678000199;EMPRESA EXEMPLO LTDA;SIM",
+    "000012024;200384;UG C;5;Pregão;23000.000001/2024-01;30108;Órgão B;200384050000120240001;LIMPEZA;"
+    "12345678909;PESSOA EXEMPLO;NÃO",
+]
+EMPENHOS_LICITACAO = [
+    "Número Licitação;Código UG;Nome UG;Código Modalidade Compra;Modalidade Compra;Número Processo;Código Empenho;"
+    "Data Emissão Empenho;Observação Empenho;Valor Empenho (R$)",
+    "000012024;200384;UG C;5;Pregão;23000.000001/2024-01;200384000012024NE000001;30/01/2024;PAGAMENTO;205690,5000",
+]
+
+
 def _csv(linhas: list[str]) -> bytes:
     saida = io.StringIO()
     escritor = csv.writer(saida, delimiter=";", quoting=csv.QUOTE_ALL)
@@ -157,11 +189,21 @@ def transparencia_files(pasta: Path) -> dict[str, Path]:
         pacote.writestr(f"{MES}_Compras.csv", _csv(COMPRAS))
         pacote.writestr(f"{MES}_ItemCompra.csv", _csv(ITENS_COMPRA))
         pacote.writestr(f"{MES}_TermoAditivo.csv", _csv(TERMOS_ADITIVOS))
+    licitacoes = pasta / "licitacoes.zip"
+    with zipfile.ZipFile(licitacoes, "w") as pacote:  # nomes com acento, como no pacote oficial
+        pacote.writestr(f"{MES}_Licitação.csv", _csv(LICITACOES))
+        pacote.writestr(f"{MES}_ItemLicitação.csv", _csv(ITENS_LICITACAO))
+        pacote.writestr(f"{MES}_ParticipantesLicitação.csv", _csv(PARTICIPANTES_LICITACAO))
+        pacote.writestr(f"{MES}_EmpenhosRelacionados.csv", _csv(EMPENHOS_LICITACAO))
     mensais = {
         "despesas": despesas,
         "compras": compras,
         "compras_itens": compras,
         "compras_termos_aditivos": compras,
+        "licitacoes": licitacoes,
+        "licitacoes_itens": licitacoes,
+        "licitacoes_participantes": licitacoes,
+        "licitacoes_empenhos": licitacoes,
     }
     return {
         **{contrato.url(nome, 202400 + mes): mensais[nome] for nome in mensais for mes in range(1, 13)},

@@ -1,6 +1,7 @@
 
--- Quem ocupa cada cargo em cada corte, por território e partido. Dois cortes por ano (1º de janeiro e 1º de julho) de 1997
--- até hoje. As duas composições são SEMPRE separadas, porque respondem coisas diferentes:
+-- Quem ocupa cada cargo em cada corte, por território e partido. Os cortes são 1º de janeiro e 1º de julho de cada ano, de
+-- 1997 até hoje, mais a posse de cada legislatura (dim_legislaturas.dt_inicio, 1º de fevereiro: é quando as cadeiras da
+-- Câmara e do Senado mudam de mãos). As duas composições são SEMPRE separadas, porque respondem coisas diferentes:
 --  - eleita: quem foi eleito para o mandato que cobre o corte (fct_mandatos, de dt_inicio a dt_fim_prevista; o fim é
 --    derivado da duração do cargo, então cassação, renúncia e morte não entram). Todos os cargos, inclusive vereador.
 --  - exercicio: quem de fato exercia o cargo no corte (fct_exercicios, períodos oficiais da Câmara e do Senado). Só
@@ -15,6 +16,14 @@ with cortes as (
     cross join (values (1), (7)) as m(mes)
 
     where make_date(ano, mes, 1) <= current_date
+
+    union
+
+    select dt_inicio as dt_corte
+
+    from {{ ref('dim_legislaturas') }}
+
+    where dt_inicio between date '1997-01-01' and current_date
 
 ),
 

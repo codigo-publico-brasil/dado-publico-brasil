@@ -14,3 +14,5 @@ sources:
         description: Cada execução de etapa do pipeline, com início, fim, versão do código e resultado.
       - name: testes_resultados
         description: Resultado de cada modelo e teste do dbt na última execução de cada comando.
+      - name: fontes_verificacoes
+        description: Verificações de cada fonte (disponibilidade, carga, volume), com resultado e detalhe; cada linha é um instante, vale a mais recente de cada tipo.

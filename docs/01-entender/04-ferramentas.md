@@ -27,4 +27,6 @@ uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pyt
 | `mypy` | **tipos:** as anotações de tipo (modo estrito) são coerentes entre si |
 | `pytest` | **testes:** unidade, o pipeline sintético inteiro, contratos do repositório (nomes e descrições, catálogo em dia, fronteira entre os motores) |
 
+No CI o `pytest` roda com `--cov` e o resumo do job mostra a cobertura por arquivo e as linhas sem teste ([ADR 0048](../05-decisoes/0048-cobertura-de-testes-sem-piso.md)); não há piso que reprove. Localmente: `uv run pytest --cov`. Cobertura alta não prova dado certo: reconciliação e lacunas seguem sendo o principal.
+
 Os testes são escritos a partir do critério de aceite, antes do código, e nunca são desativados para passar. A configuração de cada ferramenta está em `pyproject.toml`.

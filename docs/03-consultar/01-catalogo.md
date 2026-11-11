@@ -78,6 +78,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `emendas` | Emendas parlamentares por localidade, função, programa e ação, com os valores empenhado, liquidado e pago. | publico-dados-pessoais-de-terceiros |  |
 | `emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico-dados-pessoais-de-terceiros |  |
 | `emendas_favorecidos` | Quem recebeu o dinheiro das emendas, como a fonte publica (inclui pessoa física, com CPF mascarado). | publico-dados-pessoais-de-terceiros |  |
+| `licitacoes` | Licitações do governo federal (SIASG), uma por linha. Fonte: saida/licitacoes/AAAAMM_Licitacoes.zip, membro AAAAMM_Licitação.csv. | publico-dados-pessoais-de-terceiros |  |
+| `licitacoes_empenhos` | Empenhos relacionados às licitações. Mesmo zip, membro AAAAMM_EmpenhosRelacionados.csv. | publico-dados-pessoais-de-terceiros |  |
+| `licitacoes_itens` | Itens das licitações, com o vencedor (CPF completo se pessoa física). Mesmo zip, membro AAAAMM_ItemLicitação.csv. | publico-dados-pessoais-de-terceiros |  |
+| `licitacoes_participantes` | Participantes dos itens das licitações (CPF completo se pessoa física). Mesmo zip, membro AAAAMM_ParticipantesLicitação.csv. | publico-dados-pessoais-de-terceiros |  |
 
 ## raw_federal_tse
 
@@ -166,6 +170,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_transparencia__emendas` | Emendas parlamentares, uma linha por emenda, localidade, função, programa e ação. | publico-agente-publico |  |
 | `stg_transparencia__emendas_convenios` | Convênios firmados com recursos de emendas parlamentares. | publico-agente-publico |  |
 | `stg_transparencia__emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda, por mês, como a fonte publica (inclui pessoa física, com CPF mascarado). | publico-agente-publico |  |
+| `stg_transparencia__licitacoes` | Licitações do governo federal (SIASG), uma por linha, de 2022-11 em diante, só meses fechados. | publico-agente-publico | unidade gestora, modalidade e número da licitação |
+| `stg_transparencia__licitacoes_empenhos` | Empenhos relacionados às licitações do governo federal. | publico-agente-publico | licitação e empenho |
+| `stg_transparencia__licitacoes_itens` | Itens das licitações do governo federal, com o vencedor. Vencedor pessoa física vem com CPF completo na fonte e sai mascarado aqui. | publico-dados-pessoais-de-terceiros | linha da fonte: item e vencedor (a fonte repete linhas idênticas e deixa o código do item vazio em parte delas) |
+| `stg_transparencia__licitacoes_participantes` | Participantes dos itens das licitações do governo federal, com a marca de vencedor. Participante pessoa física vem com CPF completo na fonte e sai mascarado aqui. | publico-dados-pessoais-de-terceiros | linha da fonte: item e participante (a fonte repete linhas idênticas) |
 | `stg_tse__bens` | Bens declarados pelos candidatos de todos os cargos, uma linha por bem. | publico-agente-publico |  |
 | `stg_tse__candidaturas` | Candidaturas de todos os cargos nas eleições gerais e municipais, uma linha por candidatura e turno. | publico-agente-publico |  |
 | `stg_tse__despesas_candidatos` | Despesas contratadas declaradas pelos candidatos de todos os cargos, uma linha por despesa; o valor é o declarado, sem nome nem documento do fornecedor. | publico-agente-publico |  |
@@ -184,7 +192,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `int_ementas_siglas_extraidas` | Siglas escritas em maiúsculas dentro de ementas de caixa mista. | publico-agente-publico |  |
 | `int_frentes_membros_ligados` | Participação em frentes ligada à pessoa do projeto. | publico-agente-publico |  |
 | `int_orgaos_membros_ligados` | Participação em órgãos ligada à pessoa do projeto. | publico-agente-publico |  |
-| `int_pessoas_atividade_agregada` | Uma linha por pessoa, com votos, propostas e legislaturas. | publico-agente-publico |  |
 | `int_pessoas_ids_vistos` | Todo identificador de pessoa informado pelas fontes. Entrada do código de identidade. | publico-agente-publico |  |
 | `int_pessoas_profissoes_agregadas` | Uma linha por pessoa, com as profissões declaradas. | publico-agente-publico |  |
 | `int_pessoas_senado_unidas` | Pessoa do projeto unida ao cadastro do Senado. | publico-agente-publico |  |
@@ -204,8 +211,10 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
-| `agg_composicoes` | Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje), por território e partido. A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes. | publico | corte |
+| `agg_composicoes` | Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje, e a posse de cada legislatura), por território e partido. A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes. | publico | corte |
+| `agg_pessoas_atividade` | O que cada parlamentar fez, derivado dos votos e das autorias: quantidade de votos e de propostas, legislaturas com voto e o partido e a UF do voto mais recente. Fica fora do cadastro (dim_pessoas_cadastro) porque muda a cada carga, enquanto o cadastro só descreve a pessoa. Uma linha por pessoa do cadastro (Câmara e Senado); quem não votou tem zero votos e o resto vazio. O partido e a UF são os do voto, como a fonte informa, e não afirmam filiação. | publico-agente-publico | pessoa |
 | `brg_frentes_membros` | Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título. | publico-agente-publico | pessoa |
+| `brg_licitacoes_empenhos` | Ponte entre as licitações do governo federal e os empenhos relacionados a elas, como o Portal da Transparência publica. Uma linha por licitação e empenho. | publico-agente-publico | licitação e empenho |
 | `brg_normas_relacoes` | Ligações de cada norma com atos posteriores, como o Senado declara (alteração, regulamentação, veto, declaração de constitucionalidade). Só das normas detalhadas (leis, leis complementares, emendas, medidas provisórias e a Constituição). Uma linha por norma, ato posterior e tipo de relação. | publico | norma |
 | `brg_orgaos_membros` | Participação de pessoas em órgãos da Câmara, com cargo e período. Uma linha por pessoa, órgão, cargo e período informado. | publico-agente-publico | pessoa |
 | `brg_pessoas_ocupacoes` | Ocupações anteriores declaradas. Uma linha por pessoa e ocupação. | publico-agente-publico | pessoa e ocupação |
@@ -222,7 +231,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dim_partidos_camara` | Partidos com sigla e nome oficiais. Uma linha por partido. | publico | partido |
 | `dim_partidos_linhagem` | Mudanças de nome, fusões e incorporações de partidos, conforme o TSE, com a página oficial de cada evento. Curada à mão; só o que foi conferido. Uma linha por partido de origem e evento. | publico | partido de origem e evento |
 | `dim_pessoas` | Quem já teve pelo menos um cargo (ADR 0030 e 0031): parlamentar da Câmara ou do Senado e todo eleito do TSE, a partir do momento da eleição. Quem só se candidatou e nunca foi eleito não está aqui. Uma linha por pessoa do projeto, com a chave de identidade que nunca muda nem é reaproveitada. Cada atributo diz de qual fonte veio (a Câmara e o Senado valem mais que o TSE; o TSE vale a candidatura mais recente que o traz). Só o que a fonte publica; nada é inferido. | publico-agente-publico | pessoa |
-| `dim_pessoas_cadastro` | Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação, falecimento e atividade legislativa (contagens e último partido). Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas). | publico-agente-publico | pessoa |
+| `dim_pessoas_cadastro` | Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação e falecimento. A atividade legislativa (contagens e último partido) está em agg_pessoas_atividade. Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas). | publico-agente-publico | pessoa |
 | `dim_territorios` | Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato que fala de lugar (ADR 0030). | publico | território |
 | `fct_campanhas` | A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o arquivo daquele dado não foi carregado ou não traz o candidato. | publico-agente-publico | candidatura |
 | `fct_candidaturas` | Cada candidatura de uma eleição ordinária, como o TSE registrou, de todos os cargos (inclusive vereador): quem era, por qual partido, em qual disputa, o desfecho e a foto oficial. Só arquivos do TSE, sem Câmara, Senado nem pessoa do projeto. Uma linha por candidatura; os turnos estão em resultados e a campanha em campanhas. A mesma pessoa em eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer novato. fl_eleito vale para o eleito informado pelo TSE ou derivado dos votos pela Constituição (base_eleicao diz qual; o texto original do TSE segue em resultado); fl_eleito_informado guarda só o informado. | publico-agente-publico | candidatura |
@@ -235,14 +244,17 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fct_emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês. | publico-dados-pessoais-de-terceiros | emenda |
 | `fct_eventos` | A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto livre). O tipo vem do catálogo fechado dim_evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data, retorno de afastamento) ainda não têm linha: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fct_eventos. | publico-agente-publico | evento da pessoa |
 | `fct_exercicios` | Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Os campos da fonte não são derivados; as colunas que ligam o período ao resto (id_candidatura, id_partido) são derivadas e marcadas (base_partido). Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos; a ocupação dos dois juntos, em fct_cargos_ocupacoes). O nome do modelo leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fct_exercicios. | publico-agente-publico | período de exercício |
-| `fct_mandatos` | Um mandato por candidatura eleita, de todos os cargos (inclusive vereador e o vice e os suplentes eleitos junto): o mandato nasce da eleição, não do exercício. Quem assumiu depois como suplente não tem linha aqui (será fct_exercicios). O início vem da regra da Constituição com a vigência (dim_cargos_posse) ou, para deputado estadual e distrital, da posse que a constituição estadual fixa por UF (dim_cargos_posse_uf, só UFs com fonte conferida); onde nenhuma fixa a data, da data de posse do TSE quando plausível. O fim é sempre derivado da duração do cargo. Só TSE; a ligação com a pessoa do projeto virá com as pessoas de todos os eleitos. O nome do modelo leva o prefixo fatos_ só porque fct_mandatos ainda existe; a tabela é fct_mandatos. | publico-agente-publico | mandato (candidatura eleita) |
+| `fct_licitacoes` | Licitações do governo federal (SIASG), de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora, modalidade e número da licitação; se a fonte repete a licitação em mais de um mês, vale a captura mais recente. | publico-agente-publico | licitação (unidade gestora |
+| `fct_licitacoes_itens` | Itens das licitações do governo federal, com o vencedor, uma linha por item e vencedor como a fonte publica (a fonte repete linhas idênticas e deixa o código do item vazio em parte delas; o teste de lacunas as mede). Vencedor pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. | publico-dados-pessoais-de-terceiros | item e vencedor |
+| `fct_licitacoes_participantes` | Participantes dos itens das licitações do governo federal, com a marca de vencedor, uma linha por item e participante como a fonte publica (a fonte repete linhas idênticas). Participante pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. | publico-dados-pessoais-de-terceiros | item e participante |
+| `fct_mandatos` | Um mandato por candidatura eleita, de todos os cargos (inclusive vereador e o vice e os suplentes eleitos junto): o mandato nasce da eleição, não do exercício. Quem assumiu depois como suplente não tem linha aqui (será fct_exercicios). O início vem da regra da Constituição com a vigência (dim_cargos_posse); onde a Constituição não fixa a data, da data de posse do TSE quando plausível. O fim é sempre derivado da duração do cargo. Só TSE; a ligação com a pessoa do projeto virá com as pessoas de todos os eleitos. O nome do modelo leva o prefixo fatos_ só porque fct_mandatos ainda existe; a tabela é fct_mandatos. | publico-agente-publico | mandato (candidatura eleita) |
 | `fct_normas` | Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...) desde 1808, só metadados; o texto integral não vem desta fonte. Uma linha por norma. | publico | norma |
 | `fct_normas_geradas` | Norma jurídica que resultou de uma matéria, com número, datas e veículo de publicação. Só o Senado informa por enquanto. Uma linha por matéria. | publico | matéria |
 | `fct_normas_publicacoes` | Onde cada norma foi publicada no Diário Oficial (a original e, por exemplo, a do veto), com página e coluna. Só das normas detalhadas. Uma linha por norma e publicação. | publico | norma e publicação |
 | `fct_pessoas_fusoes` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa (por exemplo, deputado que virou senador). Uma linha por chave absorvida. | publico-agente-publico | chave absorvida |
 | `fct_pessoas_partidos` | O partido de cada pessoa em cada momento, de fontes oficiais (ADR 0032): o histórico de deputados da Câmara (períodos em que o deputado aparece em um partido), os votos de deputados e senadores (o partido em cada voto, só para quem não tem histórico) e a candidatura do TSE (o partido pelo qual a pessoa concorreu em cada eleição, para toda pessoa que já foi eleita, inclusive vereador, prefeito e governador que nunca estiveram na Câmara). Troca de partido são dois momentos seguidos da mesma pessoa com partidos diferentes. O partido da candidatura não é a data de filiação, e a filiação partidária por data (arquivo de filiados do TSE) não é carregada: ver a base legal em docs/03-consultar/05-lgpd-dados-pessoais.md. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fct_pessoas_partidos. | publico-agente-publico | partido de uma pessoa em um momento por fonte |
 | `fct_proposicoes` | Proposições com ementa padronizada, ementa oficial, situação atual e URL da fonte. Uma linha por proposição. | publico | proposição |
-| `fct_proposicoes_tramitacoes` | Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição e sequência. | publico | proposição e sequência |
+| `fct_proposicoes_tramitacoes` | Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição, sequência e hora (a fonte às vezes repete a sequência com outra hora). | publico | proposição, sequência e hora |
 | `fct_resultados` | O que aconteceu em cada turno da eleição, candidatura a candidatura, só com arquivos do TSE. Uma linha por candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente). fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE. | publico-agente-publico | candidatura e turno |
 | `fct_vetos` | Vetos presidenciais apreciados pelo Congresso, de 1994 em diante (antes disso a fonte não informa), com a matéria vetada, a norma gerada e as datas. Uma linha por veto. | publico | veto |
 | `fct_vetos_dispositivos` | Cada dispositivo vetado, com o texto vetado, a razão do veto escrita pela Presidência e o que o Congresso decidiu (situação como a fonte informa). Só dos vetos já buscados. Uma linha por dispositivo. | publico | dispositivo vetado |
@@ -264,6 +276,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `capturas` | Cada arquivo recebido da fonte, com URL, hash, caminho no landing e datas. | controle |  |
 | `execucoes` | Cada execução de etapa do pipeline, com início, fim, versão do código e resultado. | controle |  |
+| `fontes_verificacoes` | Verificações de cada fonte (disponibilidade, carga, volume), com resultado e detalhe; cada linha é um instante, vale a mais recente de cada tipo. | controle |  |
 | `testes_resultados` | Resultado de cada modelo e teste do dbt na última execução de cada comando. | controle |  |
 
 ## Dicionário de colunas dos marts
@@ -272,12 +285,25 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Coluna | Tipo | Descrição | Dado pessoal |
 | --- | --- | --- | --- |
-| `dt_corte` | date | Data do corte: 1º de janeiro ou 1º de julho. |  |
+| `dt_corte` | date | Data do corte: 1º de janeiro, 1º de julho ou a posse de uma legislatura (dim_legislaturas). |  |
 | `tipo_composicao` | varchar | eleita (quem foi eleito para o mandato que cobre o corte) ou exercicio (quem de fato exercia o cargo). |  |
 | `id_cargo` | varchar | Cargo (dim_cargos). |  |
 | `id_territorio` | varchar | Território da composição (dim_territorios): município, UF ou país; vazio onde a fonte não liga a um território. |  |
 | `id_partido` | integer | Partido (dim_partidos): o da eleição na composição eleita, o mais recente conhecido até o corte na composição em exercício; vazio quando não se conhece. |  |
 | `qtd_membros` | bigint | Quantas pessoas ocupam o cargo naquele corte, território e partido. |  |
+
+### marts.agg_pessoas_atividade
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `id_pessoa` | bigint | Pessoa (dim_pessoas_cadastro). |  |
+| `qtd_votos` | bigint | Quantidade de votos nominais registrados. |  |
+| `qtd_propostas` | bigint | Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado). |  |
+| `ultimo_partido` | varchar | Sigla do partido no voto mais recente, como a fonte informa. |  |
+| `ultima_uf` | varchar | UF no voto mais recente. |  |
+| `dt_ultimo_voto` | timestamp | Data e hora do voto mais recente. |  |
+| `primeira_legislatura_com_voto` | integer | Primeira legislatura em que há voto registrado. |  |
+| `ultima_legislatura_com_voto` | integer | Última legislatura em que há voto registrado. |  |
 
 ### marts.brg_frentes_membros
 
@@ -290,6 +316,19 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_legislatura` | integer | Legislatura do registro. |  |
 | `dt_inicio` | date | Início da participação, quando a fonte informa. |  |
 | `dt_fim` | date | Fim da participação, quando a fonte informa. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.brg_licitacoes_empenhos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_licitacao` | varchar | Licitação a que o empenho se relaciona (fct_licitacoes). |  |
+| `cd_empenho` | varchar | Código do empenho, como a fonte informa. |  |
+| `dt_emissao` | date | Data de emissão do empenho. |  |
+| `observacao` | varchar | Observação do empenho, texto livre da fonte (CPF no texto é mascarado pelo projeto). |  |
+| `valor` | decimal(18,4) | Valor do empenho, em reais, com as quatro casas que a fonte publica. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
@@ -570,14 +609,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `telefone_institucional` | varchar | Telefone institucional do gabinete; no Senado, vários separados por ponto e vírgula. |  |
 | `gabinete_endereco` | varchar | Endereço do gabinete (prédio, sala e andar na Câmara; endereço no Senado). |  |
 | `pagina_url` | varchar | Página oficial da pessoa no Senado; vazia onde a fonte não informa. |  |
-| `primeira_legislatura_com_voto` | integer | Primeira legislatura em que há voto registrado. |  |
-| `ultima_legislatura_com_voto` | integer | Última legislatura em que há voto registrado. |  |
 | `profissoes` | varchar | Profissões declaradas, separadas por ponto e vírgula. |  |
-| `ultimo_partido` | varchar | Partido no voto mais recente. |  |
-| `ultima_uf` | varchar | UF no voto mais recente. |  |
-| `dt_ultimo_voto` | timestamp | Data e hora do voto mais recente. |  |
-| `qtd_propostas` | bigint | Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado). |  |
-| `qtd_votos` | bigint | Quantidade de votos nominais registrados. |  |
 | `dt_captura` | date | Data da captura do cadastro de deputados. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 
@@ -837,6 +869,63 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dt_fim` | date | Fim do período; vazio enquanto está em exercício. |  |
 | `dt_mandato_fim` | date | Fim do mandato a que o período pertence, como a fonte publica: no Senado, o do mandato do titular (inclusive de quem assume como suplente); na Câmara, o fim da legislatura. Diferente de dt_fim, que é o fim do período de exercício. |  |
 | `causa_fim` | varchar | Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.fct_licitacoes
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_licitacao` | varchar | Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen. Liga os itens, participantes e empenhos. |  |
+| `numero` | varchar | Número da licitação no SIASG, como a fonte informa (único só junto com a unidade gestora e a modalidade). |  |
+| `cd_ug` | varchar | Código SIAFI da unidade gestora responsável pela licitação. |  |
+| `ug` | varchar | Nome da unidade gestora responsável pela licitação. |  |
+| `cd_modalidade` | varchar | Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal). |  |
+| `modalidade` | varchar | Modalidade de compra, como a fonte informa. |  |
+| `numero_processo` | varchar | Número do processo administrativo da licitação, como a fonte informa. |  |
+| `objeto` | varchar | Objeto da licitação, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing). |  |
+| `situacao` | varchar | Situação da licitação, como a fonte informa (por exemplo, Publicado, Encerrado). |  |
+| `cd_orgao_superior` | varchar | Código SIAFI do órgão superior (ministério ou equivalente). |  |
+| `orgao_superior` | varchar | Nome do órgão superior. |  |
+| `cd_orgao` | varchar | Código SIAFI do órgão da unidade gestora. |  |
+| `orgao` | varchar | Nome do órgão da unidade gestora. |  |
+| `uf` | varchar | UF da unidade gestora. |  |
+| `municipio` | varchar | Município da unidade gestora. |  |
+| `dt_resultado` | date | Data do resultado da compra (homologação publicada no Diário Oficial da União, segundo o dicionário do portal). |  |
+| `dt_abertura` | date | Data de abertura para envio de propostas; vazia onde a fonte não informa. |  |
+| `valor` | decimal(18,4) | Valor total licitado, em reais, com as quatro casas que a fonte publica. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.fct_licitacoes_itens
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_licitacao` | varchar | Licitação do item (fct_licitacoes). |  |
+| `cd_item` | varchar | Código do item da compra (22 dígitos: unidade gestora, modalidade, número da licitação no ano, ano e sequencial do item, segundo o dicionário do portal); vazio em parte das linhas da fonte. |  |
+| `item` | varchar | Descrição do item, texto livre da fonte (CPF no texto é mascarado pelo projeto). |  |
+| `quantidade` | decimal(18,4) | Quantidade do item, com as quatro casas que a fonte publica. |  |
+| `valor` | decimal(18,4) | Valor total do item, em reais, com as quatro casas que a fonte publica. |  |
+| `cd_vencedor` | varchar | CNPJ do vencedor, como a fonte publica. CPF (11 dígitos, completo na fonte) sai mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing. | sim |
+| `vencedor` | varchar | Nome do vencedor (pessoa física inclusive), como a fonte publica; número de CPF no texto é mascarado pelo projeto. | sim |
+| `fl_contem_dado_pessoal` | boolean | Verdadeiro quando o vencedor é pessoa física (código com CPF mascarado). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.fct_licitacoes_participantes
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_licitacao` | varchar | Licitação do item (fct_licitacoes). |  |
+| `cd_item` | varchar | Código do item da compra (liga a fct_licitacoes_itens); vazio em parte das linhas da fonte. |  |
+| `item` | varchar | Descrição do item, texto livre da fonte (CPF no texto é mascarado pelo projeto). |  |
+| `cd_participante` | varchar | Código do participante: CNPJ na maioria das linhas; a fonte traz também CPF (sai mascarado, ***.nnn.nnn-**) e códigos curtos que o dicionário do portal não descreve. Como a fonte publica. | sim |
+| `participante` | varchar | Nome do participante (pessoa física inclusive), como a fonte publica; número de CPF no texto é mascarado pelo projeto. | sim |
+| `fl_vencedor` | boolean | Verdadeiro quando o participante venceu o item (SIM na fonte); falso quando não (NÃO). |  |
+| `fl_contem_dado_pessoal` | boolean | Verdadeiro quando o participante é pessoa física (código com CPF mascarado). |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
 

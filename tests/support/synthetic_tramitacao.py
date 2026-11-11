@@ -31,6 +31,8 @@ def _camara_corpo(item: str) -> bytes:
         ),
         _andamento(2, "2024-03-05T09:30", "CCJC", "AGUARDANDO PARECER", "Às Comissões."),
         _andamento(3, "2025-02-02T09:30", "PLEN", "TRANSFORMADO EM NORMA JURÍDICA", "Sancionada."),
+        # a fonte repete o número da sequência com outra hora: não pode ser colisão nem perda
+        _andamento(3, "2025-02-02T15:00", "PLEN", "TRANSFORMADO EM NORMA JURÍDICA", "Publicada."),
     ]
     return json.dumps({"dados": dados, "links": [{"rel": "self", "href": CAMARA.format(item)}]}).encode()
 

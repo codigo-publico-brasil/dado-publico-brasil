@@ -21,7 +21,7 @@ orchestration = [
 dado-publico = "dado_publico_brasil.orchestration.__main__:main"
 
 [dependency-groups]
-dev = ["mypy>=1.13", "pytest>=8.3", "ruff>=0.8", "types-pyyaml>=6.0"]
+dev = ["mypy>=1.13", "pytest>=8.3", "pytest-cov>=6.0", "ruff>=0.8", "types-pyyaml>=6.0"]
 
 [build-system]
 requires = ["hatchling"]
@@ -46,6 +46,15 @@ strict = true
 explicit_package_bases = true
 mypy_path = "src:tests/support"
 files = ["src", "tests"]
+
+[tool.coverage.run]
+source = ["dado_publico_brasil"]
+branch = true
+
+[tool.coverage.report]
+# Relatório sem piso (ADR 0048); `show_missing` lista as linhas sem teste.
+show_missing = true
+skip_covered = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -294,6 +294,8 @@ models:
 
   - name: stg_camara__tramitacoes
     description: Tramitação das proposições que podem virar norma (só as já buscadas), uma linha por andamento.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [id_proposicao, sequencia, dt_registro]}}
     columns:
       - {name: id_proposicao, description: "Identificador da proposição na fonte.", tests: ["not_null"]}
       - {name: sequencia, description: "Número do andamento dentro da proposição.", tests: ["not_null"]}

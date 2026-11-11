@@ -3,7 +3,7 @@ version: 2
 models:
   - name: agg_composicoes
     description: >
-      Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje), por território e partido.
+      Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje, e a posse de cada legislatura), por território e partido.
       A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a
       composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente
       conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na
@@ -12,9 +12,26 @@ models:
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [dt_corte, tipo_composicao, id_cargo, id_territorio, id_partido]}}
     columns:
-      - {name: dt_corte, data_type: date, tests: [not_null], description: "Data do corte: 1º de janeiro ou 1º de julho."}
+      - {name: dt_corte, data_type: date, tests: [not_null], description: "Data do corte: 1º de janeiro, 1º de julho ou a posse de uma legislatura (dim_legislaturas)."}
       - {name: tipo_composicao, data_type: varchar, tests: [{accepted_values: {arguments: {values: [eleita, exercicio]}}}], description: "eleita (quem foi eleito para o mandato que cobre o corte) ou exercicio (quem de fato exercia o cargo)."}
       - {name: id_cargo, data_type: varchar, tests: [not_null, {relationships: {to: ref('dim_cargos'), field: id_cargo}}], description: "Cargo (dim_cargos)."}
       - {name: id_territorio, data_type: varchar, description: "Território da composição (dim_territorios): município, UF ou país; vazio onde a fonte não liga a um território."}
       - {name: id_partido, data_type: integer, description: "Partido (dim_partidos): o da eleição na composição eleita, o mais recente conhecido até o corte na composição em exercício; vazio quando não se conhece."}
       - {name: qtd_membros, data_type: bigint, tests: [not_null], description: "Quantas pessoas ocupam o cargo naquele corte, território e partido."}
+
+  - name: agg_pessoas_atividade
+    description: >
+      O que cada parlamentar fez, derivado dos votos e das autorias: quantidade de votos e de propostas, legislaturas com
+      voto e o partido e a UF do voto mais recente. Fica fora do cadastro (dim_pessoas_cadastro) porque muda a cada carga,
+      enquanto o cadastro só descreve a pessoa. Uma linha por pessoa do cadastro (Câmara e Senado); quem não votou tem zero
+      votos e o resto vazio. O partido e a UF são os do voto, como a fonte informa, e não afirmam filiação.
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", auditoria_excecao: "Agregado derivado dos votos e das autorias; fonte e captura estão em fct_votos e brg_proposicoes_autorias."}
+    columns:
+      - {name: id_pessoa, data_type: bigint, tests: [unique, not_null, {relationships: {to: ref('dim_pessoas_cadastro'), field: id_pessoa}}], description: "Pessoa (dim_pessoas_cadastro)."}
+      - {name: qtd_votos, data_type: bigint, tests: [not_null], description: "Quantidade de votos nominais registrados."}
+      - {name: qtd_propostas, data_type: bigint, description: "Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado)."}
+      - {name: ultimo_partido, data_type: varchar, description: "Sigla do partido no voto mais recente, como a fonte informa."}
+      - {name: ultima_uf, data_type: varchar, description: "UF no voto mais recente."}
+      - {name: dt_ultimo_voto, data_type: timestamp, description: "Data e hora do voto mais recente."}
+      - {name: primeira_legislatura_com_voto, data_type: integer, description: "Primeira legislatura em que há voto registrado."}
+      - {name: ultima_legislatura_com_voto, data_type: integer, description: "Última legislatura em que há voto registrado."}

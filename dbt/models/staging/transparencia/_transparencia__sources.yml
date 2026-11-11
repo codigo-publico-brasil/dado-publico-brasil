@@ -3,9 +3,9 @@ version: 2
 sources:
   - name: transparencia
     description: >
-      Portal da Transparência do Governo Federal (CGU), emendas parlamentares (pacote .zip nacional com três tabelas), despesas e contratos (um .zip por mês, de 2022-11 em diante).
+      Portal da Transparência do Governo Federal (CGU), emendas parlamentares (pacote .zip nacional com três tabelas), despesas, contratos e licitações (um .zip por mês, de 2022-11 em diante).
       Carregado em raw_federal_transparencia (declaração em sources/executivo/federal/transparencia.yml): favorecido
-      de emenda pessoa física entra como a fonte publica (marcado como dado pessoal); nos contratos o contratado
+      de emenda pessoa física entra como a fonte publica (marcado como dado pessoal); nos contratos e nas licitações o contratado, o participante e o vencedor
       pessoa física traz CPF completo na fonte (guardado no raw privado e mascarado no staging). Licença pela política de dados abertos (Decreto 8.777/2016); o Termo de Uso do portal (lido em 27/10/2026) permite utilizar os dados "da forma que melhor lhe convier", sem licença própria nem citação obrigatória.
       Fonte oficial: [https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares](https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares).
     schema: raw_federal_transparencia
@@ -22,10 +22,22 @@ sources:
       - name: emendas_favorecidos
         description: Quem recebeu o dinheiro das emendas, como a fonte publica (inclui pessoa física, com CPF mascarado).
       - name: despesas
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: "Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa (sem favorecido). Fonte: saida/despesas-execucao/AAAAMM_Despesas.zip."
       - name: compras
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: "Contratos do governo federal, um por linha (o contratado pessoa física traz CPF completo). Fonte: saida/compras/AAAAMM_Compras.zip."
       - name: compras_itens
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Itens dos contratos do governo federal.
       - name: compras_termos_aditivos
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Termos aditivos dos contratos do governo federal.
+      - name: licitacoes
+        description: "Licitações do governo federal (SIASG), uma por linha. Fonte: saida/licitacoes/AAAAMM_Licitacoes.zip, membro AAAAMM_Licitação.csv."
+      - name: licitacoes_itens
+        description: "Itens das licitações, com o vencedor (CPF completo se pessoa física). Mesmo zip, membro AAAAMM_ItemLicitação.csv."
+      - name: licitacoes_participantes
+        description: "Participantes dos itens das licitações (CPF completo se pessoa física). Mesmo zip, membro AAAAMM_ParticipantesLicitação.csv."
+      - name: licitacoes_empenhos
+        description: "Empenhos relacionados às licitações. Mesmo zip, membro AAAAMM_EmpenhosRelacionados.csv."

@@ -10,7 +10,8 @@ def test_senators_become_people_with_standardized_names_and_empty_fields_the_sou
     con, _ = full
     row = con.execute(
         "SELECT nome, nome_civil, sexo, dt_nascimento, foto_url, qtd_propostas, qtd_votos, ultimo_partido, "
-        "ultima_uf, dt_captura IS NOT NULL FROM marts.dim_pessoas_cadastro WHERE fonte = 'senado' AND nome = 'Beto Barreiras'"
+        "ultima_uf, dt_captura IS NOT NULL FROM marts.dim_pessoas_cadastro JOIN marts.agg_pessoas_atividade USING (id_pessoa) "
+        "WHERE fonte = 'senado' AND nome = 'Beto Barreiras'"
     ).fetchone()
     assert row is not None
     assert row[:3] == ("Beto Barreiras", "Roberto Barreiras", "M")
@@ -20,7 +21,8 @@ def test_senators_become_people_with_standardized_names_and_empty_fields_the_sou
     assert (
         scalar(
             con,
-            "SELECT COUNT(*) FROM marts.dim_pessoas_cadastro WHERE fonte = 'camara' AND qtd_propostas IS NULL",
+            "SELECT COUNT(*) FROM marts.dim_pessoas_cadastro JOIN marts.agg_pessoas_atividade USING (id_pessoa) "
+            "WHERE fonte = 'camara' AND qtd_propostas IS NULL",
         )
         == 0
     )

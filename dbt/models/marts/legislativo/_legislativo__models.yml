@@ -5,7 +5,7 @@ version: 2
 models:
   - name: dim_pessoas_cadastro
     description: >
-      Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação, falecimento e atividade legislativa (contagens e último partido). Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas).
+      Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação e falecimento. A atividade legislativa (contagens e último partido) está em agg_pessoas_atividade. Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas).
     meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     data_tests: &monitoramento
       - elementary.volume_anomalies: {config: {severity: warn}}
@@ -34,14 +34,7 @@ models:
       - {name: telefone_institucional, data_type: varchar, description: "Telefone institucional do gabinete; no Senado, vários separados por ponto e vírgula."}
       - {name: gabinete_endereco, data_type: varchar, description: "Endereço do gabinete (prédio, sala e andar na Câmara; endereço no Senado)."}
       - {name: pagina_url, data_type: varchar, description: "Página oficial da pessoa no Senado; vazia onde a fonte não informa."}
-      - {name: primeira_legislatura_com_voto, data_type: integer, description: "Primeira legislatura em que há voto registrado."}
-      - {name: ultima_legislatura_com_voto, data_type: integer, description: "Última legislatura em que há voto registrado."}
       - {name: profissoes, data_type: varchar, description: "Profissões declaradas, separadas por ponto e vírgula."}
-      - {name: ultimo_partido, data_type: varchar, description: "Partido no voto mais recente."}
-      - {name: ultima_uf, data_type: varchar, description: "UF no voto mais recente."}
-      - {name: dt_ultimo_voto, data_type: timestamp, description: "Data e hora do voto mais recente."}
-      - {name: qtd_propostas, data_type: bigint, description: "Quantidade de proposições em que consta como autora ou apoiadora; vazio onde a fonte não informa autoria (Senado)."}
-      - {name: qtd_votos, data_type: bigint, tests: [not_null], description: "Quantidade de votos nominais registrados."}
       - {name: dt_captura, data_type: date, description: "Data da captura do cadastro de deputados."}
       - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
 
@@ -243,9 +236,13 @@ models:
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: fct_proposicoes_tramitacoes
-    description: Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição e sequência.
-    meta: {sensitivity: publico, grain: proposição e sequência, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
-    data_tests: *monitoramento
+    description: Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição, sequência e hora (a fonte às vezes repete a sequência com outra hora).
+    meta: {sensitivity: publico, grain: "proposição, sequência e hora", owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [fonte, id_proposicao, sequencia, dt_registro]}}
+      - elementary.volume_anomalies: {config: {severity: warn}}
+      - elementary.schema_changes: {config: {severity: warn}}
+      - elementary.all_columns_anomalies: {column_anomalies: [null_percent], config: {severity: warn}}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: id_proposicao, data_type: varchar, tests: [not_null], description: "Proposição (fct_proposicoes, junto com a fonte)."}

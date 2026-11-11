@@ -14,16 +14,22 @@ sources:
       owner: fundador do projeto
     tables:
       - name: candidaturas
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Candidaturas a deputado federal e senador (e suplentes) nas eleições gerais, uma linha por candidatura.
       - name: bens
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Bens declarados pelos candidatos de todos os cargos nas eleições gerais de 2006 em diante, uma linha por bem.
       - name: votacao
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Votos de cada candidato (todos os cargos) por município e zona nas eleições gerais já carregadas, como o TSE publica.
       - name: vagas
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Quantidade de vagas de cada cargo em cada unidade eleitoral nas eleições gerais (por exemplo, 513 de deputado federal), uma linha por cargo e unidade, como o TSE publica.
       - name: receitas_candidatos
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Receitas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por receita, só com as colunas do total (sem nome nem documento de quem doou), como o TSE publica.
       - name: despesas_candidatos
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Despesas contratadas declaradas na prestação de contas dos candidatos de todos os cargos, uma linha por despesa, só com as colunas do total (sem nome nem documento do fornecedor), como o TSE publica.
       - name: fotos_br
         description: Arquivos de foto do pacote do TSE para BR (nome e tamanho de cada imagem; o pacote original está no landing).
