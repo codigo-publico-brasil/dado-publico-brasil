@@ -37,6 +37,12 @@ jobs:
         with:
           version: "0.13.5"
       - run: uv audit --locked --preview-features audit-command
+      - name: SBOM do Python (CycloneDX 1.5, do uv.lock; mesmas dependências da imagem)
+        run: uv export --locked --all-extras --no-dev --no-emit-project --format cyclonedx1.5 --output-file sbom-python.cdx.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-python
+          path: sbom-python.cdx.json
 
   segredos:
     runs-on: ubuntu-latest

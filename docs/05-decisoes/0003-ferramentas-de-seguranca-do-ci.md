@@ -58,6 +58,14 @@ Dependabot e `uv export` já fazem parte do que está disponível no GitHub e na
 - O Scorecard em repositório privado só roda pela linha de comando e algumas verificações dele não se aplicam; o resultado completo passa a existir quando o repositório ficar público.
 - Depois de aceito, este ADR não é editado: mudanças viram um ADR novo que o substitui.
 
+## Nota de implementação (2026-11-11)
+
+Refs #270. O repositório já é público e a `uv` ganhou `uv audit` (mesma base OSV, lê `uv.lock`), então a implementação diverge do desenho em três pontos, todos mais simples e sem binário novo:
+
+- **Auditoria:** `uv audit` no job `dependencias`, sem OSV-Scanner nem script de severidade; reprova em qualquer vulnerabilidade, não só em CVSS 7,0 ou mais. É mais rígido que o ADR; se travar o fluxo por aviso de baixo risco, usa-se `--ignore`/`--ignore-until-fixed` com comentário.
+- **Scorecard:** ação oficial `ossf/scorecard-action` fixada por SHA (possível porque o repositório é público), semanal, com `publish_results: false`.
+- **SBOM:** `uv export` como artefato do CI (não há fluxo de release ainda). A imagem leva o SBOM do Docker e a assinatura cosign sem chave.
+
 ## Pontos para o fundador aceitar
 
 1. **Vulnerabilidade sem nota de severidade** não reprova o PR, só é registrada. Aceita?
