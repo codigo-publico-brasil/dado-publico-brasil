@@ -944,8 +944,8 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_pessoa_tse` | varchar | Identificador da pessoa entre as eleições do TSE; vazio sem ligação. |  |
 | `id_pessoa` | bigint | Pessoa do projeto (dim_pessoas); todo eleito tem. O teste de aviso mede os que ficaram sem. |  |
 | `dt_posse_tse` | date | Data de posse exatamente como o TSE informa na disputa, mesmo quando impossível (por exemplo, antes da eleição); guardada para auditoria. |  |
-| `dt_inicio` | date | Início do mandato. Derivado da Constituição com a vigência por ano de eleição (dim_cargos_posse) onde ela fixa a data; sem regra (vereador, deputado estadual), a data de posse do TSE quando cai no ano seguinte ao da eleição e a eleição não é a do ano corrente. Vazio nos demais casos. |  |
-| `base_dt_inicio` | varchar | Como dt_inicio foi obtida: derivado (regra da Constituição, com artigo e vigência em dim_cargos_posse) ou informado (data do TSE, só onde a Constituição não fixa a data). Vazio quando dt_inicio é vazio. |  |
+| `dt_inicio` | date | Início do mandato. Derivado da Constituição com a vigência por ano de eleição (dim_cargos_posse) ou da constituição estadual por UF (dim_cargos_posse_uf) onde elas fixam a data; sem regra (vereador, deputado estadual de UF sem fonte conferida), a data de posse do TSE quando cai no ano seguinte ao da eleição e a eleição não é a do ano corrente. Vazio nos demais casos. |  |
+| `base_dt_inicio` | varchar | Como dt_inicio foi obtida: derivado (regra da Constituição ou da constituição estadual, com artigo e vigência em dim_cargos_posse e dim_cargos_posse_uf) ou informado (data do TSE, só onde a Constituição não fixa a data). Vazio quando dt_inicio é vazio. |  |
 | `dt_fim_prevista` | date | DERIVADO: dt_inicio mais a duração do cargo na Constituição, menos um dia. É o fim previsto, não o fim real (cassação, renúncia e morte não entram). |  |
 | `id_captura` | bigint | Captura do arquivo de candidaturas de origem (URL, data e hash em metadata.capturas). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
