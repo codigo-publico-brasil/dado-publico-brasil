@@ -45,6 +45,25 @@ def cursor(con: Connection) -> Connection:
     return cur
 
 
+def replace_view(con: Connection, schema: str, name: str, select: str) -> None:
+    """`CREATE OR REPLACE VIEW` que mantém as descrições (o DuckDB as perde ao refazer a view)."""
+    comments = rows(
+        con,
+        "SELECT NULL AS column_name, comment FROM duckdb_views() WHERE schema_name = ? AND view_name = ? "
+        "AND comment IS NOT NULL UNION ALL SELECT column_name, comment FROM duckdb_columns() "
+        "WHERE schema_name = ? AND table_name = ? AND comment IS NOT NULL",
+        (schema, name, schema, name),
+    )
+    con.execute(f'CREATE OR REPLACE VIEW "{schema}"."{name}" AS {select}')
+    kept = set(columns(con, schema, name))
+    for c in comments:
+        text = "'" + c["comment"].replace("'", "''") + "'"
+        if c["column_name"] is None:
+            con.execute(f'COMMENT ON VIEW "{schema}"."{name}" IS {text}')
+        elif c["column_name"] in kept:
+            con.execute(f'COMMENT ON COLUMN "{schema}"."{name}"."{c["column_name"]}" IS {text}')
+
+
 def scalar(con: Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:
     row = con.execute(sql, params).fetchone()
     return row[0] if row else None

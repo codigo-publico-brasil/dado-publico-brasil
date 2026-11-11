@@ -25,7 +25,7 @@ datasets:
     load: yearly                    # full | yearly
     first_year: 2001                # (yearly) primeiro ano publicado pela fonte: anos anteriores não são pedidos
     extra_years: true               # (yearly) aceita anos só deste dataset (--extra-years)
-    write: merge                    # merge (upsert pela chave) | replace (troca a tabela inteira) | replace_partition (troca as linhas da versão anterior do mesmo arquivo)
+    write: merge                    # merge (a view fica com a última captura de cada chave) | replace (troca a tabela inteira) | replace_partition (troca as linhas da versão anterior do mesmo arquivo)
     primary_key: [id]
     columns: [id, siglaTipo, numero, ano, ementa, dataApresentacao]   # lista permitida
 ```

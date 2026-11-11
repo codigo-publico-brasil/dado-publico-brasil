@@ -90,7 +90,15 @@ def test_selective_nights_end_with_the_same_tables_as_a_complete_rebuild(
 
     # noite 1: dado novo só da Câmara (captura carregada depois da última construção)
     for settings in both:
-        sql(settings, "UPDATE raw_federal_camara.deputados SET municipio_nascimento = 'cidade nova'")
+        sql(
+            settings,
+            "CREATE VIEW raw_federal_camara.deputados_antes AS SELECT * FROM raw_federal_camara.deputados",
+        )
+        sql(
+            settings,
+            "CREATE OR REPLACE VIEW raw_federal_camara.deputados AS "
+            "SELECT * REPLACE ('cidade nova' AS municipio_nascimento) FROM raw_federal_camara.deputados_antes",
+        )
         sql(
             settings,
             "UPDATE metadata.capturas SET dt_carga = ? WHERE fonte = 'camara' AND dataset = 'deputados'",

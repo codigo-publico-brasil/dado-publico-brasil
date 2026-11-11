@@ -10,7 +10,6 @@ import json
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from dado_publico_brasil.core import runs
 from dado_publico_brasil.core.warehouse import Connection
@@ -150,20 +149,13 @@ def latest_status(con: Connection, source: str, dataset: str) -> tuple[str, list
     return ("error" if any(f[0] == "error" for f in found) else "warn" if found else "ok"), details
 
 
-def check_removed(
-    con: Connection, source: str, dataset: str, partition: int | None, table: str, capture: dict[str, Any]
-) -> None:
-    """Avisa se o raw guarda linhas de capturas anteriores do mesmo arquivo que a captura atual não traz.
+def check_removed(con: Connection, source: str, dataset: str, partition: int | None, count: int) -> None:
+    """Avisa se a captura anterior do mesmo arquivo tinha linhas que a atual não traz.
 
-    O `merge` do dlt não apaga: uma linha que a fonte removeu (ou, em dataset de chave por conteúdo, alterou)
-    continua no raw com o id da captura antiga. Só se mede quando o arquivo já foi capturado antes.
+    No `merge`, a pasta da captura antiga sai do raw quando a nova entra, então a linha que a fonte removeu
+    (ou, em dataset de chave por conteúdo, alterou) deixa o raw; `count` é medido antes de apagar (o loader).
+    Só se mede quando o arquivo já foi capturado antes.
     """
-    older = "SELECT id_captura FROM metadata.capturas WHERE url = ? AND id_captura <> ?"
-    args = (capture["url"], capture["id_captura"])
-    if not con.execute(older, args).fetchone():
-        return
-    n = con.execute(f"SELECT count(*) FROM {table} WHERE _source_file_id IN ({older})", args).fetchone()
-    count = int(n[0]) if n else 0
     detail = f"{count} linhas de capturas anteriores que a atual não traz (removidas ou alteradas pela fonte)"
     record(con, source, dataset, partition, "linhas_removidas", "warn" if count else "ok", detail)
 

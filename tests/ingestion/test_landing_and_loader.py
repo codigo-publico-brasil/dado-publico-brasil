@@ -10,7 +10,7 @@ import duckdb
 import pytest
 from synthetic_camara import fake_downloader, no_headers, synthetic_files
 
-from dado_publico_brasil.core import runs
+from dado_publico_brasil.core import runs, warehouse
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, columns, rows, scalar, tables
 from dado_publico_brasil.ingestion import landing, loader, monitoring
@@ -162,26 +162,6 @@ def test_loading_again_is_idempotent(raw: tuple[Connection, Settings], contract:
     assert before == after
 
 
-def test_backfill_fills_old_rows_with_the_load_time_of_their_capture(
-    raw: tuple[Connection, Settings], contract: SourceContract
-) -> None:
-    con, _ = raw
-    con.execute(
-        "UPDATE raw_federal_camara.deputados SET _ingested_at = NULL"
-    )  # como as linhas de antes da coluna
-    assert loader.backfill_ingested_at(con, contract) > 0
-    assert scalar(con, "SELECT COUNT(*) FROM raw_federal_camara.deputados WHERE _ingested_at IS NULL") == 0
-    assert (
-        scalar(
-            con,
-            "SELECT COUNT(*) FROM raw_federal_camara.deputados t JOIN metadata.capturas c ON c.id_captura = t._source_file_id "
-            "WHERE t._ingested_at <> (c.dt_carga AT TIME ZONE 'UTC')",
-        )
-        == 0
-    )
-    assert loader.backfill_ingested_at(con, contract) == 0  # de novo, nada a fazer
-
-
 def test_recheck_headers_reads_the_landing_files_again(
     raw: tuple[Connection, Settings], contract: SourceContract
 ) -> None:
@@ -246,12 +226,23 @@ def read_all(settings: Settings, sql: str) -> list[tuple[object, ...]]:
 
 
 def load(
-    settings: Settings, contract: SourceContract, dataset: str, text: str, file_id: int
+    settings: Settings,
+    contract: SourceContract,
+    dataset: str,
+    text: str,
+    file_id: int,
+    superseded: tuple[int, ...] = (),
 ) -> dict[str, int]:
     file = settings.storage_root / f"{dataset}-{file_id}.csv"
     file.parent.mkdir(parents=True, exist_ok=True)
     file.write_text(text, encoding="utf-8")
-    return loader.load_file(settings, contract, contract.datasets[dataset], file, file_id)
+    stats = loader.load_file(settings, contract, contract.datasets[dataset], file, file_id, superseded)
+    con = warehouse.connect(settings)
+    try:
+        loader.create_views(settings, contract, con)
+    finally:
+        con.close()
+    return stats
 
 
 def test_new_source_enters_with_only_a_contract_and_rejects_rows_without_key(
@@ -260,7 +251,15 @@ def test_new_source_enters_with_only_a_contract_and_rejects_rows_without_key(
     settings = Settings(storage_root=tmp_path / "store")
     contract = make_contract(tmp_path)
     stats = load(settings, contract, "pessoas", "codigo,nome,cpf\n1,Ana,111\n2,Bia,222\n,Sem Chave,333\n", 7)
-    assert stats == {"read": 3, "filtered": 0, "loaded": 2, "rejected": 1, "conflicting": 0, "replaced": 0}
+    assert stats == {
+        "read": 3,
+        "filtered": 0,
+        "loaded": 2,
+        "rejected": 1,
+        "conflicting": 0,
+        "replaced": 0,
+        "removed": 0,
+    }
     assert read_all(
         settings, "SELECT codigo, nome, _source_file_id FROM raw_municipal_teste.pessoas ORDER BY 1"
     ) == [
@@ -368,7 +367,7 @@ def test_declared_tolerance_turns_the_rejection_into_a_warning_only_up_to_the_li
     assert outcome(stats, None)[0] == "error"  # sem declaração, o comportamento não muda
 
 
-def test_rows_that_a_previous_capture_had_and_the_current_one_lacks_are_a_warning(
+def test_rows_that_a_previous_capture_had_and_the_current_one_lacks_are_a_warning_and_leave_the_raw(
     con: Connection, settings: Settings, tmp_path: Path
 ) -> None:
     contract = make_contract(tmp_path)
@@ -390,8 +389,10 @@ def test_rows_that_a_previous_capture_had_and_the_current_one_lacks_are_a_warnin
     assert checks() == []  # primeira captura: nada a comparar
     loader.load_capture(con, settings, contract, capture("codigo,nome\n1,Ana\n", "b"))
     assert [(s, d[:8]) for s, d in checks()] == [("warn", "1 linhas")]
+    loader.create_views(settings, contract, con)
+    assert scalar(con, "SELECT count(*) FROM raw_municipal_teste.pessoas") == 1  # a linha 2 saiu do raw
     loader.load_capture(con, settings, contract, capture("codigo,nome\n1,Ana\n3,Cid\n", "c"))
-    assert [s for s, _ in checks()][-1] == "warn"  # a linha 2 continua no raw, de uma captura antiga
+    assert [s for s, _ in checks()][-1] == "ok"  # o que a anterior tinha, a atual ainda traz
 
 
 def test_reset_lets_a_table_be_reloaded_when_the_contract_changes_the_primary_key(tmp_path: Path) -> None:
@@ -431,6 +432,7 @@ def test_replace_partition_swaps_only_the_rows_of_the_same_file_and_is_idempoten
     table = "raw_municipal_teste.retratos"
 
     def values() -> list[tuple[Any, ...]]:
+        loader.create_views(settings, contract, con)
         return con.execute(f"SELECT _source_file_id, codigo FROM {table} ORDER BY 1, 2").fetchall()
 
     a1 = _capture(con, settings, contract, "http://x/a", "codigo,valor\n1,10\n2,20\n2,20\n", "a1")
@@ -489,13 +491,12 @@ def _capture_of(
     return rows(con, "SELECT * FROM metadata.capturas WHERE sha256 = ?", (sha,))[0]
 
 
-def test_every_raw_dataset_has_its_table_even_without_a_capture_and_a_later_load_fits_it(
+def test_every_raw_dataset_has_its_view_even_without_a_capture_and_a_later_load_fits_it(
     con: Connection, settings: Settings, tmp_path: Path
 ) -> None:
     contract = make_contract(tmp_path)
-    created = loader.ensure_tables(settings, contract, con)
-    assert sorted(created) == ["fixos", "lancamentos", "pessoas", "retratos"]
-    assert loader.ensure_tables(settings, contract, con) == []  # idempotente: a existente não é tocada
+    loader.create_views(settings, contract, con)
+    loader.create_views(settings, contract, con)  # idempotente
     pessoas = [c[0] for c in con.execute("DESCRIBE SELECT * FROM raw_municipal_teste.pessoas").fetchall()]
     assert {"codigo", "nome", "_source_file_id", "_ingested_at", "_dlt_load_id", "_dlt_id"} <= set(pessoas)
     assert "_row_hash" in [
@@ -504,11 +505,102 @@ def test_every_raw_dataset_has_its_table_even_without_a_capture_and_a_later_load
     for name in ("pessoas", "lancamentos", "retratos", "fixos"):
         assert scalar(con, f"SELECT count(*) FROM raw_municipal_teste.{name}") == 0
     capture = _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n2,Bia\n", "p1")
-    loader.load_capture(con, settings, contract, capture)  # sem erro de esquema sobre a tabela vazia
+    loader.load_capture(con, settings, contract, capture)  # sem erro de esquema sobre a view vazia
+    loader.create_views(settings, contract, con)
     assert scalar(con, "SELECT count(*) FROM raw_municipal_teste.pessoas") == 2
     again = _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n3,Caio\n", "p2")
     loader.load_capture(con, settings, contract, again)
-    assert scalar(con, "SELECT count(*) FROM raw_municipal_teste.pessoas") == 3
+    loader.create_views(settings, contract, con)
+    assert (
+        scalar(con, "SELECT count(*) FROM raw_municipal_teste.pessoas") == 2
+    )  # a captura nova substitui a velha
+
+
+def test_a_column_that_comes_entirely_empty_still_exists_in_the_view(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,\n2,\n", "e1")
+    loader.load_pending(con, settings, contract)
+    assert rows(con, "SELECT nome FROM raw_municipal_teste.pessoas") == [{"nome": None}, {"nome": None}]
+
+
+def test_merge_keeps_the_latest_capture_of_each_key_across_files_and_the_first_row_within_one(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    a = _capture_of(con, settings, "pessoas", "http://x/a", "codigo,nome\n1,Ana\n2,Bia\n1,Outra\n", "m1")
+    b = _capture_of(con, settings, "pessoas", "http://x/b", "codigo,nome\n2,Bea\n3,Caio\n", "m2")
+    loader.load_pending(con, settings, contract)
+    assert rows(
+        con, "SELECT codigo, nome, _source_file_id FROM raw_municipal_teste.pessoas ORDER BY codigo"
+    ) == [
+        {"codigo": "1", "nome": "Ana", "_source_file_id": a["id_captura"]},
+        {"codigo": "2", "nome": "Bea", "_source_file_id": b["id_captura"]},
+        {"codigo": "3", "nome": "Caio", "_source_file_id": b["id_captura"]},
+    ]
+
+
+def test_the_raw_folder_holds_only_the_current_captures(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    old = _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n", "v1")
+    loader.load_pending(con, settings, contract)
+    folder = loader.raw_dir(settings, contract) / "pessoas"
+    assert [d.name for d in folder.iterdir()] == [str(old["id_captura"])]
+    new = _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n2,Bia\n", "v2")
+    loader.load_pending(con, settings, contract)
+    assert [d.name for d in folder.iterdir()] == [str(new["id_captura"])]  # a substituída saiu
+    (folder / "999").mkdir()  # sobra de uma captura que o landing não tem como vigente
+    (folder / "999" / "x.parquet").write_bytes(b"")
+    loader.load_pending(con, settings, contract)
+    assert [d.name for d in folder.iterdir()] == [str(new["id_captura"])]
+    assert (loader.raw_dir(settings, contract) / "_dlt_loads").is_dir()  # as tabelas internas do dlt ficam
+
+
+def test_a_failed_load_keeps_the_previous_capture_until_the_new_one_enters(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n", "w1")
+    loader.load_pending(con, settings, contract)
+    _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n2,Bia\n", "w2")
+    monkeypatch.setattr(loader, "load_file", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("falha")))
+    loader.load_pending(con, settings, contract)
+    assert scalar(con, "SELECT count(*) FROM raw_municipal_teste.pessoas") == 1  # o dado antigo continua
+    monkeypatch.undo()
+    loader.load_pending(con, settings, contract)
+    assert scalar(con, "SELECT count(*) FROM raw_municipal_teste.pessoas") == 2
+
+
+def test_a_leftover_of_an_interrupted_load_of_the_same_capture_does_not_duplicate(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    capture = _capture_of(con, settings, "retratos", "http://x/r", "codigo,valor\n1,10\n", "i1")
+    loader.load_capture(con, settings, contract, capture)
+    con.execute("UPDATE metadata.capturas SET dt_carga = NULL")  # a carga caiu depois de gravar o Parquet
+    loader.load_pending(con, settings, contract)
+    assert scalar(con, "SELECT count(*) FROM raw_municipal_teste.retratos") == 1
+
+
+def test_a_native_table_of_the_previous_raw_stays_until_the_rebuild_turns_it_into_a_view(
+    con: Connection, settings: Settings, tmp_path: Path
+) -> None:
+    contract = make_contract(tmp_path)
+    capture = _capture_of(con, settings, "pessoas", "http://x/p", "codigo,nome\n1,Ana\n", "n1")
+    con.execute("CREATE SCHEMA raw_municipal_teste")
+    con.execute("CREATE TABLE raw_municipal_teste.pessoas AS SELECT '9' AS codigo, 'Antiga' AS nome")
+    messages: list[str] = []
+    loader.create_views(settings, contract, con, messages.append)
+    assert any("tabela nativa" in m for m in messages)
+    assert scalar(con, "SELECT nome FROM raw_municipal_teste.pessoas") == "Antiga"
+    loader.load_pending(con, settings, contract, rebuild=True)
+    assert rows(con, "SELECT codigo, _source_file_id FROM raw_municipal_teste.pessoas") == [
+        {"codigo": "1", "_source_file_id": capture["id_captura"]}
+    ]
+    assert scalar(con, "SELECT count(*) FROM duckdb_views() WHERE view_name = 'pessoas'") == 1
 
 
 def test_a_table_without_the_column_the_new_key_needs_is_reloaded_instead_of_failing(

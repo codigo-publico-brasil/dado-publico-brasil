@@ -59,7 +59,8 @@ def test_only_keeps_the_declared_rows_in_the_raw_and_the_columns_exclude_what_is
     c = contract(tmp_path)
     settings = Settings(storage_root=tmp_path / "store")
     con = migrations.open_warehouse(settings)
-    stats = loader.load_file(settings, c, c.datasets["eleicoes"], package(tmp_path), 1, con)
+    stats = loader.load_file(settings, c, c.datasets["eleicoes"], package(tmp_path), 1)
+    loader.create_views(settings, c, con)
     assert stats == {
         "read": 3,
         "filtered": 1,
@@ -67,6 +68,7 @@ def test_only_keeps_the_declared_rows_in_the_raw_and_the_columns_exclude_what_is
         "rejected": 0,
         "conflicting": 0,
         "replaced": 0,
+        "removed": 0,
     }  # MARIA (estadual) fica de fora
     found = rows(con, f"SELECT id, nome FROM {c.schema}.eleicoes ORDER BY id")
     assert [(r["id"], r["nome"]) for r in found] == [("1", "JOSÉ"), ("3", "ANA")]
@@ -98,8 +100,17 @@ def test_a_legacy_layout_is_read_through_aliases_to_the_current_column_names(tmp
         z.writestr("cand_2006_TUDO.csv", "id;nome_antigo;cargo\n1;ANTIGO;FEDERAL\n".encode("latin-1"))
     settings = Settings(storage_root=tmp_path / "store")
     con = migrations.open_warehouse(settings)
-    stats = loader.load_file(settings, c, c.datasets["eleicoes"], file, 1, con)
-    assert stats == {"read": 1, "filtered": 0, "loaded": 1, "rejected": 0, "conflicting": 0, "replaced": 0}
+    stats = loader.load_file(settings, c, c.datasets["eleicoes"], file, 1)
+    loader.create_views(settings, c, con)
+    assert stats == {
+        "read": 1,
+        "filtered": 0,
+        "loaded": 1,
+        "rejected": 0,
+        "conflicting": 0,
+        "replaced": 0,
+        "removed": 0,
+    }
     found = rows(con, f"SELECT id, nome FROM {c.schema}.eleicoes")
     assert [(r["id"], r["nome"]) for r in found] == [("1", "ANTIGO")]
 

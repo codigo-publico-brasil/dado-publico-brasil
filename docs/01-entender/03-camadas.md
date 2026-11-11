@@ -17,7 +17,7 @@ Para quem precisa saber por onde o dado passa e onde mudar cada coisa. Responde:
 | Camada | Pergunta que responde | Quem produz | Reconstruível? |
 | --- | --- | --- | --- |
 | **landing** | "O que a fonte entregou, exatamente?" | código próprio (pacote `ingestion`, `landing.py`) | não: é imutável |
-| **raw** (`raw_<esfera>_<fonte>`) | "O que a fonte diz, tabela a tabela?" | **dlt**, guiado por `sources/<poder>/<esfera>/<fonte>.yml` | sim, a partir do landing |
+| **raw** (`raw_<esfera>_<fonte>`) | "O que a fonte diz, tabela a tabela?" | **dlt** (destino `filesystem`: Parquet por captura), guiado por `sources/<poder>/<esfera>/<fonte>.yml` | sim, a partir do landing |
 | **staging** | "Como isso fica com nomes, tipos e caixa padronizados?" | **dbt** (views, tabelas no TSE; um modelo por tabela do raw) | sim |
 | **intermediate** | "Como juntar e re-granular para chegar às entidades?" | **dbt** (tabelas, uma finalidade por modelo) | sim |
 | **marts** | "Como entregar cada entidade, fato e consulta prontos para consumo?" | **dbt** (tabelas com contrato de colunas) | sim |
@@ -34,8 +34,7 @@ Um único arquivo DuckDB, um schema por camada. Lista completa do que existe, e 
 
 | Schema | Papel | Quem cria | Segue o padrão de... |
 | --- | --- | --- | --- |
-| `raw_federal_camara` | tabelas fiéis à fonte, uma por dataset | dlt | dlt: um schema (dataset) por fonte; `raw_` diz a camada e `federal` a esfera |
-| `dlt_tmp_raw_federal_camara` | área temporária do dlt para fazer `merge` e `replace`; não é camada, ninguém lê | dlt | dlt cria `<dataset>_staging`; renomeamos (`staging_dataset_name_layout`) para não parecer a camada `staging` do dbt |
+| `raw_federal_camara` | **views** fiéis à fonte, uma por dataset, sobre o Parquet em `data_store/raw/raw_federal_camara/<tabela>/<id_captura>/` ([ADR 0051](../05-decisoes/0051-raw-em-parquet-por-captura-e-estado-em-arquivo-proprio.md)); no `merge`, a view fica com a última captura de cada chave | dlt grava o Parquet; o `load` cria as views | dlt: um schema (dataset) por fonte; `raw_` diz a camada e `federal` a esfera |
 | `staging` | uma por tabela do raw, com nomes, tipos e caixa padronizados e colunas de auditoria (`fonte`, `id_captura`, `dt_captura`, `url_fonte`, `sha256_captura`); publicado no lake ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)) | dbt | guia da dbt Labs |
 | `intermediate` | tabelas de passagem (re-granularidade e junções) | dbt | guia da dbt Labs |
 | `marts` | o que a aplicação lê, com contrato, nomeado pelo tipo: `dim_` (dimensão), `fct_` (fato), `brg_` (ponte) e `agg_` (agregado); é a única camada que é contrato ([ADR 0033](../05-decisoes/0033-marts-com-a-terminologia-da-dbt-labs.md)) e vai ao lake | dbt | guia da dbt Labs; convenção em [`02-convencao-de-nomes.md`](../03-consultar/02-convencao-de-nomes.md) |

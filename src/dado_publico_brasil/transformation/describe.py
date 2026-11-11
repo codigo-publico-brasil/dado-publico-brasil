@@ -32,12 +32,12 @@ def _text(value: str) -> str:
 
 
 def raw(con: Connection, manifest_dir: Path) -> int:
-    """Grava `COMMENT ON` em cada tabela e coluna do raw. Devolve quantas tabelas foram descritas."""
+    """Grava `COMMENT ON` em cada view (tabela) e coluna do raw. Devolve quantas foram descritas."""
     manifest = json.loads((manifest_dir / "manifest.json").read_text(encoding="utf-8"))
     declared = {(s["schema"], s["name"]): s for s in manifest["sources"].values()}
     tables = con.execute(
-        "SELECT schema_name, table_name FROM duckdb_tables() "
-        "WHERE starts_with(schema_name, 'raw_') AND NOT starts_with(table_name, '_dlt_') ORDER BY 1, 2"
+        "SELECT schema_name, view_name FROM duckdb_views() "
+        "WHERE starts_with(schema_name, 'raw_') AND NOT internal ORDER BY 1, 2"
     ).fetchall()
     for schema, table in tables:
         source = declared.get((schema, table), {})
@@ -48,7 +48,7 @@ def raw(con: Connection, manifest_dir: Path) -> int:
             else f"Tabela `{table}` da fonte, como publicada, sem tratamento."
         )
         description = (source.get("description") or "").strip() or generic
-        con.execute(f'COMMENT ON TABLE "{schema}"."{table}" IS {_text(description)}')
+        con.execute(f'COMMENT ON VIEW "{schema}"."{table}" IS {_text(description)}')
         columns = source.get("columns") or {}
         for (column,) in con.execute(
             "SELECT column_name FROM duckdb_columns() WHERE schema_name = ? AND table_name = ?",

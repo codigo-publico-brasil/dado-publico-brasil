@@ -32,8 +32,9 @@ Para quem opera a plataforma: como saber, a cada atualização, se algo quebrou 
 - **Saúde por dimensão:** `dado-publico observe` mostra uma nota por dimensão de qualidade (frescor, completude, acurácia, consistência, unicidade e validade) e uma geral, calculadas dos testes do último build: passou vale 100, avisou 50 e falhou 0, e a nota da dimensão é a média. Cada teste cai na dimensão pelo nome (`not_null` é completude; `unique`, unicidade; `relationships`, consistência; `accepted_values`, validade; os do Elementary pelo tipo) ou pela pasta (`gaps` é completude; `reconciliation`, consistência); a regra fica em `transformation/health.py`, e um teste reprova se algum teste novo ficar sem dimensão. Os testes de lacuna são avisos permanentes e puxam a completude para baixo de forma estável: a lista do que puxa vem junto com a nota, e a leitura é "estas lacunas conhecidas", não degradação. É nota de saúde dos **dados**, nunca de pessoas.
 - **Captura velha:** o dataset que declara `max_age_days` no contrato e não foi verificado nesse prazo aparece em `observe` e no e-mail como problema (a pipeline parou ou a fonte deixou de responder); um dataset com limite e nenhuma captura também.
 - Recesso do Congresso (julho e dezembro a janeiro) pode gerar aviso de volume e de frescor: é esperado, e o aviso é só informação.
-- `load --rebuild` descarta a tabela raw do dataset (e as tabelas filhas) e o estado do dlt antes de recarregar do landing; por isso mudar a chave primária de um contrato não exige apagar nada à mão.
-- O `merge` do dlt não apaga: uma linha que a fonte removeu continua no raw (nos datasets `replace_partition` ela sai com a versão antiga e o aviso não existe). O aviso `linhas_removidas` conta as que vieram de capturas anteriores do mesmo arquivo e a atual não traz; decidir o que fazer com elas é manual.
+- `load --rebuild` apaga o raw do dataset (as pastas de Parquet, as filhas e, se ainda existir, a tabela nativa anterior ao ADR 0051) antes de recarregar do landing; por isso mudar a chave primária de um contrato não exige apagar nada à mão.
+- **O raw é sempre igual a uma recarga do landing:** a pasta de Parquet de uma captura sai quando a captura seguinte do mesmo arquivo entra, então a linha que a fonte removeu sai do raw. O aviso `linhas_removidas` (datasets `merge`) conta, antes de apagar, as linhas da captura anterior que a atual não traz; o landing guarda as duas.
+- **Raw em Parquet e views:** `raw_<esfera>_<fonte>.<tabela>` é uma view `read_parquet(..., union_by_name=true)` (com o caminho absoluto da pasta, refeita a cada `load` e pelo `transform`; se o `data_store` mudar de lugar, rode `load`). A view guarda a descrição ao ser refeita, mas coluna nova só a ganha no próximo `transform`. Se um dataset passar de cerca de 10 mil arquivos ou o bind da view de 2 s, é hora da compactação (gatilho do ADR 0051).
 - **Tempo da carga do raw** (ADR 0043, medido numa máquina de desenvolvimento, não no servidor): votação do TSE de 2016 (943 mil linhas) em 160 s com Parquet contra 1.062 s com `insert_values`; a de 2026 (6,7 milhões de linhas, zip de 446 MB) em 28 min com `merge` e 19 min com `replace_partition`, pico de 2,9 GB e 1,5 GB. Mais da metade é a leitura do CSV em Python. Acompanhe a carga na aba *Runs*: o ativo `raw_<fonte>` avisa o dataset, o arquivo, o tamanho e as linhas lidas a cada 30 s.
 - **Carga que leu 0 linhas** de um arquivo que já teve linhas (`volume` de N para 0) é erro: a captura foi marcada como carregada sem entrar no raw, que fica com a versão anterior. Corrija com `load --rebuild --dataset <nome>` (reconstrói do landing).
 - **`optional` no contrato** (colunas que a fonte omite quando vazias, como número e data de normas e vetos antigos do Senado) evita o aviso `schema` por partição; o aviso já gravado só some quando o arquivo é conferido de novo (`dado-publico recheck`).
@@ -178,6 +179,19 @@ A partir do [ADR 0051](../05-decisoes/0051-raw-em-parquet-por-captura-e-estado-e
 3. Confira: `ATTACH 'data_store/estado.duckdb' AS estado (READ_ONLY); SELECT count(*) FROM estado.metadata.capturas;` e que o warehouse não tem mais os esquemas (`SELECT count(*) FROM duckdb_tables() WHERE schema_name IN ('metadata','identity') AND database_name = 'warehouse'` dá 0).
 
 O espaço do warehouse só volta ao disco se ele for exportado e recriado (o DuckDB não encolhe o arquivo sozinho); não é necessário. O `export` e o dbt leem o estado só para leitura; quem escreve nele é um processo por vez, como antes.
+
+## Raw em Parquet (migração única)
+
+O [ADR 0051](../05-decisoes/0051-raw-em-parquet-por-captura-e-estado-em-arquivo-proprio.md) tira o raw do `warehouse.duckdb`: o dlt grava Parquet em `data_store/raw/` e as tabelas `raw_*` viram views. **Não há migração automática do raw antigo**: ele se refaz do landing, e a carga que já foi marcada como feita não se repete sozinha. O hash de linha novo (issue 269) exige a mesma recarga, então as duas coincidem. Ordem, no servidor (peça autorização antes de agir, e liste as execuções ativas):
+
+1. Pare o Dagster e confira que nenhum container órfão segura os arquivos; faça cópia de `warehouse.duckdb` e `estado.duckdb`.
+2. Atualize o código (`scripts/servidor.sh`) e suba só o necessário para rodar um comando avulso.
+3. `uv run dado-publico load --rebuild` (todas as fontes; para uma, `--source`; para um dataset, `--dataset`). Cada dataset apaga a tabela nativa antiga e vira view; enquanto não for recarregado, a tabela nativa continua valendo (o `load` avisa "ainda é tabela nativa").
+4. `uv run dado-publico transform --rebuild` (refaz staging, intermediate e marts; confira que nenhuma pessoa nova nasce e que os testes passam).
+5. Opcional, para recuperar espaço: apague os esquemas `dlt_tmp_raw_*` e as tabelas `_dlt_*` que o dlt deixou no `warehouse.duckdb`, e exporte e recrie o arquivo (o DuckDB não encolhe sozinho).
+6. Suba o Dagster.
+
+O landing não é tocado. Reverter: restaure a cópia do passo 1 e o código anterior (a pasta `data_store/raw/` pode ser apagada).
 
 ## Rodar por partes no container
 
