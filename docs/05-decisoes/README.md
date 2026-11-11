@@ -82,7 +82,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0025](0025-historico-do-eleito-ligacao-entre-eleicoes-do-tse.md) | Histórico do eleito entre eleições | defasado: implementado de outra forma (fundador, 2026-11-11) |
 | [0026](0026-segunda-chave-nome-de-urna-e-nascimento.md) | Segunda chave: nome de urna e nascimento | defasado: implementado de outra forma (fundador, 2026-11-11) |
 | [0028](0028-ligar-vetos-e-emendas-a-pessoas.md) | Ligar votos de vetos e emendas a pessoas | defasado: implementado de outra forma (fundador, 2026-11-11) |
-| [0029](0029-campos-de-pessoas-nos-marts.md) | Campos de pessoas no raw e nos marts | proposto (aprovado pelo fundador) |
+| [0029](0029-campos-de-pessoas-nos-marts.md) | Campos de pessoas no raw e nos marts | aceito (2026-11-11) |
 | [0030](0030-modelo-de-dados-pessoa-no-centro.md) | Modelo de dados com a pessoa no centro, eventos tipados e composições | defasado: implementado de outra forma (fundador, 2026-11-11); altera 0023 em fases; a organização em esquemas foi substituída pelo [0033](0033-marts-com-a-terminologia-da-dbt-labs.md) |
 | [0031](0031-pessoas-de-todo-eleito.md) | Pessoas de todo eleito, ancoradas na candidatura (F3 do 0030) | aceito; altera 0004 e 0013 |
 | [0032](0032-partido-da-pessoa-por-fonte-e-filiacao.md) | O partido da pessoa vem de fontes oficiais (candidatura, histórico da Câmara, votos); a filiação por data fica de fora | aceito; altera o item 10 do 0030 |
