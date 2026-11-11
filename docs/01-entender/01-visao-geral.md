@@ -9,7 +9,7 @@ A **camada de dados** do [Código Público Brasil](https://github.com/codigo-pub
 ## Escopo
 
 - Qualquer poder (legislativo, executivo, judiciário) e esfera (federal, estadual, municipal). Hoje: Câmara dos Deputados, Senado Federal, TSE (candidaturas ao Congresso), Portal da Transparência (emendas), Constituição e Diário Oficial da União (só o arquivo original).
-- Código aberto (AGPL-3.0) e dados curados abertos (CC BY 4.0), a confirmar.
+- Código aberto (Apache-2.0) e dados curados abertos (CC BY 4.0), conforme o [ADR 0049](../05-decisoes/0049-licenca-apache-2-para-o-codigo-e-cc-by-para-os-dados.md).
 - Material de estudo: a documentação explica cada decisão de arquitetura e de dados.
 
 ## Regras de dados (nunca violar)
