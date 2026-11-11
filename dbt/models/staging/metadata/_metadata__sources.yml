@@ -3,6 +3,7 @@ version: 2
 sources:
   - name: metadata
     description: Metadados operacionais do pipeline (capturas dos arquivos, execuções, resultado de testes).
+    database: estado
     schema: metadata
     meta:
       sensitivity: controle

@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 import duckdb
+import legacy_warehouse
 import pytest
 
 from dado_publico_brasil.core import migrations, runs, warehouse
@@ -148,18 +149,9 @@ def test_rebuild_carries_only_the_metadata_and_moves_the_sequences_past_the_old_
     from dado_publico_brasil.core import rebuild
 
     old = Settings(storage_root=tmp_path / "antigo")
-    con = migrations.open_warehouse(old)
-    con.execute(
-        "INSERT INTO metadata.capturas (id_captura, fonte, dataset, particao, url, sha256, qtd_bytes, caminho, dt_captura, "
-        "dt_verificacao, dt_carga) VALUES (40, 'camara', 'votacoes', 2024, 'https://x/a', 'abc', 1, 'p', "
-        "'2026-10-20', '2026-10-21', '2026-10-22')"
-    )
-    con.execute("INSERT INTO identity.pessoas VALUES (1, '2026-10-23 00:00:00')")
-    con.execute(
-        "INSERT INTO metadata.fontes_verificacoes (id_verificacao, dt_verificacao, fonte, dataset, verificacao, resultado, detalhe) "
-        "VALUES (90, '2026-10-21', 'camara', 'votacoes', 'carga', 'ok', 'x')"
-    )
-    con.close()
+    legacy_warehouse.make(
+        old
+    )  # warehouse anterior ao ADR 0051 (id_captura 40, id_verificacao 90, id_pessoa 7)
     new = Settings(storage_root=tmp_path / "novo")
     dlt = new.state_dir / "dlt"
     dlt.mkdir(parents=True)

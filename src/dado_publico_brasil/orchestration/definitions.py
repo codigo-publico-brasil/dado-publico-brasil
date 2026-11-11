@@ -81,7 +81,7 @@ from dado_publico_brasil.transformation import (
 from dado_publico_brasil.transformation import dbt as dbt_runner
 
 SETTINGS = load_settings()
-os.environ["DADO_PUBLICO_WAREHOUSE_FILE"] = str(SETTINGS.warehouse.resolve())
+os.environ.update(SETTINGS.dbt_env)
 DBT_TARGET = SETTINGS.state_dir / "dbt" / "dagster"  # artefatos do dbt fora do repositório
 PROJECT = DbtProject(
     project_dir=DBT_DIR, profiles_dir=DBT_DIR, target_path=SETTINGS.state_dir / "dbt" / "target"

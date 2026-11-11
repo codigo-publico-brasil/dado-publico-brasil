@@ -68,7 +68,7 @@ Os passos rodam **em sequência** (o DuckDB em arquivo aceita um escritor por ve
 
 ## Como acessar os dados
 
-O warehouse é `data_store/warehouse.duckdb`. Um arquivo DuckDB aceita um escritor por vez; com o pipeline parado, qualquer um dos três serve:
+O warehouse é `data_store/warehouse.duckdb`; `metadata` e `identity` ficam ao lado, em `data_store/estado.duckdb` (anexado como `estado`; em consulta direta, `ATTACH 'data_store/estado.duckdb' AS estado (READ_ONLY)`). Um arquivo DuckDB aceita um escritor por vez; com o pipeline parado, qualquer um dos três serve:
 
 ```bash
 uv run dado-publico query --sql "SELECT * FROM dim_pessoas_cadastro WHERE nome_busca LIKE '%maria%'"

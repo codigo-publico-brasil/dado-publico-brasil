@@ -33,15 +33,18 @@ FINGERPRINTS = (
 )
 
 
+DB = "database_name IN (current_database(), 'estado')"  # o warehouse e o estado (`metadata.capturas`)
+
+
 def relations(con: warehouse.Connection) -> list[tuple[str, str]]:
     """(esquema, nome) das tabelas e views a exportar, pela ordem das camadas."""
     marks = ",".join("?" * len(LAYERS))
     found = {
         (s, t)
         for s, t in con.execute(
-            "SELECT schema_name, table_name FROM duckdb_tables() WHERE database_name = current_database() "
+            f"SELECT schema_name, table_name FROM duckdb_tables() WHERE {DB} "
             f"AND schema_name IN ({marks}) UNION SELECT schema_name, view_name FROM duckdb_views() "
-            f"WHERE database_name = current_database() AND NOT internal AND schema_name IN ({marks})",
+            f"WHERE {DB} AND NOT internal AND schema_name IN ({marks})",
             (*LAYERS, *LAYERS),
         ).fetchall()
         if not (s == "staging" and _source(t) in (None, *PRIVATE_SOURCES))
@@ -101,14 +104,14 @@ def table_path(models: dict[str, dict[str, Any]], schema: str, table: str) -> st
 def _describe(con: warehouse.Connection, schema: str, table: str) -> tuple[str, list[dict[str, str]]]:
     """Descrição da tabela e esquema (nome, tipo, descrição) sem as colunas pessoais, lidos do DuckDB."""
     comment = con.execute(
-        "SELECT comment FROM duckdb_tables() WHERE database_name = current_database() AND schema_name = ? "
+        f"SELECT comment FROM duckdb_tables() WHERE {DB} AND schema_name = ? "
         "AND table_name = ? UNION ALL SELECT comment FROM duckdb_views() WHERE "
-        "database_name = current_database() AND schema_name = ? AND view_name = ?",
+        f"{DB} AND schema_name = ? AND view_name = ?",
         (schema, table, schema, table),
     ).fetchone()
     columns = con.execute(
         "SELECT column_name, data_type, comment FROM duckdb_columns() "
-        "WHERE database_name = current_database() AND schema_name = ? AND table_name = ? "
+        f"WHERE {DB} AND schema_name = ? AND table_name = ? "
         "ORDER BY column_index",
         (schema, table),
     ).fetchall()
@@ -289,7 +292,7 @@ def fingerprint(
     Roda num cursor próprio (só leitura), então várias tabelas podem ser calculadas ao mesmo tempo.
     """
     start = time.monotonic()
-    cur = con.cursor()
+    cur = warehouse.cursor(con)
     try:
         description, columns = _describe(cur, schema, table)
         if not columns:

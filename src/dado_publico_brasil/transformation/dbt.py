@@ -52,7 +52,7 @@ def _command(settings: Settings, *args: str) -> tuple[list[str], dict[str, str]]
         "--target-path",
         str(state / "target"),
     ]
-    return command, {**os.environ, "DADO_PUBLICO_WAREHOUSE_FILE": str(settings.warehouse.resolve())}
+    return command, {**os.environ, **settings.dbt_env}
 
 
 def install_packages(settings: Settings) -> None:

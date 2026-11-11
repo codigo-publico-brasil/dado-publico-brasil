@@ -8,6 +8,8 @@ por `;` no fim da linha. Cada arquivo e o seu registro rodam numa transação.
 import re
 from pathlib import Path
 
+import duckdb
+
 from dado_publico_brasil.core import warehouse
 from dado_publico_brasil.core.runs import now
 from dado_publico_brasil.core.settings import DDL_DIR, Settings
@@ -52,25 +54,133 @@ def apply(con: Connection, directory: Path = DDL_DIR) -> list[str]:
     return applied
 
 
-def open_warehouse(settings: Settings, restore: bool = True) -> Connection:
-    """Abre o warehouse para escrita e aplica as migrações pendentes.
+LEDGERS = ("migrations", "migracoes")
 
-    Arquivo novo com o bucket privado configurado: restaura dele o metadata e a identidade (ADR 0036).
+
+def _legacy_schemas(settings: Settings) -> list[str]:
+    """Esquemas `metadata` e `identity` que ainda moram no warehouse (anterior ao ADR 0051)."""
+    if not settings.warehouse.exists():
+        return []
+    con = duckdb.connect(str(settings.warehouse), read_only=True)
+    try:
+        found = con.execute(
+            "SELECT DISTINCT schema_name FROM duckdb_tables() WHERE schema_name IN ('metadata', 'identity')"
+        ).fetchall()
+    finally:
+        con.close()
+    return sorted(s for (s,) in found)
+
+
+def _fingerprint(con: Connection, source: str, table: str, columns: list[str]) -> tuple[int, int]:
+    """Contagem e soma do hash das linhas, nas colunas dadas: prova que a cópia é igual à origem."""
+    cols = ", ".join(f'"{c}"' for c in columns)
+    row = con.execute(
+        f"SELECT count(*), coalesce(sum(hash({cols})::HUGEINT), 0)::HUGEINT FROM {source}{table}"
+    ).fetchone()
+    assert row is not None
+    return int(row[0]), int(row[1])
+
+
+def migrate_legacy(settings: Settings, schemas: list[str]) -> dict[str, int]:
+    """Copia `metadata` e `identity` do warehouse para o `estado.duckdb` e só então os apaga do warehouse.
+
+    A cópia e a prova (contagem e soma de hash por tabela) rodam numa transação do estado; se divergirem,
+    nada é apagado do warehouse. Repetível: uma queda depois da cópia e antes do `DROP` refaz a cópia.
+    """
+    from dado_publico_brasil.core import rebuild  # rebuild importa este módulo
+
+    settings.estado.parent.mkdir(parents=True, exist_ok=True)
+    con = duckdb.connect(str(settings.estado))  # o catálogo padrão é o estado: o DDL vale sem qualificar
+    copied: dict[str, int] = {}
+    try:
+        apply(con)
+        con.execute(f"ATTACH '{settings.warehouse.as_posix()}' AS legado (READ_ONLY)")
+        found = con.execute(
+            "SELECT schema_name, table_name FROM duckdb_tables() WHERE database_name = 'legado' "
+            "AND schema_name IN (SELECT unnest(?)) AND table_name NOT IN (SELECT unnest(?)) ORDER BY 1, 2",
+            (schemas, list(LEDGERS)),
+        ).fetchall()
+        con.execute("BEGIN")
+        try:
+            for schema, table in found:
+                cols = [
+                    c
+                    for (c,) in con.execute(
+                        "SELECT column_name FROM duckdb_columns() WHERE database_name = current_database() "
+                        "AND schema_name = ? AND table_name = ?",
+                        (schema, table),
+                    ).fetchall()
+                ]
+                old_cols = con.execute(
+                    "SELECT column_name FROM duckdb_columns() WHERE database_name = 'legado' "
+                    "AND schema_name = ? AND table_name = ? ORDER BY column_index",
+                    (schema, table),
+                ).fetchall()
+                common = [c for (c,) in old_cols if c in cols]
+                if len(common) != len(old_cols):
+                    raise RuntimeError(
+                        f"legado.{schema}.{table} tem coluna que o estado não tem: migre o warehouse antes"
+                    )
+                list_ = ", ".join(f'"{c}"' for c in common)
+                con.execute(f"DELETE FROM {schema}.{table}")
+                con.execute(
+                    f"INSERT INTO {schema}.{table} ({list_}) SELECT {list_} FROM legado.{schema}.{table}"
+                )
+                here = _fingerprint(con, f"{schema}.", table, common)
+                there = _fingerprint(con, f"legado.{schema}.", table, common)
+                if here != there:
+                    raise RuntimeError(f"{schema}.{table}: cópia diferente da origem ({here} contra {there})")
+                copied[f"{schema}.{table}"] = here[0]
+        except BaseException:
+            con.execute("ROLLBACK")
+            raise
+        con.execute("COMMIT")
+        con.execute("DETACH legado")
+        rebuild.advance_sequences(con)
+    finally:
+        con.close()
+    legacy = duckdb.connect(str(settings.warehouse))
+    try:
+        legacy.execute("BEGIN")
+        for schema in schemas:
+            legacy.execute(f"DROP SCHEMA {schema} CASCADE")
+        legacy.execute("COMMIT")
+    finally:
+        legacy.close()
+    return copied
+
+
+def open_warehouse(settings: Settings, restore: bool = True) -> Connection:
+    """Abre o warehouse (com o estado anexado) para escrita e aplica as migrações pendentes.
+
+    Warehouse anterior ao ADR 0051 (com `metadata` e `identity` dentro): leva o estado para o `estado.duckdb`.
+    Estado novo com o bucket privado configurado: restaura dele o metadata e a identidade (ADR 0036).
     Se a migração ou a restauração falhar num arquivo recém-criado, ele é apagado: um arquivo pela metade
     faria a próxima subida pular a restauração.
     """
     from dado_publico_brasil.core import privado  # privado importa rebuild, que importa este módulo
 
-    new = not settings.warehouse.exists()
-    con = warehouse.connect(settings)
+    new = not settings.estado.exists()
+    new_warehouse = not settings.warehouse.exists()
+    con: Connection | None = None
+    migrated = False  # depois de migrar, o estado é a única cópia: nunca se apaga
     try:
+        legacy = _legacy_schemas(settings)
+        if legacy:
+            migrate_legacy(settings, legacy)
+            migrated = True
+        con = warehouse.connect(settings)
         apply(con)
-        if new and restore:
+        if new and restore and not legacy:
             privado.restore(con, settings)
     except BaseException:
-        if new:
+        if con is not None:
             con.close()
-            for file in (settings.warehouse, settings.warehouse.with_name(settings.warehouse.name + ".wal")):
-                file.unlink(missing_ok=True)
+        for file, created in (
+            (settings.estado, new and not migrated),
+            (settings.warehouse, new_warehouse and not migrated),
+        ):
+            for f in (file, file.with_name(file.name + ".wal")) if created else ():
+                f.unlink(missing_ok=True)
         raise
     return con
