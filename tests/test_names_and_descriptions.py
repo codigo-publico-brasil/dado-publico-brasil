@@ -132,8 +132,8 @@ def test_file_collections_follow_the_convention() -> None:
     wrong: list[str] = []
     for source in contracts.find_all():
         for dataset in source.datasets.values():
-            if dataset.arquivos:
-                name = f"arq_{dataset.arquivos.colecao}"
+            if dataset.files:
+                name = f"arq_{dataset.files.collection}"
                 wrong += [f"{name}: conectivo"] if CONNECTIVES & set(name.split("_")) else []
     for name, kind, description in colecoes.CONTROL_COLUMNS:
         if kind.startswith(("DATE", "TIMESTAMP")) != name.startswith("dt_") or (

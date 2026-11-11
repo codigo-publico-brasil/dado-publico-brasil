@@ -10,7 +10,7 @@ source: tse
 power: judiciario
 level: federal
 description: Tribunal Superior Eleitoral, dados abertos (CKAN; pacotes .zip com CSV)
-licenca: "CC BY"
+license: "CC BY"
 
 # Regra de extração: o TSE muda em datas pontuais (eleição, apuração, prestação de contas), então a conferência é semanal
 # (segunda, 8h) e só do ano de eleição em curso; a pergunta barata à fonte (ETag/Last-Modified) evita baixar o que não mudou.
@@ -147,11 +147,11 @@ datasets:
     write: merge
     primary_key: [member]
     columns: [member, size]
-    arquivos:           # as imagens extraídas do pacote vão ao lake público (arq_fotos); o zip não sobe
-      colecao: fotos
-      membro: '^F?(?P<uf>[A-Z]{2})(?P<sq>\d+)_div\.(?P<ext>jpe?g|png)$'
-      caminho: "{particao}/{uf}/{sq}.{ext}"
-      publicar: true
+    files:              # as imagens extraídas do pacote vão ao lake público (arq_fotos); o zip não sobe
+      collection: fotos
+      member: '^F?(?P<uf>[A-Z]{2})(?P<sq>\d+)_div\.(?P<ext>jpe?g|png)$'
+      path: "{partition}/{uf}/{sq}.{ext}"
+      publish: true
   fotos_ac:
     <<: *fotos
     url: "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes{year}/fotos/foto_cand{year}_AC_div.zip"
