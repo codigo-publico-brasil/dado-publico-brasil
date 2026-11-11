@@ -18,6 +18,12 @@ code_servers:
   local_startup_timeout: 600
   reload_timeout: 600
 
+# Os `logging` do pacote (progresso do dbt, do export e da extração) aparecem na aba Runs, com nível e horário.
+python_logs:
+  managed_python_loggers:
+    - dado_publico_brasil
+  python_log_level: INFO
+
 telemetry:
   enabled: false
 

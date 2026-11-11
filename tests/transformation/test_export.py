@@ -6,6 +6,7 @@ segredo. O que depende de credencial real (COPY, LIST e DELETE em `r2://` e o PU
 
 import hashlib
 import json
+import logging
 import mimetypes
 import shutil
 import zipfile
@@ -117,17 +118,18 @@ def test_a_second_export_without_changes_rewrites_nothing(con: Connection, setti
 
 
 def test_an_unchanged_run_writes_and_sends_nothing_and_prints_progress(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], con: Connection, settings: Settings
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, con: Connection, settings: Settings
 ) -> None:
     out, _ = run(con, settings)
     stamps = {p: p.stat().st_mtime_ns for p in out.iterdir() if p.is_file()}
     text = (out / "manifesto.json").read_text(encoding="utf-8")
     tables = len(manifest(out)["tabelas"])
-    capsys.readouterr()
+    caplog.clear()
+    caplog.set_level(logging.INFO)
     sent: list[str] = []
     monkeypatch.setattr(shutil, "copyfile", lambda s, d: sent.append(str(d)))
     export.export(settings)
-    shown = capsys.readouterr().out
+    shown = caplog.text
     assert sent == [] and (out / "manifesto.json").read_text(encoding="utf-8") == text
     assert {p: p.stat().st_mtime_ns for p in out.iterdir() if p.is_file()} == stamps
     for phase in ("impressões digitais", "escrita", "arquivos", "catálogo e manifesto", "órfãos"):
@@ -136,14 +138,15 @@ def test_an_unchanged_run_writes_and_sends_nothing_and_prints_progress(
 
 
 def test_a_changed_table_prints_as_written_and_the_rest_as_ignored(
-    capsys: pytest.CaptureFixture[str], con: Connection, settings: Settings
+    caplog: pytest.LogCaptureFixture, con: Connection, settings: Settings
 ) -> None:
     out, _ = run(con, settings)
     tables = len(manifest(out)["tabelas"])
     change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
-    capsys.readouterr()
+    caplog.clear()
+    caplog.set_level(logging.INFO)
     export.export(settings)
-    lines = [ln for ln in capsys.readouterr().out.splitlines() if ": gravada (" in ln or ": ignorada (" in ln]
+    lines = [ln for ln in caplog.messages if ": gravada (" in ln or ": ignorada (" in ln]
     assert [ln.split(":")[0].strip() for ln in lines if ": gravada (" in ln] == ["intermediate.int_x"]
     assert len(lines) == tables
 
@@ -924,7 +927,7 @@ def build_at(settings: Settings, when: str, results: dict[str, str]) -> None:
 
 
 def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_again(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], con: Connection, settings: Settings
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, con: Connection, settings: Settings
 ) -> None:
     """ADR 0047: o manifesto sai idêntico ao do export completo, sem ler a tabela que o dbt não refez."""
     monkeypatch.setattr(runs, "code_version", lambda: "abc123")  # a árvore de trabalho suja nunca reaproveita
@@ -948,7 +951,8 @@ def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_a
         return original(con_, schema, table, *rest)  # type: ignore[arg-type]
 
     monkeypatch.setattr(tables, "fingerprint", spy)
-    capsys.readouterr()
+    caplog.clear()
+    caplog.set_level(logging.INFO)
     result = export.export(settings)
     assert sorted(seen) == [  # só as sem nó do dbt no manifesto (staging e a captura): sempre recalculadas
         "metadata.capturas",
@@ -957,7 +961,7 @@ def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_a
         "staging.stg_tse__x",
     ]
     assert manifest(out)["tabelas"] == complete and result["gravadas"] == 0
-    assert "int_x: reaproveitada" in capsys.readouterr().out
+    assert "int_x: reaproveitada" in caplog.text
     assert verify.verify(settings) == []
 
     # refeita depois do manifesto: a impressão é recalculada e o dado novo é publicado

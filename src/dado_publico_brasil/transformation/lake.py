@@ -5,6 +5,7 @@ O catálogo é um DuckDB, que o DuckDB não escreve no R2: sobe, e os órfãos s
 """
 
 import json
+import logging
 import os
 import time
 from collections.abc import Iterator
@@ -19,6 +20,8 @@ from dado_publico_brasil.core import privado, s3, warehouse
 from dado_publico_brasil.core.settings import SITE_DIR, Settings
 from dado_publico_brasil.transformation import dbt, observability
 
+logger = logging.getLogger(__name__)
+
 MEMORY_LIMIT = os.environ.get(
     "DADO_PUBLICO_DUCKDB_MEMORY", "4GB"
 )  # padrão para 8 GB de RAM; suba em máquina maior
@@ -30,7 +33,7 @@ def q(text: str) -> str:
 
 
 def say(text: str) -> None:
-    print(text, flush=True)
+    logger.info(text)
 
 
 @contextmanager

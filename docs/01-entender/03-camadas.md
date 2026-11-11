@@ -102,7 +102,7 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 
 **Imutabilidade do landing.** O arquivo é salvo com o hash no nome e nunca é sobrescrito. Se a fonte mudar o conteúdo, nasce um segundo arquivo.
 
-**Organização do landing.** O caminho diz a origem, a referência e a data da extração: `landing/<fonte>/<dataset>/<referência>/<AAAAMMDD>/<nome>-<hash>.<ext>`. A referência é o ano, o mês (`AAAAMM`, no DOU) ou a legislatura do arquivo, ou `completo` quando o dataset não é particionado (lotes de datasets por item também ficam em `completo`). A data é a da captura. Capturar de novo o mesmo conteúdo em outro dia não cria arquivo: vale o primeiro e só a data da última verificação muda ([ADR 0021](../05-decisoes/0021-landing-por-fonte-dataset-e-data.md)).
+**Organização do landing.** O caminho diz a origem, a referência e a data da extração: `landing/<fonte>/<dataset>/<referência>/<AAAAMMDD>/<nome>-<hash>.<ext>`. A referência é o ano, o mês (`AAAAMM`, no DOU) ou a legislatura do arquivo, ou `completo` quando o dataset não é particionado (lotes de datasets por item também ficam em `completo`). A data é a da captura. Capturar de novo o mesmo conteúdo em outro dia não cria arquivo: vale o primeiro e só a data da última verificação muda; se a fonte volta a um conteúdo antigo (A, B, A), a volta é uma captura nova e o raw a acompanha ([ADR 0021](../05-decisoes/0021-landing-por-fonte-dataset-e-data.md)).
 
 **Linhagem.** Toda linha do raw leva `_ingested_at` (quando chegou) e `_source_file_id`, que aponta para `metadata.capturas` (URL, hash, tamanho, datas, caminho); nos datasets por item, `metadata.capturas_itens` aponta para cada resposta dentro do lote. Cada execução registra a versão do código (commit). O dlt grava `_dlt_load_id` por carga e o Dagster mostra o grafo entre ativos.
 
@@ -118,7 +118,7 @@ O projeto segue o guia oficial de estrutura (“How we structure our dbt project
 
 O arquivo DuckDB é só o motor de cálculo. Um único arquivo DuckDB, com um esquema por camada (`raw_<esfera>_<fonte>`, `staging`, `intermediate`, `marts`, `identity`, `metadata`). Limite do DuckDB em arquivo: um processo escritor por vez. Por isso o dbt roda em outro processo, com a conexão do chamador fechada, e a aplicação abre em modo somente leitura. 
 
-**Sem banco de serviço** ([ADR 0038](../05-decisoes/0038-lake-como-unica-publicacao.md)). O dbt roda só no DuckDB e o `export` grava o lake; cada aplicação lê os marts do Parquet e monta as suas próprias consultas, no banco que quiser.
+**Sem banco de serviço** ([ADR 0055](../05-decisoes/0055-lake-como-unica-publicacao.md)). O dbt roda só no DuckDB e o `export` grava o lake; cada aplicação lê os marts do Parquet e monta as suas próprias consultas, no banco que quiser.
 
 **Os marts são a camada semântica** ([ADR 0039](../05-decisoes/0039-marts-como-camada-semantica.md)). A regra de negócio vive neles, com teste de dado e unit test; a aplicação só junta nomes e filtra. Mudança de mart é aditiva, e o que não vem da fonte é marcado `derivado`. Exemplo: quem ocupa cada cargo está em `fct_cargos_ocupacoes` ([ADR 0040](../05-decisoes/0040-ocupacao-de-cargo.md)) ([ADR 0041](../05-decisoes/0041-eleito-completo-e-fim-das-views-app.md): as views `app_*` deixaram de existir).
 

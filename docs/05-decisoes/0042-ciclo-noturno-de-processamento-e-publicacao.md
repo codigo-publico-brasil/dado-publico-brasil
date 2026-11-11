@@ -1,6 +1,6 @@
 # ADR 0042: Ciclo noturno: capturas escalonadas, um processamento e uma publicação por dia
 
-- **Status:** proposto (2026-11-04), para revisão do fundador
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-04), para revisão do fundador)
 - **Data:** 2026-11-04
 - **Altera:** o [ADR 0027](0027-orquestracao-automatica-por-fonte.md), no item 3 (propagação por evento, `AutomationCondition.eager` e o sensor `propagar_atualizacoes`) e nos horários das capturas. Mantém do 0027: `schedule` por fonte no YAML, jobs gerados de `sources/`, publicação como ativo, atraso visível e uma execução por vez.
 

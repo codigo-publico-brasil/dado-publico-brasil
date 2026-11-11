@@ -26,6 +26,7 @@ Modos de extração: --years (anos pedidos), --historical --from-year N (carga m
 """
 
 import argparse
+import logging
 from pathlib import Path
 
 from dado_publico_brasil.core import alert, migrations, rebuild, warehouse
@@ -170,6 +171,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--storage-root", type=Path, help="pasta de armazenamento (padrão: settings.yml)")
     p.add_argument("--warehouse", help="arquivo do warehouse (padrão: settings.yml)")
     args = p.parse_args(argv)
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )  # progresso das etapas
 
     if args.command in ("run", "extract") and sum([bool(args.years), args.historical, args.incremental]) != 1:
         p.error("escolha um modo de extração: --years, --historical ou --incremental")

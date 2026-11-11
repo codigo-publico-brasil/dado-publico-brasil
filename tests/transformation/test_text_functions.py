@@ -85,22 +85,25 @@ def test_name_key_compares_names_across_sources(db: duckdb.DuckDBPyConnection) -
         ("VEICULO DA ESPOSA, CPF/MF: 999.999.999-99", "VEICULO DA ESPOSA, CPF/MF: ***.999.999-**"),
         ("IMOVEL cpf 99999999999 DO PAI", "IMOVEL cpf ***.999.999-** DO PAI"),
         ("RENAVAM 12345678901 PLACA ABC", "RENAVAM 12345678901 PLACA ABC"),
-        ("DEPOSITO AG. 1234 C/C 56789-0", "DEPOSITO AG. ***** C/C *****"),
-        ("Agência 1234, conta corrente nº 56789-X", "Agência *****, conta corrente nº *****"),
+        ("DEPOSITO AG. 1234 C/C 56789-0", "DEPOSITO AG. 1234 C/C 56789-0"),
+        ("Agência 1234, conta corrente nº 56789-X", "Agência 1234, conta corrente nº 56789-X"),
         ("CASA COM 3 QUARTOS", "CASA COM 3 QUARTOS"),
         ("TERRENO DE PESSOA EXEMPLO 999.999.999-99 EM SP", "TERRENO DE PESSOA EXEMPLO ***.999.999-** EM SP"),
         ("PROCESSO 1234.567.890-12 E 12.345.678/0001-99", "PROCESSO 1234.567.890-12 E 12.345.678/0001-99"),
+        # agência e conta bancária vêm como a fonte publica (ADR 0050): a descrição não é alterada
         ("MOTO 150 CC ANO 2019 E CONTA 3 PARCELAS", "MOTO 150 CC ANO 2019 E CONTA 3 PARCELAS"),
         ("conta de luz paga em 2019", "conta de luz paga em 2019"),
         ("AG 123 DO BANCO", "AG 123 DO BANCO"),
-        ("CONTA CORRENTE N. 12345-6", "CONTA CORRENTE N. *****"),
-        ("AGENCIA 1234 CONTA 12.345-X", "AGENCIA ***** CONTA *****"),
-        ("SALDO C/C12345-6 E CONTA99999", "SALDO C/C***** E CONTA*****"),
-        ("CONTA 99-123456-7, SALDO", "CONTA *****, SALDO"),
-        ("CONTA 1234-56789-0 FIM", "CONTA ***** FIM"),
-        ("CONTA CORRENTE HSBC 12345678 E AG1234CONTA 5678", "CONTA CORRENTE HSBC ***** E AG*****CONTA *****"),
+        ("CONTA CORRENTE N. 12345-6", "CONTA CORRENTE N. 12345-6"),
+        ("AGENCIA 1234 CONTA 12.345-X", "AGENCIA 1234 CONTA 12.345-X"),
+        ("SALDO C/C12345-6 E CONTA99999", "SALDO C/C12345-6 E CONTA99999"),
+        ("CONTA 99-123456-7, SALDO", "CONTA 99-123456-7, SALDO"),
+        ("CONTA 1234-56789-0 FIM", "CONTA 1234-56789-0 FIM"),
+        (
+            "CONTA CORRENTE HSBC 12345678 E AG1234CONTA 5678",
+            "CONTA CORRENTE HSBC 12345678 E AG1234CONTA 5678",
+        ),
         ("CONTAS ELEITORAIS 2020 E CONTABEIS 123456", "CONTAS ELEITORAIS 2020 E CONTABEIS 123456"),
-        # não é conta: cilindrada, ano, quantidade, apartamento, placa, chassi, motor
         ("MOTO 125 CC 2008", "MOTO 125 CC 2008"),
         ("MOTO 150CC 2019 E 300 CC 2008 KM", "MOTO 150CC 2019 E 300 CC 2008 KM"),
         ("CONTA 2019", "CONTA 2019"),
@@ -111,17 +114,16 @@ def test_name_key_compares_names_across_sources(db: duckdb.DuckDBPyConnection) -
         ("PLACA AGN 1234 MOTOR CCN 12345", "PLACA AGN 1234 MOTOR CCN 12345"),
         ("CHASSI 9BWZZZ9ZCC123456", "CHASSI 9BWZZZ9ZCC123456"),
         ("CC 1.600 16V", "CC 1.600 16V"),
-        # é conta ou agência
-        ("BANCO DO BRASIL AG 1234", "BANCO DO BRASIL AG *****"),
-        ("AGENCIA 1234-5, CONTA CORRENTE", "AGENCIA *****, CONTA CORRENTE"),
-        ("SALDO NO BANCO CONTA 5678", "SALDO NO BANCO CONTA *****"),
-        ("AG 1234 CONTA 56789-0", "AG ***** CONTA *****"),
-        ("AG 1234 C/C 56789", "AG ***** C/C *****"),
-        ("C/C 12345", "C/C *****"),
-        ("CC 12345-6 E CC 1234-5", "CC ***** E CC *****"),
-        ("CONTA NO BANCO EXEMPLO S/A 1234-5", "CONTA NO BANCO EXEMPLO S/A *****"),
-        ("AG 1234 12345-6", "AG *****"),
-        ("CONTA 999-6", "CONTA *****"),
+        ("BANCO DO BRASIL AG 1234", "BANCO DO BRASIL AG 1234"),
+        ("AGENCIA 1234-5, CONTA CORRENTE", "AGENCIA 1234-5, CONTA CORRENTE"),
+        ("SALDO NO BANCO CONTA 5678", "SALDO NO BANCO CONTA 5678"),
+        ("AG 1234 CONTA 56789-0", "AG 1234 CONTA 56789-0"),
+        ("AG 1234 C/C 56789", "AG 1234 C/C 56789"),
+        ("C/C 12345", "C/C 12345"),
+        ("CC 12345-6 E CC 1234-5", "CC 12345-6 E CC 1234-5"),
+        ("CONTA NO BANCO EXEMPLO S/A 1234-5", "CONTA NO BANCO EXEMPLO S/A 1234-5"),
+        ("AG 1234 12345-6", "AG 1234 12345-6"),
+        ("CONTA 999-6", "CONTA 999-6"),
         (
             "CPF 99999999999 E 999.999.999-99 999.888.777-66",
             "CPF ***.999.999-** E ***.999.999-** ***.888.777-**",
@@ -130,10 +132,10 @@ def test_name_key_compares_names_across_sources(db: duckdb.DuckDBPyConnection) -
         (None, None),
     ],
 )
-def test_mascarar_dado_pessoal_bem(
+def test_mascarar_dado_pessoal_cpf_deixa_conta_e_agencia(
     db: duckdb.DuckDBPyConnection, original: str | None, expected: str | None
 ) -> None:
-    assert one(db, "SELECT mascarar_dado_pessoal(?, 'bem')", original) == expected
+    assert one(db, "SELECT mascarar_dado_pessoal(?, 'cpf')", original) == expected
 
 
 @pytest.mark.parametrize(
@@ -158,7 +160,7 @@ def test_mascarar_dado_pessoal_cpf_only_masks_labelled_cpf(db: duckdb.DuckDBPyCo
     assert one(db, "SELECT mascarar_dado_pessoal(?, 'cpf')", text) == expected
 
 
-@pytest.mark.parametrize("modo", ["cpf", "bem", "favorecido"])
+@pytest.mark.parametrize("modo", ["cpf", "favorecido"])
 @pytest.mark.parametrize(
     ("original", "expected"),
     [

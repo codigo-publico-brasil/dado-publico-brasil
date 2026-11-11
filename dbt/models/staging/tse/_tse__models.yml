@@ -53,7 +53,7 @@ models:
       - {name: ordem, description: "Posição do parágrafo no arquivo, a partir de 1."}
       - {name: cd_tipo, description: "Código do tipo, como a fonte informa."}
       - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
-      - {name: descricao, description: "Descrição do bem, como o candidato declarou. CPF (***.nnn.nnn-**) e número de agência e de conta bancária (após rótulo como agência, ag, conta, c/c, cc: 5 dígitos ou mais, ou com dígito verificador; 4 dígitos sem ano só em texto de banco) são mascarados (*****) pelo projeto; ano, cilindrada, placa e outros números não são tocados, e conta escrita fora desses padrões pode ficar visível; o original fica no landing."}
+      - {name: descricao, description: "Descrição do bem, como o candidato declarou. CPF (***.nnn.nnn-**) é mascarado pelo projeto; o original fica no landing. Agência e conta bancária que o candidato escreveu na descrição vêm como a fonte publica, sem máscara (ADR 0050, issue 289; a republicação desta tabela é do fundador)."}
       - {name: valor, description: "Valor declarado em reais, sem correção."}
       - {name: dt_atualizacao, description: "Data da última atualização do bem na declaração."}
       - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
@@ -163,7 +163,7 @@ models:
       - {name: dt_despesa, description: "Data da despesa."}
       - {name: valor, description: "Valor da despesa contratada em reais, como declarado."}
       - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
-      - {name: descricao, description: "Descrição da despesa, como o candidato declarou. CPF (***.nnn.nnn-**) e número de agência e de conta bancária (após rótulo como agência, ag, conta, c/c, cc: 5 dígitos ou mais, ou com dígito verificador; 4 dígitos sem ano só em texto de banco) são mascarados (*****) pelo projeto; ano, cilindrada, placa e outros números não são tocados, e conta escrita fora desses padrões pode ficar visível; o original fica no landing."}
+      - {name: descricao, description: "Descrição da despesa, como o candidato declarou. CPF (***.nnn.nnn-**) é mascarado pelo projeto; o original fica no landing. Agência e conta bancária que o candidato escreveu na descrição vêm como a fonte publica, sem máscara (ADR 0050, issue 289; a republicação desta tabela é do fundador)."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
       - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
       - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}

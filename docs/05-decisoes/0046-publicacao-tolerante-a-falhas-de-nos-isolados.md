@@ -1,6 +1,6 @@
 # ADR 0046: publicação tolerante a falhas de nós isolados e raw sempre presente
 
-- **Status:** proposto (2026-11-06), para revisão do fundador
+- **Status:** aceito em 2026-11-11 (implementado; antes proposto (2026-11-06), para revisão do fundador)
 - **Data:** 2026-11-06
 - **Altera:** o item 6 do [ADR 0035](0035-lakehouse-publico-no-r2.md) ("publicação só depois dos testes do dbt": de tudo-ou-nada para por tabela) e os itens 2 e 6 do [ADR 0042](0042-ciclo-noturno-de-processamento-e-publicacao.md) (a publicação sai do job `processar_tudo` e passa a ser uma execução própria).
 

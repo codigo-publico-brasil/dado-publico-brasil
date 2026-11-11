@@ -6,6 +6,7 @@ O estado do dbt (logs e `target/`) fica dentro do storage, não na pasta do proj
 """
 
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -15,6 +16,8 @@ from typing import Any
 
 from dado_publico_brasil.core.settings import DBT_DIR, Settings
 from dado_publico_brasil.transformation import branding
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -149,7 +152,7 @@ def invoke(
         output = ""
         for line in process.stdout or ():
             if stream:
-                print(line, end="", flush=True)
+                logger.info(line.rstrip())
             output = (output + line)[-2000:]
     results = read_results(settings, results_file)
     return Outcome(process.returncode, output, results)

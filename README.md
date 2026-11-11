@@ -42,10 +42,10 @@ O arquivo original nunca é alterado; o resto se refaz a partir dele. O DuckDB �
 
 ## Estado
 
-Projeto em desenvolvimento, **ainda sem versão publicada e sem garantia de estabilidade** dos nomes de tabelas e colunas.
+Projeto em desenvolvimento, **sem garantia de estabilidade** dos nomes de tabelas e colunas. O lake foi publicado pela primeira vez em novembro de 2026.
 
-- **Funciona hoje:** captura com hash e monitoramento das fontes; carga e transformação em camadas com testes de qualidade; identidade de pessoas; catálogo e dicionário de colunas; lake público em Parquet, que as aplicações leem.
-- **Falta:** infraestrutura de produção, trilha de documentos com busca vetorial, estados e municípios, e a primeira publicação do lake no R2 ([ADR 0035](docs/05-decisoes/0035-lakehouse-publico-no-r2.md), proposto).
+- **Funciona hoje:** captura com hash e monitoramento das fontes; carga e transformação em camadas com testes de qualidade; identidade de pessoas; catálogo e dicionário de colunas; lake público em Parquet no R2, que as aplicações leem ([ADR 0035](docs/05-decisoes/0035-lakehouse-publico-no-r2.md)); ciclo noturno automático no Dagster, em servidor próprio. O `manifesto.json` de 11/11/2026 lista 123 tabelas (49 de staging, 24 de intermediate, 49 de marts e `metadata.capturas`), com cerca de 108 milhões de linhas e 322.750 pessoas em `dim_pessoas`; o manifesto publicado é a prova do que está no ar.
+- **Falta:** trilha de documentos com busca vetorial, estados e municípios, login para a interface do Dagster, canal e revisão jurídica de dados pessoais ([issue 38](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/38)).
 - **Pendências e decisões abertas:** [issues do repositório](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues).
 
 ## Começar em poucos minutos
@@ -99,4 +99,4 @@ Ordem de leitura e regras em [`docs/README.md`](docs/README.md).
 
 ## Licença
 
-Pretende-se AGPL-3.0 para o código e CC BY 4.0 para os dados curados, **ainda não confirmadas**: por isso o repositório não traz um arquivo `LICENSE` e nenhuma permissão de uso está concedida até a decisão. Os dados de origem seguem os termos de cada fonte oficial.
+O código é **Apache-2.0** ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)) e os dados curados são **CC BY 4.0**: cite o projeto e o `id_execucao` da publicação ([`CITATION.cff`](CITATION.cff)). Os dados de origem seguem os termos de cada fonte oficial, que o manifesto declara por tabela. Decisão e alternativas: [ADR 0049](docs/05-decisoes/0049-licenca-apache-2-para-o-codigo-e-cc-by-para-os-dados.md).

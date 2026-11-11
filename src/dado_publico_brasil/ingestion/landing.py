@@ -11,10 +11,11 @@ Três maneiras de montar o que baixar (o plano):
   da fonte que declara `schedule`; sem `schedule`, só roda quando pedido.
 """
 
+import logging
 import shutil
 from collections.abc import Mapping
 from contextlib import suppress
-from datetime import UTC, date, datetime
+from datetime import date
 from http.client import HTTPException
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,8 @@ from dado_publico_brasil.core.warehouse import Connection, rows, scalar
 from dado_publico_brasil.ingestion import arquivos, fetch, monitoring
 from dado_publico_brasil.ingestion.contract import Dataset, SourceContract
 from dado_publico_brasil.ingestion.fetch import Downloader, HeadRequest
+
+logger = logging.getLogger(__name__)
 
 Item = tuple[str, int | None]
 
@@ -95,20 +98,27 @@ def register_capture(
     run_id: int,
     headers: Mapping[str, str | None] | None = None,
 ) -> int:
-    """Anota a captura. O mesmo conteúdo (URL e hash) não é duplicado."""
+    """Anota a captura. O mesmo conteúdo da captura vigente da URL não é duplicado; a volta a um conteúdo
+    antigo (A, B, A) é captura nova, para o vigente e o histórico seguirem a fonte."""
     moment = runs.now()
     h = headers or {}
-    con.execute(
-        "INSERT INTO metadata.capturas (fonte, dataset, particao, url, sha256, qtd_bytes, caminho, "
-        "dt_captura, dt_verificacao, id_execucao, etag, ultima_modificacao) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
-        "ON CONFLICT (url, sha256) DO UPDATE SET dt_verificacao = excluded.dt_verificacao, "
-        "etag = excluded.etag, ultima_modificacao = excluded.ultima_modificacao",
-        (source, dataset, year, url, sha256, size_bytes, path, moment, moment, run_id)
-        + (h.get("etag"), h.get("last_modified")),
-    )
+    last = last_capture(con, url)
+    if last and last["sha256"] == sha256:
+        con.execute(
+            "UPDATE metadata.capturas SET dt_verificacao = ?, etag = ?, ultima_modificacao = ? "
+            "WHERE id_captura = ?",
+            (moment, h.get("etag"), h.get("last_modified"), last["id_captura"]),
+        )
+        return int(last["id_captura"])
     return int(
-        scalar(con, "SELECT id_captura FROM metadata.capturas WHERE url = ? AND sha256 = ?", (url, sha256))
+        scalar(
+            con,
+            "INSERT INTO metadata.capturas (fonte, dataset, particao, url, sha256, qtd_bytes, caminho, "
+            "dt_captura, dt_verificacao, id_execucao, etag, ultima_modificacao) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_captura",
+            (source, dataset, year, url, sha256, size_bytes, path, moment, moment, run_id)
+            + (h.get("etag"), h.get("last_modified")),
+        )
     )
 
 
@@ -133,7 +143,7 @@ def current_captures(con: Connection, source: str) -> list[dict[str, Any]]:
 
 
 def current_year() -> int:
-    return datetime.now(UTC).year
+    return runs.today().year
 
 
 def legislature_of(year: int) -> int:
@@ -152,7 +162,7 @@ def partitions(dataset: Dataset, years: list[int] | set[int], today: date | None
     if dataset.partition == "legislature":
         return sorted({legislature_of(y) for y in valid})
     if dataset.partition == "month":
-        last = current_partition(dataset, today or datetime.now(UTC).date())
+        last = current_partition(dataset, today or runs.today())
         months = (y * 100 + m for y in valid for m in range(1, 13))
         return sorted(v for v in months if (dataset.first_month or 0) <= v <= last)
     return sorted(valid)
@@ -213,7 +223,7 @@ def plan_incremental(contract: SourceContract, today: date | None = None) -> lis
     a fonte só roda quando pedida. Tudo que é retroativo (anos ou meses anteriores) exige pedir (`--years`
     ou `--historical`). Dataset `on_demand` fica fora: só vem quando pedido.
     """
-    today = today or datetime.now(UTC).date()
+    today = today or runs.today()
     items: list[Item] = []
     if contract.schedule is None:
         return items
@@ -253,7 +263,7 @@ def partition_gaps(
 
     Indisponível é a partição que a fonte não publica (a última tentativa deu 404): não vira tentativa eterna
     e só é pedida de novo de forma explícita (`--years`). Faltante é o resto, falta nossa a recuperar."""
-    today = today or datetime.now(UTC).date()
+    today = today or runs.today()
     result: dict[str, dict[str, Any]] = {}
     for d in contract.datasets.values():
         expected = expected_partitions(d, today)
@@ -304,7 +314,7 @@ def plan_recovery(
 
     Só para fontes com `schedule`. A partição em curso fica com `plan_incremental` (o zip do mês corrente do
     DOU muda todo dia e não entra aqui)."""
-    today = today or datetime.now(UTC).date()
+    today = today or runs.today()
     if contract.schedule is None:
         return []
     items: list[Item] = []
@@ -336,7 +346,7 @@ def _not_yet_published(dataset: Dataset, year: int | None, error: fetch.SourceBl
         error.status == 403
         and dataset.partition == "month"
         and year is not None
-        and year >= current_partition(dataset, datetime.now(UTC).date())
+        and year >= current_partition(dataset, runs.today())
     )
 
 
@@ -448,7 +458,7 @@ def extract_plan(
         items = [*items, *(i for i in plan_recovery(con, contract) if i not in items)]
     done = 0
     for dataset, year in items:
-        print(f"Extraindo {dataset} {year or ''}".strip(), flush=True)
+        logger.info("Extraindo %s", f"{dataset} {year or ''}".strip())
         try:
             extract(con, settings, contract, dataset, year, downloader, head_request, force)
             done += 1
@@ -463,8 +473,10 @@ def extract_plan(
                 monitoring.record(con, contract.source, dataset, year, "bloqueio", "ok")
         except fetch.SourceBlocked as error:  # sem retry: o próximo agendamento tenta de novo
             monitoring.record(con, contract.source, dataset, year, "bloqueio", "error", str(error))
-            print(
-                f"Fonte {contract.source} bloqueou ({error}); o resto da fonte fica para a próxima execução"
+            logger.warning(
+                "Fonte %s bloqueou (%s); o resto da fonte fica para a próxima execução",
+                contract.source,
+                error,
             )
             break
     record_gaps(con, contract)
