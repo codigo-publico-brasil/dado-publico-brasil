@@ -328,7 +328,7 @@ def create_views(
         name = normalize(dataset.name)
         family = sorted({name} | {t for t in on_disk if t.startswith(f"{name}__")}, key=len)
         for table in family:
-            # a pai é a tabela mais longa da família que prefixa o nome (o dlt omite o nível que é só um objeto)
+            # a pai é a mais longa da família que prefixa o nome (o dlt omite o nível que é só um objeto)
             parent = max((t for t in family if table.startswith(f"{t}__")), key=len, default=None)
             if con.execute(
                 "SELECT 1 FROM duckdb_tables() WHERE schema_name = ? AND table_name = ?",

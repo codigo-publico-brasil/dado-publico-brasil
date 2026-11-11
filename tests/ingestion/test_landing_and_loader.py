@@ -287,7 +287,7 @@ def test_replace_swaps_the_previous_content(tmp_path: Path) -> None:
     settings = Settings(storage_root=tmp_path / "store")
     contract = make_contract(tmp_path)
     load(settings, contract, "fixos", "codigo\n1\n2\n", 1)
-    load(settings, contract, "fixos", "codigo\n3\n", 2)
+    load(settings, contract, "fixos", "codigo\n3\n", 2, (1,))
     assert read_all(settings, "SELECT codigo FROM raw_municipal_teste.fixos") == [("3",)]
 
 
