@@ -350,6 +350,20 @@ def _not_yet_published(dataset: Dataset, year: int | None, error: fetch.SourceBl
     )
 
 
+def _keep_previous(settings: Settings, previous: Mapping[str, Any], file: Path, lost: bool) -> None:
+    """O download repetiu a captura anterior: o arquivo novo sai; se o antigo sumiu, o novo ocupa o lugar."""
+    original = settings.storage_root / previous["caminho"]
+    if file == original:
+        return
+    if lost:
+        original.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(file, original)
+    else:
+        file.unlink()
+    with suppress(OSError):  # a pasta só some se ficou vazia
+        file.parent.rmdir()
+
+
 def extract(
     con: Connection,
     settings: Settings,
@@ -404,17 +418,8 @@ def extract(
             monitoring.record(con, contract.source, dataset, year, "availability", "error", str(error))
             return -1
         if previous is not None and previous["sha256"] == digest:  # mesmo conteúdo: fica o arquivo antigo
-            original = settings.storage_root / previous["caminho"]
-            if reused:
-                pass  # o arquivo é o de outro dataset: não se move nem se apaga
-            elif file != original and lost:  # o arquivo local sumiu: o baixado volta ao `caminho` registrado
-                original.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(file, original)
-            elif file != original:
-                file.unlink()
-            if file != original and not reused:
-                with suppress(OSError):  # a pasta só some se ficou vazia
-                    file.parent.rmdir()
+            if not reused:  # o arquivo de outro dataset não se move nem se apaga
+                _keep_previous(settings, previous, file, lost)
             mark_checked(con, int(previous["id_captura"]))
             run.rows_in = 1
             return int(previous["id_captura"])
