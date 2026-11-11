@@ -243,9 +243,13 @@ models:
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
 
   - name: fct_proposicoes_tramitacoes
-    description: Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição e sequência.
-    meta: {sensitivity: publico, grain: proposição e sequência, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
-    data_tests: *monitoramento
+    description: Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição, sequência e hora (a fonte às vezes repete a sequência com outra hora).
+    meta: {sensitivity: publico, grain: "proposição, sequência e hora", owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [fonte, id_proposicao, sequencia, dt_registro]}}
+      - elementary.volume_anomalies: {config: {severity: warn}}
+      - elementary.schema_changes: {config: {severity: warn}}
+      - elementary.all_columns_anomalies: {column_anomalies: [null_percent], config: {severity: warn}}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: id_proposicao, data_type: varchar, tests: [not_null], description: "Proposição (fct_proposicoes, junto com a fonte)."}

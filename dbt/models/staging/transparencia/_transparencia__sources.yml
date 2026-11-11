@@ -22,10 +22,14 @@ sources:
       - name: emendas_favorecidos
         description: Quem recebeu o dinheiro das emendas, como a fonte publica (inclui pessoa física, com CPF mascarado).
       - name: despesas
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: "Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa (sem favorecido). Fonte: saida/despesas-execucao/AAAAMM_Despesas.zip."
       - name: compras
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: "Contratos do governo federal, um por linha (o contratado pessoa física traz CPF completo). Fonte: saida/compras/AAAAMM_Compras.zip."
       - name: compras_itens
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Itens dos contratos do governo federal.
       - name: compras_termos_aditivos
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
         description: Termos aditivos dos contratos do governo federal.

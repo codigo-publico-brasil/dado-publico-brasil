@@ -11,14 +11,22 @@ def test_camara_andamentos_come_in_order_with_standardized_situation(full: Env) 
     con, _ = full
     rows = con.execute(
         "SELECT sequencia, orgao_sigla, situacao, despacho FROM marts.fct_proposicoes_tramitacoes "
-        "WHERE fonte = 'camara' AND id_proposicao = '100' ORDER BY sequencia"
+        "WHERE fonte = 'camara' AND id_proposicao = '100' ORDER BY sequencia, dt_registro"
     ).fetchall()
     assert [(r[0], r[1], r[2]) for r in rows] == [
         (1, "MESA", "Aguardando designação"),
         (2, "CCJC", "Aguardando parecer"),
         (3, "PLEN", "Transformado em norma jurídica"),
+        (3, "PLEN", "Transformado em norma jurídica"),  # mesma sequência, outra hora: as duas ficam
     ]
     assert rows[0][3] == "Apresentação da proposição 100."
+    assert rows[3][3] == "Publicada."
+    carga = scalar(
+        con,
+        "SELECT detalhe FROM metadata.fontes_verificacoes WHERE dataset = 'proposicoes_tramitacoes' "
+        "AND verificacao = 'carga' ORDER BY id_verificacao DESC LIMIT 1",
+    )
+    assert "colisões de chave 0" in str(carga) and "rejeitadas 0" in str(carga)
 
 
 def test_only_the_fetched_target_items_have_andamentos_and_the_rest_is_measured(full: Env) -> None:

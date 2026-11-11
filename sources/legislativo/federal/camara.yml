@@ -233,7 +233,9 @@ datasets:
       recent_by: data_apresentacao
       version: ultimo_status_data_hora   # mudou a última situação: busca de novo
       batch_size: 500
-    primary_key: [_item, sequencia]
+    # A fonte repete `sequencia` dentro da mesma proposição com outra hora (visto em 2026); sem `dataHora` na chave,
+    # o merge juntava dois andamentos diferentes e perdia um.
+    primary_key: [_item, sequencia, dataHora]
     columns:
       [_item, sequencia, dataHora, siglaOrgao, regime, descricaoTramitacao, codTipoTramitacao,
        descricaoSituacao, codSituacao, despacho, ambito, apreciacao]
