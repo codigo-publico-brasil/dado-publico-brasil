@@ -441,13 +441,20 @@ def test_publish_docs_uploads_both_pages_as_html_and_does_nothing_without_r2(
         lake, "request", lambda m, key, path=None, content_type=None: sent.append((key, content_type))
     )
     monkeypatch.setattr(lake, "index", lambda s: page)
+    monkeypatch.setattr(lake, "situation", lambda s, limits=None: page)
     monkeypatch.setattr(lake, "r2", lambda: {})
     assert lake.publish_docs(settings) == [] and sent == []
     monkeypatch.setattr(lake, "r2", lambda: {"BUCKET": "b"})
-    assert lake.publish_docs(settings) == ["docs/dbt.html", "docs/qualidade.html", "docs/index.html"]
+    assert lake.publish_docs(settings) == [
+        "docs/dbt.html",
+        "docs/qualidade.html",
+        "docs/situacao.html",
+        "docs/index.html",
+    ]
     assert sent == [
         ("docs/dbt.html", "text/html; charset=utf-8"),
         ("docs/qualidade.html", "text/html; charset=utf-8"),
+        ("docs/situacao.html", "text/html; charset=utf-8"),
         ("docs/index.html", "text/html; charset=utf-8"),
     ]
 

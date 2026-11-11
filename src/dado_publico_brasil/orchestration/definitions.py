@@ -369,7 +369,7 @@ def export_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
 def docs_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
     """Sobe ao R2 o dbt docs, o relatório do Elementary e a página inicial do lake (sem R2, não faz nada)."""
     with step(context, "publicação das docs"):
-        pages = lake.publish_docs(SETTINGS)
+        pages = lake.publish_docs(SETTINGS, pipeline.freshness_limits())
     context.log.info(f"docs: {len(pages)} páginas publicadas")
     return MaterializeResult(metadata={"paginas": len(pages)})
 
