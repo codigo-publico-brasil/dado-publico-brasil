@@ -24,7 +24,7 @@ datasets:
     load: yearly
     archive: zip
     raw: false
-    arquivos: {colecao: fotos, membro: '^(?P<x>.+)\.jpg$', caminho: "{particao}/{x}.jpg"}
+    files: {collection: fotos, member: '^(?P<x>.+)\.jpg$', path: "{partition}/{x}.jpg"}
 """
 
 
@@ -103,9 +103,9 @@ def test_writes_are_atomic_idempotent_and_a_vanished_member_keeps_its_last_copy(
 def test_the_tse_member_pattern_and_the_mart_agree_on_the_state_folder(
     member: str, uf: str, ext: str
 ) -> None:
-    pattern = contracts.find("tse").datasets["fotos_br"].arquivos
-    assert pattern is not None and pattern.membro
-    found = re.match(pattern.membro, member)
+    pattern = contracts.find("tse").datasets["fotos_br"].files
+    assert pattern is not None and pattern.member
+    found = re.match(pattern.member, member)
     assert found and (found["uf"], found["ext"]) == (uf, ext)
     mem = duckdb.connect()
     sql = (DBT_DIR / "models/marts/eleicoes/fct_candidaturas.sql").read_text(encoding="utf-8")

@@ -69,28 +69,28 @@ def test_contract_reads_max_age_days_and_every_real_source_still_loads(tmp_path:
     assert limits and all(days >= 1 for days in limits)
 
 
-TOLERANCE = "    rejeitadas_toleradas:\n      2004: {limite: 1, justificativa: linha da fonte sem chave}\n"
+TOLERANCE = "    tolerated_rejects:\n      2004: {limit: 1, reason: linha da fonte sem chave}\n"
 
 
 def test_contract_reads_the_tolerated_rejections_per_partition(tmp_path: Path) -> None:
     dataset = contract_from(tmp_path, text=TEMPLATE.format(extra="") + TOLERANCE).datasets["pessoas"]
-    assert dataset.rejeitadas_toleradas[2004].limite == 1
-    assert dataset.rejeitadas_toleradas[2004].justificativa == "linha da fonte sem chave"
-    assert contract_from(tmp_path).datasets["pessoas"].rejeitadas_toleradas == {}
+    assert dataset.tolerated_rejects[2004].limit == 1
+    assert dataset.tolerated_rejects[2004].reason == "linha da fonte sem chave"
+    assert contract_from(tmp_path).datasets["pessoas"].tolerated_rejects == {}
 
 
 @pytest.mark.parametrize(
     "block",
     [
-        "{limite: 0, justificativa: x}",
-        "{limite: 1}",
-        "{limite: 1, justificativa: ''}",
-        "{limite: um, justificativa: x}",
+        "{limit: 0, reason: x}",
+        "{limit: 1}",
+        "{limit: 1, reason: ''}",
+        "{limit: um, reason: x}",
     ],
 )
 def test_contract_with_a_bad_tolerance_is_refused(tmp_path: Path, block: str) -> None:
-    text = TEMPLATE.format(extra="") + f"    rejeitadas_toleradas:\n      2004: {block}\n"
-    with pytest.raises(InvalidContract, match="rejeitadas_toleradas"):
+    text = TEMPLATE.format(extra="") + f"    tolerated_rejects:\n      2004: {block}\n"
+    with pytest.raises(InvalidContract, match="tolerated_rejects"):
         contract_from(tmp_path, text=text)
 
 
@@ -221,31 +221,31 @@ def test_raw_schema_carries_the_level_and_the_source(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "block, message",
     [
-        ("{colecao: x}", "colecao e caminho"),
-        ("{colecao: x, caminho: a, outro: 1}", "colecao e caminho"),
-        ("{colecao: Fotos_1, caminho: a}", "colecao"),
-        ("{colecao: x, caminho: a, publicar: sim}", "publicar"),
-        ("{colecao: x, caminho: '{inexistente}'}", "campo desconhecido"),
-        ("{colecao: x, caminho: '../{nome}'}", "sobe pastas"),
-        ("{colecao: x, caminho: '{nome}', membro: 'a'}", "archive: zip"),
+        ("{collection: x}", "collection e path"),
+        ("{collection: x, path: a, other: 1}", "collection e path"),
+        ("{collection: Fotos_1, path: a}", "collection"),
+        ("{collection: x, path: a, publish: sim}", "publish"),
+        ("{collection: x, path: '{inexistente}'}", "campo desconhecido"),
+        ("{collection: x, path: '../{name}'}", "sobe pastas"),
+        ("{collection: x, path: '{name}', member: 'a'}", "archive: zip"),
     ],
 )
-def test_contract_with_a_bad_arquivos_block_is_refused(tmp_path: Path, block: str, message: str) -> None:
-    text = TEMPLATE.format(extra="") + f"    arquivos: {block}" + chr(10)
+def test_contract_with_a_bad_files_block_is_refused(tmp_path: Path, block: str, message: str) -> None:
+    text = TEMPLATE.format(extra="") + f"    files: {block}" + chr(10)
     with pytest.raises(InvalidContract, match=message):
         contract_from(tmp_path, text=text)
 
 
-def test_arquivos_block_is_read_and_the_member_groups_become_path_fields(tmp_path: Path) -> None:
-    block = "{colecao: x, caminho: '{particao}/{uf}/{nome}', membro: '^(?P<uf>[A-Z]{2})', publicar: true}"
-    text = TEMPLATE.format(extra="") + f"    archive: zip\n    arquivos: {block}" + chr(10)
-    spec = contract_from(tmp_path, text=text).datasets["pessoas"].arquivos
-    assert spec is not None and spec.publicar and spec.colecao == "x"
+def test_files_block_is_read_and_the_member_groups_become_path_fields(tmp_path: Path) -> None:
+    block = "{collection: x, path: '{partition}/{uf}/{name}', member: '^(?P<uf>[A-Z]{2})', publish: true}"
+    text = TEMPLATE.format(extra="") + f"    archive: zip\n    files: {block}" + chr(10)
+    spec = contract_from(tmp_path, text=text).datasets["pessoas"].files
+    assert spec is not None and spec.publish and spec.collection == "x"
     published = {
-        (c.source, n): d.arquivos.colecao
+        (c.source, n): d.files.collection
         for c in contracts.find_all()
         for n, d in c.datasets.items()
-        if d.arquivos and d.arquivos.publicar
+        if d.files and d.files.publish
     }
     assert published[("dou", "secao1")] == "secoes" and published[("tse", "fotos_rj")] == "fotos"
 
@@ -291,6 +291,6 @@ def test_an_unknown_foreach_key_is_refused(tmp_path: Path) -> None:
         contract_from(tmp_path, text=text)
 
 
-def test_licenca_is_optional_text() -> None:
-    assert contracts.find("tse").licenca == "CC BY"
-    assert contracts.find("camara").licenca is None  # a doc de fontes não registra licença formal
+def test_license_is_optional_text() -> None:
+    assert contracts.find("tse").license == "CC BY"
+    assert contracts.find("camara").license is None  # a doc de fontes não registra licença formal

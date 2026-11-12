@@ -1,12 +1,12 @@
 """Materializa os arquivos de um dataset (bloco `arquivos` do contrato) para servir ao público (ADR 0037).
 
 Para cada captura vigente, copia o arquivo ou extrai os membros do zip que casam com `membro`, para
-`<pasta de dados>/arquivos/<poder>/<esfera>/<fonte>/arq_<colecao>/<caminho>`, e anota em `metadata.arquivos`
+`<pasta de dados>/arquivos/<poder>/<esfera>/<fonte>/arq_<collection>/<path>`, e anota em `metadata.arquivos`
 o hash e a captura de origem. É cópia derivada do landing (que fica intacto): refaz-se quando quiser, e só se
 escreve o que falta ou mudou (gravação atômica; membro já presente com o mesmo tamanho não é regravado).
 Captura corrompida ou caminho que sai da coleção vira aviso e não para as outras. Membro que some de uma
 captura nova não é apagado: a última cópia fica, com a captura de origem anterior.
-O `export` lê esta pasta e publica o que o contrato manda (`publicar: true`).
+O `export` lê esta pasta e publica o que o contrato manda (`publish: true`).
 """
 
 import hashlib
@@ -20,7 +20,7 @@ from typing import Any
 
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, rows
-from dado_publico_brasil.ingestion.contract import Arquivos, SourceContract
+from dado_publico_brasil.ingestion.contract import Files, SourceContract
 
 HASH_SUFFIX = re.compile(r"-[0-9a-f]{12}(?=\.[^.]+$)")  # o landing põe o hash no nome do arquivo
 Member = tuple[str, int, Callable[[Path], None], str | None]  # caminho, bytes, grava, sha256 se já se sabe
@@ -34,17 +34,17 @@ def folder(settings: Settings, contract: SourceContract, colecao: str) -> Path:
 def materialize(con: Connection, settings: Settings, contract: SourceContract) -> int:
     """Materializa as capturas vigentes dos datasets com `arquivos`. Devolve quantos arquivos escreveu."""
     written = 0
-    for dataset in (d for d in contract.datasets.values() if d.arquivos):
-        spec = dataset.arquivos
+    for dataset in (d for d in contract.datasets.values() if d.files):
+        spec = dataset.files
         assert spec is not None
-        base = folder(settings, contract, spec.colecao)
+        base = folder(settings, contract, spec.collection)
         known = {
             r["caminho"]: r
             for r in rows(
                 con,
                 "SELECT caminho, id_captura, qtd_bytes, sha256_arquivo FROM metadata.arquivos "
                 "WHERE fonte = ? AND colecao = ?",
-                (contract.source, spec.colecao),
+                (contract.source, spec.collection),
             )
         }
         for capture in rows(
@@ -68,7 +68,7 @@ def materialize(con: Connection, settings: Settings, contract: SourceContract) -
 def _capture(
     con: Connection,
     contract: SourceContract,
-    spec: Arquivos,
+    spec: Files,
     dataset: str,
     capture: dict[str, Any],
     source: Path,
@@ -106,7 +106,7 @@ def _capture(
             "fl_original = excluded.fl_original",
             (
                 contract.source,
-                spec.colecao,
+                spec.collection,
                 name,
                 dataset,
                 capture["id_captura"],
@@ -115,24 +115,24 @@ def _capture(
                     old and old["sha256_arquivo"] if same else hashlib.sha256(target.read_bytes()).hexdigest()
                 ),
                 size,
-                spec.membro is None,
+                spec.member is None,
             ),
         )
         written += not same
     return written
 
 
-def _members(spec: Arquivos, dataset: str, capture: dict[str, Any], source: Path) -> list[Member]:
-    """Os arquivos que a captura gera: ela mesma (sem `membro`) ou cada membro do zip que casa."""
-    fields = {"dataset": dataset, "particao": capture["particao"]}
-    if spec.membro is None:
-        name = spec.caminho.format(**fields, nome=HASH_SUFFIX.sub("", source.name))
+def _members(spec: Files, dataset: str, capture: dict[str, Any], source: Path) -> list[Member]:
+    """Os arquivos que a captura gera: ela mesma (sem `member`) ou cada membro do zip que casa."""
+    fields = {"dataset": dataset, "partition": capture["particao"]}
+    if spec.member is None:
+        name = spec.path.format(**fields, name=HASH_SUFFIX.sub("", source.name))
         return [(name, source.stat().st_size, lambda t: _copy(source, t), capture["sha256"])]
-    pattern, found = re.compile(spec.membro), list[Member]()
+    pattern, found = re.compile(spec.member), list[Member]()
     with zipfile.ZipFile(source) as package:
         for info in package.infolist():
             if match := pattern.match(info.filename):
-                name = spec.caminho.format(**fields, nome=Path(info.filename).name, **match.groupdict())
+                name = spec.path.format(**fields, name=Path(info.filename).name, **match.groupdict())
                 found.append((name, info.file_size, _extract(source, info.filename), None))
     return found
 
