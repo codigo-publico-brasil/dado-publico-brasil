@@ -27,12 +27,20 @@ def record(
     check: str,
     status: str,
     detail: str = "",
+    *,
+    cd_status_http: int | None = None,
+    tipo: str | None = None,
+    bytes_esperados: int | None = None,
+    bytes_recebidos: int | None = None,
+    linhas: int | None = None,
 ) -> None:
+    """Grava uma verificação. O `detail` é o texto para gente; quem decide algo lê as colunas próprias."""
     con.execute(
-        "INSERT INTO metadata.fontes_verificacoes "
-        "(dt_verificacao, fonte, dataset, particao, verificacao, resultado, detalhe) VALUES (?, ?, ?, "
-        "?, ?, ?, ?)",
-        (runs.now(), source, dataset, partition, check, status, detail),
+        "INSERT INTO metadata.fontes_verificacoes (dt_verificacao, fonte, dataset, particao, verificacao, "
+        "resultado, detalhe, cd_status_http, tipo_ocorrencia, qtd_bytes_esperados, qtd_bytes_recebidos, "
+        "qtd_linhas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (runs.now(), source, dataset, partition, check, status, detail, cd_status_http, tipo)
+        + (bytes_esperados, bytes_recebidos, linhas),
     )
 
 
@@ -95,12 +103,17 @@ def check_integrity(
     evidência, mas não vira captura vigente, e a próxima execução tenta de novo.
     """
     problems: list[str] = []
+    kinds: list[str] = []
+    size = file.stat().st_size
     with file.open("rb") as f:
         start = f.read(512).lstrip().lower()
     if expected_format != "html" and start.startswith((b"<!doctype html", b"<html")):
         problems.append("o conteúdo é uma página HTML, não o arquivo esperado")
-    if expected_size and expected_size.isdigit() and int(expected_size) != file.stat().st_size:
-        problems.append(f"recebidos {file.stat().st_size} bytes, a fonte informou {expected_size}")
+        kinds.append("html_no_lugar")
+    divergent = bool(expected_size and expected_size.isdigit() and int(expected_size) != size)
+    if divergent:
+        problems.append(f"recebidos {size} bytes, a fonte informou {expected_size}")
+        kinds.append("tamanho_divergente")
     if dataset.archive == "zip" and not problems:
         try:
             with zipfile.ZipFile(file) as archive:
@@ -111,8 +124,21 @@ def check_integrity(
                     problems.append(f"nenhum membro {dataset.member} no zip")
         except zipfile.BadZipFile as error:
             problems.append(f"zip inválido: {error}")
+        if problems:
+            kinds.append("zip_invalido")
     if problems:
-        record(con, source, dataset.name, partition, "integridade", "error", f"{url}: {'; '.join(problems)}")
+        record(
+            con,
+            source,
+            dataset.name,
+            partition,
+            "integridade",
+            "error",
+            f"{url}: {'; '.join(problems)}",
+            tipo=kinds[0],
+            bytes_esperados=int(expected_size) if divergent and expected_size else None,
+            bytes_recebidos=size if divergent else None,
+        )
         return False
     record(con, source, dataset.name, partition, "integridade", "ok")
     return True
@@ -128,9 +154,18 @@ def check_volume(con: Connection, source: str, dataset: str, partition: int | No
     ).fetchone()
     if previous and previous[0] and rows < VOLUME_DROP * previous[0]:
         severity = "error" if rows == 0 else "warn"  # 0 linhas onde havia: carga falha
-        record(con, source, dataset, partition, "volume", severity, f"de {previous[0]} para {rows} linhas")
+        record(
+            con,
+            source,
+            dataset,
+            partition,
+            "volume",
+            severity,
+            f"de {previous[0]} para {rows} linhas",
+            linhas=rows,
+        )
     else:
-        record(con, source, dataset, partition, "volume", "ok", f"{rows} linhas")
+        record(con, source, dataset, partition, "volume", "ok", f"{rows} linhas", linhas=rows)
 
 
 def latest_status(con: Connection, source: str, dataset: str) -> tuple[str, list[str]]:
@@ -157,7 +192,9 @@ def check_removed(con: Connection, source: str, dataset: str, partition: int | N
     Só se mede quando o arquivo já foi capturado antes.
     """
     detail = f"{count} linhas de capturas anteriores que a atual não traz (removidas ou alteradas pela fonte)"
-    record(con, source, dataset, partition, "linhas_removidas", "warn" if count else "ok", detail)
+    record(
+        con, source, dataset, partition, "linhas_removidas", "warn" if count else "ok", detail, linhas=count
+    )
 
 
 def check_load(
@@ -185,7 +222,14 @@ def check_load(
     if tolerated and tolerance:
         detail += f"; tolerada: {tolerance.reason}"
     record(
-        con, source, dataset, partition, "carga", "warn" if tolerated else "error" if lost else "ok", detail
+        con,
+        source,
+        dataset,
+        partition,
+        "carga",
+        "warn" if tolerated else "error" if lost else "ok",
+        detail,
+        linhas=stats["loaded"],
     )
 
 

@@ -56,3 +56,11 @@ Cada captura grava em `metadata.fontes_verificacoes` (status `ok`, `warn` ou `er
 ```bash
 uv run dado-publico query --sql "SELECT * FROM metadata.fontes_verificacoes WHERE resultado <> 'ok' ORDER BY id_verificacao DESC LIMIT 20"
 ```
+
+O `detalhe` é o texto para gente; o que o código e os testes usam tem coluna própria (ADR 0053): `cd_status_http` (código da resposta), `tipo_ocorrencia` (`nao_encontrado`, `nao_publicado`, `erro_http`, `falha_de_rede`, `bloqueio`, `html_no_lugar`, `tamanho_divergente`, `zip_invalido`), `qtd_bytes_esperados` e `qtd_bytes_recebidos` (integridade e disponibilidade) e `qtd_linhas` (carga, volume e linhas removidas). Consulta por tipo, sem buscar no texto:
+
+```bash
+uv run dado-publico query --sql "SELECT fonte, dataset, particao, cd_status_http FROM metadata.fontes_verificacoes WHERE tipo_ocorrencia = 'nao_encontrado'"
+```
+
+As linhas anteriores à migração 0012 foram preenchidas por extração do `detalhe`; o que não casou ficou vazio.

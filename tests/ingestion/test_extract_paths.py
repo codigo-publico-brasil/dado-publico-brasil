@@ -140,8 +140,8 @@ def test_a_403_on_the_current_month_is_not_yet_published_and_on_a_past_month_is_
     monkeypatch.setattr(runs, "today", lambda: date(2026, 10, 24))
     blocked = failing(fetch.SourceBlocked("x: HTTP 403", status=403))
     assert landing.extract(con, settings, source, "mensal", 202610, blocked, head) == -1
-    assert "ainda não publicado" in scalar(
-        con, "SELECT detalhe FROM metadata.fontes_verificacoes WHERE verificacao = 'availability'"
-    )
+    assert con.execute(
+        "SELECT tipo_ocorrencia, cd_status_http FROM metadata.fontes_verificacoes WHERE verificacao = 'availability'"
+    ).fetchall() == [("nao_publicado", 403)]
     with pytest.raises(fetch.SourceBlocked):
         landing.extract(con, settings, source, "mensal", 202608, blocked, head)
