@@ -22,7 +22,7 @@ então se apagam os objetos órfãos sob os caminhos das tabelas gravadas (mudan
 partição); com `prune`, sob todos (tabela removida). Nunca exporta `raw`, `identity` nem colunas de
 documento pessoal. Imprime o progresso: uma linha por tabela e o tempo de cada fase.
 
-Arquivos (ADR 0037): dataset com `arquivos.publicar: true` no YAML da fonte vira uma coleção `arq_<nome>`
+Arquivos (ADR 0037): dataset com `files.publish: true` no YAML da fonte vira uma coleção `arq_<nome>`
 ao lado das tabelas da fonte (`staging/<poder>/<esfera>/<fonte>/arq_<nome>/...`), lida de
 `<pasta de dados>/arquivos/` (a carga materializa), com a tabela de controle `arq_<nome>.parquet` (um arquivo
 por linha, com hash). Só sobe o que falta ou mudou; o que saiu da fonte só é apagado com `prune`.

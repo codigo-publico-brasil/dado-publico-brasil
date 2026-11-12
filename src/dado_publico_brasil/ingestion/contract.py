@@ -33,13 +33,13 @@ ROW_HASH = "_row_hash"
 ITEM = "_item"  # nos datasets `foreach`: o item que deu origem à linha
 IDENTIFIER = re.compile(r"^\w+$")
 # Chaves aceitas no YAML: a desconhecida (erro de digitação) falha, em vez de virar o padrão em silêncio.
-TOP_KEYS = {"source", "power", "level", "description", "licenca", "schedule", "access", "datasets"}
+TOP_KEYS = {"source", "power", "level", "description", "license", "schedule", "access", "datasets"}
 ACCESS_KEYS = {"base_url", "format", "delimiter", "encoding", "headers", "rate_limit", "redirect_sites"}
 DATASET_KEYS = {
     "url", "load", "write", "columns", "primary_key", "extra_years", "first_year", "partition", "records",
-    "nested", "format", "headers", "foreach", "archive", "member", "raw", "arquivos", "first_month",
+    "nested", "format", "headers", "foreach", "archive", "member", "raw", "files", "first_month",
     "lag_months", "step", "sequence", "only", "optional", "aliases", "on_demand", "max_age_days",
-    "rejeitadas_toleradas",
+    "tolerated_rejects",
 }  # fmt: skip
 FOREACH_KEYS = {"from", "item", "where", "recent_by", "version", "refresh_after_days", "batch_size"}
 FORBIDDEN_COLUMNS = {"cpf", "rg", "tituloeleitor", "cnh", "passaporte"}
@@ -63,25 +63,25 @@ class ForEach:
 
 
 @dataclass(frozen=True)
-class Arquivos:
+class Files:
     """Como materializar os arquivos de um dataset e se vão ao lake público (ADR 0037).
 
-    Sem `membro`, o arquivo da captura é copiado como está; com `membro`, cada membro do zip que casa com o
-    padrão (grupos nomeados viram campos de `caminho`) é extraído. Campos de `caminho`: `dataset`, `particao`
-    e `nome`."""
+    Sem `member`, o arquivo da captura é copiado como está; com `member`, cada membro do zip que casa com o
+    padrão (grupos nomeados viram campos de `path`) é extraído. Campos de `path`: `dataset`, `partition`
+    e `name`."""
 
-    colecao: str  # a pasta é `arq_<colecao>`
-    caminho: str  # modelo do caminho relativo à pasta da coleção
-    membro: str | None = None  # regex do nome do membro dentro do zip
-    publicar: bool = False  # true: vai ao lake público; false: fica só no disco local
+    collection: str  # a pasta é `arq_<collection>`
+    path: str  # modelo do caminho relativo à pasta da coleção
+    member: str | None = None  # regex do nome do membro dentro do zip
+    publish: bool = False  # true: vai ao lake público; false: fica só no disco local
 
 
 @dataclass(frozen=True)
-class Tolerancia:
+class Tolerance:
     """Linhas da FONTE sem chave que o balanço da carga aceita como aviso (seguem registradas e contadas)."""
 
-    limite: int
-    justificativa: str
+    limit: int
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -103,7 +103,7 @@ class Dataset:
     archive: str | None = None  # "zip": o arquivo guardado é um pacote; `member` diz qual membro ler
     member: str = "*"  # padrão (glob) do nome do membro dentro do pacote
     raw: bool = True  # false: só o landing (arquivos guardados para uso futuro), sem tabela no raw
-    arquivos: Arquivos | None = None  # arquivos servidos ao público, em coleção `arq_` (ADR 0037)
+    files: Files | None = None  # arquivos servidos ao público, em coleção `arq_` (ADR 0037)
     first_month: int | None = None  # (partition: month) primeiro mês pedido, como AAAAMM
     lag_months: int = (
         0  # (partition: month) só meses fechados: 1 = até o mês anterior (a fonte publica depois)
@@ -119,7 +119,7 @@ class Dataset:
     max_age_days: int | None = (
         None  # idade máxima da última verificação da fonte; mais velha que isso é problema
     )
-    rejeitadas_toleradas: dict[int, Tolerancia] = field(
+    tolerated_rejects: dict[int, Tolerance] = field(
         default_factory=dict
     )  # partição -> linhas sem chave que a própria fonte traz e o balanço aceita como aviso
 
@@ -134,7 +134,7 @@ class SourceContract:
     power: str
     level: str
     description: str
-    licenca: str | None  # licença declarada pela fonte, como a doc de fontes registra (texto curto)
+    license: str | None  # licença declarada pela fonte, como a doc de fontes registra (texto curto)
     base_url: str
     delimiter: str
     encoding: str
@@ -240,7 +240,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         archive=data.get("archive"),
         member=str(data.get("member", "*")),
         raw=raw,
-        arquivos=_arquivos(where, data),
+        files=_files(where, data),
         first_month=int(data["first_month"]) if data.get("first_month") else None,
         lag_months=int(data.get("lag_months", 0)),
         sequence=tuple(int(data["sequence"][k]) for k in ("first_year", "first_value", "years"))
@@ -253,39 +253,39 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         first_year=int(data["first_year"]) if data.get("first_year") is not None else None,
         on_demand=_on_demand(where, data.get("on_demand", False)),
         max_age_days=_max_age(where, data.get("max_age_days")),
-        rejeitadas_toleradas=_tolerancias(where, data.get("rejeitadas_toleradas")),
+        tolerated_rejects=_tolerances(where, data.get("tolerated_rejects")),
     )
 
 
-def _arquivos(where: str, data: dict[str, Any]) -> Arquivos | None:
-    block = data.get("arquivos")
+def _files(where: str, data: dict[str, Any]) -> Files | None:
+    block = data.get("files")
     if block is None:
         return None
-    unknown = set(block) - {"colecao", "caminho", "membro", "publicar"}
-    if unknown or not {"colecao", "caminho"} <= set(block):
-        raise InvalidContract(f"{where}: arquivos exige colecao e caminho e aceita só membro e publicar")
-    if not re.fullmatch(r"[a-z][a-z0-9]*", str(block["colecao"])):
-        raise InvalidContract(f"{where}: arquivos.colecao deve ser minúscula, sem separadores")
-    if not isinstance(block.get("publicar", False), bool):
-        raise InvalidContract(f"{where}: arquivos.publicar deve ser true ou false")
-    fields = {"dataset", "particao", "nome"}
-    if block.get("membro"):
+    unknown = set(block) - {"collection", "path", "member", "publish"}
+    if unknown or not {"collection", "path"} <= set(block):
+        raise InvalidContract(f"{where}: files exige collection e path e aceita só member e publish")
+    if not re.fullmatch(r"[a-z][a-z0-9]*", str(block["collection"])):
+        raise InvalidContract(f"{where}: files.collection deve ser minúscula, sem separadores")
+    if not isinstance(block.get("publish", False), bool):
+        raise InvalidContract(f"{where}: files.publish deve ser true ou false")
+    fields = {"dataset", "partition", "name"}
+    if block.get("member"):
         if data.get("archive") != "zip":
-            raise InvalidContract(f"{where}: arquivos.membro exige archive: zip")
+            raise InvalidContract(f"{where}: files.member exige archive: zip")
         try:
-            fields |= set(re.compile(block["membro"]).groupindex)
+            fields |= set(re.compile(block["member"]).groupindex)
         except re.error as error:
-            raise InvalidContract(f"{where}: arquivos.membro inválido ({error})") from error
-    used = {name for _, name, _, _ in string.Formatter().parse(block["caminho"]) if name}
-    if used - fields or ".." in block["caminho"] or block["caminho"].startswith("/"):
+            raise InvalidContract(f"{where}: files.member inválido ({error})") from error
+    used = {name for _, name, _, _ in string.Formatter().parse(block["path"]) if name}
+    if used - fields or ".." in block["path"] or block["path"].startswith("/"):
         raise InvalidContract(
-            f"{where}: arquivos.caminho usa campo desconhecido {sorted(used - fields)} ou sobe pastas"
+            f"{where}: files.path usa campo desconhecido {sorted(used - fields)} ou sobe pastas"
         )
-    return Arquivos(
-        colecao=block["colecao"],
-        caminho=block["caminho"],
-        membro=block.get("membro"),
-        publicar=block.get("publicar", False),
+    return Files(
+        collection=block["collection"],
+        path=block["path"],
+        member=block.get("member"),
+        publish=block.get("publish", False),
     )
 
 
@@ -295,9 +295,9 @@ def _on_demand(where: str, value: Any) -> bool:
     return value
 
 
-def _licenca(where: str, value: Any) -> str | None:
+def _license(where: str, value: Any) -> str | None:
     if value is not None and (not isinstance(value, str) or not value.strip()):
-        raise InvalidContract(f"{where}: licenca deve ser um texto curto (ex.: 'CC BY 4.0')")
+        raise InvalidContract(f"{where}: license deve ser um texto curto (ex.: 'CC BY 4.0')")
     return value.strip() if value else None
 
 
@@ -309,11 +309,11 @@ def _max_age(where: str, value: Any) -> int | None:
     return value
 
 
-def _tolerancias(where: str, block: Any) -> dict[int, Tolerancia]:
-    found: dict[int, Tolerancia] = {}
+def _tolerances(where: str, block: Any) -> dict[int, Tolerance]:
+    found: dict[int, Tolerance] = {}
     for partition, spec in (block or {}).items():
-        limit = spec.get("limite") if isinstance(spec, dict) else None
-        reason = spec.get("justificativa") if isinstance(spec, dict) else None
+        limit = spec.get("limit") if isinstance(spec, dict) else None
+        reason = spec.get("reason") if isinstance(spec, dict) else None
         if (
             not isinstance(partition, int)
             or isinstance(limit, bool)
@@ -323,9 +323,9 @@ def _tolerancias(where: str, block: Any) -> dict[int, Tolerancia]:
             or not reason.strip()
         ):
             raise InvalidContract(
-                f"{where}: rejeitadas_toleradas exige, por partição, limite (inteiro >= 1) e justificativa"
+                f"{where}: tolerated_rejects exige, por partição, limit (inteiro >= 1) e reason"
             )
-        found[partition] = Tolerancia(limit, reason.strip())
+        found[partition] = Tolerance(limit, reason.strip())
     return found
 
 
@@ -411,7 +411,7 @@ def load_contract(path: Path) -> SourceContract:
         power=data["power"],
         level=data["level"],
         description=data.get("description", source),
-        licenca=_licenca(source, data.get("licenca")),
+        license=_license(source, data.get("license")),
         base_url=access["base_url"],
         delimiter=access.get("delimiter", ";"),
         encoding=access.get("encoding", "utf-8-sig"),

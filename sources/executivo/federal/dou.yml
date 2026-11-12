@@ -2,7 +2,7 @@ source: dou
 power: executivo
 level: federal
 description: Diário Oficial da União, arquivos XML mensais por seção, como a Imprensa Nacional publica
-licenca: "CC BY-ND 3.0"
+license: "CC BY-ND 3.0"
 # Regra de extração: o DOU publica todo dia útil; a execução diária confere só o mês em curso (o zip do mês é reescrito a
 # cada atualização, e cada versão fica no landing). Meses anteriores só quando pedidos (`--years`, a partir de first_month).
 schedule: "0 2 * * *"            # captura noturna (cron, fuso America/Sao_Paulo; escalonada 01:00-02:20, ADR 0042); sem esta linha, só quando pedido
@@ -24,7 +24,8 @@ datasets:
     archive: zip
     member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
-    arquivos: {colecao: secoes, caminho: "{dataset}/{particao}/{nome}", publicar: true}  # zip original, CC BY-ND
+    max_age_days: 3   # a conferência é diária; avisa se a última verificação passar de 3 dias
+    files: {collection: secoes, path: "{dataset}/{partition}/{name}", publish: true}  # zip original, CC BY-ND
 
   secao2:
     # Seção 2: atos de pessoal (nomeações, exonerações, aposentadorias).
@@ -35,7 +36,8 @@ datasets:
     archive: zip
     member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
-    arquivos: {colecao: secoes, caminho: "{dataset}/{particao}/{nome}", publicar: true}  # zip original, CC BY-ND
+    max_age_days: 3   # a conferência é diária; avisa se a última verificação passar de 3 dias
+    files: {collection: secoes, path: "{dataset}/{partition}/{name}", publish: true}  # zip original, CC BY-ND
 
   secao3:
     # Seção 3: contratos, licitações, editais e outros avisos.
@@ -46,4 +48,5 @@ datasets:
     archive: zip
     member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
-    arquivos: {colecao: secoes, caminho: "{dataset}/{particao}/{nome}", publicar: true}  # zip original, CC BY-ND
+    max_age_days: 3   # a conferência é diária; avisa se a última verificação passar de 3 dias
+    files: {collection: secoes, path: "{dataset}/{partition}/{name}", publish: true}  # zip original, CC BY-ND

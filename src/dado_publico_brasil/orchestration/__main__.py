@@ -204,7 +204,9 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 "lake:", export.export(settings)
             )  # depois dos testes do dbt (build.run falha antes se algum quebrar)
-            print("docs:", lake.publish_docs(settings))  # warehouse livre: dbt docs e edr abrem o arquivo
+            print(
+                "docs:", lake.publish_docs(settings, pipeline.freshness_limits())
+            )  # warehouse livre: dbt docs e edr abrem o arquivo
         case "rebuild":
             old = Path(args.old_warehouse) if args.old_warehouse else None
             print("metadata levado:", rebuild.start_from(settings, old))
@@ -245,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 1 if found else 0
             print(export.export(settings, prune=args.prune))
         case "publish-docs":
-            pages = lake.publish_docs(settings)
+            pages = lake.publish_docs(settings, pipeline.freshness_limits())
             print(pages or "R2 não configurado: nada publicado")
         case _:
             _ingest(settings, args)

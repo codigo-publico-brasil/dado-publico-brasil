@@ -252,6 +252,19 @@ def test_without_limits_the_stale_check_does_not_run(con: Connection) -> None:
     assert not observability.report(con)[1]
 
 
+def test_the_freshness_page_shows_the_raw_interval_and_judges_only_against_the_declared_limit(
+    con: Connection,
+) -> None:
+    capture(con, "votacoes", runs.now())
+    capture(con, "pessoas", "2020-01-01T00:00:00")
+    capture(con, "livre", "2020-01-01T00:00:00")
+    html = observability.freshness_html(con, {("camara", "votacoes"): 3, ("camara", "pessoas"): 3})
+    rows = {r.split("</td>")[1].removeprefix("<td>"): r for r in html.split("<tr>")[2:]}
+    assert "em dia" in rows["votacoes"] and "atrasado" in rows["pessoas"]
+    assert "sem expectativa declarada" in rows["livre"] and "atrasado" not in rows["livre"]
+    assert "<td>0</td>" in rows["votacoes"]  # dias desde a última captura
+
+
 def test_a_failed_edr_carries_its_stderr_in_the_error(
     settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:

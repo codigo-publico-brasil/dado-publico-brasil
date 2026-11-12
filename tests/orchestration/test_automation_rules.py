@@ -2,10 +2,12 @@
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from croniter import croniter  # type: ignore[import-untyped]
 from dagster import DagsterInstance, DagsterRun, DagsterRunStatus
 
+from dado_publico_brasil.core.runs import TIMEZONE
 from dado_publico_brasil.ingestion import contract
 from dado_publico_brasil.orchestration.pipeline import (
     CYCLE_CRON,
@@ -82,6 +84,9 @@ def test_a_success_today_skips_the_schedule_but_a_failure_or_nothing_runs_again(
     )  # em andamento ou na fila também conta (tiques recuperados em sequência)
     tomorrow = datetime.now(UTC) + timedelta(days=1)
     assert not done_today(instance, "captura_x", tomorrow)  # no dia seguinte, roda de novo
+    # à noite (21h-24h locais) o Dagster lia a meia-noite local como UTC e errava o dia: vale em qualquer hora
+    local_tomorrow = (datetime.now(ZoneInfo(TIMEZONE)) + timedelta(days=1)).replace(hour=22)
+    assert not done_today(instance, "captura_x", local_tomorrow)
 
 
 def test_the_publication_only_leaves_through_the_cycle_job_and_the_manual_job() -> None:

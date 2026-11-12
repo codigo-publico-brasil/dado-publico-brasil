@@ -162,5 +162,6 @@ def done_today(instance: Any, job: str, now: datetime | None = None) -> bool:
     """
     local = (now or datetime.now(UTC)).astimezone(ZoneInfo(TIMEZONE))
     midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
-    found = RunsFilter(job_name=job, statuses=DONE_OR_RUNNING, created_after=midnight)
+    # o Dagster ignora o fuso de um datetime que não seja UTC: converte antes
+    found = RunsFilter(job_name=job, statuses=DONE_OR_RUNNING, created_after=midnight.astimezone(UTC))
     return bool(instance.get_runs(filters=found, limit=1))
