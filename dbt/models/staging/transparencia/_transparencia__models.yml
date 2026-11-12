@@ -139,6 +139,7 @@ models:
     description: "Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado pessoa física vem com CPF completo na fonte e sai mascarado aqui."
     meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "numero_contrato + cd_ug"}
     columns:
+      - {name: id_contrato, description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen (o número só é único junto com a unidade gestora).", tests: ["not_null"]}
       - {name: numero_contrato, description: "Número do contrato, como a fonte informa (único só junto com a unidade gestora).", tests: ["not_null"]}
       - {name: objeto, description: "Objeto do contrato, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing). Pode ser `Informação protegida por sigilo`."}
       - {name: fundamento_legal, description: "Fundamento legal da contratação."}
@@ -160,6 +161,7 @@ models:
       - {name: valor_final, description: "Valor final do contrato (com aditivos), em reais."}
       - {name: numero_licitacao, description: "Número da licitação de origem, quando houve."}
       - {name: cd_ug_licitacao, description: "Código SIAFI da unidade gestora da licitação."}
+      - {name: id_licitacao, description: "Chave da licitação de origem no mesmo formato de `stg_transparencia__licitacoes` (unidade gestora, modalidade e número, com hífen); vazia quando o contrato não traz os três."}
       - {name: ug_licitacao, description: "Nome da unidade gestora da licitação."}
       - {name: cd_modalidade_licitacao, description: "Código da modalidade da licitação."}
       - {name: modalidade_licitacao, description: "Modalidade da licitação."}
@@ -172,6 +174,7 @@ models:
     description: Itens dos contratos do governo federal.
     meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "numero_contrato + cd_ug + cd_item"}
     columns:
+      - {name: id_contrato, description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen (o número só é único junto com a unidade gestora).", tests: ["not_null"]}
       - {name: cd_orgao, description: "Código SIAFI do órgão contratante."}
       - {name: orgao, description: "Nome do órgão contratante."}
       - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: ["not_null"]}
@@ -191,6 +194,7 @@ models:
     description: Termos aditivos dos contratos do governo federal.
     meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "numero_contrato + cd_ug + numero_termo_aditivo"}
     columns:
+      - {name: id_contrato, description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen (o número só é único junto com a unidade gestora).", tests: ["not_null"]}
       - {name: numero_contrato, description: "Número do contrato aditado (liga a `stg_transparencia__compras` junto com a unidade gestora).", tests: ["not_null"]}
       - {name: cd_orgao_superior, description: "Código SIAFI do órgão superior (ministério ou equivalente)."}
       - {name: orgao_superior, description: "Nome do órgão superior."}

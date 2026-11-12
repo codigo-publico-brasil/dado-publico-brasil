@@ -80,3 +80,62 @@ models:
       - {name: valor, data_type: "decimal(18,4)", description: "Valor do empenho, em reais, com as quatro casas que a fonte publica."}
       - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: fct_contratos
+    description: Contratos do governo federal, de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora e número do contrato; se a fonte repete o contrato em mais de um mês, vale a captura mais recente. Contratado pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. Contrato sigiloso traz `-11` e `Sigiloso` no contratado, como a fonte.
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: contrato (unidade gestora e número do contrato), owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: id_contrato, data_type: varchar, tests: [unique, not_null], description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen. Liga os itens e termos aditivos."}
+      - {name: numero, data_type: varchar, description: "Número do contrato, como a fonte informa (único só junto com a unidade gestora)."}
+      - {name: cd_ug, data_type: varchar, description: "Código SIAFI da unidade gestora contratante."}
+      - {name: ug, data_type: varchar, description: "Nome da unidade gestora contratante."}
+      - {name: cd_orgao_superior, data_type: varchar, description: "Código SIAFI do órgão superior (ministério ou equivalente)."}
+      - {name: orgao_superior, data_type: varchar, description: "Nome do órgão superior."}
+      - {name: cd_orgao, data_type: varchar, description: "Código SIAFI do órgão contratante."}
+      - {name: orgao, data_type: varchar, description: "Nome do órgão contratante."}
+      - {name: objeto, data_type: varchar, description: "Objeto do contrato, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing). Pode ser `Informação protegida por sigilo`."}
+      - {name: fundamento_legal, data_type: varchar, description: "Fundamento legal da contratação, como a fonte informa; vazio onde a fonte não informa."}
+      - {name: modalidade, data_type: varchar, description: "Modalidade da compra (pregão, dispensa, inexigibilidade...), como a fonte informa."}
+      - {name: situacao, data_type: varchar, description: "Situação do contrato, como a fonte informa."}
+      - {name: dt_assinatura, data_type: date, description: "Data de assinatura do contrato."}
+      - {name: dt_publicacao_dou, data_type: date, description: "Data de publicação no Diário Oficial da União; vazia onde a fonte não informa."}
+      - {name: dt_inicio_vigencia, data_type: date, description: "Data de início da vigência."}
+      - {name: dt_fim_vigencia, data_type: date, description: "Data de fim da vigência."}
+      - {name: cd_contratado, data_type: varchar, meta: {pii: true}, description: "CNPJ, CPF ou código de estrangeiro do contratado, como a fonte publica. CPF (11 dígitos, completo na fonte) sai mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing. `-11` quando a fonte protege por sigilo."}
+      - {name: contratado, data_type: varchar, meta: {pii: true}, description: "Nome do contratado (pessoa física inclusive), como a fonte publica; número de CPF no texto é mascarado pelo projeto. `Sigiloso` quando protegido por sigilo."}
+      - {name: fl_contem_dado_pessoal, data_type: boolean, description: "Verdadeiro quando o contratado é pessoa física (código com CPF mascarado)."}
+      - {name: valor_inicial, data_type: "decimal(18,2)", description: "Valor inicial do contrato, em reais."}
+      - {name: valor_final, data_type: "decimal(18,2)", description: "Valor final do contrato (com aditivos), em reais."}
+      - {name: id_licitacao, data_type: varchar, tests: [{relationships: {to: ref('fct_licitacoes'), field: id_licitacao, config: {severity: warn}}}], description: "Licitação de origem do contrato (fct_licitacoes), montada com unidade gestora, modalidade e número da licitação que o contrato informa; vazia quando a fonte não traz os três (contrato sem licitação)."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: fct_contratos_itens
+    description: Itens dos contratos do governo federal, uma linha por item como a fonte publica (a fonte pode repetir linhas idênticas e deixar o código do item vazio).
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: item de contrato, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: id_contrato, data_type: varchar, tests: [not_null, {relationships: {to: ref('fct_contratos'), field: id_contrato, config: {severity: warn}}}], description: "Contrato do item (fct_contratos)."}
+      - {name: cd_item, data_type: varchar, description: "Código do item da compra, como a fonte informa."}
+      - {name: item, data_type: varchar, description: "Descrição do item, texto livre da fonte (CPF no texto é mascarado pelo projeto)."}
+      - {name: descricao, data_type: varchar, description: "Descrição complementar do item, texto livre da fonte (CPF no texto é mascarado pelo projeto)."}
+      - {name: quantidade, data_type: "decimal(18,4)", description: "Quantidade do item, com as quatro casas que a fonte publica."}
+      - {name: valor, data_type: "decimal(18,2)", description: "Valor do item, em reais."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+
+  - name: fct_contratos_aditivos
+    description: Termos aditivos dos contratos do governo federal, uma linha por termo como a fonte publica.
+    meta: {sensitivity: publico-agente-publico, grain: termo aditivo de contrato, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
+      - {name: id_contrato, data_type: varchar, tests: [not_null, {relationships: {to: ref('fct_contratos'), field: id_contrato, config: {severity: warn}}}], description: "Contrato aditado (fct_contratos)."}
+      - {name: numero, data_type: varchar, tests: [not_null], description: "Número do termo aditivo, como a fonte informa."}
+      - {name: dt_publicacao, data_type: date, description: "Data de publicação do termo aditivo."}
+      - {name: objeto, data_type: varchar, description: "Objeto do termo aditivo, texto livre da fonte (CPF no texto é mascarado pelo projeto)."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}

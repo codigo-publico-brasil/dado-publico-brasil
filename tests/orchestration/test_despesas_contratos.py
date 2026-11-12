@@ -102,3 +102,39 @@ def test_cpf_in_free_text_of_items_and_amendments_is_masked(full: Env) -> None:
     assert "***.654.321-**" in scalar(
         con, "SELECT item_descricao FROM staging.stg_transparencia__compras_itens WHERE cd_item LIKE '%0002'"
     )
+
+
+def test_contract_marts_key_dedupe_flag_the_person_and_link_the_licitacao(full: Env) -> None:
+    con, _ = full
+    # o mesmo pacote nos 12 meses de 2024: um contrato por chave, itens e termos como a fonte publica
+    assert scalar(con, "SELECT COUNT(*) FROM marts.fct_contratos") == 3
+    assert scalar(con, "SELECT COUNT(DISTINCT id_contrato) FROM marts.fct_contratos") == 3
+    assert scalar(con, "SELECT COUNT(*) FROM marts.fct_contratos_itens") == 24
+    assert scalar(con, "SELECT COUNT(*) FROM marts.fct_contratos_aditivos") == 24
+    assert (
+        scalar(con, "SELECT id_contrato FROM marts.fct_contratos WHERE numero = '000012024'")
+        == "200384-000012024"
+    )
+    # liga à licitação quando o contrato a informa; fica vazio (nunca inventado) quando não informa
+    ligados = dict(con.execute("SELECT numero, id_licitacao FROM marts.fct_contratos").fetchall())
+    assert ligados == {"000012024": "200384-5-000012024", "000022024": None, "000032024": None}
+    assert (
+        scalar(
+            con,
+            "SELECT COUNT(*) FROM marts.fct_contratos c JOIN marts.fct_licitacoes l USING (id_licitacao)",
+        )
+        == 1
+    )
+    marcadas = con.execute(
+        "SELECT cd_contratado FROM marts.fct_contratos WHERE fl_contem_dado_pessoal"
+    ).fetchall()
+    assert marcadas == [("***.456.789-**",)]
+    for modelo in ("fct_contratos", "fct_contratos_itens", "fct_contratos_aditivos"):
+        assert scalar(con, f"SELECT COUNT(*) FROM marts.{modelo} WHERE id_captura IS NULL") == 0
+    assert (
+        scalar(
+            con,
+            "SELECT COUNT(*) FROM marts.fct_contratos_itens i LEFT JOIN marts.fct_contratos c USING (id_contrato) WHERE c.id_contrato IS NULL",
+        )
+        == 0
+    )
