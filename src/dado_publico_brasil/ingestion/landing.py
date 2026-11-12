@@ -11,6 +11,8 @@ Três maneiras de montar o que baixar (o plano):
   da fonte que declara `schedule`; sem `schedule`, só roda quando pedido.
 """
 
+import hashlib
+import json
 import logging
 import shutil
 import urllib.error
@@ -138,6 +140,12 @@ def current_captures(con: Connection, source: str) -> list[dict[str, Any]]:
         "ORDER BY c.dataset, c.particao, c.id_captura",
         (source,),
     )
+
+
+def content_version(con: Connection, source: str) -> str:
+    """Impressão digital do conteúdo vigente da fonte: só muda quando uma captura traz arquivo novo."""
+    pairs = sorted((c["url"], c["sha256"]) for c in current_captures(con, source))
+    return hashlib.sha256(json.dumps(pairs).encode()).hexdigest()
 
 
 # ---------------------------------------------------------------- planos

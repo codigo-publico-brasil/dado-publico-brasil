@@ -725,3 +725,14 @@ def test_the_landing_clock_is_brasilia_not_utc_at_the_turn_of_the_year(
 
     monkeypatch.setattr(runs, "datetime", Utc2027)
     assert landing.current_year() == 2026
+
+
+def test_content_version_changes_only_with_the_captured_content(con: Connection) -> None:
+    args = ("camara", "deputados", None, "http://x/d.csv")
+    assert landing.content_version(con, "camara") == landing.content_version(con, "camara")
+    landing.register_capture(con, *args, "h1", 1, "a", 1)
+    v1 = landing.content_version(con, "camara")
+    landing.register_capture(con, *args, "h1", 1, "a", 2)  # mesma verificação, mesmo conteúdo
+    assert landing.content_version(con, "camara") == v1
+    landing.register_capture(con, *args, "h2", 1, "b", 3)
+    assert landing.content_version(con, "camara") != v1
