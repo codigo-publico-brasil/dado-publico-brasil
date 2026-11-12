@@ -10,6 +10,7 @@ import logging
 import mimetypes
 import re
 import shutil
+import time
 import zipfile
 from pathlib import Path
 
@@ -1160,7 +1161,7 @@ GOLDEN: dict[int, list[tuple[object, ...]]] = {
             "fontes_verificacoes",
             "metadata/fontes_verificacoes",
             0,
-            "a337289c5086aa27e998a961b604f19cd9905e1f33435683da285124488e033e",
+            "662a89f035601869bdbd8480a69e94d3700a2efd21625a219e040453cc974c4a",
             None,
             None,
             None,
@@ -1184,6 +1185,31 @@ GOLDEN: dict[int, list[tuple[object, ...]]] = {
                     "detalhe",
                     "VARCHAR",
                     "Detalhe do resultado (contagens, colunas que mudaram, mensagem de erro).",
+                ),
+                (
+                    "cd_status_http",
+                    "INTEGER",
+                    "Código HTTP que a fonte devolveu (404, 403, 429...), quando a ocorrência veio de uma resposta; vazio nas demais.",
+                ),
+                (
+                    "tipo_ocorrencia",
+                    "VARCHAR",
+                    "Tipo da ocorrência de uma verificação com erro: nao_encontrado (404), nao_publicado (403 no mês ainda não publicado), erro_http (outro código), falha_de_rede, bloqueio, html_no_lugar, tamanho_divergente ou zip_invalido; vazio quando não há ocorrência.",
+                ),
+                (
+                    "qtd_bytes_esperados",
+                    "BIGINT",
+                    "Tamanho em bytes que a fonte informou (Content-Length), quando a verificação o confrontou com o recebido.",
+                ),
+                (
+                    "qtd_bytes_recebidos",
+                    "BIGINT",
+                    "Tamanho em bytes do arquivo recebido, nas verificações de disponibilidade e de integridade.",
+                ),
+                (
+                    "qtd_linhas",
+                    "BIGINT",
+                    "Linhas da verificação: carregadas (carga), lidas (volume) ou de capturas anteriores que a atual não traz (linhas_removidas).",
                 ),
             ],
             [("metadata/fontes_verificacoes.parquet", 0)],
@@ -1345,7 +1371,7 @@ GOLDEN: dict[int, list[tuple[object, ...]]] = {
             "fontes_verificacoes",
             "metadata/fontes_verificacoes",
             0,
-            "a337289c5086aa27e998a961b604f19cd9905e1f33435683da285124488e033e",
+            "662a89f035601869bdbd8480a69e94d3700a2efd21625a219e040453cc974c4a",
             None,
             None,
             None,
@@ -1369,6 +1395,31 @@ GOLDEN: dict[int, list[tuple[object, ...]]] = {
                     "detalhe",
                     "VARCHAR",
                     "Detalhe do resultado (contagens, colunas que mudaram, mensagem de erro).",
+                ),
+                (
+                    "cd_status_http",
+                    "INTEGER",
+                    "Código HTTP que a fonte devolveu (404, 403, 429...), quando a ocorrência veio de uma resposta; vazio nas demais.",
+                ),
+                (
+                    "tipo_ocorrencia",
+                    "VARCHAR",
+                    "Tipo da ocorrência de uma verificação com erro: nao_encontrado (404), nao_publicado (403 no mês ainda não publicado), erro_http (outro código), falha_de_rede, bloqueio, html_no_lugar, tamanho_divergente ou zip_invalido; vazio quando não há ocorrência.",
+                ),
+                (
+                    "qtd_bytes_esperados",
+                    "BIGINT",
+                    "Tamanho em bytes que a fonte informou (Content-Length), quando a verificação o confrontou com o recebido.",
+                ),
+                (
+                    "qtd_bytes_recebidos",
+                    "BIGINT",
+                    "Tamanho em bytes do arquivo recebido, nas verificações de disponibilidade e de integridade.",
+                ),
+                (
+                    "qtd_linhas",
+                    "BIGINT",
+                    "Linhas da verificação: carregadas (carga), lidas (volume) ou de capturas anteriores que a atual não traz (linhas_removidas).",
                 ),
             ],
             [("metadata/fontes_verificacoes.parquet", 0)],
@@ -1491,6 +1542,7 @@ def test_the_first_export_of_the_month_fixes_an_immutable_dated_version_with_the
     )
     old_file = where(out, VOTOS)
     change(settings, "INSERT INTO marts.fct_votos VALUES (5000, DATE '2021-01-01', 'x', 1)")
+    time.sleep(1.1)  # o id da execução tem resolução de segundo: a segunda não pode cair no mesmo caminho
     export.export(settings)
     assert {n: (folder / n).read_bytes() for n in frozen} == frozen  # a versão do mês não se reescreve
     assert where(out, VOTOS) != old_file and old_file.exists()  # e os Parquet que ela cita ficam
