@@ -24,6 +24,7 @@ datasets:
     archive: zip
     member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
+    max_age_days: 3   # a conferência é diária; avisa se a última verificação passar de 3 dias
     files: {collection: secoes, path: "{dataset}/{partition}/{name}", publish: true}  # zip original, CC BY-ND
 
   secao2:
@@ -35,6 +36,7 @@ datasets:
     archive: zip
     member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
+    max_age_days: 3   # a conferência é diária; avisa se a última verificação passar de 3 dias
     files: {collection: secoes, path: "{dataset}/{partition}/{name}", publish: true}  # zip original, CC BY-ND
 
   secao3:
@@ -46,4 +48,5 @@ datasets:
     archive: zip
     member: "*.xml"                # a conferência de integridade exige ao menos um XML no pacote
     raw: false
+    max_age_days: 3   # a conferência é diária; avisa se a última verificação passar de 3 dias
     files: {collection: secoes, path: "{dataset}/{partition}/{name}", publish: true}  # zip original, CC BY-ND

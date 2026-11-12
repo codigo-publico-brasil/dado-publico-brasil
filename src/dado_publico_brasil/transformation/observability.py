@@ -13,8 +13,9 @@ import shutil
 import smtplib
 import subprocess
 from pathlib import Path
+from typing import Any
 
-from dado_publico_brasil.core import alert
+from dado_publico_brasil.core import alert, runs
 from dado_publico_brasil.core.settings import DBT_DIR, Settings
 from dado_publico_brasil.core.warehouse import Connection
 from dado_publico_brasil.transformation import branding, health
@@ -81,6 +82,25 @@ def report(con: Connection, limits: dict[tuple[str, str], int] | None = None) ->
     return lines, bool(source_errors or stale or failing or anomalies)
 
 
+def freshness(con: Connection, limits: dict[tuple[str, str], int]) -> list[tuple[Any, ...]]:
+    """Por dataset: fonte, dataset, última captura, última verificação, dias desde cada uma e o limite.
+
+    `dt_captura` é quando o arquivo mudou; `dt_verificacao` é quando a pipeline conferiu a fonte (a cada
+    captura, mesmo sem mudança). Entram os datasets capturados e os que declaram limite (sem captura, as datas
+    e os dias vêm vazios). O limite é só o `max_age_days` do contrato, nunca um valor nosso.
+    """
+    rows = con.execute(
+        "SELECT fonte, dataset, max(dt_captura), max(dt_verificacao), "
+        "date_diff('day', max(dt_captura), now() AT TIME ZONE 'UTC'), "
+        "date_diff('day', max(dt_verificacao), now() AT TIME ZONE 'UTC') "
+        "FROM metadata.capturas GROUP BY fonte, dataset"
+    ).fetchall()
+    found = {(r[0], r[1]): r for r in rows}
+    for key in limits.keys() - found.keys():
+        found[key] = (*key, None, None, None, None)
+    return [(*found[key], limits.get(key)) for key in sorted(found)]
+
+
 def stale_captures(con: Connection, limits: dict[tuple[str, str], int]) -> list[str]:
     """Datasets cuja última verificação é mais velha que o limite (ou que nunca foram capturados).
 
@@ -88,18 +108,44 @@ def stale_captures(con: Connection, limits: dict[tuple[str, str], int]) -> list[
     mudou: se ele para de andar, a pipeline parou ou a fonte deixou de responder.
     """
     problems: list[str] = []
-    for (source, dataset), limit in sorted(limits.items()):
-        row = con.execute(
-            "SELECT date_diff('day', max(dt_verificacao), now() AT TIME ZONE 'UTC') "
-            "FROM metadata.capturas WHERE fonte = ? AND dataset = ?",
-            (source, dataset),
-        ).fetchone()
-        age = None if row is None else row[0]
+    for source, dataset, _, _, _, age, limit in freshness(con, limits):
+        if limit is None:
+            continue
         if age is None:
             problems.append(f"{source}.{dataset}: nunca capturado (limite de {limit} dias)")
         elif age > limit:
             problems.append(f"{source}.{dataset}: última verificação há {age} dias (limite de {limit})")
     return problems
+
+
+def freshness_html(con: Connection, limits: dict[tuple[str, str], int]) -> str:
+    """Página de situação: o intervalo bruto por dataset; "atrasado" só contra o limite declarado no YAML.
+
+    Fato e medição (ADR 0054): sem nota, sem ordem por "pior" e sem limite que não seja do contrato.
+    """
+    head = "Fonte|Dataset|Última captura|Dias desde a captura|Última verificação|Dias desde a verificação|"
+    head += "Limite declarado (dias)|Situação"
+    body = []
+    for source, dataset, captured, checked, days_c, days_v, limit in freshness(con, limits):
+        state = (
+            "sem expectativa declarada"
+            if limit is None
+            else "atrasado"
+            if days_v is None or days_v > limit
+            else "em dia"
+        )
+        cells = [source, dataset, captured, days_c, checked, days_v, limit, state]
+        body.append("<tr>" + "".join(f"<td>{'' if c is None else c}</td>" for c in cells) + "</tr>")
+    th = "".join(f"<th>{h}</th>" for h in head.split("|"))
+    style = "body{font:15px sans-serif;margin:2rem}td,th{border:1px solid #ccc;padding:.3rem .6rem}"
+    return (
+        f'<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Situação das capturas</title>'
+        f"<style>{style}</style></head><body><h1>Situação das capturas</h1>"
+        "<p>Dias desde a última captura (arquivo novo) e desde a última verificação da fonte, por dataset. "
+        "O limite vem do contrato da fonte (<code>max_age_days</code>, justificado pela periodicidade dela); "
+        "sem limite declarado, só o intervalo é mostrado. Gerada em "
+        f"{runs.now()[:10]}.</p><table><tr>{th}</tr>{''.join(body)}</table></body></html>"
+    )
 
 
 CLOUD_ITEM = re.compile(

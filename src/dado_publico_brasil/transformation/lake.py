@@ -177,14 +177,31 @@ def index(settings: Settings) -> Path:
     return file
 
 
-def publish_docs(settings: Settings) -> list[str]:
-    """Sobe ao R2 o dbt e o Elementary (`docs/`) e a página inicial do lake (`docs/index.html`).
+def situation(settings: Settings, limits: dict[tuple[str, str], int] | None = None) -> Path:
+    """`situacao.html`: dias desde a última captura por dataset, lidos de `metadata.capturas`."""
+    con = warehouse.connect(settings, read_only=True)
+    try:
+        html = observability.freshness_html(con, limits or {})
+    finally:
+        con.close()
+    file = settings.state_dir / "situacao.html"
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(html, encoding="utf-8")
+    return file
+
+
+def publish_docs(settings: Settings, limits: dict[tuple[str, str], int] | None = None) -> list[str]:
+    """Sobe ao R2 as páginas de `docs/`: dbt, Elementary, situação das capturas e a página inicial.
 
     Roda depois do `export`, com o warehouse livre (o dbt e o `edr` o abrem). Sem R2, não faz nada.
     """
     if not r2():
         return []
-    pages = {"dbt": dbt.static_docs(settings), "qualidade": observability.html_report(settings)}
+    pages = {
+        "dbt": dbt.static_docs(settings),
+        "qualidade": observability.html_report(settings),
+        "situacao": situation(settings, limits),
+    }
     keys = {f"docs/{name}.html": file for name, file in pages.items()} | {"docs/index.html": index(settings)}
     for key, file in keys.items():
         request("PUT", key, file, "text/html; charset=utf-8")
