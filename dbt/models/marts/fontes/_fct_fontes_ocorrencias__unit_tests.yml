@@ -1,0 +1,27 @@
+version: 2
+
+unit_tests:
+  - name: ocorrencia_e_a_sequencia_de_verificacoes_sem_ok_com_a_captura_vigente_quando_comecou
+    description: >
+      Duas falhas seguidas são uma ocorrência (primeira e última observação, contagem e detalhe da primeira); o "ok" a encerra e
+      a falha seguinte abre outra, ainda em aberto, que começa depois de uma captura nova; a verificação "ok" não gera ocorrência;
+      partição nunca capturada fica sem captura de evidência; o tipo vem do nome e do resultado da verificação.
+    model: fct_fontes_ocorrencias
+    given:
+      - input: ref('stg_metadata__fontes_verificacoes')
+        rows:
+          - {id_verificacao: 1, dt_verificacao: "2024-01-01 10:00:00", fonte: a, dataset: d, particao: 2024, verificacao: availability, resultado: error, detalhe: "HTTP 500"}
+          - {id_verificacao: 2, dt_verificacao: "2024-01-02 10:00:00", fonte: a, dataset: d, particao: 2024, verificacao: availability, resultado: error, detalhe: "HTTP 502"}
+          - {id_verificacao: 3, dt_verificacao: "2024-01-03 10:00:00", fonte: a, dataset: d, particao: 2024, verificacao: availability, resultado: ok, detalhe: ""}
+          - {id_verificacao: 4, dt_verificacao: "2024-01-04 10:00:00", fonte: a, dataset: d, particao: 2024, verificacao: availability, resultado: error, detalhe: "ainda não publicado (HTTP 404)"}
+          - {id_verificacao: 5, dt_verificacao: "2024-01-01 11:00:00", fonte: a, dataset: d, particao: 2025, verificacao: schema_mudou, resultado: warn, detalhe: "colunas novas: ['x']"}
+          - {id_verificacao: 6, dt_verificacao: "2024-01-01 11:00:00", fonte: a, dataset: d, particao: 2025, verificacao: integridade, resultado: ok, detalhe: ""}
+      - input: ref('stg_metadata__capturas')
+        rows:
+          - {id_captura: 10, fonte: a, dataset: d, particao: 2024, dt_captura: "2023-12-31 10:00:00"}
+          - {id_captura: 11, fonte: a, dataset: d, particao: 2024, dt_captura: "2024-01-03 12:00:00"}
+    expect:
+      rows:
+        - {fonte: a, id_verificacao: 1, dataset: d, particao: 2024, tipo_ocorrencia: indisponivel, dt_primeira_observacao: "2024-01-01 10:00:00", dt_ultima_observacao: "2024-01-02 10:00:00", qtd_observacoes: 2, fl_em_aberto: false, detalhe: "HTTP 500", id_captura: 10, dt_captura: "2023-12-31"}
+        - {fonte: a, id_verificacao: 4, dataset: d, particao: 2024, tipo_ocorrencia: nao_publicado, dt_primeira_observacao: "2024-01-04 10:00:00", dt_ultima_observacao: "2024-01-04 10:00:00", qtd_observacoes: 1, fl_em_aberto: true, detalhe: "ainda não publicado (HTTP 404)", id_captura: 11, dt_captura: "2024-01-03"}
+        - {fonte: a, id_verificacao: 5, dataset: d, particao: 2025, tipo_ocorrencia: mudanca_esquema, dt_primeira_observacao: "2024-01-01 11:00:00", dt_ultima_observacao: "2024-01-01 11:00:00", qtd_observacoes: 1, fl_em_aberto: true, detalhe: "colunas novas: ['x']", id_captura: null, dt_captura: null}

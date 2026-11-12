@@ -158,6 +158,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_identity__pessoas_fusoes` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa, uma linha por chave absorvida. | publico-agente-publico |  |
 | `stg_identity__pessoas_identificadores` | Identificadores de cada pessoa em cada fonte. | publico-agente-publico |  |
 | `stg_metadata__capturas` | Capturas dos arquivos da fonte (um arquivo, uma linha). `id_captura` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
+| `stg_metadata__fontes_verificacoes` | Verificações das fontes (disponibilidade, bloqueio, integridade do arquivo, esquema, volume, carga), uma linha por verificação. Base de `fct_fontes_ocorrencias`. | publico-agente-publico |  |
 | `stg_pep__dirigentes` | Presidente, Vice-Presidente e Ministro de Estado, uma linha por pessoa, função, órgão e início de exercício, em cada mês capturado (a mesma linha se repete nos meses). Sem CPF. | publico-agente-publico | mês capturado, pessoa, função, órgão e início de exercício |
 | `stg_senado__colegiados` | Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha; o colegiado extinto não consta da fonte. | publico-agente-publico |  |
 | `stg_senado__exercicios` | Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento. | publico-agente-publico |  |
@@ -221,6 +222,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
 | `agg_composicoes` | Quem ocupa cada cargo em cada corte (1º de janeiro e 1º de julho, de 1997 até hoje, e a posse de cada legislatura), por território e partido. A composição eleita (quem foi eleito para o mandato que cobre o corte; o fim é derivado da duração do cargo) e a composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes. | publico | corte |
+| `agg_fontes_capturas` | Quando cada dataset de cada fonte trouxe conteúdo novo e quando foi consultado pela última vez: contagem de capturas e de partições, primeira e última captura e última verificação. Medição de tempo sobre `metadata/capturas`, sem expectativa de periodicidade: o atraso exige o prazo legal ou a periodicidade declarada pela fonte e não é calculado aqui. Uma linha por fonte e dataset. | publico | fonte e dataset |
 | `agg_pessoas_atividade` | O que cada parlamentar fez, derivado dos votos e das autorias: quantidade de votos e de propostas, legislaturas com voto e o partido e a UF do voto mais recente. Fica fora do cadastro (dim_pessoas_cadastro) porque muda a cada carga, enquanto o cadastro só descreve a pessoa. Uma linha por pessoa do cadastro (Câmara e Senado); quem não votou tem zero votos e o resto vazio. O partido e a UF são os do voto, como a fonte informa, e não afirmam filiação. | publico-agente-publico | pessoa |
 | `brg_frentes_membros` | Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título. | publico-agente-publico | pessoa |
 | `brg_licitacoes_empenhos` | Ponte entre as licitações do governo federal e os empenhos relacionados a elas, como o Portal da Transparência publica. Uma linha por licitação e empenho. | publico-agente-publico | licitação e empenho |
@@ -257,6 +259,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fct_eventos` | A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto livre). O tipo vem do catálogo fechado dim_evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data, retorno de afastamento) ainda não têm linha: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fct_eventos. | publico-agente-publico | evento da pessoa |
 | `fct_executivo_ocupacoes` | Quem exerceu Presidente, Vice-Presidente e Ministro de Estado, e quando, como a CGU publica no cadastro de Pessoas Expostas Politicamente. A fonte guarda só os últimos cinco anos (o exercício mais antigo observado começa em 2019, com uma exceção de 2005 que a própria fonte traz): não há histórico anterior. Uma linha por pessoa, função, órgão e início de exercício; vale a captura mais recente. Sem CPF nem nascimento na fonte, a pessoa não é ligada a dim_pessoas (a ligação por nome seria um palpite); o presidente e o vice eleitos, com pessoa, estão em fct_cargos_ocupacoes. Quem filtra a data usa dt_inicio e dt_fim (vazio enquanto a fonte não informa o fim). | publico-agente-publico | pessoa, função, órgão e início de exercício |
 | `fct_exercicios` | Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Os campos da fonte não são derivados; as colunas que ligam o período ao resto (id_candidatura, id_partido) são derivadas e marcadas (base_partido). Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos; a ocupação dos dois juntos, em fct_cargos_ocupacoes). O nome do modelo leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fct_exercicios. | publico-agente-publico | período de exercício |
+| `fct_fontes_ocorrencias` | O que a fonte deixou de entregar e desde quando: cada sequência de verificações seguidas sem resultado "ok" para a mesma fonte, dataset, partição e verificação, com a primeira e a última observação. Um "ok" depois encerra a ocorrência; o mesmo problema depois dele abre outra. Tipos: `indisponivel` (a fonte não respondeu; inclui falha de rede do projeto, que o registro de hoje não separa), `nao_publicado` (partição que a fonte ainda não publicou), `bloqueio` (a fonte barrou o pedido), `arquivo_invalido` (página HTML no lugar do arquivo, tamanho diferente do informado, zip inválido ou sem o membro esperado), `mudanca_esquema` (colunas novas ou removidas desde a captura anterior), `coluna_ausente` (coluna do contrato ausente) e `queda_volume` (menos de 80% das linhas da carga anterior). A divergência entre fontes oficiais não é registrada por verificação: está nos testes de lacuna em `metadata/testes_resultados`. Uma linha por ocorrência. | publico | ocorrência (primeira verificação da sequência) |
 | `fct_licitacoes` | Licitações do governo federal (SIASG), de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora, modalidade e número da licitação; se a fonte repete a licitação em mais de um mês, vale a captura mais recente. | publico-agente-publico | licitação (unidade gestora |
 | `fct_licitacoes_itens` | Itens das licitações do governo federal, com o vencedor, uma linha por item e vencedor como a fonte publica (a fonte repete linhas idênticas e deixa o código do item vazio em parte delas; o teste de lacunas as mede). Vencedor pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. | publico-dados-pessoais-de-terceiros | item e vencedor |
 | `fct_licitacoes_participantes` | Participantes dos itens das licitações do governo federal, com a marca de vencedor, uma linha por item e participante como a fonte publica (a fonte repete linhas idênticas). Participante pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. | publico-dados-pessoais-de-terceiros | item e participante |
@@ -304,6 +307,18 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_territorio` | varchar | Território da composição (dim_territorios): município, UF ou país; vazio onde a fonte não liga a um território. |  |
 | `id_partido` | integer | Partido (dim_partidos): o da eleição na composição eleita, o mais recente conhecido até o corte na composição em exercício; vazio quando não se conhece. |  |
 | `qtd_membros` | bigint | Quantas pessoas ocupam o cargo naquele corte, território e partido. |  |
+
+### marts.agg_fontes_capturas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte dos arquivos. |  |
+| `dataset` | varchar | Dataset dos arquivos. |  |
+| `qtd_capturas` | bigint | Quantos arquivos foram capturados do dataset (um conteúdo novo, uma captura). |  |
+| `qtd_particoes` | bigint | Quantas partições distintas (ano, mês AAAAMM ou legislatura) foram capturadas; zero nos datasets sem partição. |  |
+| `dt_primeira_captura` | timestamp | Instante (UTC) da primeira captura do dataset. |  |
+| `dt_ultima_captura` | timestamp | Instante (UTC) da última captura com conteúdo novo. |  |
+| `dt_ultima_verificacao` | timestamp | Instante (UTC) da última vez que a fonte foi consultada para o dataset. |  |
 
 ### marts.agg_pessoas_atividade
 
@@ -959,6 +974,23 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `causa_fim` | varchar | Causa do fim do período, como a fonte informa (licença, renúncia, término do mandato); vazia se não informada ou em curso. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.fct_fontes_ocorrencias
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte verificada. |  |
+| `id_verificacao` | bigint | Primeira verificação da ocorrência (metadata/fontes_verificacoes): a evidência, com instante e detalhe. |  |
+| `dataset` | varchar | Dataset verificado. |  |
+| `particao` | integer | Partição verificada (ano, mês AAAAMM ou legislatura); vazio nos datasets sem partição. |  |
+| `tipo_ocorrencia` | varchar | Tipo da ocorrência (veja a descrição da tabela). |  |
+| `dt_primeira_observacao` | timestamp | Instante (UTC) da primeira verificação da ocorrência: desde quando. |  |
+| `dt_ultima_observacao` | timestamp | Instante (UTC) da última verificação da ocorrência. |  |
+| `qtd_observacoes` | bigint | Quantas verificações seguidas registraram a ocorrência. |  |
+| `fl_em_aberto` | boolean | Verdadeiro quando a última verificação desta fonte, dataset, partição e verificação ainda é a da ocorrência (nenhum ok depois). |  |
+| `detalhe` | varchar | Detalhe da primeira verificação da ocorrência, como o projeto registrou (mensagem de erro, colunas que mudaram, contagens). |  |
+| `id_captura` | bigint | Captura vigente quando a ocorrência começou (a última feita até a primeira observação, metadata/capturas); vazio se a partição nunca foi capturada. |  |
+| `dt_captura` | date | Data da captura de id_captura; vazia quando ela é vazia. |  |
 
 ### marts.fct_licitacoes
 

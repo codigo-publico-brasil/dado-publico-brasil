@@ -74,7 +74,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0017](0017-revisao-de-filtros-e-dados-pessoais.md) | Filtros, chaves e dados pessoais | vigente |
 | [0018](0018-observabilidade-dos-dados.md) | Observabilidade com Elementary e relatório | vigente |
 | [0022](0022-convencao-de-nomes-e-descricoes.md) | Convenção de nomes e descrições | vigente |
-| [0054](0054-fato-agregado-e-avaliacao.md) | Fato, agregado e medição de fontes (`fct_fontes_*`, `agg_fontes_*`, método público) entram; avaliação (nota, ranking, índice com pesos) não, para nenhuma unidade | proposto; complementa 0033, 0039 e 0053 |
+| [0054](0054-fato-agregado-e-avaliacao.md) | Fato, agregado e medição de fontes (`fct_fontes_*`, `agg_fontes_*`, método público) entram; avaliação (nota, ranking, índice com pesos) não, para nenhuma unidade | aceito (2026-11-12); complementa 0033, 0039 e 0053 |
 
 ### Fontes e pessoas
 
@@ -96,6 +96,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0049](0049-licenca-apache-2-para-o-codigo-e-cc-by-para-os-dados.md) | Apache-2.0 para o código e CC BY 4.0 para os dados curados, respeitando a licença de cada fonte | aceito |
 | [0050](0050-dado-pessoal-publicado-pela-fonte-vem-como-esta.md) | Dado pessoal que a fonte oficial publica (data de nascimento, conta em descrição) vem como está, com fonte; CPF continua fora | aceito; revisão jurídica pendente; complementa 0017 |
 | [0051](0051-raw-em-parquet-por-captura-e-estado-em-arquivo-proprio.md) | Raw em Parquet por captura (views no DuckDB) e `metadata`/`identity` em `estado.duckdb` | aceito; altera 0014 e 0043 |
+| [0058](0058-particao-diaria-generica.md) | Partição diária genérica (`partition: day`, `first_day`, `lag_days`) no contrato | proposto; complementa 0045 e 0053 |
 
 **Numeração:** o ADR do lake nasceu como um segundo `0038` e foi renumerado para 0055. Confira `git ls-tree origin/main docs/05-decisoes/` antes de escolher o próximo número.
 
