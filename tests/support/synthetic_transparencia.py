@@ -112,7 +112,7 @@ COMPRAS = [
     "Modalidade Compra Licitação",
     "000012024;Serviço de limpeza. CPF 123.456.789-09;;Pregão;Ativo;30000;Ministério A;30108;Órgão B;200384;UG C;"
     "24/01/2024;29/01/2024;24/01/2024;24/01/2025;12345678000199;EMPRESA EXEMPLO LTDA;205690,0000;205690,0000;"
-    "900052024;;;;",
+    "000012024;200384;UG C;5;Pregão",
     "000022024;Serviço pessoal;;Dispensa;Ativo;30000;Ministério A;30108;Órgão B;200384;UG C;25/01/2024;;25/01/2024;"
     "25/01/2025;12345678909;PESSOA EXEMPLO;1000,0000;1000,0000;;;;;",
     "000032024;Informação protegida por sigilo nos termos da legislação vigente;;Sem Informação;Não se aplica;30000;"

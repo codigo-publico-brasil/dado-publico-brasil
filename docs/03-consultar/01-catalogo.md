@@ -239,6 +239,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fct_candidaturas_votos` | Votos de cada candidatura de quem já é pessoa do projeto, somados dos municípios e zonas, nas eleições gerais já carregadas. Uma linha por candidatura e turno. | publico-agente-publico | candidatura e turno |
 | `fct_cargos_ocupacoes` | Cada período em que uma pessoa ocupa um cargo num território: a camada semântica da ocupação, que junta o exercício publicado pela Câmara e pelo Senado (fim real, suplente que assumiu, eleito em eleição suplementar) e o mandato da eleição (fct_mandatos), que cobre quem foi eleito e ainda não assumiu e os cargos sem fonte de exercício (vereador, prefeito, governador, presidente, deputado estadual), com o fim previsto pela duração do cargo. O exercício vence: o mandato que ele cumpre não gera outra linha. Cassação e renúncia dos cargos sem exercício não aparecem (issue 162). Quem filtra a data usa dt_inicio e dt_fim. | publico-agente-publico | período de ocupação |
 | `fct_constituicao_alteracoes` | Cada indicação de emenda que o texto da Constituição traz entre parênteses, por dispositivo (por exemplo, Redação dada pela Emenda Constitucional nº 45, de 2004). Uma linha por dispositivo e emenda citada. | publico | dispositivo e emenda citada |
+| `fct_contratos` | Contratos do governo federal, de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora e número do contrato; se a fonte repete o contrato em mais de um mês, vale a captura mais recente. Contratado pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. Contrato sigiloso traz `-11` e `Sigiloso` no contratado, como a fonte. | publico-dados-pessoais-de-terceiros | contrato (unidade gestora e número do contrato) |
+| `fct_contratos_aditivos` | Termos aditivos dos contratos do governo federal, uma linha por termo como a fonte publica. | publico-agente-publico | termo aditivo de contrato |
+| `fct_contratos_itens` | Itens dos contratos do governo federal, uma linha por item como a fonte publica (a fonte pode repetir linhas idênticas e deixar o código do item vazio). | publico-dados-pessoais-de-terceiros | item de contrato |
 | `fct_emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
 | `fct_emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
 | `fct_emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês. | publico-dados-pessoais-de-terceiros | emenda |
@@ -754,6 +757,62 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `emenda_ano` | integer | Ano da emenda; só quando a nota cita uma emenda. |  |
 | `nota` | varchar | A nota como o texto publica, sem os parênteses. |  |
 | `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.fct_contratos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_contrato` | varchar | Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen. Liga os itens e termos aditivos. |  |
+| `numero` | varchar | Número do contrato, como a fonte informa (único só junto com a unidade gestora). |  |
+| `cd_ug` | varchar | Código SIAFI da unidade gestora contratante. |  |
+| `ug` | varchar | Nome da unidade gestora contratante. |  |
+| `cd_orgao_superior` | varchar | Código SIAFI do órgão superior (ministério ou equivalente). |  |
+| `orgao_superior` | varchar | Nome do órgão superior. |  |
+| `cd_orgao` | varchar | Código SIAFI do órgão contratante. |  |
+| `orgao` | varchar | Nome do órgão contratante. |  |
+| `objeto` | varchar | Objeto do contrato, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing). Pode ser `Informação protegida por sigilo`. |  |
+| `fundamento_legal` | varchar | Fundamento legal da contratação, como a fonte informa; vazio onde a fonte não informa. |  |
+| `modalidade` | varchar | Modalidade da compra (pregão, dispensa, inexigibilidade...), como a fonte informa. |  |
+| `situacao` | varchar | Situação do contrato, como a fonte informa. |  |
+| `dt_assinatura` | date | Data de assinatura do contrato. |  |
+| `dt_publicacao_dou` | date | Data de publicação no Diário Oficial da União; vazia onde a fonte não informa. |  |
+| `dt_inicio_vigencia` | date | Data de início da vigência. |  |
+| `dt_fim_vigencia` | date | Data de fim da vigência. |  |
+| `cd_contratado` | varchar | CNPJ, CPF ou código de estrangeiro do contratado, como a fonte publica. CPF (11 dígitos, completo na fonte) sai mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing. `-11` quando a fonte protege por sigilo. | sim |
+| `contratado` | varchar | Nome do contratado (pessoa física inclusive), como a fonte publica; número de CPF no texto é mascarado pelo projeto. `Sigiloso` quando protegido por sigilo. | sim |
+| `fl_contem_dado_pessoal` | boolean | Verdadeiro quando o contratado é pessoa física (código com CPF mascarado). |  |
+| `valor_inicial` | decimal(18,2) | Valor inicial do contrato, em reais. |  |
+| `valor_final` | decimal(18,2) | Valor final do contrato (com aditivos), em reais. |  |
+| `id_licitacao` | varchar | Licitação de origem do contrato (fct_licitacoes), montada com unidade gestora, modalidade e número da licitação que o contrato informa; vazia quando a fonte não traz os três (contrato sem licitação). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.fct_contratos_aditivos
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_contrato` | varchar | Contrato aditado (fct_contratos). |  |
+| `numero` | varchar | Número do termo aditivo, como a fonte informa. |  |
+| `dt_publicacao` | date | Data de publicação do termo aditivo. |  |
+| `objeto` | varchar | Objeto do termo aditivo, texto livre da fonte (CPF no texto é mascarado pelo projeto). |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
+
+### marts.fct_contratos_itens
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro. |  |
+| `id_contrato` | varchar | Contrato do item (fct_contratos). |  |
+| `cd_item` | varchar | Código do item da compra, como a fonte informa. |  |
+| `item` | varchar | Descrição do item, texto livre da fonte (CPF no texto é mascarado pelo projeto). |  |
+| `descricao` | varchar | Descrição complementar do item, texto livre da fonte (CPF no texto é mascarado pelo projeto). |  |
+| `quantidade` | decimal(18,4) | Quantidade do item, com as quatro casas que a fonte publica. |  |
+| `valor` | decimal(18,2) | Valor do item, em reais. |  |
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
