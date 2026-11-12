@@ -21,6 +21,7 @@ unit_tests:
           - {cd_emenda: e7, ano: 2024, tipo: Emenda Individual - X, cd_autor: "6", autor_nome: Fabio Santos Pereira}
           - {cd_emenda: e8, ano: 2024, tipo: Emenda Individual - X, cd_autor: "7", autor_nome: Sem Correspondencia}
           - {cd_emenda: e9, ano: 2024, tipo: Emenda Individual - X, cd_autor: null, autor_nome: null}
+          - {cd_emenda: e10, ano: 2024, tipo: Emenda Individual - X, cd_autor: "8", autor_nome: Gil Nunes}
       - input: ref('stg_metadata__capturas')
         rows: []
       - input: ref('dim_pessoas')
@@ -32,6 +33,7 @@ unit_tests:
           - {id_pessoa: 5, nome_publico: Dani Rocha, nome_civil: Dani Rocha}
           - {id_pessoa: 6, nome_publico: Eva Alves, nome_civil: Eva Alves}
           - {id_pessoa: 7, nome_publico: Fabio Santos, nome_civil: Fabio Santos Pereira}
+          - {id_pessoa: 8, nome_publico: Gil Nunes, nome_civil: Gil Nunes}
       - input: ref('fct_exercicios')
         rows:
           - {id_pessoa: 1, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
@@ -41,6 +43,7 @@ unit_tests:
           - {id_pessoa: 5, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
           - {id_pessoa: 6, dt_inicio: "2015-02-01", dt_fim: "2018-12-01", dt_mandato_fim: "2019-01-31"}
           - {id_pessoa: 7, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 8, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
     expect:
       rows:
         - {cd_emenda: e1, id_pessoa: 1, regra_ligacao_pessoa: nome_parlamentar_e_exercicio, precisao_ligacao_pessoa: derivada}
@@ -52,3 +55,4 @@ unit_tests:
         - {cd_emenda: e7, id_pessoa: 7, regra_ligacao_pessoa: nome_civil_e_exercicio, precisao_ligacao_pessoa: derivada}
         - {cd_emenda: e8, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
         - {cd_emenda: e9, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {cd_emenda: e10, id_pessoa: 8, regra_ligacao_pessoa: nome_parlamentar_e_exercicio, precisao_ligacao_pessoa: derivada}
