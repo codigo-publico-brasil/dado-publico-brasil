@@ -130,6 +130,23 @@ O plano incremental pede o mês em curso **e o anterior**: o mês fechado sem mu
 - **Mês republicado:** os datasets mensais usam `write: replace_partition` ([ADR 0043](../05-decisoes/0043-raw-em-parquet-substituicao-por-particao-e-logs.md)): a captura nova do mês substitui as linhas da anterior (a URL do mês é a partição), então um mês corrigido pela fonte não deixa linha velha no raw. Cada staging declara o grão em `meta.grain` e o teste `warn` `transparencia_linhas_duplicadas_no_grao` mede as duplicatas que a própria fonte traz.
 - **Frequência da conferência:** o plano diário pede os dois últimos meses fechados (dois HEAD por dataset); `max_age_days: 40` evita o alerta de defasagem. Um intervalo próprio para meses fechados é pendência (hoje seria um `schedule` por dataset, que o contrato ainda não tem).
 
+## Partição diária (`partition: day`)
+
+Para a fonte que publica um arquivo por dia ([ADR 0058](../05-decisoes/0058-particao-diaria-generica.md)):
+
+```yaml
+    url: "{base_url}/{day}_Despesas.zip"   # {day} é o valor da partição, AAAAMMDD
+    load: yearly
+    partition: day
+    first_day: 20260101                    # primeiro dia pedido (obrigatório); o YAML decide o tamanho da janela
+    lag_days: 1                            # opcional: o arquivo só existe a partir de N dias (1 = até ontem)
+```
+
+- **Janela:** de `first_day` até `hoje - lag_days`; dia futuro nunca é pedido. Histórico anterior fica em outro dataset `on_demand` com outro `first_day`.
+- **Plano incremental:** só o último dia. Os dias que faltam entram pela recuperação, sem o limite por execução das outras partições (a janela é a do YAML).
+- **404:** dia sem arquivo (feriado) é `nao_encontrado` e não é tentado de novo; no dia mais recente é `nao_publicado`, e ele e o anterior seguem pedidos.
+- `{partition}` e `{name}` de `files.path` aceitam o dia; `on_demand` e `max_age_days` valem como nas outras partições.
+
 ## Partição por sequência (`partition: sequence`)
 
 Para o arquivo numerado por um período que não é o ano (a legislatura, por exemplo): o YAML declara o calendário e o núcleo só calcula `first_value + (ano - first_year) // years`, sem saber o que o número significa. A URL usa `{partition}` (aceito em todo tipo de partição; `{year}` e `{month}` seguem valendo).
