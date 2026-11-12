@@ -17,6 +17,9 @@ with textos as (
     union all select 'fct_licitacoes.objeto', objeto from {{ ref('fct_licitacoes') }}
     union all select 'fct_licitacoes_itens.item', item from {{ ref('fct_licitacoes_itens') }}
     union all select 'fct_licitacoes_participantes.item', item from {{ ref('fct_licitacoes_participantes') }}
+    union all select 'fct_contratos.objeto', objeto from {{ ref('fct_contratos') }}
+    union all select 'fct_contratos_itens.item', item || ' ' || coalesce(descricao, '') from {{ ref('fct_contratos_itens') }}
+    union all select 'fct_contratos_aditivos.objeto', objeto from {{ ref('fct_contratos_aditivos') }}
     union all select 'brg_licitacoes_empenhos.observacao', observacao from {{ ref('brg_licitacoes_empenhos') }}
 
 )
@@ -37,3 +40,6 @@ where regexp_matches(vencedor, '(^|[^0-9])[0-9]{11}([^0-9]|$)') or regexp_matche
 union all
 select 'fct_licitacoes_participantes', participante from {{ ref('fct_licitacoes_participantes') }}
 where regexp_matches(participante, '(^|[^0-9])[0-9]{11}([^0-9]|$)') or regexp_matches(cd_participante, '^[0-9]{11}$')
+union all
+select 'fct_contratos', contratado from {{ ref('fct_contratos') }}
+where regexp_matches(contratado, '(^|[^0-9])[0-9]{11}([^0-9]|$)') or regexp_matches(cd_contratado, '^[0-9]{11}$')

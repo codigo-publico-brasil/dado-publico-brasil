@@ -11,6 +11,7 @@ import pytest
 from synthetic_camara import fake_downloader, no_headers, synthetic_files
 from synthetic_ibge import ibge_files
 from synthetic_normas import normas_files, normas_get
+from synthetic_pep import pep_files
 from synthetic_senado import senado_files
 from synthetic_tramitacao import fake_get
 from synthetic_transparencia import transparencia_files
@@ -58,8 +59,8 @@ def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract
     pipeline.run_all(
         Settings(storage_root=base / "full"),
         lambda c: landing.plan(
-            c, [2018, 2022] if c.source == "tse" else [2024], []
-        ),  # TSE: duas eleições gerais
+            c, [2018, 2022] if c.source == "tse" else [2026] if c.source == "pep" else [2024], []
+        ),  # TSE: duas eleições gerais; PEP: o primeiro arquivo que a fonte mantém é de 2026
         downloader=fake_downloader(
             {
                 **files,
@@ -68,6 +69,7 @@ def snapshots(tmp_path_factory: pytest.TempPathFactory, contract: SourceContract
                 **normas_files(base / "origin_normas"),
                 **transparencia_files(base / "origin_transparencia"),
                 **ibge_files(base / "origin_ibge"),
+                **pep_files(base / "origin_pep"),
             }
         ),
         head_request=no_headers,

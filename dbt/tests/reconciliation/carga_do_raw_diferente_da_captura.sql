@@ -1,5 +1,5 @@
 -- Erro se, numa partição (ano ou mês) de arquivo que é a foto completa (`meta.escrita: replace_partition`), o raw tem
--- linhas diferentes das que a carga da captura vigente registrou (`carregadas` em `metadata.fontes_verificacoes`):
+-- linhas diferentes das que a carga da captura vigente registrou (`qtd_linhas` em `metadata.fontes_verificacoes`):
 -- sobra de versão anterior (a votação de 2022 chegou a ter o dobro) ou perda. Só confere o que já foi carregado.
 {% set tabelas = [] %}
 {% if execute %}
@@ -13,7 +13,7 @@ with carga as (
         fonte,
         dataset,
         particao,
-        cast(regexp_extract(detalhe, 'carregadas ([0-9]+)', 1) as bigint) as linhas_carregadas
+        qtd_linhas as linhas_carregadas
 
     from {{ source('metadata', 'fontes_verificacoes') }}
 

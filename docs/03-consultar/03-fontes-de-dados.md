@@ -86,6 +86,13 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 - **Cuidado:** o servidor responde sempre comprimido (`Content-Encoding: gzip`), mesmo quando se pede sem compressão; o downloader descomprime e o landing guarda o JSON.
 - **De-para com o TSE:** o TSE usa códigos próprios de município e não publica o do IBGE. `dim_municipios_codigos_tse` liga os dois por nome e UF, só quando o par é único dos dois lados: 5.556 dos 5.569 municípios do TSE ligam, e os 13 restantes (grafias diferentes, como "Barão de Monte Alto") ficam sem código do IBGE, medidos pelo teste `municipios_do_tse_sem_correspondencia_no_ibge`.
 
+### Pessoas Expostas Politicamente (CGU), topo do Executivo federal (verificado em 12/11/2026)
+
+- **O quê:** quem exerceu, nos últimos cinco anos, função pública relevante: nome, função, órgão, início e fim do exercício e fim da carência. Só entram Presidente, Vice-Presidente e Ministro de Estado (as outras ~133 mil linhas são descartadas na carga; o zip original fica no landing). Fonte declarada em `sources/executivo/federal/pep.yml`; vira `fct_executivo_ocupacoes` (issue 19).
+- **Onde:** `https://portaldatransparencia.gov.br/download-de-dados/pep`, que redireciona para `https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/pep/AAAAMM_PEP.zip` (um CSV latin-1 em `;`).
+- **Licença:** política de dados abertos (Decreto 8.777/2016); a página do conjunto não declara licença própria. O DOU (CC BY-ND) não é usado; a página do Planalto com ex-presidentes e ex-ministros fica atrás de verificação anti-robô e não foi lida.
+- **Cuidado:** o portal só mantém o arquivo do último mês publicado (o do mês fechado sai por volta do dia 21 do mês seguinte; os anteriores respondem 403), então o histórico além de cinco anos não existe e o landing é quem o preserva daqui em diante. O CPF, mascarado pela fonte, não é carregado: sem CPF nem nascimento, a pessoa não é ligada a `dim_pessoas` (a ligação por nome seria um palpite). `custom/executivo/federal/pep.py` trata o 403 de mês retirado como falha comum, e a fonte é separada do Portal da Transparência para que isso não interrompa despesas e contratos.
+
 ### TCU (verificado em 23/10/2026)
 
 - **Acesso:** `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/`, sem requisitos, com um manifesto legível por máquina (`arquivos/jurisprudencia-arquivos.csv`, atualizado em 02/10/2026) que lista cada arquivo CSV com ano e tamanho. Acórdãos de 1992 a 2026 (**7,65 GB**, de 15 MB a 500 MB por ano), jurisprudência selecionada (112 MB), respostas a consultas, súmulas, boletins e informativos (cerca de 20 MB). Há também "visões gerais" de acórdãos geradas com IA, que precisariam de rótulo próprio. Contas irregulares e certidões: não apareceram.

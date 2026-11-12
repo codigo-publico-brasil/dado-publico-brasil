@@ -90,11 +90,16 @@ def test_a_partition_the_source_does_not_publish_is_unavailable_and_not_retried_
     con: Connection, tmp_path: Path
 ) -> None:
     captured(con, "votos", 2020)
-    monitoring.record(con, "teste", "votos", 2022, "availability", "error", "HTTP Error 404: Not Found")
-    monitoring.record(con, "teste", "votos", 2023, "availability", "error", "timed out")  # transitório
+    monitoring.record(
+        con, "teste", "votos", 2022, "availability", "error", cd_status_http=404, tipo="nao_encontrado"
+    )
+    monitoring.record(con, "teste", "votos", 2023, "availability", "error", "timed out", tipo="falha_de_rede")
+    monitoring.record(
+        con, "teste", "votos", 2024, "availability", "error", "HTTP Error 404: Not Found"
+    )  # só texto
     gaps = landing.partition_gaps(con, contract(tmp_path), TODAY)["votos"]
-    assert gaps["indisponiveis"] == [2022]
-    assert 2022 not in gaps["faltam"] and 2023 in gaps["faltam"]
+    assert gaps["indisponiveis"] == [2022]  # o texto do detalhe não decide: só as colunas próprias
+    assert 2022 not in gaps["faltam"] and 2023 in gaps["faltam"] and 2024 in gaps["faltam"]
     assert ("votos", 2022) not in landing.plan_recovery(con, contract(tmp_path), TODAY, limit=10)
 
 
@@ -131,8 +136,10 @@ def test_the_monthly_incremental_plan_asks_for_the_current_and_the_previous_mont
 def test_a_404_of_the_previous_month_at_the_turn_of_the_month_is_not_unavailable(
     con: Connection, tmp_path: Path
 ) -> None:
-    monitoring.record(con, "teste", "mensal", 202610, "availability", "error", "HTTP Error 404: Not Found")
-    monitoring.record(con, "teste", "mensal", 202609, "availability", "error", "HTTP Error 404: Not Found")
+    for month in (202610, 202609):
+        monitoring.record(
+            con, "teste", "mensal", month, "availability", "error", cd_status_http=404, tipo="nao_encontrado"
+        )
     gaps = landing.partition_gaps(con, contract(tmp_path), date(2026, 11, 2))["mensal"]
     assert gaps["indisponiveis"] == [202609] and 202610 in gaps["faltam"]
 

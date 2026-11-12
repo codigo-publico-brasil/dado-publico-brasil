@@ -124,6 +124,14 @@ seeds:
       - {name: fonte_url, description: "Página oficial do TSE que registra o evento."}
       - {name: observacao, description: "Divergência de data, resolução ou ressalva da fonte."}
 
+  - name: fontes_identidade
+    meta: {owner: fundador do projeto, sensitivity: publico, fonte_oficial: "Projeto (ADR 0053)", auditoria_excecao: "Regra do projeto sobre as fontes de identidade, sem fonte externa."}
+    description: Papel de cada fonte na identidade de pessoas, uma linha por fonte. Fonte nova que entra na identidade ganha uma linha aqui, sem mudar o código (ADR 0053).
+    columns:
+      - {name: fonte, description: "Fonte (como em fontes_verificacoes.fonte).", data_tests: [unique, not_null]}
+      - {name: precedencia, description: "Quem sobrevive quando duas pessoas se fundem: menor vence. A menor precedência da tabela (1) é o cadastro oficial, que nunca se funde com outro cadastro oficial.", data_tests: [not_null]}
+      - {name: fl_vinculo_derivado, description: "Verdadeiro se os vínculos desta fonte são derivados e recalculados a cada execução (uma ligação que a regra deixa de propor sai).", data_tests: [not_null]}
+
   - name: vinculos_aprovados
     meta: {owner: fundador do projeto, sensitivity: publico-agente-publico, fonte_oficial: "Projeto (vínculos aprovados por uma pessoa)", auditoria_excecao: "Vínculos aprovados por uma pessoa do projeto, com a evidência em cada linha."}
     description: Vínculos entre registros de fontes diferentes que a regra automática não resolve (homônimo, nome diferente entre as fontes), conferidos por uma pessoa, com a evidência escrita. Uma linha por vínculo aprovado.
