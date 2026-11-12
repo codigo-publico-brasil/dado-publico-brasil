@@ -48,7 +48,7 @@ Pela página de comparação do Elementary (consultada em 24/10/2026), a versão
 | --- | --- |
 | Catalog | `docs/03-consultar/01-catalogo.md`, gerado do dbt (`dado-publico catalog`) |
 | Data health | `dado-publico observe` |
-| Arquivos servidos (DOU, fotos) | a carga materializa, em `<pasta de dados>/arquivos/<poder>/<esfera>/<fonte>/arq_<coleção>/`, o que o bloco `arquivos` do dataset declara (cópia ou extração do pacote do landing, só o que falta ou mudou); o `export` publica o que tem `publicar: true`. `fct_candidaturas.foto_caminho` é o caminho no lake. Veja [especificação de fonte](03-especificacao-de-fonte.md) e [ADR 0037](../05-decisoes/0037-arquivos-no-lake-com-prefixo-arq.md) |
+| Arquivos servidos (DOU, fotos) | a carga materializa, em `<pasta de dados>/arquivos/<poder>/<esfera>/<fonte>/arq_<coleção>/`, o que o bloco `files` do dataset declara (cópia ou extração do pacote do landing, só o que falta ou mudou); o `export` publica o que tem `publish: true`. `fct_candidaturas.foto_caminho` é o caminho no lake. Veja [especificação de fonte](03-especificacao-de-fonte.md) e [ADR 0037](../05-decisoes/0037-arquivos-no-lake-com-prefixo-arq.md) |
 | Alert rules | alerta por e-mail do `observe` (o Elementary aberto só alerta por Slack e Teams) |
 | Environment | não se aplica: há um ambiente |
 | Pull requests | o próprio GitHub |

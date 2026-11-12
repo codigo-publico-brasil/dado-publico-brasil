@@ -39,7 +39,7 @@ CONTROL_COLUMNS = (
 def collect(
     con: warehouse.Connection, settings: Settings, prune: bool = False
 ) -> dict[str, list[dict[str, Any]]]:
-    """Arquivos a publicar por coleção (caminho no lake): datasets com `arquivos.publicar: true` no YAML.
+    """Arquivos a publicar por coleção (caminho no lake): datasets com `files.publish: true` no YAML.
 
     Os arquivos já foram materializados na carga (`ingestion/arquivos.py`) em `<pasta de dados>/arquivos/...`;
     aqui só se lê essa pasta e `metadata.arquivos` (hash e captura de origem). Arquivo registrado que não está
@@ -49,11 +49,11 @@ def collect(
     for file in sorted(SOURCES_DIR.glob("*/*/*.yml")):
         data = yaml.safe_load(file.read_text(encoding="utf-8"))
         power, level, source = file.parent.parent.name, file.parent.name, data["source"]
-        for colecao in sorted({d["arquivos"]["colecao"] for d in data["datasets"].values() if _published(d)}):
+        for colecao in sorted({d["files"]["collection"] for d in data["datasets"].values() if _published(d)}):
             wanted = [
                 n
                 for n, d in data["datasets"].items()
-                if _published(d) and d["arquivos"]["colecao"] == colecao
+                if _published(d) and d["files"]["collection"] == colecao
             ]
             key = f"staging/{power}/{level}/{source}/arq_{colecao}"
             folder = settings.storage_root / "arquivos" / power / level / source / f"arq_{colecao}"
@@ -91,7 +91,7 @@ def collect(
 
 
 def _published(dataset: dict[str, Any]) -> bool:
-    return (dataset.get("arquivos") or {}).get("publicar") is True
+    return (dataset.get("files") or {}).get("publish") is True
 
 
 def send(root: str, key: str, files: list[dict[str, Any]], known: dict[str, str]) -> tuple[int, int]:

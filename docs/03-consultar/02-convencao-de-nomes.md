@@ -43,6 +43,10 @@ Regras:
 
 O raw **espelha a fonte**: guarda os nomes de tabela e de coluna como a fonte publica, sem tratamento. Mesmo assim, tem descrição de tabela e de coluna: a da fonte declarada no dbt, ou um texto que diz só que o campo vem da fonte, como publicado (`dado-publico transform` grava os comentários).
 
+## Chaves do contrato da fonte
+
+As chaves dos YAMLs de `sources/` são termos técnicos e ficam em inglês (`license`, `files.collection`, `partition`), como `load` e `primary_key`; só o conteúdo (nomes de tabela e coluna, descrições) segue esta convenção. Veja a [especificação de fonte](../02-fazer/03-especificacao-de-fonte.md).
+
 ## Descrições
 
 **Toda tabela e toda coluna, de todas as camadas, tem descrição** (raw, staging, intermediate, marts, identity e metadata). No dbt, a descrição fica no YAML do modelo; nas tabelas de `ddl/`, em `COMMENT ON`. O `export` grava os mesmos comentários dentro de cada Parquet. A descrição diz o que a coluna significa e, quando for dado da fonte, qual é.

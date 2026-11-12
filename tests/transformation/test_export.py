@@ -793,8 +793,8 @@ def test_a_published_collection_that_left_the_contract_stops_the_export_unless_p
 
 
 def test_publicar_only_counts_when_it_is_exactly_true() -> None:
-    assert colecoes._published({"arquivos": {"publicar": True}})
-    assert not any(colecoes._published({"arquivos": {"publicar": v}}) for v in ("false", "sim", 1, None))
+    assert colecoes._published({"files": {"publish": True}})
+    assert not any(colecoes._published({"files": {"publish": v}}) for v in ("false", "sim", 1, None))
     assert not colecoes._published({}) and not colecoes._published({"arquivos": None})
 
 

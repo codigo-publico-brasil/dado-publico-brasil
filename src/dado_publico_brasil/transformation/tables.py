@@ -64,7 +64,7 @@ def licenca(key: str) -> str | None:
     if file is None or not file.exists():
         return None  # intermediate e marts misturam fontes: sem licença única
     return (
-        str(licenca) if (licenca := yaml.safe_load(file.read_text(encoding="utf-8")).get("licenca")) else None
+        str(licenca) if (licenca := yaml.safe_load(file.read_text(encoding="utf-8")).get("license")) else None
     )
 
 

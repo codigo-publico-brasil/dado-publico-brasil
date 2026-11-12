@@ -71,6 +71,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0017](0017-revisao-de-filtros-e-dados-pessoais.md) | Filtros, chaves e dados pessoais | vigente |
 | [0018](0018-observabilidade-dos-dados.md) | Observabilidade com Elementary e relatório | vigente |
 | [0022](0022-convencao-de-nomes-e-descricoes.md) | Convenção de nomes e descrições | vigente |
+| [0054](0054-fato-agregado-e-avaliacao.md) | Fato, agregado e medição de fontes (`fct_fontes_*`, `agg_fontes_*`, método público) entram; avaliação (nota, ranking, índice com pesos) não, para nenhuma unidade | proposto; complementa 0033, 0039 e 0053 |
 
 ### Fontes e pessoas
 

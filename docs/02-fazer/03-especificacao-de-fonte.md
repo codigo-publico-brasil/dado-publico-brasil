@@ -9,7 +9,7 @@ source: camara                      # nome curto: prefixo dos modelos stg_camara
 power: legislativo                  # legislativo | executivo | judiciario
 level: federal                      # federal | estadual | municipal: o raw vira raw_federal_camara
 description: Câmara dos Deputados, dados abertos (arquivos em lote)
-# licenca: "CC BY"           # opcional: a licença que a fonte declara (texto curto); vai ao manifesto.json de cada tabela da fonte. Sem licença registrada na doc de fontes, omita
+# license: "CC BY"           # opcional: a licença que a fonte declara (texto curto); vai ao manifesto.json de cada tabela da fonte. Sem licença registrada na doc de fontes, omita
 schedule: "0 6 * * *"             # quando capturar (cron, fuso America/Sao_Paulo); sem esta linha, só quando pedido
 
 access:
@@ -64,28 +64,28 @@ O [TSE](../../sources/judiciario/federal/tse.yml) é o exemplo:
     optional: [SG_FEDERACAO, DS_COMPOSICAO_FEDERACAO]   # colunas que os arquivos antigos não têm
 ```
 
-`columns` filtra as colunas (minimização: o que não está na lista nunca entra no raw). `only: {COLUNA: [valores]}` filtra as linhas **do raw** quando a fonte traz o que não se deve guardar (o arquivo original no landing continua inteiro, para auditoria); o TSE não usa `only`, porque todos os cargos entram. `optional` lista colunas que podem faltar nos arquivos de alguns anos (a ausência vira vazio, não erro). `max_age_days` (por exemplo, `14` na votação) faz o `observe` acusar o dataset cuja última verificação passou do prazo. O prazo precisa ter origem na própria fonte (periodicidade de publicação, cron do `schedule`), nunca opinião; também alimenta a página de situação. `rejeitadas_toleradas` declara, por partição, quantas linhas **da própria fonte** sem valor na chave o balanço da carga aceita: `rejeitadas_toleradas: {2004: {limite: 1, justificativa: "linha da fonte sem identificador do deputado"}}`. Até o limite, o registro `carga` de `metadata.fontes_verificacoes` vira `warn` com `tolerada: <justificativa>` no detalhe; acima dele (ou com colisão de chave) volta a ser `error`. A linha continua rejeitada, registrada e contada: nada é completado nem inventado, só se evita um erro permanente e repetido a cada captura. Sem a declaração, nada muda. `on_demand: true` (padrão `false`) tira o dataset do plano incremental e da recuperação de lacunas: ele só é capturado quando pedido (`--years`, `--historical`, `--dataset`, ou o job manual do Dagster em `years`/`historical`), e a falta de partições não vira aviso. Serve para pacotes grandes ou republicados com frequência, como as fotos do TSE; o que já está no landing segue valendo para o raw e o dbt. `primary_key: [_row_hash]` usa o hash da linha inteira como chave, para fontes sem chave natural.
+`columns` filtra as colunas (minimização: o que não está na lista nunca entra no raw). `only: {COLUNA: [valores]}` filtra as linhas **do raw** quando a fonte traz o que não se deve guardar (o arquivo original no landing continua inteiro, para auditoria); o TSE não usa `only`, porque todos os cargos entram. `optional` lista colunas que podem faltar nos arquivos de alguns anos (a ausência vira vazio, não erro). `max_age_days` (por exemplo, `14` na votação) faz o `observe` acusar o dataset cuja última verificação passou do prazo. O prazo precisa ter origem na própria fonte (periodicidade de publicação, cron do `schedule`), nunca opinião; também alimenta a página de situação. `tolerated_rejects` declara, por partição, quantas linhas **da própria fonte** sem valor na chave o balanço da carga aceita: `tolerated_rejects: {2004: {limit: 1, reason: "linha da fonte sem identificador do deputado"}}`. Até o limite, o registro `carga` de `metadata.fontes_verificacoes` vira `warn` com `tolerada: <justificativa>` no detalhe; acima dele (ou com colisão de chave) volta a ser `error`. A linha continua rejeitada, registrada e contada: nada é completado nem inventado, só se evita um erro permanente e repetido a cada captura. Sem a declaração, nada muda. `on_demand: true` (padrão `false`) tira o dataset do plano incremental e da recuperação de lacunas: ele só é capturado quando pedido (`--years`, `--historical`, `--dataset`, ou o job manual do Dagster em `years`/`historical`), e a falta de partições não vira aviso. Serve para pacotes grandes ou republicados com frequência, como as fotos do TSE; o que já está no landing segue valendo para o raw e o dbt. `primary_key: [_row_hash]` usa o hash da linha inteira como chave, para fontes sem chave natural.
 
-## Arquivos servidos ao público (`arquivos`)
+## Arquivos servidos ao público (`files`)
 
 Bloco opcional por dataset para arquivos que não são tabela e que o público deve poder baixar ([ADR 0037](../05-decisoes/0037-arquivos-no-lake-com-prefixo-arq.md)). Sem ele, o arquivo fica só no landing (que pode ter campos pessoais e nunca é público).
 
 ```yaml
-  secao1:                       # DOU: sem `membro`, o arquivo da captura sobe como está (fl_original = true)
-    arquivos: {colecao: secoes, caminho: "{dataset}/{particao}/{nome}", publicar: true}
-  fotos_br:                     # TSE: com `membro`, cada membro do zip que casa é extraído (fl_original = false)
+  secao1:                       # DOU: sem `member`, o arquivo da captura sobe como está (fl_original = true)
+    files: {collection: secoes, path: "{dataset}/{partition}/{name}", publish: true}
+  fotos_br:                     # TSE: com `member`, cada membro do zip que casa é extraído (fl_original = false)
     archive: zip
-    arquivos:
-      colecao: fotos
-      membro: '^F?(?P<uf>[A-Z]{2})(?P<sq>\d+)_div\.(?P<ext>jpe?g|png)$'
-      caminho: "{particao}/{uf}/{sq}.{ext}"
-      publicar: true
+    files:
+      collection: fotos
+      member: '^F?(?P<uf>[A-Z]{2})(?P<sq>\d+)_div\.(?P<ext>jpe?g|png)$'
+      path: "{partition}/{uf}/{sq}.{ext}"
+      publish: true
 ```
 
-- `colecao`: a pasta é `arq_<colecao>`. `caminho`: modelo do caminho dentro dela, estável (sem hash nem pasta por versão); campos `dataset`, `particao`, `nome` (nome do arquivo ou do membro; no arquivo capturado, sem o hash que o landing põe) e os grupos nomeados de `membro`.
-- `membro` (regex, exige `archive: zip`): só os membros que casam são extraídos.
-- `publicar: true` autoriza o `export` a subir a coleção ao lake público, com a tabela `arq_<colecao>`; `false` (padrão) só materializa no disco local.
-- A carga materializa a cópia derivada em `<pasta de dados>/arquivos/<poder>/<esfera>/<fonte>/arq_<colecao>/` e anota hash e captura de origem em `metadata.arquivos`. Captura corrompida vira aviso (as demais seguem); membro que some de uma captura nova mantém a última cópia, com a captura de origem anterior. O mesmo código serve a qualquer fonte e tipo de arquivo; formato que o padrão não cobre (SOAP, robô) segue em `ingestion/custom/`.
+- `collection`: a pasta é `arq_<collection>`. `path`: modelo do caminho dentro dela, estável (sem hash nem pasta por versão); campos `dataset`, `partition`, `name` (nome do arquivo ou do membro; no arquivo capturado, sem o hash que o landing põe) e os grupos nomeados de `member`.
+- `member` (regex, exige `archive: zip`): só os membros que casam são extraídos.
+- `publish: true` autoriza o `export` a subir a coleção ao lake público, com a tabela `arq_<collection>`; `false` (padrão) só materializa no disco local.
+- A carga materializa a cópia derivada em `<pasta de dados>/arquivos/<poder>/<esfera>/<fonte>/arq_<collection>/` e anota hash e captura de origem em `metadata.arquivos`. Captura corrompida vira aviso (as demais seguem); membro que some de uma captura nova mantém a última cópia, com a captura de origem anterior. O mesmo código serve a qualquer fonte e tipo de arquivo; formato que o padrão não cobre (SOAP, robô) segue em `ingestion/custom/`.
 
 ## Dataset por item (`load: foreach`)
 
@@ -171,8 +171,9 @@ O padrão (HTTP com nova tentativa, CSV e JSON) não tem nada disso, de propósi
 - **`write: replace_partition`** é para o arquivo que é a **foto completa** de uma partição (o ano de uma eleição, um mês): a captura nova entra e as linhas das capturas anteriores **da mesma URL** saem. Várias partições convivem na mesma tabela (outras URLs nunca são tocadas) e o raw espelha a versão atual; o histórico fica no landing. Não pede coluna de partição: a partição é a própria captura (`_source_file_id`), então vale para qualquer fonte e não muda o esquema. Não compara linha com linha (barato em dezenas de milhões de linhas); `primary_key: [_row_hash]` segue valendo para manter as linhas idênticas da fonte e dar chave ao dbt. Não aceita `nested`. Recarregar a mesma captura é idempotente. Em tabela que já existe não há migração: todas as linhas já levam o id da captura; na próxima captura nova de cada arquivo, as linhas antigas saem (a primeira carga depois de trocar de `merge` para `replace_partition` pode ainda ter linhas de versões que o `merge` somou: o `load --rebuild --dataset` do dataset as limpa) ([ADR 0043](../05-decisoes/0043-raw-em-parquet-substituicao-por-particao-e-logs.md)).
 - **Valores como texto, vazio como nulo.** Tipos e limpeza ficam no staging.
 - Toda linha do raw leva `_source_file_id`, o id da captura (arquivo do landing) de onde veio, e `_ingested_at`, o instante em que chegou ao raw.
+- **Nomes das chaves em inglês.** O contrato é interface técnica: toda chave é em inglês (`license`, `files.collection`, `tolerated_rejects.reason`), como `load`, `partition` e `primary_key`; o conteúdo (valores, descrições, nomes de tabela e coluna) segue a [convenção de nomes](../03-consultar/02-convencao-de-nomes.md). Chave nova segue a regra. A [ADR 0037](../05-decisoes/0037-arquivos-no-lake-com-prefixo-arq.md) cita as chaves antigas (`arquivos`, `colecao`...).
 - **Chave desconhecida falha.** Um erro de digitação (`shedule`, `primay_key`) recusa o contrato, com o nome da chave e do arquivo, em vez de virar o valor padrão em silêncio. Chave nova do contrato entra nas listas de `ingestion/contract.py`.
-- **`licenca`** é a licença que a própria fonte declara, como [`03-fontes-de-dados.md`](../03-consultar/03-fontes-de-dados.md) a registra; não se inventa. O `export` a leva ao `manifesto.json` nas tabelas de staging da fonte (marts e intermediate misturam fontes e não a levam).
+- **`license`** é a licença que a própria fonte declara, como [`03-fontes-de-dados.md`](../03-consultar/03-fontes-de-dados.md) a registra; não se inventa. O `export` a leva ao `manifesto.json` nas tabelas de staging da fonte (marts e intermediate misturam fontes e não a levam).
 - **Revisão:** um PR em `sources/` executa código: `foreach.where` é SQL rodado sobre o raw, e `${VARIAVEL}` lê o ambiente. Revise-o com o mesmo rigor de um PR em Python.
 - Erros do contrato (tipo, chave ou `load` inválidos) dizem onde está o problema.
 

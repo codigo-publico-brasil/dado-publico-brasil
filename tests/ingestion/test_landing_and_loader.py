@@ -351,12 +351,12 @@ def test_the_load_registers_one_balance_that_is_an_error_for_collisions_and_reje
 
 def test_declared_tolerance_turns_the_rejection_into_a_warning_only_up_to_the_limit(con: Connection) -> None:
     from dado_publico_brasil.ingestion import monitoring
-    from dado_publico_brasil.ingestion.contract import Tolerancia
+    from dado_publico_brasil.ingestion.contract import Tolerance
 
-    tolerance = Tolerancia(limite=1, justificativa="linha da fonte sem chave")
+    tolerance = Tolerance(limit=1, reason="linha da fonte sem chave")
     stats = {"read": 10, "filtered": 0, "loaded": 9, "rejected": 1, "conflicting": 0}
 
-    def outcome(values: dict[str, int], declared: Tolerancia | None) -> tuple[str, str]:
+    def outcome(values: dict[str, int], declared: Tolerance | None) -> tuple[str, str]:
         con.execute("DELETE FROM metadata.fontes_verificacoes")
         monitoring.check_load(con, "teste", "ds", 2004, values, declared)
         return con.execute("SELECT resultado, detalhe FROM metadata.fontes_verificacoes").fetchall()[0]
