@@ -107,6 +107,16 @@ Levantamento de 18/10/2026, feito por leitura das páginas oficiais e de algumas
 - **Limites e termos.** A API do Senado limita a 10 requisições por segundo (a plataforma usa 4) e pode devolver 429 e 503. O portal do Senado diz que o conteúdo "pode ser utilizado, desde que seja citada a fonte e para fins lícitos"; não nomeia licença. O `normas.leg.br` declara Creative Commons Atribuição 4.0 nos próprios metadados. O `robots.txt` da Câmara não restringe a página da Constituição.
 - **Não confirmado.** O texto integral das leis comuns: não vem na API documentada, o link de publicação devolve PDF vazio e a rota interna do `normas.leg.br` (`/api/public/normas`) não é documentada e respondeu 400. O Planalto não abre desta rede (conexão derrubada) e o LexML está atrás de verificação anti-robô; nenhum dos dois foi contornado. As Constituições de 1824 a 1967 estão no catálogo, sem texto.
 
+### Judiciário: composição dos tribunais (verificado em 12/11/2026; issue 69)
+
+Pesquisa limitada por cortesia (poucas requisições por site, depois de bloqueios em outras fontes). **Não há fonte estruturada confirmada; nada foi implementado.**
+
+- **STF** (`https://portal.stf.jus.br/ministros/`): a página responde 200, mas o HTML estático não traz a lista de ministros (carregada por script) e o painel "Corte Aberta" (`transparencia.stf.jus.br/extensions/corte_aberta/corte_aberta.html`) respondeu **403** a requisição automatizada. Sem dados abertos de composição, licença nem API encontrados. Ler a página exigiria robô com navegador: inviável pelo critério do projeto (sem robô nem captcha).
+- **CNJ:** a página de dados abertos do portal (`cnj.jus.br/transparencia/dados-abertos/`) respondeu **403**, e `dadosabertos.cnj.jus.br` não respondeu. A Portaria CNJ de dados abertos define dado aberto como de uso livre com atribuição, mas não prova a licença de um conjunto de magistrados. O **DataJud** (`api-publica.datajud.cnj.jus.br`) exige chave e trata de **processos**, não de composição de tribunal. O Painel de Remuneração dos Magistrados é um painel com filtros, não um arquivo de cadastro.
+- **TST** (`https://www.tst.jus.br/ministros`): a página estática cita ministros, mas é HTML de leiame sem contrato (cada tribunal tem leiaute próprio, sem licença declarada); não foi lida campo a campo. STJ e TSE: páginas institucionais sem arquivo aberto de composição encontrado (o `dadosabertos.tse.jus.br` só tem candidaturas e prestação de contas, já carregadas).
+- **Complemento por outro poder:** a sabatina e a aprovação de ministros passam pelo Senado, que publica dados abertos (já usados na fonte `senado`); não verificado se a API traz indicações de autoridades.
+- **Caminho proposto (decisão do fundador):** (1) uma tabela de referência em `dbt/seeds/` com as cadeiras previstas na Constituição (STF: 11, art. 101; STJ: no mínimo 33, art. 104), cada linha citando a página oficial do tribunal e a data de captura, conferida por pessoa; ela é dado de referência com fonte, não carga automática, e o teste mede cadeiras ocupadas contra o previsto; (2) em paralelo, pedir ao STF e ao CNJ um arquivo de composição com licença; (3) verificar a API do Senado para indicação e sabatina. Sem partido e sem juízo sobre os ministros (ADR 0054).
+
 ## Município de São Paulo
 
 ### Câmara Municipal de São Paulo
