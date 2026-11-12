@@ -209,3 +209,24 @@ datasets:
     primary_key: [_item]
     columns: [_item, ParteVetada, TipoVotacao, Sessao, Camara__Voto, Senado__Voto]
     nested: [Camara__Voto, Senado__Voto]
+
+  ceaps:
+    # Cota para o exercício da atividade parlamentar dos senadores (CEAPS): uma linha por despesa reembolsada, um CSV por
+    # ano (2008 em diante; ~0,4 a 7,5 MB, ~16 mil linhas por ano; o do ano em curso muda todo dia). Foto completa do
+    # ano: `replace_partition`. O arquivo é em ISO-8859-1, com ponto e vírgula, e a primeira linha é um aviso
+    # ("ULTIMA ATUALIZACAO") antes do cabeçalho (`skip_lines`). A fonte NÃO traz o código do senador, só o nome: a
+    # ligação à pessoa é derivada no dbt (ADR 0057). Nos anos até 2014 o fornecedor e o documento vêm vazios.
+    url: "https://www.senado.leg.br/transparencia/LAI/verba/despesa_ceaps_{year}.csv"
+    max_age_days: 3
+    load: yearly
+    first_year: 2008
+    format: csv
+    delimiter: ";"
+    encoding: cp1252
+    skip_lines: 1
+    headers: {Accept: "*/*"}
+    write: replace_partition
+    primary_key: [_row_hash]
+    columns:
+      [ANO, MES, SENADOR, TIPO_DESPESA, CNPJ_CPF, FORNECEDOR, DOCUMENTO, DATA, DETALHAMENTO,
+       VALOR_REEMBOLSADO, COD_DOCUMENTO]

@@ -286,8 +286,9 @@ models:
       A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto
       livre). O tipo vem do catálogo fechado dim_evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento
       sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado
-      (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data, retorno de
-      afastamento) ainda não têm linha: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só
+      (diplomação, nomeação, exoneração, filiação e desfiliação por data, retorno de afastamento) ainda não têm
+      linha; a entrada e a saída de órgão vêm da participação em órgãos da Câmara (brg_orgaos_membros), sem repetir a linha
+      que a fonte duplica: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só
       pela colisão de nomes; a tabela é fct_eventos.
     meta: {sensitivity: publico-agente-publico, grain: evento da pessoa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Evento derivado de outros fatos do projeto; fato_origem e id_fato_origem apontam a linha com fonte e captura (id_captura vem quando o fato a tem)."}
     columns:
@@ -306,6 +307,7 @@ models:
       - {name: id_captura, data_type: bigint, description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto."}
       - {name: fonte, data_type: varchar, tests: [{not_null: {config: {severity: warn}}}], description: "Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento e no falecimento, a fonte do cadastro que informa a data. O teste de aviso mede o que ficar sem."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem do fato; vazia quando o evento não tem id_captura."}
+      - {name: id_orgao, data_type: varchar, tests: [{relationships: {to: ref('dim_orgaos'), field: id_orgao, config: {severity: warn}}}], description: "Órgão do evento (dim_orgaos), só na entrada e na saída de órgão; vazio nos demais tipos, que não nascem de um órgão (eleito e posse não têm órgão na fonte e não são ligados por inferência). O teste de aviso mede a participação em órgão que a lista de órgãos da fonte não traz."}
 
   - name: fct_votos
     description: >

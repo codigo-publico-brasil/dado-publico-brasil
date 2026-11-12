@@ -36,6 +36,8 @@ unit_tests:
         rows: []
       - input: ref('fct_pessoas_partidos')
         rows: []
+      - input: ref('brg_orgaos_membros')
+        rows: []
       - input: ref('stg_metadata__capturas')
         rows:
           - {id_captura: 1, fonte: camara, dt_captura: "2026-10-21 10:00:00"}
@@ -90,6 +92,8 @@ unit_tests:
         rows: []
       - input: ref('fct_pessoas_partidos')
         rows: []
+      - input: ref('brg_orgaos_membros')
+        rows: []
       - input: ref('stg_metadata__capturas')
         rows: []
     expect:
@@ -139,6 +143,8 @@ unit_tests:
         rows: []
       - input: ref('fct_pessoas_partidos')
         rows: []
+      - input: ref('brg_orgaos_membros')
+        rows: []
       - input: ref('stg_metadata__capturas')
         rows: []
     expect:
@@ -179,6 +185,8 @@ unit_tests:
           - {id_exercicio: e7, id_pessoa: 7, id_cargo: senador, condicao_na_fonte: Titular, dt_inicio: "2019-02-01", dt_fim: "2020-07-07", causa_fim: null, id_captura: 1}
           - {id_exercicio: e8, id_pessoa: null, id_cargo: senador, condicao_na_fonte: Suplente, dt_inicio: "2019-02-01", dt_fim: "2020-07-07", causa_fim: null, id_captura: 1}
       - input: ref('fct_pessoas_partidos')
+        rows: []
+      - input: ref('brg_orgaos_membros')
         rows: []
       - input: ref('stg_metadata__capturas')
         rows:
@@ -228,6 +236,8 @@ unit_tests:
           - {id_pessoa: 3, id_pessoa_partido: t1, fonte: camara, ano_referencia: 2018, dt_inicio: "2018-03-01", id_partido: 1}
           - {id_pessoa: null, id_pessoa_partido: u1, fonte: camara, ano_referencia: 2018, dt_inicio: "2018-03-01", id_partido: 1}
           - {id_pessoa: null, id_pessoa_partido: u2, fonte: camara, ano_referencia: 2019, dt_inicio: "2019-03-01", id_partido: 2}
+      - input: ref('brg_orgaos_membros')
+        rows: []
       - input: ref('stg_metadata__capturas')
         rows: []
     expect:
@@ -235,3 +245,46 @@ unit_tests:
         - {id_evento: "troca_de_partido:fct_pessoas_partidos:r2", id_pessoa: 1, ano_evento: 2021, dt_evento: "2021-02-01", id_partido: 2, base: informado}
         - {id_evento: "troca_de_partido:fct_pessoas_partidos:r5", id_pessoa: 1, ano_evento: 2023, dt_evento: null, id_partido: 1, base: informado}
         - {id_evento: "troca_de_partido:fct_pessoas_partidos:s2", id_pessoa: 2, ano_evento: 2018, dt_evento: "2018-03-01", id_partido: 2, base: informado}
+
+  - name: evento_de_orgao_traz_entrada_e_saida_com_o_orgao_do_dim_orgaos_sem_repetir_a_linha_duplicada_da_fonte
+    description: >
+      Cada participação em órgão gera a entrada (no início) e, se encerrada, a saída (no fim), ambas com o órgão como chave
+      de dim_orgaos (fonte e identificador da fonte). A mesma participação repetida pela fonte, uma aberta e outra
+      encerrada, gera uma só entrada e uma só saída. Sem data de início não há entrada; sem data de fim não há saída; sem
+      pessoa não há evento.
+    model: fct_eventos
+    given:
+      - input: ref('dim_pessoas')
+        rows: []
+      - input: ref('int_pessoas_unidas_cadastro')
+        rows: []
+      - input: ref('int_pessoas_senado_unidas')
+        rows: []
+      - input: ref('fct_candidaturas')
+        rows: []
+      - input: ref('stg_tse__candidaturas')
+        rows: []
+      - input: ref('dim_disputas')
+        rows: []
+      - input: ref('fct_mandatos')
+        rows: []
+      - input: ref('fct_exercicios')
+        rows: []
+      - input: ref('fct_pessoas_partidos')
+        rows: []
+      - input: ref('brg_orgaos_membros')
+        rows:
+          - {id_pessoa: 1, id_orgao: 10, cargo: Titular, dt_inicio: "2020-03-01", dt_fim: "2021-03-01", id_captura: 1}
+          - {id_pessoa: 1, id_orgao: 10, cargo: Titular, dt_inicio: "2020-03-01", dt_fim: null, id_captura: 1}
+          - {id_pessoa: 2, id_orgao: 11, cargo: Suplente, dt_inicio: "2022-02-01", dt_fim: null, id_captura: 1}
+          - {id_pessoa: 3, id_orgao: 12, cargo: Titular, dt_inicio: null, dt_fim: "2019-12-31", id_captura: 1}
+          - {id_pessoa: null, id_orgao: 13, cargo: Titular, dt_inicio: "2020-03-01", dt_fim: null, id_captura: 1}
+      - input: ref('stg_metadata__capturas')
+        rows:
+          - {id_captura: 1, fonte: camara, dt_captura: "2026-10-21 10:00:00"}
+    expect:
+      rows:
+        - {id_evento: "entrada_em_orgao:brg_orgaos_membros:1|10|Titular|2020-03-01", id_pessoa: 1, id_orgao: camara-10, ano_evento: 2020, dt_evento: "2020-03-01", base: informado, fonte: camara, dt_captura: "2026-10-21"}
+        - {id_evento: "saida_de_orgao:brg_orgaos_membros:1|10|Titular|2020-03-01|2021-03-01", id_pessoa: 1, id_orgao: camara-10, ano_evento: 2021, dt_evento: "2021-03-01", base: informado, fonte: camara, dt_captura: "2026-10-21"}
+        - {id_evento: "entrada_em_orgao:brg_orgaos_membros:2|11|Suplente|2022-02-01", id_pessoa: 2, id_orgao: camara-11, ano_evento: 2022, dt_evento: "2022-02-01", base: informado, fonte: camara, dt_captura: "2026-10-21"}
+        - {id_evento: "saida_de_orgao:brg_orgaos_membros:3|12|Titular||2019-12-31", id_pessoa: 3, id_orgao: camara-12, ano_evento: 2019, dt_evento: "2019-12-31", base: informado, fonte: camara, dt_captura: "2026-10-21"}

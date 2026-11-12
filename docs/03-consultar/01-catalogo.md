@@ -6,6 +6,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
+| `cota_parlamentar` | Cota para o exercício da atividade parlamentar (CEAP): uma linha por despesa reembolsada, um pacote por ano (foto completa do ano, substituída a cada captura). Sem o CPF do deputado, a carteira parlamentar e o nome de passageiro, que a fonte traz e o contrato não lê. O CPF de fornecedor pessoa física vem como a fonte publica (raw privado) e é mascarado no staging. | publico-agente-publico |  |
 | `deputados` | Cadastro de deputados (sem documentos pessoais). | publico-agente-publico |  |
 | `deputados_detalhe` | Cadastro de cada deputado (escolaridade, último status e gabinete institucional), buscado por item na API (`_item` é o endereço do deputado), só dos que já foram buscados. | publico-agente-publico |  |
 | `deputados_historico` | Histórico de situação de cada deputado (posse, licença, fim de mandato), buscado por item na API (`_item` é o endereço do deputado), só dos que já foram buscados. | publico-agente-publico |  |
@@ -49,6 +50,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
+| `ceaps` | Cota para o exercício da atividade parlamentar dos senadores (CEAPS): uma linha por despesa reembolsada, um CSV por ano (foto completa do ano, substituída a cada captura). Só o nome do senador, sem código. O CPF de fornecedor pessoa física vem como a fonte publica (raw privado) e é mascarado no staging. | publico-agente-publico |  |
 | `colegiados` | Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha. Fonte do catálogo de órgãos do Senado. | publico-agente-publico |  |
 | `normas` | Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...), por ano de assinatura, só os metadados. | publico-agente-publico |  |
 | `normas_detalhe` | Detalhe, buscado por item na API, das leis, leis complementares, emendas e medidas provisórias já buscadas (`_item` é o código da norma). | publico-agente-publico |  |
@@ -133,6 +135,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
+| `stg_camara__cota_parlamentar` | Despesas da cota parlamentar (CEAP) como a Câmara publica, uma linha por despesa e parcela; CPF de fornecedor pessoa física mascarado. A fonte não tem chave única (o mesmo documento repete), então a linha se identifica pelo conteúdo. | publico-dados-pessoais-de-terceiros |  |
 | `stg_camara__deputados` | Deputados, uma linha por deputado, com nomes padronizados e tipos corretos. | publico-agente-publico |  |
 | `stg_camara__deputados_detalhe` | Cadastro dos deputados (só dos já buscados), uma linha por deputado. | publico-agente-publico |  |
 | `stg_camara__deputados_historico` | Histórico de situação dos deputados (só dos já buscados), uma linha por registro de status. | publico-agente-publico |  |
@@ -160,6 +163,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_metadata__capturas` | Capturas dos arquivos da fonte (um arquivo, uma linha). `id_captura` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
 | `stg_metadata__fontes_verificacoes` | Verificações das fontes (disponibilidade, bloqueio, integridade do arquivo, esquema, volume, carga), uma linha por verificação. Base de `fct_fontes_ocorrencias`. | publico-agente-publico |  |
 | `stg_pep__dirigentes` | Presidente, Vice-Presidente e Ministro de Estado, uma linha por pessoa, função, órgão e início de exercício, em cada mês capturado (a mesma linha se repete nos meses). Sem CPF. | publico-agente-publico | mês capturado, pessoa, função, órgão e início de exercício |
+| `stg_senado__ceaps` | Despesas da cota parlamentar dos senadores (CEAPS) como o Senado publica, uma linha por despesa reembolsada; CPF mascarado. A fonte traz só o nome do senador. | publico-dados-pessoais-de-terceiros |  |
 | `stg_senado__colegiados` | Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha; o colegiado extinto não consta da fonte. | publico-agente-publico |  |
 | `stg_senado__exercicios` | Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento. | publico-agente-publico |  |
 | `stg_senado__normas` | Catálogo das normas federais, uma linha por norma, só metadados, com a ementa padronizada e a original. | publico-agente-publico |  |
@@ -253,10 +257,11 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fct_contratos` | Contratos do governo federal, de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora e número do contrato; se a fonte repete o contrato em mais de um mês, vale a captura mais recente. Contratado pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. Contrato sigiloso traz `-11` e `Sigiloso` no contratado, como a fonte. | publico-dados-pessoais-de-terceiros | contrato (unidade gestora e número do contrato) |
 | `fct_contratos_aditivos` | Termos aditivos dos contratos do governo federal, uma linha por termo como a fonte publica. | publico-agente-publico | termo aditivo de contrato |
 | `fct_contratos_itens` | Itens dos contratos do governo federal, uma linha por item como a fonte publica (a fonte pode repetir linhas idênticas e deixar o código do item vazio). | publico-dados-pessoais-de-terceiros | item de contrato |
+| `fct_cotas_despesas` | Despesas da cota para o exercício da atividade parlamentar (CEAP da Câmara, CEAPS do Senado) como cada casa publica, uma linha por despesa, desde 2008. Só fatos, sem total avaliativo nem ordenação entre pessoas. Câmara e Senado medem valores de formas diferentes e as colunas ficam separadas. A pessoa vem do identificador do deputado (Câmara) ou é derivada pelo nome e pelo exercício no mês (Senado, ADR 0057); sem ligação segura, fica vazia. Inclui fornecedor pessoa física (CPF mascarado). | publico-dados-pessoais-de-terceiros | despesa |
 | `fct_emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código do SIAFI (não é o código do parlamentar); a pessoa é derivada só para emenda individual, quando o nome é o de uma só pessoa com mandato federal no ano da emenda ou no anterior (ADR 0056), e fica vazia no resto. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
 | `fct_emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
 | `fct_emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês. | publico-dados-pessoais-de-terceiros | emenda |
-| `fct_eventos` | A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto livre). O tipo vem do catálogo fechado dim_evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data, retorno de afastamento) ainda não têm linha: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fct_eventos. | publico-agente-publico | evento da pessoa |
+| `fct_eventos` | A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto livre). O tipo vem do catálogo fechado dim_evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado (diplomação, nomeação, exoneração, filiação e desfiliação por data, retorno de afastamento) ainda não têm linha; a entrada e a saída de órgão vêm da participação em órgãos da Câmara (brg_orgaos_membros), sem repetir a linha que a fonte duplica: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fct_eventos. | publico-agente-publico | evento da pessoa |
 | `fct_executivo_ocupacoes` | Quem exerceu Presidente, Vice-Presidente e Ministro de Estado, e quando, como a CGU publica no cadastro de Pessoas Expostas Politicamente. A fonte guarda só os últimos cinco anos (o exercício mais antigo observado começa em 2019, com uma exceção de 2005 que a própria fonte traz): não há histórico anterior. Uma linha por pessoa, função, órgão e início de exercício; vale a captura mais recente. Sem CPF nem nascimento na fonte, a pessoa não é ligada a dim_pessoas (a ligação por nome seria um palpite); o presidente e o vice eleitos, com pessoa, estão em fct_cargos_ocupacoes. Quem filtra a data usa dt_inicio e dt_fim (vazio enquanto a fonte não informa o fim). | publico-agente-publico | pessoa, função, órgão e início de exercício |
 | `fct_exercicios` | Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Os campos da fonte não são derivados; as colunas que ligam o período ao resto (id_candidatura, id_partido) são derivadas e marcadas (base_partido). Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos; a ocupação dos dois juntos, em fct_cargos_ocupacoes). O nome do modelo leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fct_exercicios. | publico-agente-publico | período de exercício |
 | `fct_fontes_ocorrencias` | O que a fonte deixou de entregar e desde quando: cada sequência de verificações seguidas sem resultado "ok" para a mesma fonte, dataset, partição e verificação, com a primeira e a última observação. Um "ok" depois encerra a ocorrência; o mesmo problema depois dele abre outra. Tipos: `indisponivel` (a fonte não respondeu; inclui falha de rede do projeto, que o registro de hoje não separa), `nao_publicado` (partição que a fonte ainda não publicou), `bloqueio` (a fonte barrou o pedido), `arquivo_invalido` (página HTML no lugar do arquivo, tamanho diferente do informado, zip inválido ou sem o membro esperado), `mudanca_esquema` (colunas novas ou removidas desde a captura anterior), `coluna_ausente` (coluna do contrato ausente) e `queda_volume` (menos de 80% das linhas da carga anterior). A divergência entre fontes oficiais não é registrada por verificação: está nos testes de lacuna em `metadata/testes_resultados`. Uma linha por ocorrência. | publico | ocorrência (primeira verificação da sequência) |
@@ -841,6 +846,38 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
 | `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
+### marts.fct_cotas_despesas
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (camara ou senado). |  |
+| `id_despesa` | varchar | Chave da despesa: fonte e impressão digital do conteúdo da linha (as fontes não têm identificador único). |  |
+| `id_pessoa` | bigint | Pessoa que fez a despesa. Câmara: pelo identificador do deputado que a fonte publica; Senado: DERIVADA pelo nome e pelo exercício no mês. Vazia sem ligação segura e nas linhas de liderança da Câmara. |  |
+| `regra_ligacao_pessoa` | varchar | Regra que ligou a pessoa: id_na_fonte (Câmara) ou nome_parlamentar_e_exercicio / nome_civil_e_exercicio (Senado, ADR 0057); vazia quando id_pessoa é vazio. |  |
+| `precisao_ligacao_pessoa` | varchar | informada (identificador publicado pela fonte) ou derivada (inferida por regra, sem identificador oficial); vazia quando id_pessoa é vazio. |  |
+| `nome_parlamentar` | varchar | Nome do parlamentar como a fonte informa, com caixa padronizada (nas linhas de liderança da Câmara, o rótulo da fonte). |  |
+| `uf` | varchar | UF de representação como a Câmara informa; vazia no Senado (a fonte não traz). |  |
+| `partido_sigla` | varchar | Sigla do partido como a Câmara informa; vazia no Senado (a fonte não traz). |  |
+| `ano` | integer | Ano de competência da despesa. |  |
+| `mes` | integer | Mês de competência da despesa. |  |
+| `tipo_despesa` | varchar | Subcota (Câmara) ou tipo da despesa (Senado), como a fonte informa; as categorias das duas casas são diferentes. |  |
+| `especificacao` | varchar | Especificação da subcota (só Câmara); vazia quando a fonte não informa. |  |
+| `fornecedor` | varchar | Nome do fornecedor como a fonte informa, pessoa física inclusive (ADR 0050); vazio onde a fonte não publica (Senado até 2014). | sim |
+| `documento_fornecedor` | varchar | CNPJ do fornecedor como a fonte informa; CPF de pessoa física mascarado (***.nnn.nnn-**); o original fica no landing. | sim |
+| `fl_fornecedor_pessoa_fisica` | boolean | Verdadeiro quando o documento do fornecedor tem 11 dígitos (CPF). |  |
+| `numero_documento` | varchar | Número do documento fiscal, como a fonte informa. |  |
+| `dt_emissao` | date | Data de emissão do documento ou da despesa; vazia quando a fonte não informa. |  |
+| `valor_documento` | decimal(18,2) | Valor do documento em reais (só Câmara; negativo em estorno). |  |
+| `valor_glosa` | decimal(18,2) | Valor glosado, não reembolsado, em reais (só Câmara). |  |
+| `valor_liquido` | decimal(18,2) | Valor líquido em reais, como a Câmara informa (só Câmara). |  |
+| `valor_reembolsado` | decimal(18,2) | Valor reembolsado em reais, como o Senado informa (só Senado). |  |
+| `trecho` | varchar | Trecho da viagem nas passagens aéreas (só Câmara). |  |
+| `detalhamento` | varchar | Texto livre do Senado (por exemplo, passageiros e voos), como a fonte informa; CPF no texto mascarado (só Senado). | sim |
+| `id_documento` | varchar | Identificador do documento na fonte (Câmara: ideDocumento, que pode repetir; Senado: COD_DOCUMENTO). |  |
+| `url_documento` | varchar | Endereço oficial do documento fiscal na Câmara, quando a fonte informa (só Câmara). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+
 ### marts.fct_emendas
 
 | Coluna | Tipo | Descrição | Dado pessoal |
@@ -936,6 +973,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto. |  |
 | `fonte` | varchar | Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento e no falecimento, a fonte do cadastro que informa a data. O teste de aviso mede o que ficar sem. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem do fato; vazia quando o evento não tem id_captura. |  |
+| `id_orgao` | varchar | Órgão do evento (dim_orgaos), só na entrada e na saída de órgão; vazio nos demais tipos, que não nascem de um órgão (eleito e posse não têm órgão na fonte e não são ligados por inferência). O teste de aviso mede a participação em órgão que a lista de órgãos da fonte não traz. |  |
 
 ### marts.fct_executivo_ocupacoes
 

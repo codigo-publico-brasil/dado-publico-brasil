@@ -10,6 +10,8 @@ from pathlib import Path
 
 from dado_publico_brasil.ingestion import contract as contracts
 
+CRLF = chr(13) + chr(10)  # o CSV do Senado termina as linhas assim
+
 
 def _parlamentar(codigo: str, nome: str, civil: str, sexo: str) -> dict[str, object]:
     return {
@@ -162,4 +164,19 @@ def senado_files(pasta: Path) -> dict[str, Path]:
         file = pasta / f"senado-{dataset}-{partition}.json"
         file.write_text(json.dumps(payload), encoding="utf-8")
         saida[contract.url(dataset, partition)] = file
+    # CEAPS: ISO-8859-1, aviso antes do cabeçalho, vírgula decimal. As competências são de 2020 (dentro do exercício
+    # sintético dos senadores) para a regra de ligação ter o que casar; o arquivo é o de 2024 do plano de teste.
+    linhas = [
+        '"ULTIMA ATUALIZACAO";"12/11/2026 02:01"',
+        '"ANO";"MES";"SENADOR";"TIPO_DESPESA";"CNPJ_CPF";"FORNECEDOR";"DOCUMENTO";"DATA";"DETALHAMENTO";'
+        '"VALOR_REEMBOLSADO";"COD_DOCUMENTO"',
+        '"2020";"3";"BETO BARREIRAS";"Divulgação da atividade parlamentar";"11.222.333/0001-81";"GRÁFICA X LTDA";'
+        '"77";"05/03/2020";"";"1500,75";"9001"',
+        '"2020";"3";"BETO BARREIRAS";"Divulgação da atividade parlamentar";"123.456.789-09";"FULANO DE TAL";'
+        '"78";"06/03/2020";"Serviço do CPF 123.456.789-09";"300";"9002"',
+        '"2020";"3";"SENADOR SEM CADASTRO";"Divulgação da atividade parlamentar";"";"";"";"";"";"10";"9003"',
+    ]
+    ceaps = pasta / "senado-ceaps-2024.csv"
+    ceaps.write_bytes(CRLF.join(linhas).encode("cp1252") + CRLF.encode())
+    saida[contract.url("ceaps", 2024)] = ceaps
     return saida

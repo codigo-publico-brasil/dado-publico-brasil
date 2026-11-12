@@ -74,3 +74,9 @@ sources:
         description: Votos dos deputados no dispositivo (nome, partido, UF e voto, sem código do parlamentar).
       - name: vetos_votos__senado_voto
         description: Votos dos senadores no dispositivo (nome, partido, UF e voto, sem código do parlamentar).
+      - name: ceaps
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
+        description: >
+          Cota para o exercício da atividade parlamentar dos senadores (CEAPS): uma linha por despesa reembolsada, um CSV
+          por ano (foto completa do ano, substituída a cada captura). Só o nome do senador, sem código. O CPF de
+          fornecedor pessoa física vem como a fonte publica (raw privado) e é mascarado no staging.

@@ -314,3 +314,42 @@ models:
       - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
       - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+
+  - name: stg_camara__cota_parlamentar
+    description: Despesas da cota parlamentar (CEAP) como a Câmara publica, uma linha por despesa e parcela; CPF de fornecedor pessoa física mascarado. A fonte não tem chave única (o mesmo documento repete), então a linha se identifica pelo conteúdo.
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros}
+    columns:
+      - {name: hash_linha, description: "Impressão digital do conteúdo da linha na fonte (chave, porque a fonte não tem identificador único).", tests: [unique, not_null]}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara (ideCadastro); vazio nas linhas de liderança e partido, que a fonte publica sem deputado."}
+      - {name: deputado_nome, description: "Nome parlamentar como a fonte informa, com caixa padronizada (nas linhas de liderança, o rótulo da fonte)."}
+      - {name: uf_sigla, description: "UF de representação, como a fonte informa (NA nas lideranças)."}
+      - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
+      - {name: id_legislatura, description: "Número da legislatura da despesa, como a fonte informa."}
+      - {name: cd_subcota, description: "Código da subcota (tipo de despesa) na Câmara."}
+      - {name: subcota_descricao, description: "Descrição da subcota, com caixa padronizada."}
+      - {name: cd_especificacao, description: "Código da especificação da subcota na Câmara."}
+      - {name: especificacao_descricao, description: "Descrição da especificação da subcota; vazia quando a fonte não informa."}
+      - {name: fornecedor_nome, description: "Nome do fornecedor como a fonte informa (pessoa física inclusive)."}
+      - {name: fornecedor_documento, description: "CNPJ do fornecedor como a fonte informa; CPF de pessoa física mascarado (***.nnn.nnn-**); o original fica no landing."}
+      - {name: fl_fornecedor_pessoa_fisica, description: "Verdadeiro quando o documento do fornecedor tem 11 dígitos (CPF); falso quando tem outro tamanho."}
+      - {name: numero_documento, description: "Número do documento fiscal, como a fonte informa."}
+      - {name: cd_tipo_documento, description: "Código do tipo de documento, como a Câmara informa."}
+      - {name: dt_emissao, description: "Data de emissão do documento; vazia quando a fonte não informa."}
+      - {name: valor_documento, description: "Valor do documento em reais, como a fonte informa (negativo em estorno)."}
+      - {name: valor_glosa, description: "Valor glosado (não reembolsado) em reais."}
+      - {name: valor_liquido, description: "Valor líquido em reais, como a fonte informa."}
+      - {name: mes, description: "Mês de competência da despesa."}
+      - {name: ano, description: "Ano de competência da despesa."}
+      - {name: numero_parcela, description: "Número da parcela, como a fonte informa (0 sem parcelamento)."}
+      - {name: trecho, description: "Trecho da viagem, nas passagens aéreas."}
+      - {name: id_lote, description: "Número do lote de pagamento."}
+      - {name: id_ressarcimento, description: "Número do ressarcimento, quando houve."}
+      - {name: dt_pagamento_restituicao, description: "Data de pagamento da restituição, quando houve."}
+      - {name: valor_restituicao, description: "Valor restituído em reais, quando houve."}
+      - {name: id_documento, description: "Identificador do documento na Câmara; pode repetir em linhas diferentes da fonte."}
+      - {name: url_documento, description: "Endereço oficial do documento fiscal na Câmara, quando a fonte informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data.", tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}]}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
