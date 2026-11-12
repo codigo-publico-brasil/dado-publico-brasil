@@ -19,7 +19,6 @@ EXTRA = {"legislature", "ainda não publicado"}
 EXCECOES = {
     "ingestion/fetch.py": "docstring cita fonte como exemplo (PR 2)",
     "orchestration/__main__.py": "docstring cita fonte como exemplo (PR 2)",
-    "transformation/identity.py": "B: fontes de identidade fixas no código (PR 4)",
 }
 
 

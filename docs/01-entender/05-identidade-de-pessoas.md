@@ -58,10 +58,14 @@ Câmara, Senado e TSE entram na identidade: a ligação por identificador oficia
 
 Além do parlamentar da Câmara e do Senado, **todo candidato eleito pelo menos uma vez** ganha pessoa, a partir da primeira execução depois da eleição (inclui vereador). As outras candidaturas dele (as que perdeu, antes ou depois) entram na mesma pessoa; quem nunca foi eleito não tem pessoa.
 
-- **A âncora é a candidatura** (`id_candidatura`, estável), na ponte com o tipo `candidatura_de_eleito`. O `id_pessoa_tse` agrupa as candidaturas, mas o rótulo dele muda quando entra uma candidatura com outro nome; por isso ele nunca é o identificador.
-- **Se um grupo toca duas pessoas, elas se fundem.** A pessoa da Câmara ou do Senado sobrevive sempre (a chave dela já foi publicada). **Duas pessoas oficiais nunca se fundem por aqui**: o caso aparece no teste `pessoas_de_grupo_do_tse_com_mais_de_uma_pessoa` e entra em `vinculos_aprovados` se uma pessoa confirmar.
+- **A âncora é a candidatura** (`id_candidatura`, estável), na ponte com o tipo `candidatura_de_eleito`. O modelo [`int_pessoas_grupos`](../../dbt/models/intermediate/int_pessoas_grupos.sql) entrega os grupos ao código sem que ele saiba de que fonte vêm (ADR 0053). O `id_pessoa_tse` agrupa as candidaturas, mas o rótulo dele muda quando entra uma candidatura com outro nome; por isso ele nunca é o identificador.
+- **Se um grupo toca duas pessoas, elas se fundem.** A pessoa da Câmara ou do Senado sobrevive sempre (a chave dela já foi publicada). **Duas pessoas oficiais nunca se fundem por aqui**: o caso aparece no teste `pessoas_de_grupo_com_mais_de_uma_pessoa` e entra em `vinculos_aprovados` se uma pessoa confirmar.
 - Os atributos (nome, nascimento, gênero) ficam em `dim_pessoas`, cada um com a fonte de onde veio.
 - Os riscos e o teste de cada um estão na [issue 130](https://github.com/codigo-publico-brasil/dado-publico-brasil/issues/130).
+
+### Papel de cada fonte: a seed `fontes_identidade` ([ADR 0053](../05-decisoes/0053-nucleo-sem-nomes-de-fonte.md))
+
+O código de identidade não nomeia fonte. Quem decide **quem sobrevive** numa fusão e **quais vínculos são recalculados** a cada execução é a seed [`fontes_identidade`](../../dbt/seeds/intermediate/fontes_identidade.csv), uma linha por fonte: `precedencia` (menor vence; a menor da tabela é o cadastro oficial, que nunca se funde com outro cadastro oficial) e `fl_vinculo_derivado` (verdadeiro: a ligação é recalculada e some se a regra deixa de propô-la). Fonte nova que entre na identidade ganha uma linha ali; se tiver grupos, um produtor no modelo `int_pessoas_grupos`. A seed é a casa da regra porque ela é uma relação **entre** fontes, e o dbt e o Python a leem do mesmo lugar.
 
 ## Mandato: o que é oficial e o que é observado
 
