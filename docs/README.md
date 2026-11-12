@@ -6,7 +6,7 @@ Para quem chega ao projeto: onde cada coisa mora em `docs/` e em que ordem ler. 
 | --- | --- | --- |
 | [`01-entender/`](01-entender/) | **Explicação:** o que o projeto é, como é construído e por quê | primeiro, na ordem dos números |
 | [`02-fazer/`](02-fazer/) | **Como fazer:** passo a passo para rodar, operar, auditar e acrescentar fonte | quando for pôr a mão na massa |
-| [`03-consultar/`](03-consultar/) | **Referência:** catálogo de tabelas, convenção de nomes, fontes, lacunas, dados pessoais e LGPD | quando precisar de um fato exato |
+| [`03-consultar/`](03-consultar/) | **Referência:** catálogo de tabelas, convenção de nomes, fontes, cobertura e lacunas (gerado), dados pessoais e LGPD | quando precisar de um fato exato |
 | [`04-dominio/`](04-dominio/) | Material didático sobre as instituições (Câmara, Senado, TSE...) e as regras por trás dos campos | para entender os dados |
 | [`05-decisoes/`](05-decisoes/) | ADRs: decisões de arquitetura, uma por arquivo (`0001`...); o [`README`](05-decisoes/README.md) diz quais valem hoje | para saber por que algo é assim |
 | [`99-historico/`](99-historico/) | Planos e propostas antigos, guardados só como registro | normalmente, nunca |
@@ -24,5 +24,5 @@ Para quem chega ao projeto: onde cada coisa mora em `docs/` e em que ordem ler. 
 2. **Todo documento começa dizendo para quem é e o que responde.**
 3. **Uma decisão aceita não é editada:** vira um ADR novo que a substitui.
 4. **Itens e pendências ficam em issues** do repositório, não em arquivos `.md`.
-5. **O catálogo ([`03-consultar/01-catalogo.md`](03-consultar/01-catalogo.md)) é gerado** (`uv run dado-publico catalog`); um teste falha se estiver desatualizado.
+5. **O catálogo ([`03-consultar/01-catalogo.md`](03-consultar/01-catalogo.md)) é gerado** (`uv run dado-publico catalog`); um teste falha se estiver desatualizado. O mesmo vale para [cobertura e lacunas](03-consultar/04-cobertura-e-lacunas.md) (`uv run dado-publico gaps`, a partir do warehouse).
 6. **Quem muda comportamento atualiza o documento no mesmo PR.**

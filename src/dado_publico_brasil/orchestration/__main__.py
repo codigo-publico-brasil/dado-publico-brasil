@@ -10,6 +10,7 @@ A pasta de armazenamento e o warehouse vêm de DADO_PUBLICO_STORAGE_ROOT e DADO_
 
 Reparo sem baixar nada: recheck (refaz a checagem de cabeçalho dos arquivos do landing).
 Etapas separadas: extract, load [--rebuild], transform, identity, catalog, docs, query --sql "SELECT ...".
+Documento de cobertura e lacunas, gerado do warehouse: gaps (docs/03-consultar/04-cobertura-e-lacunas.md).
 Lake público: export grava Parquet, manifesto e catálogo no R2 (DADO_PUBLICO_R2_*) ou em <storage_root>/lake;
 export --verificar confere cada arquivo do manifesto e das coleções arq_ (ADR 0037).
 Publicação: export grava o lake em Parquet (ADR 0035); publish-docs sobe as páginas.
@@ -33,7 +34,16 @@ from dado_publico_brasil.core import settings as settings_module
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.ingestion import contract, foreach, landing, loader
 from dado_publico_brasil.orchestration import pipeline
-from dado_publico_brasil.transformation import build, catalog, dbt, export, lake, observability, snapshot
+from dado_publico_brasil.transformation import (
+    build,
+    catalog,
+    cobertura,
+    dbt,
+    export,
+    lake,
+    observability,
+    snapshot,
+)
 from dado_publico_brasil.transformation import verify as lake_verify
 
 COMMANDS = (
@@ -46,6 +56,7 @@ COMMANDS = (
     "export",
     "publish-docs",
     "catalog",
+    "gaps",
     "docs",
     "query",
     "verify",
@@ -164,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--fixar", metavar="AAAA-MM", help="export: fixa a versão (com --doi): mantém os Parquet")
     p.add_argument("--doi", help="export --fixar: o DOI depositado da versão")
-    p.add_argument("--output", type=Path, help="arquivo de saída do comando catalog")
+    p.add_argument("--output", type=Path, help="arquivo de saída dos comandos catalog e gaps")
     p.add_argument("--port", type=int, default=8080, help="porta do comando docs")
     p.add_argument("--storage-root", type=Path, help="pasta de armazenamento (padrão: settings.yml)")
     p.add_argument("--warehouse", help="arquivo do warehouse (padrão: settings.yml)")
@@ -189,6 +200,14 @@ def main(argv: list[str] | None = None) -> int:
             output = args.output or Path("docs/03-consultar/01-catalogo.md")
             output.write_text(catalog.markdown(settings), encoding="utf-8")
             print(f"Catálogo escrito em {output}")
+        case "gaps":
+            output = args.output or Path("docs/03-consultar/04-cobertura-e-lacunas.md")
+            con = warehouse.connect(settings, read_only=True)
+            try:
+                output.write_text(cobertura.markdown(con) + "\n", encoding="utf-8")
+            finally:
+                con.close()
+            print(f"Cobertura e lacunas escritas em {output}")
         case "docs":
             return dbt.serve_docs(settings, args.port)
         case "run":

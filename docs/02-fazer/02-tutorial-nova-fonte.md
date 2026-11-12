@@ -53,7 +53,7 @@ uv run dado-publico export      # grava o lake em Parquet (no R2, se houver segr
 
 ## 8. Testes do repositório, documentação e PR
 
-Os testes seguem o modelo de `tests/ingestion/` e `tests/orchestration/` (fonte sintética em `tests/support/`). Documente a fonte em [`../03-consultar/03-fontes-de-dados.md`](../03-consultar/03-fontes-de-dados.md) e as lacunas em [`04-cobertura-e-lacunas.md`](../03-consultar/04-cobertura-e-lacunas.md). Rode os checks de [`../01-entender/04-ferramentas.md`](../01-entender/04-ferramentas.md) e abra o PR com a seção "autoria da IA".
+Os testes seguem o modelo de `tests/ingestion/` e `tests/orchestration/` (fonte sintética em `tests/support/`). Documente a fonte em [`../03-consultar/03-fontes-de-dados.md`](../03-consultar/03-fontes-de-dados.md) e as lacunas em [`07-o-que-cada-fonte-entrega.md`](../03-consultar/07-o-que-cada-fonte-entrega.md) (e as medidas geradas em [`04-cobertura-e-lacunas.md`](../03-consultar/04-cobertura-e-lacunas.md)). Rode os checks de [`../01-entender/04-ferramentas.md`](../01-entender/04-ferramentas.md) e abra o PR com a seção "autoria da IA".
 
 ## Onde mudar cada coisa
 

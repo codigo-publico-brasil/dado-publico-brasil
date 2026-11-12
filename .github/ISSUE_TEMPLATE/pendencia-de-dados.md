@@ -8,7 +8,7 @@ labels: ""
 Uma frase: qual dado, de qual fonte.
 
 ## Situação hoje
-O que já está carregado (com números) e onde ver (`dado-publico coverage`, `docs/03-consultar/04-cobertura-e-lacunas.md`).
+O que já está carregado (com números) e onde ver (`dado-publico coverage`, `docs/03-consultar/04-cobertura-e-lacunas.md` e `07-o-que-cada-fonte-entrega.md`).
 
 ## Por que importa
 Que pergunta o dado responde.
