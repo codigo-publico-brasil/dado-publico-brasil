@@ -192,6 +192,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `int_ementas_siglas_extraidas` | Siglas escritas em maiúsculas dentro de ementas de caixa mista. | publico-agente-publico |  |
 | `int_frentes_membros_ligados` | Participação em frentes ligada à pessoa do projeto. | publico-agente-publico |  |
 | `int_orgaos_membros_ligados` | Participação em órgãos ligada à pessoa do projeto. | publico-agente-publico |  |
+| `int_pessoas_grupos` | Os registros que uma fonte diz serem a mesma pessoa, agrupados (hoje: as candidaturas do TSE de quem foi eleito pelo menos uma vez, agrupadas por pessoa entre as eleições). Entrada da identidade (ADR 0031 e 0053): é daqui que nascem as pessoas de todo eleito. O grupo não é estável; a identidade usa o registro, que é. | publico-agente-publico |  |
 | `int_pessoas_ids_vistos` | Todo identificador de pessoa informado pelas fontes. Entrada do código de identidade. | publico-agente-publico |  |
 | `int_pessoas_profissoes_agregadas` | Uma linha por pessoa, com as profissões declaradas. | publico-agente-publico |  |
 | `int_pessoas_senado_unidas` | Pessoa do projeto unida ao cadastro do Senado. | publico-agente-publico |  |
@@ -201,7 +202,6 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `int_senado_materias_unicas` | Uma linha por matéria votada no Senado, com os dados da votação mais recente. | publico-agente-publico |  |
 | `int_senadores_unidos` | Todo senador informado pelo Senado (cadastro mais votos). | publico-agente-publico |  |
 | `int_tse_eleitos` | Quem foi eleito, com a base: informado (o TSE diz Eleito) ou derivado (disputa de uma vaga de eleição passada em que o TSE não informa o vencedor; vale o mais votado do último turno, art. 77, 28 e 29 da Constituição). Entrada da identidade e dos mandatos. | publico-agente-publico |  |
-| `int_tse_eleitos_grupos` | As candidaturas do TSE de quem foi eleito pelo menos uma vez, agrupadas por pessoa entre as eleições. Entrada da identidade (ADR 0031): é daqui que nascem as pessoas de todo eleito. O grupo não é estável; a identidade usa a candidatura, que é. | publico-agente-publico |  |
 | `int_tse_pessoas` | Identificador da mesma pessoa entre as eleições do TSE, por nome civil ou nome de urna com a mesma data de nascimento (cada chave única em cada eleição e sem datas de 1º de janeiro); a ligação se propaga entre candidaturas que partilham uma chave. Uma linha por candidatura ligável. | publico-agente-publico |  |
 | `int_vinculos_propostos` | Vínculos propostos entre fontes pela regra de nome civil e nascimento iguais e únicos: Câmara com Senado (mesma pessoa) e candidatura do TSE com a pessoa. Entrada da identidade. | publico-agente-publico |  |
 | `int_votacoes_proposicoes_unidas` | Proposições de cada votação, com o papel (afetada ou objeto). | publico-agente-publico |  |
