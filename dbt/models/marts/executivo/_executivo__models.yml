@@ -1,0 +1,26 @@
+version: 2
+
+# Executivo federal: quem ocupou os cargos de topo e quando (issue 19). Os marts são o contrato com a aplicação.
+
+models:
+  - name: fct_executivo_ocupacoes
+    description: >
+      Quem exerceu Presidente, Vice-Presidente e Ministro de Estado, e quando, como a CGU publica no cadastro de Pessoas
+      Expostas Politicamente. A fonte guarda só os últimos cinco anos (o exercício mais antigo observado começa em 2019,
+      com uma exceção de 2005 que a própria fonte traz): não há histórico anterior. Uma linha por pessoa, função, órgão e
+      início de exercício; vale a captura mais recente. Sem CPF nem nascimento na fonte, a pessoa não é ligada a
+      dim_pessoas (a ligação por nome seria um palpite); o presidente e o vice eleitos, com pessoa, estão em
+      fct_cargos_ocupacoes. Quem filtra a data usa dt_inicio e dt_fim (vazio enquanto a fonte não informa o fim).
+    meta: {sensitivity: publico-agente-publico, grain: "pessoa, função, órgão e início de exercício", owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    columns:
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (pep)."}
+      - {name: id_ocupacao_executivo, data_type: varchar, tests: [unique, not_null], description: "Chave do projeto: hash do nome, da função, do órgão e do início do exercício, como a fonte publica."}
+      - {name: nome, data_type: varchar, description: "Nome da pessoa como a fonte publica (cortado em 60 caracteres pela fonte), com caixa padronizada."}
+      - {name: funcao, data_type: varchar, tests: [not_null, {accepted_values: {arguments: {values: [PRESIDENTE DA REPUBLICA, VICE-PRESIDENTE DA REPUBLICA, MINISTRO DE ESTADO]}}}], description: "Função, como a fonte informa: PRESIDENTE DA REPUBLICA, VICE-PRESIDENTE DA REPUBLICA ou MINISTRO DE ESTADO."}
+      - {name: orgao, data_type: varchar, tests: [not_null], description: "Órgão, como a fonte informa (abreviado e com o nome da época: o ministério pode ter mudado de nome)."}
+      - {name: dt_inicio, data_type: date, tests: [{not_null: {config: {severity: warn}}}], description: "Início do exercício; vazio se a fonte não informa (o teste de aviso mede)."}
+      - {name: dt_fim, data_type: date, description: "Fim do exercício; vazio quando a fonte diz 'Não informada' (em geral, quem ainda exerce a função)."}
+      - {name: dt_fim_carencia, data_type: date, description: "Data em que termina a carência como PEP, como a fonte informa; vazia quando a fonte não informa."}
+      - {name: url_fonte, data_type: varchar, description: "Endereço oficial do arquivo de origem."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}

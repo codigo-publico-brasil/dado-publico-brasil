@@ -39,6 +39,12 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | --- | --- | --- | --- |
 | `municipios` | Municípios do Brasil, uma linha por município, com a hierarquia regional imediata e intermediária. | publico |  |
 
+## raw_federal_pep
+
+| Tabela | O que é | Sensibilidade | Grain |
+| --- | --- | --- | --- |
+| `dirigentes` | Presidente, Vice-Presidente e Ministro de Estado, uma linha por pessoa, função, órgão e início de exercício. Fonte: saida/pep/AAAAMM_PEP.zip. | publico-agente-publico |  |
+
 ## raw_federal_senado
 
 | Tabela | O que é | Sensibilidade | Grain |
@@ -151,6 +157,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_identity__pessoas_fusoes` | Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa, uma linha por chave absorvida. | publico-agente-publico |  |
 | `stg_identity__pessoas_identificadores` | Identificadores de cada pessoa em cada fonte. | publico-agente-publico |  |
 | `stg_metadata__capturas` | Capturas dos arquivos da fonte (um arquivo, uma linha). `id_captura` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
+| `stg_pep__dirigentes` | Presidente, Vice-Presidente e Ministro de Estado, uma linha por pessoa, função, órgão e início de exercício, em cada mês capturado (a mesma linha se repete nos meses). Sem CPF. | publico-agente-publico | mês capturado, pessoa, função, órgão e início de exercício |
 | `stg_senado__exercicios` | Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento. | publico-agente-publico |  |
 | `stg_senado__normas` | Catálogo das normas federais, uma linha por norma, só metadados, com a ementa padronizada e a original. | publico-agente-publico |  |
 | `stg_senado__normas_publicacoes` | Publicações de cada norma detalhada (e da Constituição) no Diário Oficial, uma linha por norma e publicação. | publico-agente-publico |  |
@@ -243,6 +250,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fct_emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
 | `fct_emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês. | publico-dados-pessoais-de-terceiros | emenda |
 | `fct_eventos` | A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto livre). O tipo vem do catálogo fechado dim_evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data, retorno de afastamento) ainda não têm linha: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fct_eventos. | publico-agente-publico | evento da pessoa |
+| `fct_executivo_ocupacoes` | Quem exerceu Presidente, Vice-Presidente e Ministro de Estado, e quando, como a CGU publica no cadastro de Pessoas Expostas Politicamente. A fonte guarda só os últimos cinco anos (o exercício mais antigo observado começa em 2019, com uma exceção de 2005 que a própria fonte traz): não há histórico anterior. Uma linha por pessoa, função, órgão e início de exercício; vale a captura mais recente. Sem CPF nem nascimento na fonte, a pessoa não é ligada a dim_pessoas (a ligação por nome seria um palpite); o presidente e o vice eleitos, com pessoa, estão em fct_cargos_ocupacoes. Quem filtra a data usa dt_inicio e dt_fim (vazio enquanto a fonte não informa o fim). | publico-agente-publico | pessoa, função, órgão e início de exercício |
 | `fct_exercicios` | Cada período em que alguém exerceu de fato um mandato federal, como a fonte oficial publica: deputados federais (Câmara, a partir do histórico de entradas e saídas) e senadores, titulares e suplentes (Senado). Os campos da fonte não são derivados; as colunas que ligam o período ao resto (id_candidatura, id_partido) são derivadas e marcadas (base_partido). Quem foi eleito e nunca assumiu não tem linha; vereador, prefeito, governador e presidente não entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos; a ocupação dos dois juntos, em fct_cargos_ocupacoes). O nome do modelo leva o prefixo fatos_ só porque pode haver colisão futura com marts; a tabela é fct_exercicios. | publico-agente-publico | período de exercício |
 | `fct_licitacoes` | Licitações do governo federal (SIASG), de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora, modalidade e número da licitação; se a fonte repete a licitação em mais de um mês, vale a captura mais recente. | publico-agente-publico | licitação (unidade gestora |
 | `fct_licitacoes_itens` | Itens das licitações do governo federal, com o vencedor, uma linha por item e vencedor como a fonte publica (a fonte repete linhas idênticas e deixa o código do item vazio em parte delas; o teste de lacunas as mede). Vencedor pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. | publico-dados-pessoais-de-terceiros | item e vencedor |
@@ -849,6 +857,22 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas); vazia quando o evento vem de outra tabela do projeto. |  |
 | `fonte` | varchar | Fonte oficial do fato de origem (tse, camara ou senado), pela captura; no nascimento e no falecimento, a fonte do cadastro que informa a data. O teste de aviso mede o que ficar sem. |  |
 | `dt_captura` | date | Data da captura do arquivo de origem do fato; vazia quando o evento não tem id_captura. |  |
+
+### marts.fct_executivo_ocupacoes
+
+| Coluna | Tipo | Descrição | Dado pessoal |
+| --- | --- | --- | --- |
+| `fonte` | varchar | Fonte oficial do registro (pep). |  |
+| `id_ocupacao_executivo` | varchar | Chave do projeto: hash do nome, da função, do órgão e do início do exercício, como a fonte publica. |  |
+| `nome` | varchar | Nome da pessoa como a fonte publica (cortado em 60 caracteres pela fonte), com caixa padronizada. |  |
+| `funcao` | varchar | Função, como a fonte informa: PRESIDENTE DA REPUBLICA, VICE-PRESIDENTE DA REPUBLICA ou MINISTRO DE ESTADO. |  |
+| `orgao` | varchar | Órgão, como a fonte informa (abreviado e com o nome da época: o ministério pode ter mudado de nome). |  |
+| `dt_inicio` | date | Início do exercício; vazio se a fonte não informa (o teste de aviso mede). |  |
+| `dt_fim` | date | Fim do exercício; vazio quando a fonte diz 'Não informada' (em geral, quem ainda exerce a função). |  |
+| `dt_fim_carencia` | date | Data em que termina a carência como PEP, como a fonte informa; vazia quando a fonte não informa. |  |
+| `url_fonte` | varchar | Endereço oficial do arquivo de origem. |  |
+| `id_captura` | bigint | Captura do arquivo de origem (URL, data e hash em metadata.capturas). |  |
+| `dt_captura` | date | Data da captura do arquivo de origem. |  |
 
 ### marts.fct_exercicios
 
