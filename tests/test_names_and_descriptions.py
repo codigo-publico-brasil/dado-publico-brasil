@@ -171,3 +171,25 @@ def test_source_measurement_tables_measure_the_source_not_a_person(full: tuple[C
         if bad
     ]
     assert wrong == [], f"tabela de fontes fora do ADR 0054: {wrong}"
+
+
+EVALUATION = {"rank", "ranking", "score", "pontuacao", "indice", "posicao", "nota"}
+
+
+def test_no_table_or_column_names_an_evaluation(full: tuple[Connection, object]) -> None:
+    """ADR 0054, item 5: nota, ranking e índice não entram no lake. Compara por parte do nome (`id_proposicao`
+    passa); `nota` só vale em coluna de texto (a nota de uma norma). Staging espelha o nome da fonte: fica de fora."""
+    found = columns(full[0], ("intermediate", "marts", "identity", "metadata"))
+    wrong = [
+        f"{c['schema_name']}.{c['table_name']}.{c['column_name']}"
+        for c in found
+        if (set(c["column_name"].split("_")) & EVALUATION)
+        - ({"nota"} if c["data_type"] == "VARCHAR" else set())
+    ] + sorted(
+        {
+            f"{c['schema_name']}.{c['table_name']}"
+            for c in found
+            if set(re.sub(r"^int_", "", c["table_name"]).split("_")) & EVALUATION
+        }
+    )
+    assert wrong == [], f"nome de avaliação no lake (ADR 0054; veja {CONVENTION}): {wrong}"

@@ -91,7 +91,7 @@ def test_a_403_on_the_latest_closed_month_is_not_yet_published_and_does_not_stop
     assert not [d for d in status if "bloqueio" in d]
     assert con.execute(
         "SELECT count(*) FROM metadata.fontes_verificacoes "
-        "WHERE verificacao = 'availability' AND detalhe LIKE 'ainda não publicado%'"
+        "WHERE verificacao = 'availability' AND tipo_ocorrencia = 'nao_publicado' AND cd_status_http = 403"
     ).fetchone() == (1,)
 
 

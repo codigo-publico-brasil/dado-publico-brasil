@@ -1,7 +1,7 @@
 """Normas, vetos e Constituição: catálogo, relações, dispositivos vetados, votos sem ligação a pessoas e o texto classificado."""
 
 from dado_publico_brasil.core.settings import Settings
-from dado_publico_brasil.core.warehouse import Connection, columns, rows, scalar
+from dado_publico_brasil.core.warehouse import Connection, rows, scalar
 
 Env = tuple[Connection, Settings]
 
@@ -83,7 +83,7 @@ def test_vetoed_provisions_keep_the_text_the_reason_and_the_decision_as_the_sour
         "FROM marts.fct_vetos_dispositivos ORDER BY id_dispositivo"
     ).fetchall()
     assert [(f[0], f[1], f[4], f[5], f[6], str(f[7])) for f in found] == [
-        (9001, 7001, "Rejeitado", True, "Painel", "2024-09-10"),
+        (9001, 7001, "Rejeitado", True, "Painel", "2023-09-10"),
         (9002, 7001, "Não Apreciado", False, None, "None"),
         (None, 7001, "Mantido", False, None, "None"),  # veto total: sem código de dispositivo na fonte
     ]
@@ -93,19 +93,29 @@ def test_vetoed_provisions_keep_the_text_the_reason_and_the_decision_as_the_sour
     )
 
 
-def test_veto_votes_come_with_name_party_and_state_and_are_not_linked_to_people(full: Env) -> None:
+def test_veto_votes_link_only_the_one_person_in_office_that_day_and_state(full: Env) -> None:
     con, _ = full
     found = con.execute(
-        "SELECT casa, nome_parlamentar, partido, uf, voto FROM marts.fct_vetos_votos ORDER BY casa, nome_parlamentar"
+        "SELECT casa, nome_parlamentar, partido, uf, voto, id_pessoa IS NOT NULL, regra_ligacao_pessoa, "
+        "precisao_ligacao_pessoa FROM marts.fct_vetos_votos ORDER BY casa, nome_parlamentar"
     ).fetchall()
     assert found == [
-        ("Câmara", "Bia", "BBB", "RJ", "Sim"),
-        ("Câmara", "Carlos", "CCC", "MG", "Não"),
-        ("Senado", "Beto Barreiras", "AAA", "SP", "Sim"),
+        ("Câmara", "Ana Árvore", "AAA", "SP", "Não", True, "nome_parlamentar_e_exercicio", "derivada"),
+        ("Câmara", "Bia", "BBB", "RJ", "Sim", False, None, None),  # sem exercício na sessão: não liga
+        ("Câmara", "Carlos", "CCC", "MG", "Não", False, None, None),
+        ("Senado", "Beto Barreiras", "AAA", "SP", "Sim", False, None, None),
     ]
-    assert "id_pessoa" not in columns(
-        con, "marts", "votos_em_vetos"
-    )  # a fonte não traz o código do parlamentar
+
+
+def test_unlinked_veto_votes_are_measured_as_a_gap(full: Env) -> None:
+    con, _ = full
+    assert (
+        scalar(
+            con,
+            "SELECT qtd_falhas FROM metadata.testes_resultados WHERE id_no LIKE '%vetos_votos_sem_pessoa%'",
+        )
+        == 3
+    )
 
 
 def test_the_norm_a_matter_generated_points_to_the_catalog(full: Env) -> None:

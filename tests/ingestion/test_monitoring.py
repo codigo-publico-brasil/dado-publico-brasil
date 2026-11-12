@@ -36,6 +36,9 @@ def test_unavailable_source_is_recorded_and_the_plan_goes_on(
     assert result == -1
     [(status, detail)] = checks(con, "availability")
     assert status == "error" and "404" in detail
+    assert con.execute(
+        "SELECT cd_status_http, tipo_ocorrencia FROM metadata.fontes_verificacoes WHERE verificacao = 'availability'"
+    ).fetchall() == [(404, "nao_encontrado")]
 
 
 def test_missing_contract_column_is_an_error_and_a_new_column_is_a_warning(

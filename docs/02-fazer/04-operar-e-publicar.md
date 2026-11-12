@@ -62,7 +62,7 @@ A máquina não prova que o dado está certo. A cada fonte nova: comparar a cont
 
 | Resultado | Onde está hoje | Como acessar |
 | --- | --- | --- |
-| `staging`, `intermediate`, `marts` e `metadata.capturas` em Parquet, com `catalogo.duckdb` e `manifesto.json` | Lake público no R2 (`datalake.codigopublicobrasil.com.br`) | `dado-publico export` (só depois dos testes do dbt; sobe apenas o que mudou, por hash); consumo em [`06-consumir-o-lake.md`](../03-consultar/06-consumir-o-lake.md) ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)) |
+| `staging`, `intermediate`, `marts` e `metadata` (`capturas`, `fontes_verificacoes`, `testes_resultados`) em Parquet, com `catalogo.duckdb` e `manifesto.json` | Lake público no R2 (`datalake.codigopublicobrasil.com.br`) | `dado-publico export` (só depois dos testes do dbt; sobe apenas o que mudou, por hash); consumo em [`06-consumir-o-lake.md`](../03-consultar/06-consumir-o-lake.md) ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)) |
 | Cópias da identidade e `metadata` (ADR 0036) | Bucket privado do R2 (**nunca público**: sem domínio nem `r2.dev`) | `DADO_PUBLICO_R2_BUCKET_PRIVADO`, só na máquina de produção; sem a variável, tudo local |
 | Landing e `arquivos/` local | **Só no disco local** (risco aceito, ADR 0036); o que é publicável também está no lake público (`arq_`) | nenhuma cópia; veja "Restaurar numa máquina vazia" |
 | Catálogo e dicionário de colunas | Arquivo no repositório | [`03-consultar/01-catalogo.md`](../03-consultar/01-catalogo.md), gerado por `dado-publico catalog` |

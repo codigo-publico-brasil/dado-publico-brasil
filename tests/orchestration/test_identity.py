@@ -9,7 +9,7 @@ from dado_publico_brasil.transformation import build, identity
 def bridge(con: Connection) -> list[tuple[object, ...]]:
     return con.execute(
         "SELECT fonte, id_tipo, id_na_fonte, metodo FROM identity.pessoas_identificadores "
-        f"WHERE id_tipo <> '{identity.ELECTED_TYPE}' ORDER BY id_na_fonte"
+        "WHERE id_tipo <> 'candidatura_de_eleito' ORDER BY id_na_fonte"
     ).fetchall()
 
 
@@ -35,7 +35,7 @@ def test_each_deputy_gets_a_person_with_its_own_key_and_a_traceable_method(
         scalar(
             con,
             "SELECT COUNT(DISTINCT id_pessoa) FROM identity.pessoas_identificadores "
-            f"WHERE id_tipo <> '{identity.ELECTED_TYPE}'",
+            "WHERE id_tipo <> 'candidatura_de_eleito'",
         )
         == 6
     )
@@ -98,7 +98,7 @@ def test_every_elected_candidacy_has_a_person_and_those_who_never_won_have_none(
     never_elected = con.execute(
         "SELECT COUNT(*) FROM staging.stg_tse__candidaturas c WHERE nome_urna IN ('BETO', 'BETO B') "
         "AND id_candidatura IN (SELECT id_na_fonte FROM identity.pessoas_identificadores "
-        f"WHERE id_tipo = '{identity.ELECTED_TYPE}')"
+        "WHERE id_tipo = 'candidatura_de_eleito')"
     ).fetchone()
     assert never_elected == (0,)
 
@@ -113,7 +113,7 @@ def test_an_elected_deputy_keeps_the_person_the_chamber_gave_them(full: tuple[Co
     assert deputy == scalar(
         con,
         "SELECT id_pessoa FROM identity.pessoas_identificadores WHERE fonte = 'tse' "
-        f"AND id_tipo = '{identity.ELECTED_TYPE}' AND id_na_fonte = '2022:RJ:1001'",
+        "AND id_tipo = 'candidatura_de_eleito' AND id_na_fonte = '2022:RJ:1001'",
     )
     assert (
         scalar(

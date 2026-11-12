@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: pep
+    description: >
+      Pessoas Expostas Politicamente (CGU, Portal da Transparência), só o topo do Executivo federal: Presidente, Vice-Presidente
+      e Ministro de Estado (as demais linhas do arquivo são descartadas na carga, `only` de sources/executivo/federal/pep.yml;
+      o CPF, mascarado pela fonte, não é carregado). Carregado em raw_federal_pep. A fonte só mantém a foto dos últimos
+      cinco anos e o arquivo do último mês: o histórico anterior a 2019 não existe aqui. Licença pela política de dados abertos
+      (Decreto 8.777/2016); a página do conjunto não declara licença própria.
+      Fonte oficial: [https://portaldatransparencia.gov.br/download-de-dados/pep](https://portaldatransparencia.gov.br/download-de-dados/pep).
+    schema: raw_federal_pep
+    meta:
+      url: https://portaldatransparencia.gov.br/download-de-dados/pep
+      origin: Controladoria-Geral da União (Portal da Transparência)
+      sensitivity: publico-agente-publico
+      owner: fundador do projeto
+    tables:
+      - name: dirigentes
+        meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura
+        description: "Presidente, Vice-Presidente e Ministro de Estado, uma linha por pessoa, função, órgão e início de exercício. Fonte: saida/pep/AAAAMM_PEP.zip."

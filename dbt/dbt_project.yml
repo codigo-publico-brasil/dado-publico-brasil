@@ -56,6 +56,8 @@ models:
         +meta: {fonte_oficial: IBGE}
       transparencia:
         +meta: {fonte_oficial: Portal da Transparência (CGU)}
+      pep:
+        +meta: {fonte_oficial: Portal da Transparência (CGU)}
       constituicao:
         +tags: [pre_identity]
         +meta: {fonte_oficial: Câmara dos Deputados (texto da Constituição)}
