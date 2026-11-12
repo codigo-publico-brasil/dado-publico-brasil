@@ -10,8 +10,8 @@ import logging
 import mimetypes
 import re
 import shutil
-import time
 import zipfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
@@ -98,8 +98,8 @@ def where(out: Path, key: str) -> Path:
 
 def plain(path: str) -> str:
     """O caminho sem o segmento da execução (`<key>/<id>/<nome>.parquet` vira `<key>.parquet`)."""
-    path = re.sub(r"/\d{8}T\d{6}Z/ano=", "/ano=", path)
-    return re.sub(r"/\d{8}T\d{6}Z/[^/]+\.parquet$", ".parquet", path)
+    path = re.sub(r"/\d{8}T\d{6}Z(?:-\d+)?/ano=", "/ano=", path)
+    return re.sub(r"/\d{8}T\d{6}Z(?:-\d+)?/[^/]+\.parquet$", ".parquet", path)
 
 
 def votos(out: Path) -> dict[str, object]:
@@ -1485,9 +1485,33 @@ def test_the_manifest_of_the_synthetic_warehouse_is_the_one_recorded_before_spli
     assert shape(out) == GOLDEN[max_bytes]
 
 
+def freeze_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Todas as execuções caem no mesmo segundo (o id tem resolução de segundo)."""
+
+    class Fixed(datetime):
+        @classmethod
+        def now(cls, tz: object = None) -> "Fixed":
+            return cls(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
+
+    monkeypatch.setattr(export, "datetime", Fixed)
+
+
+def test_two_exports_in_the_same_second_never_share_a_path(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    freeze_clock(monkeypatch)
+    out, _ = run(con, settings)
+    old_file = where(out, "intermediate/int_x")
+    change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
+    export.export(settings)
+    assert where(out, "intermediate/int_x") != old_file  # id repetido ganha sufixo
+    assert verify.verify(settings) == []
+
+
 def test_a_failure_in_the_middle_of_the_export_keeps_the_published_catalog_and_manifest(
     monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
 ) -> None:
+    freeze_clock(monkeypatch)  # a execução que cai tem o mesmo id da publicada
     out, _ = run(con, settings)
     published = {n: (out / n).read_bytes() for n in ("catalogo.duckdb", "manifesto.json")}
     change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
@@ -1542,7 +1566,6 @@ def test_the_first_export_of_the_month_fixes_an_immutable_dated_version_with_the
     )
     old_file = where(out, VOTOS)
     change(settings, "INSERT INTO marts.fct_votos VALUES (5000, DATE '2021-01-01', 'x', 1)")
-    time.sleep(1.1)  # o id da execução tem resolução de segundo: a segunda não pode cair no mesmo caminho
     export.export(settings)
     assert {n: (folder / n).read_bytes() for n in frozen} == frozen  # a versão do mês não se reescreve
     assert where(out, VOTOS) != old_file and old_file.exists()  # e os Parquet que ela cita ficam

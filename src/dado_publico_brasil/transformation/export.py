@@ -76,6 +76,11 @@ def export(
     try:
         published = lake.read_manifest(con, root)
         old_entries = published.get("tabelas", [])
+        used = {a["arquivo"] for e in old_entries for a in e.get("arquivos", [])}
+        base_id, n = meta["id_execucao"], 1
+        while any(f"/{meta['id_execucao']}/" in f for f in used):  # nunca reusa o caminho do publicado
+            n += 1
+            meta["id_execucao"] = f"{base_id}-{n}"
         before = {(e["camada"], e["tabela"]): e for e in old_entries if not e["tabela"].startswith("arq_")}
         old_files = {e["caminho"]: e for e in old_entries if e["tabela"].startswith("arq_")}
         touched = {e.get("caminho", f"{e['camada']}/{e['tabela']}") for e in old_entries}
