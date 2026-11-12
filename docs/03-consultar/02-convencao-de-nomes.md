@@ -40,6 +40,7 @@ Regras:
 - Minúsculas, sem acento, `_` entre palavras, em português.
 - Prefixo novo só com decisão registrada em ADR.
 - Texto e número não levam prefixo (`nome`, `sigla`, `qtd_votos`).
+- **Sem nome de avaliação** ([ADR 0054](../05-decisoes/0054-fato-agregado-e-avaliacao.md)): nenhuma tabela ou coluna de `intermediate`, `marts`, `identity` ou `metadata` tem `rank`, `ranking`, `score`, `pontuacao`, `indice` ou `posicao` entre as partes do nome (`id_proposicao` passa); `nota` só em coluna de texto (a nota de uma norma). Um teste confere.
 
 ## Raw
 

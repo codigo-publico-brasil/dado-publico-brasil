@@ -1,4 +1,20 @@
-with proposicoes_da_votacao as (
+-- O órgão do Senado liga pela sigla do colegiado, só quando ela identifica um colegiado do Senado em atividade (a fonte de
+-- votações não traz o código; o colegiado extinto e a sigla repetida ficam sem id_orgao, e o teste de aviso mede).
+with colegiados_do_senado as (
+
+    select sigla, min(id_orgao) as id_orgao
+
+    from {{ ref('dim_orgaos') }}
+
+    where fonte = '{{ var("source_senado") }}' and casa = 'Senado Federal'
+
+    group by sigla
+
+    having count(*) = 1
+
+),
+
+proposicoes_da_votacao as (
 
     select
         vp.id_votacao,
@@ -19,6 +35,7 @@ camara as (
         '{{ var("source_camara") }}' as fonte,
         v.id_votacao,
         v.dt_votacao,
+        case when v.id_orgao is not null then '{{ var("source_camara") }}-' || v.id_orgao end as id_orgao,
         v.orgao_sigla,
         v.descricao,
         v.aprovada,
@@ -44,6 +61,7 @@ senado as (
         '{{ var("source_senado") }}' as fonte,
         cast(v.id_votacao as varchar) as id_votacao,
         v.dt_votacao,
+        o.id_orgao,
         v.orgao_sigla,
         v.descricao,
         case v.resultado when 'A' then 1 when 'R' then 0 end as aprovada,
@@ -56,6 +74,8 @@ senado as (
         cast(c.dt_captura as date) as dt_captura
 
     from {{ ref('stg_senado__votacoes') }} as v
+
+    left join colegiados_do_senado as o on o.sigla = v.orgao_sigla
 
     left join {{ ref('stg_metadata__capturas') }} as c on c.id_captura = v.id_captura
 

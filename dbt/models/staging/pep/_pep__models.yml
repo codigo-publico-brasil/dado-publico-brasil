@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: stg_pep__dirigentes
+    description: Presidente, Vice-Presidente e Ministro de Estado, uma linha por pessoa, função, órgão e início de exercício, em cada mês capturado (a mesma linha se repete nos meses). Sem CPF.
+    meta: {grain: "mês capturado, pessoa, função, órgão e início de exercício"}
+    columns:
+      - {name: nome, description: "Nome da pessoa como a fonte publica (a fonte corta nomes longos em 60 caracteres), com caixa padronizada.", tests: ["not_null"]}
+      - {name: cd_funcao, description: "Sigla da função, como a fonte informa (001 para Presidente, Vice-Presidente e Ministro de Estado; outros códigos para casos especiais como natureza especial)."}
+      - {name: funcao, description: "Descrição da função, como a fonte informa: PRESIDENTE DA REPUBLICA, VICE-PRESIDENTE DA REPUBLICA ou MINISTRO DE ESTADO.", tests: ["not_null"]}
+      - {name: cd_nivel_funcao, description: "Nível da função, como a fonte informa."}
+      - {name: orgao, description: "Órgão, como a fonte informa (abreviado e com o nome da época: o ministério pode ter mudado de nome).", tests: ["not_null"]}
+      - {name: dt_inicio, description: "Início do exercício; vazio se a fonte não informa.", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: dt_fim, description: "Fim do exercício; vazio quando a fonte diz 'Não informada' (em geral, quem ainda exerce a função)."}
+      - {name: dt_fim_carencia, description: "Data em que termina a carência como PEP, como a fonte informa (nos registros com fim de exercício, cinco anos depois dele); vazia quando a fonte não informa."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}

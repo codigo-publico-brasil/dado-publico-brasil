@@ -13,9 +13,10 @@ Três maneiras de montar o que baixar (o plano):
 
 import logging
 import shutil
+import urllib.error
 from collections.abc import Mapping
 from contextlib import suppress
-from datetime import date
+from datetime import date, datetime, timedelta
 from http.client import HTTPException
 from pathlib import Path
 from typing import Any
@@ -162,6 +163,10 @@ def partitions(dataset: Dataset, years: list[int] | set[int], today: date | None
     ]
     if dataset.partition == "sequence":
         return sorted({sequence_of(dataset, y) for y in valid})
+    if dataset.partition == "day":
+        start, end = _day(dataset.first_day or 0), _day(current_partition(dataset, today or runs.today()))
+        days = (_number(start + timedelta(n)) for n in range((end - start).days + 1))
+        return [v for v in days if v // 10000 in valid]
     if dataset.partition == "month":
         last = current_partition(dataset, today or runs.today())
         months = (y * 100 + m for y in valid for m in range(1, 13))
@@ -169,11 +174,21 @@ def partitions(dataset: Dataset, years: list[int] | set[int], today: date | None
     return sorted(valid)
 
 
-def current_partition(dataset: Dataset, today: date) -> int:
-    """A partição em curso: o ano, o mês (AAAAMM) ou o valor da sequência de hoje.
+def _day(value: int) -> date:
+    return datetime.strptime(str(value), "%Y%m%d").date()
 
-    Com `lag_months`, o mês em curso é o último fechado que a fonte já deveria ter publicado."""
+
+def _number(day: date) -> int:
+    return day.year * 10000 + day.month * 100 + day.day
+
+
+def current_partition(dataset: Dataset, today: date) -> int:
+    """A partição em curso: o ano, o mês (AAAAMM), o dia (AAAAMMDD) ou o valor da sequência de hoje.
+
+    Com `lag_months` (ou `lag_days`), é a última que a fonte já deveria ter publicado."""
     match dataset.partition:
+        case "day":
+            return _number(today - timedelta(dataset.lag_days))
         case "month":
             month = today.year * 100 + today.month
             for _ in range(dataset.lag_months):
@@ -251,7 +266,9 @@ def expected_partitions(dataset: Dataset, today: date) -> list[int]:
     """Todas as partições que a fonte deveria ter até hoje, de `first_year` (ou `first_month`) em diante."""
     if not dataset.yearly:
         return []
-    first = dataset.first_year or (dataset.first_month // 100 if dataset.first_month else None)
+    first = dataset.first_year or (
+        (dataset.first_month or dataset.first_day or 0) // (10000 if dataset.first_day else 100) or None
+    )
     if first is None:
         return []
     return partitions(dataset, set(range(first, today.year + 1)), today)
@@ -281,7 +298,8 @@ def partition_gaps(
         }
         latest = rows(
             con,
-            "SELECT particao, resultado, detalhe FROM metadata.fontes_verificacoes WHERE fonte = ? AND "
+            "SELECT particao, resultado, tipo_ocorrencia FROM metadata.fontes_verificacoes WHERE fonte = ? "
+            "AND "
             "dataset = ? "
             "AND verificacao = 'availability' AND particao IS NOT NULL "
             "QUALIFY ROW_NUMBER() OVER (PARTITION BY particao ORDER BY id_verificacao DESC) = 1",
@@ -290,13 +308,16 @@ def partition_gaps(
         unavailable = {
             int(r["particao"])
             for r in latest
-            if r["resultado"] == "error"
-            and ("404" in str(r["detalhe"]) or "ainda não publicado" in str(r["detalhe"]))
+            if r["resultado"] == "error" and r["tipo_ocorrencia"] in ("nao_encontrado", "nao_publicado")
         } - got
-        if (
-            d.partition == "month"
-        ):  # o mês anterior ainda é pedido: um 404 no fim do mês não o torna indisponível
-            unavailable.discard(previous_month(current_partition(d, today)))
+        current = current_partition(d, today)  # o anterior ainda é pedido: um 404 na virada não o descarta
+        if d.partition == "month":
+            unavailable.discard(previous_month(current))
+        elif d.partition == "day":
+            unavailable -= {
+                current,
+                _number(_day(current) - timedelta(1)),
+            }  # o dia mais recente é o `nao_publicado`
         missing = [p for p in expected if p not in got and p not in unavailable and not d.on_demand]
         result[d.name] = {
             "esperadas": len(expected),
@@ -313,15 +334,18 @@ def plan_recovery(
 ) -> list[Item]:
     """As partições passadas ainda não capturadas, as mais recentes primeiro, até `limit` por dataset.
 
-    Só para fontes com `schedule`. A partição em curso fica com `plan_incremental` (o zip do mês corrente do
-    DOU muda todo dia e não entra aqui)."""
+    Só para fontes com `schedule`. A partição em curso fica com `plan_incremental`
+    (o pacote do mês corrente muda todo dia e não entra aqui)."""
     today = today or runs.today()
     if contract.schedule is None:
         return []
     items: list[Item] = []
     for name, gap in partition_gaps(con, contract, today).items():
         current = current_partition(contract.datasets[name], today)
-        items += [(name, p) for p in sorted(gap["faltam"], reverse=True) if p != current][:limit]
+        late = [p for p in sorted(gap["faltam"], reverse=True) if p != current]
+        # a janela do dataset diário é o `first_day` do YAML; nos demais, `limit` poupa a fonte
+        keep = late if contract.datasets[name].partition == "day" else late[:limit]
+        items += [(name, p) for p in keep]
     return items
 
 
@@ -342,12 +366,19 @@ def record_gaps(con: Connection, contract: SourceContract) -> None:
 
 
 def _not_yet_published(dataset: Dataset, year: int | None, error: fetch.SourceBlocked) -> bool:
-    """403 no arquivo do mês mais recente de um dataset mensal: ainda não publicado (não é bloqueio)."""
+    """403 no arquivo do mês mais recente de um dataset mensal: mês em curso sem arquivo (não é bloqueio)."""
     return (
         error.status == 403
         and dataset.partition == "month"
         and year is not None
         and year >= current_partition(dataset, runs.today())
+    )
+
+
+def _latest_day(dataset: Dataset, value: int | None) -> bool:
+    """O dia mais recente de um dataset diário: sem arquivo ainda não é falta."""
+    return (
+        dataset.partition == "day" and value is not None and value >= current_partition(dataset, runs.today())
     )
 
 
@@ -412,11 +443,33 @@ def extract(
             if not _not_yet_published(contract.datasets[dataset], year, error):
                 raise
             monitoring.record(
-                con, contract.source, dataset, year, "availability", "error", f"ainda não publicado ({error})"
+                con,
+                contract.source,
+                dataset,
+                year,
+                "availability",
+                "error",
+                f"mês em curso sem arquivo publicado ({error})",
+                cd_status_http=error.status,
+                tipo="nao_publicado",
             )
             return -1
         except (OSError, HTTPException) as error:
-            monitoring.record(con, contract.source, dataset, year, "availability", "error", str(error))
+            code = error.code if isinstance(error, urllib.error.HTTPError) else None
+            kind = "nao_encontrado" if code == 404 else "erro_http" if code else "falha_de_rede"
+            if kind == "nao_encontrado" and _latest_day(contract.datasets[dataset], year):
+                kind = "nao_publicado"  # o dia mais recente pode ainda não ter saído
+            monitoring.record(
+                con,
+                contract.source,
+                dataset,
+                year,
+                "availability",
+                "error",
+                str(error),
+                cd_status_http=code,
+                tipo=kind,
+            )
             return -1
         if previous is not None and previous["sha256"] == digest:  # mesmo conteúdo: fica o arquivo antigo
             if not reused:  # o arquivo de outro dataset não se move nem se apaga
@@ -424,7 +477,9 @@ def extract(
             mark_checked(con, int(previous["id_captura"]))
             run.rows_in = 1
             return int(previous["id_captura"])
-        monitoring.record(con, contract.source, dataset, year, "availability", "ok", f"{size} bytes")
+        monitoring.record(
+            con, contract.source, dataset, year, "availability", "ok", f"{size} bytes", bytes_recebidos=size
+        )
         if not monitoring.check_integrity(
             con,
             contract.source,
@@ -478,7 +533,17 @@ def extract_plan(
             )[0]:
                 monitoring.record(con, contract.source, dataset, year, "bloqueio", "ok")
         except fetch.SourceBlocked as error:  # sem retry: o próximo agendamento tenta de novo
-            monitoring.record(con, contract.source, dataset, year, "bloqueio", "error", str(error))
+            monitoring.record(
+                con,
+                contract.source,
+                dataset,
+                year,
+                "bloqueio",
+                "error",
+                str(error),
+                cd_status_http=error.status,
+                tipo="bloqueio",
+            )
             logger.warning(
                 "Fonte %s bloqueou (%s); o resto da fonte fica para a próxima execução",
                 contract.source,

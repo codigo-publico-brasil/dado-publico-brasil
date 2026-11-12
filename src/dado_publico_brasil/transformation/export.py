@@ -35,7 +35,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -77,6 +76,11 @@ def export(
     try:
         published = lake.read_manifest(con, root)
         old_entries = published.get("tabelas", [])
+        used = {a["arquivo"] for e in old_entries for a in e.get("arquivos", [])}
+        base_id, n = meta["id_execucao"], 1
+        while any(f"/{meta['id_execucao']}/" in f for f in used):  # nunca reusa o caminho do publicado
+            n += 1
+            meta["id_execucao"] = f"{base_id}-{n}"
         before = {(e["camada"], e["tabela"]): e for e in old_entries if not e["tabela"].startswith("arq_")}
         old_files = {e["caminho"]: e for e in old_entries if e["tabela"].startswith("arq_")}
         touched = {e.get("caminho", f"{e['camada']}/{e['tabela']}") for e in old_entries}
@@ -128,21 +132,18 @@ def export(
                 return  # nada mudou: o publicado já é este
             catalog = settings.state_dir / "catalogo.duckdb"
             lake.write_catalog(current, catalog, base or root, meta)
-            if lake.r2():
-                lake.request("PUT", "catalogo.duckdb", catalog)
-            else:
-                shutil.copyfile(catalog, f"{root}/catalogo.duckdb")
+            lake.put_file(root, "catalogo.duckdb", catalog)
             catalog.unlink()
-            text = json.dumps({**meta, "base": base or root, "tabelas": current}, ensure_ascii=True)
-            con.execute(  # compacto: uma linha, sem aspas soltas
-                f"COPY (SELECT ?) TO '{lake.q(root)}/manifesto.json' "
-                "(FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER '\x01')",
-                (text,),
+            manifest = {**meta, "base": base or root, "tabelas": current}
+            lake.put_text(
+                con, root, "datapackage.json", json.dumps(lake.datapackage(manifest), ensure_ascii=True)
             )
+            lake.put_text(con, root, "manifesto.json", json.dumps(manifest, ensure_ascii=True))  # o último
             state.update(entries=json.loads(json.dumps(current)), base=base or root)
             lake.say("  catálogo e manifesto trocados")
 
         written_keys: set[str] = set()  # caminhos de tabela a varrer atrás de órfãos
+        replaced: set[str] = set()  # controles de coleção substituídos
         changed: set[str] = set()  # tudo o que foi gravado, para as linhas de progresso
         with lake.phase("escrita"):
             for rel, found in zip(relations, prints, strict=True):
@@ -238,7 +239,7 @@ def export(
                     if old:
                         known = dict(
                             con.execute(
-                                f"SELECT caminho, sha256_arquivo FROM read_parquet('{lake.q(root)}/{key}.parquet')"  # noqa: E501
+                                f"SELECT caminho, sha256_arquivo FROM read_parquet('{lake.q(root)}/{old['arquivos'][0]['arquivo']}')"  # noqa: E501
                             ).fetchall()
                         )
                     sent, resumed = colecoes.send(root, key, files, known)
@@ -248,6 +249,8 @@ def export(
                     parquet, description = colecoes.control(con, settings, root, meta, key, files)
                     columns = [{"nome": n, "tipo": t, "descricao": d} for n, t, d in colecoes.CONTROL_COLUMNS]
                     changed.add(key)  # coleção: objeto fora do controle só sai com --prune
+                    if old:
+                        replaced |= {f["arquivo"] for f in old["arquivos"]}  # o controle antigo sai
                     written += 1
                 lake.say(
                     f"  {key}: {'gravada' if key in changed else 'ignorada'} "
@@ -276,13 +279,23 @@ def export(
         entries = table_entries + [coll_entries[k] for k in collections if k in coll_entries]
         with lake.phase("catálogo e manifesto"):
             commit(entries)
-        keep |= {f["arquivo"] for e in entries for f in e["arquivos"]}
+        with lake.phase("versão do mês"):
+            if version := lake.snapshot(con, settings, root):
+                lake.say(f"  versão {version} fixada")
+        retained, expired = lake.retention(con, root)
+        keep |= {f["arquivo"] for e in entries for f in e["arquivos"]} | retained
         # órfãos só sob o que foi gravado; `prune` varre tudo (tabela removida, arquivo que saiu da fonte)
-        swept = written_keys | (touched | set(collections) if prune else set())
+        swept = {
+            p
+            for k in written_keys | (touched | set(collections) if prune else set())
+            for p in (f"{k}.parquet", f"{k}/**")
+        }
         with lake.phase("órfãos"):
-            orphans = (
-                lake.delete_orphans(con, root, swept, keep) if swept else 0
+            vencidos = {f for files in expired.values() for f in files}
+            orphans = lake.delete_orphans(
+                con, root, swept | replaced | vencidos, keep
             )  # só depois do manifesto novo
+            lake.mark_removed(con, root, set(expired))  # por último: se cair antes, a próxima rodada refaz
         (settings.state_dir / "export_tempos.json").write_text(json.dumps(tempos, indent=1), encoding="utf-8")
     finally:
         con.close()

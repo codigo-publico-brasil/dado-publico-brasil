@@ -1,6 +1,7 @@
 """Dados sintéticos das emendas parlamentares (pacote .zip com três CSVs em latin-1, como o real); sem rede.
 
-Emendas: uma individual com autor, uma antiga sem código nem autor ("Sem informação") e uma de relator-geral.
+Emendas: uma individual cujo autor é o deputado do cadastro sintético, uma individual de autor sem
+correspondência, uma antiga sem código nem autor ("Sem informação") e uma de relator-geral.
 Favorecidos: pessoa jurídica, unidade gestora, pessoa física (CPF mascarado) e inscrição genérica: só os dois
 primeiros podem chegar ao raw.
 """
@@ -18,9 +19,12 @@ EMENDAS = [
     "Nome Função;Código Subfunção;Nome Subfunção;Código Programa;Nome Programa;Código Ação;Nome Ação;"
     "Código Plano Orçamentário;Nome Plano Orçamentário;Valor Empenhado;Valor Liquidado;Valor Pago;"
     "Valor Restos A Pagar Inscritos;Valor Restos A Pagar Cancelados;Valor Restos A Pagar Pagos",
-    "202471280001;2024;Emenda Individual - Transferências com Finalidade Definida;7128;FULANO DE TAL;0001;"
+    "202471280001;2024;Emenda Individual - Transferências com Finalidade Definida;7128;ANA ARVORE;0001;"
     "ALVORADA DO SUL - PR;4100806;ALVORADA DO SUL;4100000;PARANÁ;Sul;10;Saúde;301;Atenção básica;2015;"
     "SUS;8581;ESTRUTURACAO DA REDE;0000;DESPESAS DIVERSAS;499995,00;250000,50;100000,00;0,00;0,00;0,00",
+    "202480010001;2024;Emenda Individual - Transferências com Finalidade Definida;8001;BETO SEM CORRESPONDENCIA;0001;"
+    "ALVORADA DO SUL - PR;4100806;ALVORADA DO SUL;4100000;PARANÁ;Sul;10;Saúde;301;Atenção básica;2015;"
+    "SUS;8581;ESTRUTURACAO DA REDE;0000;DESPESAS DIVERSAS;1000,00;0,00;0,00;0,00;0,00;0,00",
     "Sem informação;2014;Emenda Individual - Transferências com Finalidade Definida;S/I;Sem informação;S/I;"
     "MULTIPLO;9999999;MULTIPLO;9999999;MULTIPLO;Sem informação;12;Educação;361;Ensino;2030;EDUCACAO;20RP;"
     "APOIO;0000;DIVERSAS;1000,00;0,00;0,00;0,00;0,00;1000,00",
@@ -36,13 +40,13 @@ CONVENIOS = [
 FAVORECIDOS = [
     "Código da Emenda;Código do Autor da Emenda;Nome do Autor da Emenda;Número da emenda;Tipo de Emenda;Ano/Mês;"
     "Código do Favorecido;Favorecido;Natureza Jurídica;Tipo Favorecido;UF Favorecido;Município Favorecido;Valor Recebido",
-    "202471280001;7128;FULANO DE TAL;0001;Emenda Individual;202410;07121982000119;2M CONSTRUTORA LTDA;"
+    "202471280001;7128;ANA ARVORE;0001;Emenda Individual;202410;07121982000119;2M CONSTRUTORA LTDA;"
     "Sociedade Empresária Limitada;Pessoa Jurídica;PR;ALVORADA DO SUL;83346,73",
-    "202471280001;7128;FULANO DE TAL;0001;Emenda Individual;202411;195017;CIA DE DESENVOLVIMENTO;"
+    "202471280001;7128;ANA ARVORE;0001;Emenda Individual;202411;195017;CIA DE DESENVOLVIMENTO;"
     "Administração Pública;Unidade Gestora;DF;BRASILIA;1000,00",
-    "202471280001;7128;FULANO DE TAL;0001;Emenda Individual;202411;***.638.223-**;CIDADAO COMUM DA SILVA;"
+    "202471280001;7128;ANA ARVORE;0001;Emenda Individual;202411;***.638.223-**;CIDADAO COMUM DA SILVA;"
     "Pessoa Física;Pessoa Fisica;PR;ALVORADA DO SUL;1500,00",
-    "202471280001;7128;FULANO DE TAL;0001;Emenda Individual;202411;EXPF00001;OUTRO CIDADAO;"
+    "202471280001;7128;ANA ARVORE;0001;Emenda Individual;202411;EXPF00001;OUTRO CIDADAO;"
     "Pessoa Física;Inscrição Genérica;PR;ALVORADA DO SUL;800,00",
 ]
 
@@ -112,7 +116,7 @@ COMPRAS = [
     "Modalidade Compra Licitação",
     "000012024;Serviço de limpeza. CPF 123.456.789-09;;Pregão;Ativo;30000;Ministério A;30108;Órgão B;200384;UG C;"
     "24/01/2024;29/01/2024;24/01/2024;24/01/2025;12345678000199;EMPRESA EXEMPLO LTDA;205690,0000;205690,0000;"
-    "900052024;;;;",
+    "000012024;200384;UG C;5;Pregão",
     "000022024;Serviço pessoal;;Dispensa;Ativo;30000;Ministério A;30108;Órgão B;200384;UG C;25/01/2024;;25/01/2024;"
     "25/01/2025;12345678909;PESSOA EXEMPLO;1000,0000;1000,0000;;;;;",
     "000032024;Informação protegida por sigilo nos termos da legislação vigente;;Sem Informação;Não se aplica;30000;"

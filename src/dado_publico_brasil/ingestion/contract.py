@@ -7,6 +7,7 @@ import importlib
 import re
 import string
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -25,7 +26,7 @@ POWERS = {"legislativo", "executivo", "judiciario"}
 LEVELS = {"federal", "estadual", "municipal"}
 LOADS = {"full", "yearly", "foreach"}
 ARCHIVES = {"zip"}
-PARTITIONS = {"year", "sequence", "month"}  # month: o valor da partição é AAAAMM; sequence: ver `sequence`
+PARTITIONS = {"year", "sequence", "month", "day"}  # month: AAAAMM; day: AAAAMMDD; sequence: ver `sequence`
 WRITES = {"merge", "replace", "replace_partition"}
 # Documentos pessoais nunca são lidos de nenhuma fonte (princípio IX da constituição do projeto).
 # Chave "linha inteira": identifica a linha pelo conteúdo, para arquivos sem chave natural.
@@ -38,8 +39,8 @@ ACCESS_KEYS = {"base_url", "format", "delimiter", "encoding", "headers", "rate_l
 DATASET_KEYS = {
     "url", "load", "write", "columns", "primary_key", "extra_years", "first_year", "partition", "records",
     "nested", "format", "headers", "foreach", "archive", "member", "raw", "files", "first_month",
-    "lag_months", "step", "sequence", "only", "optional", "aliases", "on_demand", "max_age_days",
-    "tolerated_rejects",
+    "lag_months", "first_day", "lag_days", "step", "sequence", "only", "optional", "aliases", "on_demand",
+    "max_age_days", "tolerated_rejects",
 }  # fmt: skip
 FOREACH_KEYS = {"from", "item", "where", "recent_by", "version", "refresh_after_days", "batch_size"}
 FORBIDDEN_COLUMNS = {"cpf", "rg", "tituloeleitor", "cnh", "passaporte"}
@@ -108,6 +109,8 @@ class Dataset:
     lag_months: int = (
         0  # (partition: month) só meses fechados: 1 = até o mês anterior (a fonte publica depois)
     )
+    first_day: int | None = None  # (partition: day) primeiro dia pedido, como AAAAMMDD
+    lag_days: int = 0  # (partition: day) dias de atraso até o arquivo existir: 1 = até ontem
     sequence: tuple[int, int, int] | None = None  # (partition: sequence) (first_year, first_value, years)
     step: int = 1  # (yearly) só os anos a cada N a partir de first_year (eleições gerais: 4)
     only: dict[str, tuple[str, ...]] = field(default_factory=dict)  # minimização: só linhas com estes valores
@@ -150,12 +153,15 @@ class SourceContract:
         """Endereço oficial do arquivo de um dataset.
 
         Nos particionados, `year` é o valor da partição: o ano, em `partition: sequence` o número da
-        sequência e em `partition: month` o mês (AAAAMM); `{partition}` na URL é esse valor.
+        sequência e em `partition: month` o mês (AAAAMM) e em `partition: day` o dia (AAAAMMDD);
+        `{partition}` na URL é esse valor.
         """
         d = self.datasets[dataset]
         if d.yearly and year is None:
             raise ValueError(f"{dataset} é particionado: informe o valor da partição")
-        return d.url.format(base_url=self.base_url, year=year, partition=year, month=year, item=year)
+        return d.url.format(
+            base_url=self.base_url, year=year, partition=year, month=year, day=year, item=year
+        )
 
     def item_url(self, dataset: str, item: str) -> str:
         """Endereço de um item de um dataset `foreach`."""
@@ -171,6 +177,22 @@ class SourceContract:
     def schema(self) -> str:
         """Esquema do raw desta fonte: `raw_<esfera>_<fonte>` (o poder fica no contrato e na pasta)."""
         return f"raw_{self.level}_{self.source}"
+
+
+def _day_rules(where: str, data: dict[str, Any]) -> None:
+    if (data.get("partition") == "day") != ("first_day" in data):
+        raise InvalidContract(
+            f"{where}: partition: day exige first_day (AAAAMMDD), e first_day só vale com ele"
+        )
+    if data.get("lag_days") is not None and (data.get("partition") != "day" or int(data["lag_days"]) < 0):
+        raise InvalidContract(f"{where}: lag_days (inteiro >= 0) exige partition: day")
+    if "first_day" in data:
+        try:
+            if not re.fullmatch(r"\d{8}", str(data["first_day"])):
+                raise ValueError
+            datetime.strptime(str(data["first_day"]), "%Y%m%d")
+        except ValueError as error:
+            raise InvalidContract(f"{where}: first_day deve ser uma data AAAAMMDD") from error
 
 
 def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
@@ -195,6 +217,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         raise InvalidContract(f"{where}: first_month exige partition: month")
     if int(data.get("lag_months", 0)) and data.get("partition") != "month":
         raise InvalidContract(f"{where}: lag_months exige partition: month")
+    _day_rules(where, data)
     if data.get("archive") is not None and data["archive"] not in ARCHIVES:
         raise InvalidContract(f"{where}: archive deve ser um de {sorted(ARCHIVES)}")
     if int(data.get("step", 1)) > 1 and data.get("first_year") is None:
@@ -243,6 +266,8 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         files=_files(where, data),
         first_month=int(data["first_month"]) if data.get("first_month") else None,
         lag_months=int(data.get("lag_months", 0)),
+        first_day=int(data["first_day"]) if "first_day" in data else None,
+        lag_days=int(data.get("lag_days", 0)),
         sequence=tuple(int(data["sequence"][k]) for k in ("first_year", "first_value", "years"))
         if "sequence" in data
         else None,  # type: ignore[arg-type]

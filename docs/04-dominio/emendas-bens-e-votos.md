@@ -6,7 +6,7 @@ Para quem quer entender os campos que a plataforma traz sobre dinheiro de emenda
 
 Parlamentares podem **emendar** o orçamento da União para destinar dinheiro a obras e serviços. Os tipos são: **individual** (de cada deputado ou senador; com finalidade definida ou "transferência especial", que vai direto ao município), **de bancada** (de uma bancada estadual), **de comissão** e **de relator** (o relator-geral do orçamento, conhecida como "orçamento secreto" quando o autor real não era informado). O dinheiro passa por três etapas: **empenhado** (reservado), **liquidado** (o serviço foi entregue e conferido) e **pago**. `fct_emendas` traz um valor por etapa; `fct_emendas_convenios`, os convênios firmados; `fct_emendas_favorecidos`, quem recebeu, mês a mês.
 
-O autor vem pelo **nome e por um código orçamentário**, que não é o código do parlamentar na Câmara ou no Senado: por isso a emenda não é ligada a `dim_pessoas` (issue 16). Os favorecidos são só pessoas jurídicas e unidades gestoras; o cidadão comum que recebeu algum recurso nunca é publicado.
+O autor vem pelo **nome e por um código do SIAFI**, que não é o código do parlamentar na Câmara ou no Senado. Por isso `fct_emendas.id_pessoa` é **derivado** ([ADR 0056](../05-decisoes/0056-emenda-individual-ligada-ao-autor-por-nome-e-exercicio.md)): só emenda individual, quando o nome é o de uma só pessoa com mandato federal no ano da emenda ou no anterior; `regra_ligacao_pessoa` e `precisao_ligacao_pessoa` dizem como. Bancada, comissão, relator, homônimo e emenda sem autor ficam sem pessoa (o teste `emendas_individuais_sem_pessoa` mede). Os favorecidos são só pessoas jurídicas e unidades gestoras; o cidadão comum que recebeu algum recurso nunca é publicado.
 
 ## Bens declarados
 

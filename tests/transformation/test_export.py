@@ -8,8 +8,10 @@ import hashlib
 import json
 import logging
 import mimetypes
+import re
 import shutil
 import zipfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
@@ -79,6 +81,27 @@ def manifest(out: Path) -> dict[str, list[dict[str, object]]]:
     return json.loads((out / "manifesto.json").read_text(encoding="utf-8"))  # type: ignore[no-any-return]
 
 
+SNAPSHOT = lake.snapshot
+
+
+@pytest.fixture(autouse=True)
+def _no_monthly_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A versão do mês prende os arquivos da primeira execução; os testes de órfãos partem sem ela."""
+    monkeypatch.setattr(lake, "snapshot", lambda *a: None)
+
+
+def where(out: Path, key: str) -> Path:
+    """O (primeiro) arquivo que o manifesto publicado dá à tabela de caminho `key`."""
+    entry = next(t for t in manifest(out)["tabelas"] if t["caminho"] == key)
+    return out / entry["arquivos"][0]["arquivo"]  # type: ignore[no-any-return,index]
+
+
+def plain(path: str) -> str:
+    """O caminho sem o segmento da execução (`<key>/<id>/<nome>.parquet` vira `<key>.parquet`)."""
+    path = re.sub(r"/\d{8}T\d{6}Z(?:-\d+)?/ano=", "/ano=", path)
+    return re.sub(r"/\d{8}T\d{6}Z(?:-\d+)?/[^/]+\.parquet$", ".parquet", path)
+
+
 def votos(out: Path) -> dict[str, object]:
     return [t for t in manifest(out)["tabelas"] if t["tabela"] == "fct_votos"][0]
 
@@ -93,6 +116,8 @@ def test_every_table_is_exported_with_the_same_rows_and_schema(con: Connection, 
         ("staging", "stg_camara__visao", "staging/legislativo/federal/camara/stg_camara__visao", "prata"),
         ("staging", "stg_tse__x", "staging/judiciario/federal/tse/stg_tse__x", "prata"),
         ("metadata", "capturas", "metadata/capturas", "bronze"),
+        ("metadata", "fontes_verificacoes", "metadata/fontes_verificacoes", "bronze"),
+        ("metadata", "testes_resultados", "metadata/testes_resultados", "bronze"),
     }
     assert result["tabelas"] == len(tables) and result["gravadas"] == len(tables)
     live = warehouse.connect(settings, read_only=True)
@@ -156,10 +181,11 @@ def test_a_new_table_is_added_and_a_removed_one_needs_prune(con: Connection, set
     change(settings, "CREATE TABLE intermediate.int_nova AS SELECT 1 AS a")
     again = export.export(settings)
     assert again["gravadas"] == 1 and again["tabelas"] == first["tabelas"] + 1
-    assert (out / "intermediate/int_nova.parquet").exists()
+    assert where(out, "intermediate/int_nova").exists()
+    nova = where(out, "intermediate/int_nova")
     change(settings, "DROP TABLE intermediate.int_nova")
     export.export(settings, prune=True)
-    assert not (out / "intermediate/int_nova.parquet").exists() and verify.verify(settings) == []
+    assert not nova.exists() and verify.verify(settings) == []
 
 
 def test_a_description_change_alone_replaces_the_catalog_and_the_manifest(
@@ -193,10 +219,11 @@ def test_a_table_that_changed_path_leaves_no_orphan_even_without_prune(
     con: Connection, settings: Settings
 ) -> None:
     out, _ = run(con, settings)
+    old = where(out, VOTOS)
     moved = json.loads(json.dumps(MODELS).replace("legislativo", "outro"))
     (settings.state_dir / "dbt" / "target" / "manifest.json").write_text(json.dumps(moved), encoding="utf-8")
     export.export(settings)
-    assert not (out / f"{VOTOS}.parquet").exists() and (out / "marts/outro/fct_votos.parquet").exists()
+    assert not old.exists() and where(out, "marts/outro/fct_votos").exists()
     assert verify.verify(settings) == []
 
 
@@ -216,8 +243,9 @@ def test_a_changed_table_alone_is_rewritten_and_verify_catches_tampering(
     out, _ = run(con, settings)
     change(settings, "INSERT INTO staging.stg_camara__base VALUES (999, 'novo')")
     assert export.export(settings)["gravadas"] == 2  # a tabela e a view que a lê
-    (out / f"{VOTOS}.parquet").write_bytes(b"adulterado")
-    assert verify.verify(settings) == [f"{VOTOS}.parquet difere do manifesto"]
+    file = where(out, VOTOS)
+    file.write_bytes(b"adulterado")
+    assert verify.verify(settings) == [f"{file.relative_to(out).as_posix()} difere do manifesto"]
 
 
 def test_the_catalog_attaches_read_only_and_queries_with_descriptions(
@@ -261,7 +289,7 @@ def test_a_big_table_with_a_partition_is_split_by_year_and_filters_by_it(
     out, _ = run(con, settings, max_bytes=1)
     split = votos(out)
     names = sorted(f["arquivo"] for f in split["arquivos"])  # type: ignore[attr-defined]
-    assert names == [f"{VOTOS}/ano={y}/part-0.parquet" for y in (2020, 2021, 2022)]
+    assert [plain(n) for n in names] == [f"{VOTOS}/ano={y}/part-0.parquet" for y in (2020, 2021, 2022)]
     assert split["particao"] == "year(dt_voto)" and split["ano"] == [2020, 2021, 2022]
     assert split["colunas"][-1]["nome"] == "ano"  # type: ignore[index]
     assert sum(f["linhas"] for f in split["arquivos"]) == 1000  # type: ignore[attr-defined]
@@ -284,12 +312,11 @@ def test_a_small_table_with_a_partition_is_one_file_sorted_by_the_period(
 ) -> None:
     out, _ = run(con, settings)
     split = votos(out)
-    assert [f["arquivo"] for f in split["arquivos"]] == [f"{VOTOS}.parquet"]  # type: ignore[attr-defined]
+    assert [plain(f["arquivo"]) for f in split["arquivos"]] == [f"{VOTOS}.parquet"]  # type: ignore[attr-defined]
     assert split["particao"] == "year(dt_voto)" and split["ano"] is None
     mem = duckdb.connect()
     years = [
-        r[0]
-        for r in mem.execute(f"SELECT year(dt_voto) FROM '{(out / VOTOS).as_posix()}.parquet'").fetchall()
+        r[0] for r in mem.execute(f"SELECT year(dt_voto) FROM '{where(out, VOTOS).as_posix()}'").fetchall()
     ]
     assert years == sorted(years)
 
@@ -306,9 +333,10 @@ def test_switching_layout_or_dropping_a_table_removes_the_orphans(
     con: Connection, settings: Settings
 ) -> None:
     out, _ = run(con, settings)
+    single = where(out, VOTOS)
     change(settings, "INSERT INTO marts.fct_votos VALUES (5000, DATE '2021-01-01', 'x', 1)")
     result = export.export(settings, max_bytes=1)  # de arquivo único para partição
-    assert result["orfaos"] == 1 and not (out / f"{VOTOS}.parquet").exists()
+    assert result["orfaos"] == 1 and not single.exists()
     change(settings, "INSERT INTO marts.fct_votos VALUES (5001, DATE '2021-01-01', 'x', 1)")
     change(settings, "DROP VIEW staging.stg_camara__visao")
     result = export.export(settings, prune=True)  # de partição para arquivo único, e uma tabela removida
@@ -379,7 +407,7 @@ def test_a_changed_description_rewrites_the_table(con: Connection, settings: Set
     out, _ = run(con, settings)
     change(settings, "COMMENT ON COLUMN marts.fct_votos.qtd IS 'Outra descrição.'")
     assert export.export(settings)["gravadas"] == 1
-    meta = kv(out / f"{VOTOS}.parquet")
+    meta = kv(where(out, VOTOS))
     assert json.loads(meta["descricoes_colunas"])["qtd"] == "Outra descrição."
 
 
@@ -396,7 +424,7 @@ def test_huge_descriptions_are_cut_with_a_warning(con: Connection, settings: Set
     con.close()
     with pytest.warns(UserWarning, match="descricoes_colunas"):
         export.export(settings)
-    meta = kv(settings.storage_root / "lake" / f"{VOTOS}.parquet")
+    meta = kv(where(settings.storage_root / "lake", VOTOS))
     assert len(meta["descricoes_colunas"].encode()) <= tables.MAX_KV_BYTES
 
 
@@ -521,7 +549,7 @@ def land_files(con: Connection, settings: Settings, photo: bytes = JPG) -> None:
 
 def control(out: Path, folder: str) -> list[dict[str, object]]:
     c = duckdb.connect()
-    cur = c.execute(f"SELECT * FROM read_parquet('{(out / folder).as_posix()}.parquet') ORDER BY caminho")
+    cur = c.execute(f"SELECT * FROM read_parquet('{where(out, folder).as_posix()}') ORDER BY caminho")
     names = [d[0] for d in cur.description]
     found = [dict(zip(names, r, strict=True)) for r in cur.fetchall()]
     c.close()
@@ -577,7 +605,7 @@ def test_published_collections_are_copied_with_a_control_table_and_unpublished_o
     tables = {t["tabela"]: t for t in manifest(out)["tabelas"]}
     assert tables["arq_secoes"]["caminho"] == DOU and tables["arq_fotos"]["caminho"] == FOTOS
     assert all(c["descricao"] for t in ("arq_secoes", "arq_fotos") for c in tables[t]["colunas"])  # type: ignore[attr-defined]
-    assert kv(out / f"{FOTOS}.parquet")["descricao"]
+    assert kv(where(out, FOTOS))["descricao"]
     catalog = duckdb.connect(str(out / "catalogo.duckdb"), read_only=True)
     assert scalar(catalog, "SELECT comment FROM duckdb_views() WHERE view_name = 'arq_fotos'")
     catalog.close()
@@ -694,9 +722,10 @@ def test_a_crash_after_the_tables_keeps_them_and_resumes_without_rewriting(
         export.export(settings)
     monkeypatch.undo()
     assert next(t for t in manifest(out)["tabelas"] if t["tabela"] == "int_x")["linhas"] == 2
-    stamp = (out / "intermediate/int_x.parquet").stat().st_mtime_ns
+    int_x = where(out, "intermediate/int_x")
+    stamp = int_x.stat().st_mtime_ns
     result = export.export(settings)
-    assert (out / "intermediate/int_x.parquet").stat().st_mtime_ns == stamp
+    assert where(out, "intermediate/int_x") == int_x and int_x.stat().st_mtime_ns == stamp
     assert result["gravadas"] == 1 and len(control(out, FOTOS)) == 2  # só a coleção
     assert verify.verify(settings) == []
 
@@ -877,7 +906,9 @@ def test_a_failing_model_or_test_keeps_its_previous_version_and_the_rest_is_publ
     before = {t["tabela"]: t for t in manifest(out)["tabelas"]}
     result = export.export(settings)
     after = {t["tabela"]: t for t in manifest(out)["tabelas"]}
-    assert result["excluidas"] == 2 and result["gravadas"] == 2  # a base e a view sobre ela
+    assert (
+        result["excluidas"] == 2 and result["gravadas"] == 3
+    )  # a base, a view sobre ela e o histórico dos testes
     assert after["fct_votos"]["impressao"] == before["fct_votos"]["impressao"]  # a anterior, intacta
     assert "teste not_null_votos: fail" in str(after["fct_votos"]["excluida_por"])
     assert "modelo int_x: error" in str(after["int_x"]["excluida_por"])
@@ -961,13 +992,17 @@ def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_a
     caplog.clear()
     caplog.set_level(logging.INFO)
     result = export.export(settings)
-    assert sorted(seen) == [  # só as sem nó do dbt no manifesto (staging e a captura): sempre recalculadas
+    assert sorted(seen) == [  # só as sem nó do dbt no manifesto (staging e metadata): sempre recalculadas
         "metadata.capturas",
+        "metadata.fontes_verificacoes",
+        "metadata.testes_resultados",
         "staging.stg_camara__base",
         "staging.stg_camara__visao",
         "staging.stg_tse__x",
     ]
-    assert manifest(out)["tabelas"] == complete and result["gravadas"] == 0
+    # o histórico dos testes ganhou as linhas do `build_at`: é a única tabela que muda
+    rest = [t for t in manifest(out)["tabelas"] if t["tabela"] != "testes_resultados"]
+    assert rest == [t for t in complete if t["tabela"] != "testes_resultados"] and result["gravadas"] == 1
     assert "int_x: reaproveitada" in caplog.text
     assert verify.verify(settings) == []
 
@@ -976,7 +1011,9 @@ def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_a
     build_at(settings, "2999-01-01T00:00:00+00:00", {"model.x.int_x": "success"})
     seen.clear()
     result = export.export(settings)
-    assert "intermediate.int_x" in seen and "marts.fct_votos" not in seen and result["gravadas"] == 1
+    assert (
+        "intermediate.int_x" in seen and "marts.fct_votos" not in seen and result["gravadas"] == 2
+    )  # int_x e o histórico
 
 
 def test_a_new_code_version_fingerprints_everything_again(
@@ -1119,6 +1156,94 @@ GOLDEN: dict[int, list[tuple[object, ...]]] = {
             ],
             [("metadata/capturas.parquet", 0)],
         ),
+        (
+            "metadata",
+            "fontes_verificacoes",
+            "metadata/fontes_verificacoes",
+            0,
+            "662a89f035601869bdbd8480a69e94d3700a2efd21625a219e040453cc974c4a",
+            None,
+            None,
+            None,
+            [
+                ("id_verificacao", "BIGINT", "Identificador da verificação."),
+                ("dt_verificacao", "TIMESTAMP", "Instante (UTC) da verificação."),
+                ("fonte", "VARCHAR", "Fonte verificada."),
+                ("dataset", "VARCHAR", "Dataset verificado."),
+                (
+                    "particao",
+                    "INTEGER",
+                    "Partição verificada (ano, mês AAAAMM ou legislatura), quando houver.",
+                ),
+                (
+                    "verificacao",
+                    "VARCHAR",
+                    "Nome da verificação (availability, schema, volume, carga, linhas_removidas...).",
+                ),
+                ("resultado", "VARCHAR", "Resultado: ok, warn (aviso) ou error (erro)."),
+                (
+                    "detalhe",
+                    "VARCHAR",
+                    "Detalhe do resultado (contagens, colunas que mudaram, mensagem de erro).",
+                ),
+                (
+                    "cd_status_http",
+                    "INTEGER",
+                    "Código HTTP que a fonte devolveu (404, 403, 429...), quando a ocorrência veio de uma resposta; vazio nas demais.",
+                ),
+                (
+                    "tipo_ocorrencia",
+                    "VARCHAR",
+                    "Tipo da ocorrência de uma verificação com erro: nao_encontrado (404), nao_publicado (403 no mês ainda não publicado), erro_http (outro código), falha_de_rede, bloqueio, html_no_lugar, tamanho_divergente ou zip_invalido; vazio quando não há ocorrência.",
+                ),
+                (
+                    "qtd_bytes_esperados",
+                    "BIGINT",
+                    "Tamanho em bytes que a fonte informou (Content-Length), quando a verificação o confrontou com o recebido.",
+                ),
+                (
+                    "qtd_bytes_recebidos",
+                    "BIGINT",
+                    "Tamanho em bytes do arquivo recebido, nas verificações de disponibilidade e de integridade.",
+                ),
+                (
+                    "qtd_linhas",
+                    "BIGINT",
+                    "Linhas da verificação: carregadas (carga), lidas (volume) ou de capturas anteriores que a atual não traz (linhas_removidas).",
+                ),
+            ],
+            [("metadata/fontes_verificacoes.parquet", 0)],
+        ),
+        (
+            "metadata",
+            "testes_resultados",
+            "metadata/testes_resultados",
+            0,
+            "fef1f18e8143048b4963b92868dd83e861fcc60c137df0bb915ecf1cf98301f7",
+            None,
+            None,
+            None,
+            [
+                ("id_execucao", "BIGINT", "Execução (metadata.execucoes.id_execucao) que rodou o dbt."),
+                (
+                    "id_no",
+                    "VARCHAR",
+                    "Identificador do nó no dbt (por exemplo, test.dado_publico_brasil.nome_do_teste).",
+                ),
+                ("tipo", "VARCHAR", "Tipo do nó: model, test ou freshness."),
+                ("resultado", "VARCHAR", "Resultado: success, pass, warn, fail ou error."),
+                ("qtd_falhas", "BIGINT", "Linhas que fizeram o teste falhar ou avisar."),
+                ("mensagem", "VARCHAR", "Mensagem do dbt para o nó."),
+                ("dt_registro", "TIMESTAMP", "Instante (UTC) em que o resultado foi gravado."),
+                (
+                    "qtd_segundos",
+                    "DOUBLE",
+                    "Segundos que o dbt levou para executar o nó (execution_time do run_results.json); vazio se o "
+                    "dbt não informou.",
+                ),
+            ],
+            [("metadata/testes_resultados.parquet", 0)],
+        ),
     ],
     1: [
         (
@@ -1241,6 +1366,94 @@ GOLDEN: dict[int, list[tuple[object, ...]]] = {
             ],
             [("metadata/capturas.parquet", 0)],
         ),
+        (
+            "metadata",
+            "fontes_verificacoes",
+            "metadata/fontes_verificacoes",
+            0,
+            "662a89f035601869bdbd8480a69e94d3700a2efd21625a219e040453cc974c4a",
+            None,
+            None,
+            None,
+            [
+                ("id_verificacao", "BIGINT", "Identificador da verificação."),
+                ("dt_verificacao", "TIMESTAMP", "Instante (UTC) da verificação."),
+                ("fonte", "VARCHAR", "Fonte verificada."),
+                ("dataset", "VARCHAR", "Dataset verificado."),
+                (
+                    "particao",
+                    "INTEGER",
+                    "Partição verificada (ano, mês AAAAMM ou legislatura), quando houver.",
+                ),
+                (
+                    "verificacao",
+                    "VARCHAR",
+                    "Nome da verificação (availability, schema, volume, carga, linhas_removidas...).",
+                ),
+                ("resultado", "VARCHAR", "Resultado: ok, warn (aviso) ou error (erro)."),
+                (
+                    "detalhe",
+                    "VARCHAR",
+                    "Detalhe do resultado (contagens, colunas que mudaram, mensagem de erro).",
+                ),
+                (
+                    "cd_status_http",
+                    "INTEGER",
+                    "Código HTTP que a fonte devolveu (404, 403, 429...), quando a ocorrência veio de uma resposta; vazio nas demais.",
+                ),
+                (
+                    "tipo_ocorrencia",
+                    "VARCHAR",
+                    "Tipo da ocorrência de uma verificação com erro: nao_encontrado (404), nao_publicado (403 no mês ainda não publicado), erro_http (outro código), falha_de_rede, bloqueio, html_no_lugar, tamanho_divergente ou zip_invalido; vazio quando não há ocorrência.",
+                ),
+                (
+                    "qtd_bytes_esperados",
+                    "BIGINT",
+                    "Tamanho em bytes que a fonte informou (Content-Length), quando a verificação o confrontou com o recebido.",
+                ),
+                (
+                    "qtd_bytes_recebidos",
+                    "BIGINT",
+                    "Tamanho em bytes do arquivo recebido, nas verificações de disponibilidade e de integridade.",
+                ),
+                (
+                    "qtd_linhas",
+                    "BIGINT",
+                    "Linhas da verificação: carregadas (carga), lidas (volume) ou de capturas anteriores que a atual não traz (linhas_removidas).",
+                ),
+            ],
+            [("metadata/fontes_verificacoes.parquet", 0)],
+        ),
+        (
+            "metadata",
+            "testes_resultados",
+            "metadata/testes_resultados",
+            0,
+            "fef1f18e8143048b4963b92868dd83e861fcc60c137df0bb915ecf1cf98301f7",
+            None,
+            None,
+            None,
+            [
+                ("id_execucao", "BIGINT", "Execução (metadata.execucoes.id_execucao) que rodou o dbt."),
+                (
+                    "id_no",
+                    "VARCHAR",
+                    "Identificador do nó no dbt (por exemplo, test.dado_publico_brasil.nome_do_teste).",
+                ),
+                ("tipo", "VARCHAR", "Tipo do nó: model, test ou freshness."),
+                ("resultado", "VARCHAR", "Resultado: success, pass, warn, fail ou error."),
+                ("qtd_falhas", "BIGINT", "Linhas que fizeram o teste falhar ou avisar."),
+                ("mensagem", "VARCHAR", "Mensagem do dbt para o nó."),
+                ("dt_registro", "TIMESTAMP", "Instante (UTC) em que o resultado foi gravado."),
+                (
+                    "qtd_segundos",
+                    "DOUBLE",
+                    "Segundos que o dbt levou para executar o nó (execution_time do run_results.json); vazio se o "
+                    "dbt não informou.",
+                ),
+            ],
+            [("metadata/testes_resultados.parquet", 0)],
+        ),
     ],
 }
 
@@ -1258,7 +1471,7 @@ def shape(out: Path) -> list[tuple[object, ...]]:
             t["ano"],
             t["licenca"],
             [(c["nome"], c["tipo"], c["descricao"]) for c in t["colunas"]],  # type: ignore[attr-defined]
-            [(f["arquivo"], f["linhas"]) for f in t["arquivos"]],  # type: ignore[attr-defined]
+            [(plain(f["arquivo"]), f["linhas"]) for f in t["arquivos"]],  # type: ignore[attr-defined]
         )
         for t in manifest(out)["tabelas"]
     ]
@@ -1270,3 +1483,191 @@ def test_the_manifest_of_the_synthetic_warehouse_is_the_one_recorded_before_spli
 ) -> None:
     out, _ = run(con, settings, max_bytes)
     assert shape(out) == GOLDEN[max_bytes]
+
+
+def freeze_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Todas as execuções caem no mesmo segundo (o id tem resolução de segundo)."""
+
+    class Fixed(datetime):
+        @classmethod
+        def now(cls, tz: object = None) -> "Fixed":
+            return cls(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
+
+    monkeypatch.setattr(export, "datetime", Fixed)
+
+
+def test_two_exports_in_the_same_second_never_share_a_path(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    freeze_clock(monkeypatch)
+    out, _ = run(con, settings)
+    old_file = where(out, "intermediate/int_x")
+    change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
+    export.export(settings)
+    assert where(out, "intermediate/int_x") != old_file  # id repetido ganha sufixo
+    assert verify.verify(settings) == []
+
+
+def test_a_failure_in_the_middle_of_the_export_keeps_the_published_catalog_and_manifest(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    freeze_clock(monkeypatch)  # a execução que cai tem o mesmo id da publicada
+    out, _ = run(con, settings)
+    published = {n: (out / n).read_bytes() for n in ("catalogo.duckdb", "manifesto.json")}
+    change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
+    change(settings, "INSERT INTO marts.fct_votos VALUES (5000, DATE '2021-01-01', 'x', 1)")
+    real, calls = tables.write_table, []
+
+    def crash(*args: object, **kwargs: object) -> list[dict[str, object]]:
+        calls.append(1)
+        if len(calls) == 2:
+            raise OSError("queda")
+        return real(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(tables, "write_table", crash)
+    with pytest.raises(OSError, match="queda"):
+        export.export(settings)
+    assert len(calls) == 2  # a primeira tabela chegou a ser gravada, em caminho próprio
+    assert {n: (out / n).read_bytes() for n in published} == published
+    assert verify.verify(settings) == []  # o publicado segue íntegro: nada foi sobrescrito
+
+
+def test_the_manifest_of_the_tables_is_the_same_in_rows_and_hash_after_an_incremental_run(
+    con: Connection, settings: Settings
+) -> None:
+    out, _ = run(con, settings)
+    first = {t["caminho"]: t for t in manifest(out)["tabelas"]}
+    change(settings, "INSERT INTO intermediate.int_x VALUES (2)")
+    export.export(settings)
+    second = {t["caminho"]: t for t in manifest(out)["tabelas"]}
+    assert second.keys() == first.keys()
+    assert {k for k in first if first[k] != second[k]} == {"intermediate/int_x"}  # só a que mudou
+    live = warehouse.connect(settings, read_only=True)
+    for t in second.values():
+        files = ", ".join(f"'{(out / f['arquivo']).as_posix()}'" for f in t["arquivos"])  # type: ignore[attr-defined]
+        cols = ", ".join(f'"{c["nome"]}"' for c in t["colunas"])  # type: ignore[attr-defined]
+        count = "SELECT count(*), sum(hash(t)::HUGEINT) FROM"
+        want = live.execute(f'{count} (SELECT {cols} FROM {t["camada"]}."{t["tabela"]}") t').fetchone()
+        assert live.execute(f"{count} read_parquet([{files}]) t").fetchone() == want, t["caminho"]
+    live.close()
+
+
+def test_the_first_export_of_the_month_fixes_an_immutable_dated_version_with_the_datapackage(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    monkeypatch.setattr(lake, "snapshot", SNAPSHOT)
+    out, _ = run(con, settings)
+    (folder,) = (out / "versoes").iterdir()
+    assert re.fullmatch(r"\d{4}-\d{2}", folder.name)
+    frozen = {n: (folder / n).read_bytes() for n in ("manifesto.json", "catalogo.duckdb", "datapackage.json")}
+    version = json.loads(frozen["manifesto.json"])
+    assert version.pop("versao") == folder.name and version == json.loads(
+        (out / "manifesto.json").read_text()
+    )
+    old_file = where(out, VOTOS)
+    change(settings, "INSERT INTO marts.fct_votos VALUES (5000, DATE '2021-01-01', 'x', 1)")
+    export.export(settings)
+    assert {n: (folder / n).read_bytes() for n in frozen} == frozen  # a versão do mês não se reescreve
+    assert where(out, VOTOS) != old_file and old_file.exists()  # e os Parquet que ela cita ficam
+    for t in json.loads(frozen["manifesto.json"])["tabelas"]:
+        for f in t["arquivos"]:
+            assert hashlib.sha256((out / f["arquivo"]).read_bytes()).hexdigest() == f["sha256"]
+    pkg = json.loads(frozen["datapackage.json"])
+    assert pkg["version"] == folder.name and len(pkg["resources"]) == len(version["tabelas"])
+    res = next(r for r in pkg["resources"] if r["name"] == "marts.fct_votos")
+    assert (
+        res["hash"]
+        == f"sha256:{next(t for t in version['tabelas'] if t['tabela'] == 'fct_votos')['arquivos'][0]['sha256']}"
+        and res["format"] == "parquet"
+    )
+    assert {f["name"]: f["type"] for f in res["schema"]["fields"]} == {
+        "id_voto": "integer",
+        "dt_voto": "datetime",
+        "qtd": "integer",
+    }
+    cat = duckdb.connect(str(folder / "catalogo.duckdb"), read_only=True)
+    assert scalar(cat, "SELECT count(*) FROM marts.fct_votos") == 1000  # o número citado se reproduz
+    cat.close()
+    assert (
+        json.loads((out / "datapackage.json").read_text())["version"]
+        == json.loads((out / "manifesto.json").read_text())["id_execucao"]
+    )
+
+
+def _old_version(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings, month: str
+) -> tuple[Path, Path, Path]:
+    """Versão `month` que cita um Parquet que o lake atual já não usa: (lake, versão, arquivo só dela)."""
+    monkeypatch.setattr(lake, "snapshot", SNAPSHOT)
+    monkeypatch.setattr(lake, "utcnow", lambda: datetime.fromisoformat(f"{month}-05T00:00:00+00:00"))
+    out, _ = run(con, settings)
+    old_file = where(out, VOTOS)
+    change(settings, "INSERT INTO marts.fct_votos VALUES (5000, DATE '2021-01-01', 'x', 1)")
+    export.export(settings)
+    assert old_file.exists() and where(out, VOTOS) != old_file
+    return out, out / "versoes" / month, old_file
+
+
+def _cited(out: Path) -> list[Path]:
+    return [out / f["arquivo"] for t in manifest(out)["tabelas"] for f in t["arquivos"]]  # type: ignore[attr-defined]
+
+
+def _later(monkeypatch: pytest.MonkeyPatch, settings: Settings, month: str) -> None:
+    monkeypatch.setattr(lake, "utcnow", lambda: datetime.fromisoformat(f"{month}-05T00:00:00+00:00"))
+    export.export(settings)
+
+
+def test_retention_removes_the_parquet_of_a_version_older_than_the_window_and_marks_its_manifest(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    out, folder, old_file = _old_version(monkeypatch, con, settings, "2025-10")
+    before = json.loads((folder / "manifesto.json").read_text())
+    _later(monkeypatch, settings, "2026-11")  # 13 meses depois
+    assert not old_file.exists() and all(f.exists() for f in _cited(out))  # o citado pelo atual fica
+    after = json.loads((folder / "manifesto.json").read_text())
+    assert after.pop("arquivos_removidos") and after == before  # segue descrevendo e dando o hash
+    assert (folder / "catalogo.duckdb").exists() and (folder / "datapackage.json").exists()
+
+
+def test_retention_keeps_a_version_inside_the_window(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    out, folder, old_file = _old_version(monkeypatch, con, settings, "2025-11")
+    _later(monkeypatch, settings, "2026-11")  # 12 meses: ainda dentro
+    assert old_file.exists() and "arquivos_removidos" not in json.loads(
+        (folder / "manifesto.json").read_text()
+    )
+    monkeypatch.setenv("DADO_PUBLICO_VERSOES_MESES", "6")  # a janela é configurável
+    _later(monkeypatch, settings, "2026-11")
+    assert not old_file.exists()
+
+
+def test_a_pinned_version_keeps_its_parquet_forever(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    out, folder, old_file = _old_version(monkeypatch, con, settings, "2025-10")
+    lake.fix(lake.connect(settings, warehouse_file=False), lake.location(settings), "2025-10", "10.5281/x")
+    assert json.loads((folder / "fixada.json").read_text())["doi"] == "10.5281/x"
+    _later(monkeypatch, settings, "2030-01")
+    assert old_file.exists() and "arquivos_removidos" not in json.loads(
+        (folder / "manifesto.json").read_text()
+    )
+    with pytest.raises(ValueError, match="não existe"):
+        lake.fix(lake.connect(settings, warehouse_file=False), lake.location(settings), "2020-01", "x")
+
+
+def test_a_run_that_fails_midway_through_the_retention_deletes_nothing_cited(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    out, folder, old_file = _old_version(monkeypatch, con, settings, "2025-10")
+    monkeypatch.setattr(lake, "delete_orphans", lambda *a: (_ for _ in ()).throw(RuntimeError("caiu")))
+    with pytest.raises(RuntimeError):
+        _later(monkeypatch, settings, "2026-11")
+    assert (
+        all(f.exists() for f in _cited(out))
+        and "arquivos_removidos" not in (folder / "manifesto.json").read_text()
+    )
+    monkeypatch.undo()  # a rodada seguinte refaz a retenção
+    monkeypatch.setattr(lake, "utcnow", lambda: datetime.fromisoformat("2026-11-06T00:00:00+00:00"))
+    export.export(settings)
+    assert not old_file.exists() and all(f.exists() for f in _cited(out))

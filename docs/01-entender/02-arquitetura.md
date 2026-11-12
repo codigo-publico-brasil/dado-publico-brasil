@@ -18,7 +18,7 @@ O **DuckDB é só o motor de cálculo**, um arquivo descartável que se refaz do
 | Onde | O que guarda | Acesso |
 | --- | --- | --- |
 | Servidor de processamento (1 nó, disco local) | Dagster, ingestão, dbt e o raw em Parquet (`data_store/raw/`) e os arquivos DuckDB (`warehouse.duckdb` com as views do raw e o que o dbt produz; `estado.duckdb` com `identity` e `metadata`); fila serial, um escritor | privado; só ele sai à rede para baixar as fontes |
-| **Bucket público** (R2, `datalake.codigopublicobrasil.com.br`) | Parquet de `staging`, `intermediate`, `marts` e `metadata.capturas`; `catalogo.duckdb` e `manifesto.json` | leitura anônima, sem listagem; o catálogo enumera os arquivos |
+| **Bucket público** (R2, `datalake.codigopublicobrasil.com.br`) | Parquet de `staging`, `intermediate`, `marts` e `metadata` (`capturas`, `fontes_verificacoes`, `testes_resultados`); `catalogo.duckdb`, `manifesto.json`, `datapackage.json` e `versoes/AAAA-MM/` | leitura anônima, sem listagem; o catálogo enumera os arquivos |
 | **Bucket privado** | cópias da identidade (`id_pessoa` não se reconstrói) e `metadata` (capturas, execuções); **nunca público** | só o pipeline; com teste de restauração |
 
 O **landing** (que guarda campos que o raw descarta, como CPF) e os arquivos extraídos ficam **só no disco do servidor**, sem cópia: risco aceito no [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md). Só os arquivos que o contrato manda publicar saem, em `arq_`, no lake público.

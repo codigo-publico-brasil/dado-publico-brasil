@@ -142,7 +142,7 @@ def test_organs_and_fronts_link_members_to_people_and_report_unknown_deputies(
     full: tuple[Connection, Settings],
 ) -> None:
     con, _ = full
-    assert scalar(con, "SELECT count(*) FROM marts.dim_orgaos") == 2
+    assert scalar(con, "SELECT count(*) FROM marts.dim_orgaos") == 4  # 2 da Câmara e 2 colegiados do Senado
     members = con.execute(
         "SELECT p.nome, m.cargo, m.dt_fim FROM marts.brg_orgaos_membros m JOIN marts.dim_pessoas_cadastro p USING (id_pessoa) "
         "ORDER BY p.nome, m.dt_fim NULLS FIRST"
