@@ -17,7 +17,8 @@ from dado_publico_brasil.core.warehouse import scalar
 from dado_publico_brasil.transformation import dbt, lake
 
 LAYERS = ("staging", "intermediate", "marts")
-EXTRA = (("metadata", "capturas"),)  # único lugar do nome da tabela de capturas
+# `metadata` publicada (ADR 0054, #279): as capturas, o histórico dos testes e as verificações das fontes
+EXTRA = (("metadata", "capturas"), ("metadata", "fontes_verificacoes"), ("metadata", "testes_resultados"))
 MEDALLION = {"staging": "prata", "intermediate": "prata", "marts": "ouro", "metadata": "bronze"}
 PRIVATE_SOURCES = ("identity", "metadata")  # modelos `stg_identity__*` e `stg_metadata__*` não são de fonte
 PERSONAL = re.compile(r"(^|_)(cpf|rg|titulo_eleitor|documento|nr_documento)(_|$)")

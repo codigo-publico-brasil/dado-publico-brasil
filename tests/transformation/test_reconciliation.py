@@ -41,7 +41,7 @@ def warehouse(captures: dict[int, int], carregadas: int, raw: dict[int, int]) ->
     con.execute("CREATE TABLE metadata.capturas (id_captura BIGINT, particao INTEGER)")
     con.execute(
         "CREATE TABLE metadata.fontes_verificacoes "
-        "(id_verificacao BIGINT, fonte VARCHAR, dataset VARCHAR, particao INTEGER, verificacao VARCHAR, detalhe VARCHAR)"
+        "(id_verificacao BIGINT, fonte VARCHAR, dataset VARCHAR, particao INTEGER, verificacao VARCHAR, qtd_linhas BIGINT)"
     )
     con.execute("CREATE TABLE raw_fonte_a.votos (_source_file_id BIGINT)")
     for capture, year in captures.items():
@@ -50,9 +50,8 @@ def warehouse(captures: dict[int, int], carregadas: int, raw: dict[int, int]) ->
         con.execute("INSERT INTO raw_fonte_a.votos SELECT ? FROM range(?)", (capture, count))
     con.execute(
         "INSERT INTO metadata.fontes_verificacoes VALUES "
-        "(1, 'fonte_a', 'votos', 2022, 'carga', 'lidas 5, filtradas pelo only 0, carregadas 5, rejeitadas 0'), "
-        "(2, 'fonte_a', 'votos', 2022, 'carga', ?)",
-        (f"lidas {carregadas}, filtradas pelo only 0, carregadas {carregadas}, rejeitadas 0",),
+        "(1, 'fonte_a', 'votos', 2022, 'carga', 5), (2, 'fonte_a', 'votos', 2022, 'carga', ?)",
+        (carregadas,),
     )
     return con
 

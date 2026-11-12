@@ -143,7 +143,7 @@ DISPOSITIVOS = {
                             "Situacao": "Rejeitado",
                             "PossuiVotos": "Sim",
                             "TipoVotacao": "Painel",
-                            "DataSessao": "2024-09-10",
+                            "DataSessao": "2023-09-10",
                         },
                         {
                             "Codigo": "9002",
@@ -178,6 +178,12 @@ VOTOS = {
                 "Sessao": "SESSÃO CONJUNTA Nº 003",
                 "Camara": {
                     "Voto": [
+                        {
+                            "NomeParlamentar": "ANA ÁRVORE",
+                            "PartidoParlamentar": "AAA",
+                            "UfParlamentar": "SP",
+                            "TipoVoto": "Não",
+                        },
                         {
                             "NomeParlamentar": "BIA",
                             "PartidoParlamentar": "BBB",

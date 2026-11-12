@@ -1,0 +1,53 @@
+version: 2
+
+# Testes unitários da ligação do voto de veto à pessoa (ADR 0057), com dados sintéticos. Rodam com
+# `dbt test --select test_type:unit`.
+unit_tests:
+  - name: voto_de_veto_liga_so_quando_o_nome_aponta_para_uma_pessoa_em_exercicio_na_casa_uf_e_dia_da_sessao
+    description: >
+      Liga o voto cujo nome (sem acento e caixa) é o nome parlamentar ou, na falta, o nome civil de uma só pessoa que
+      exercia o cargo da casa, na UF, no dia da sessão. Não liga: homônimos em exercício, exercício em outra casa ou UF,
+      exercício fora do dia da sessão e nome sem correspondência.
+    model: fct_vetos_votos
+    given:
+      - input: ref('stg_senado__vetos_votos')
+        rows:
+          - {id_dispositivo: 1, casa: Câmara, nome_parlamentar: Ana Árvore, uf: SP, voto: Sim}
+          - {id_dispositivo: 1, casa: Câmara, nome_parlamentar: Beto Souza, uf: SP, voto: Sim}
+          - {id_dispositivo: 1, casa: Câmara, nome_parlamentar: Caio Lima, uf: RJ, voto: Sim}
+          - {id_dispositivo: 1, casa: Senado, nome_parlamentar: Dani Rocha, uf: SP, voto: Sim}
+          - {id_dispositivo: 1, casa: Câmara, nome_parlamentar: Eva Alves, uf: SP, voto: Sim}
+          - {id_dispositivo: 1, casa: Câmara, nome_parlamentar: Fabio Santos Pereira, uf: SP, voto: Sim}
+          - {id_dispositivo: 1, casa: Câmara, nome_parlamentar: Sem Correspondencia, uf: SP, voto: Sim}
+      - input: ref('stg_senado__vetos_dispositivos')
+        rows:
+          - {id_dispositivo: 1, dt_sessao: "2023-09-10"}
+      - input: ref('stg_metadata__capturas')
+        rows: []
+      - input: ref('dim_pessoas')
+        rows:
+          - {id_pessoa: 1, nome_publico: Ana Árvore, nome_civil: Ana da Silva}
+          - {id_pessoa: 2, nome_publico: Beto Souza, nome_civil: Beto A Souza}
+          - {id_pessoa: 3, nome_publico: Beto Souza, nome_civil: Beto B Souza}
+          - {id_pessoa: 4, nome_publico: Caio Lima, nome_civil: Caio Lima}
+          - {id_pessoa: 5, nome_publico: Dani Rocha, nome_civil: Dani Rocha}
+          - {id_pessoa: 6, nome_publico: Eva Alves, nome_civil: Eva Alves}
+          - {id_pessoa: 7, nome_publico: Fabio Santos, nome_civil: Fabio Santos Pereira}
+      - input: ref('fct_exercicios')
+        rows:
+          - {id_pessoa: 1, id_cargo: deputado_federal, uf: SP, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 2, id_cargo: deputado_federal, uf: SP, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 3, id_cargo: deputado_federal, uf: SP, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 4, id_cargo: deputado_federal, uf: SP, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 5, id_cargo: deputado_federal, uf: SP, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 6, id_cargo: deputado_federal, uf: SP, dt_inicio: "2023-02-01", dt_fim: "2023-06-01", dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 7, id_cargo: deputado_federal, uf: SP, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+    expect:
+      rows:
+        - {nome_parlamentar: Ana Árvore, id_pessoa: 1, regra_ligacao_pessoa: nome_parlamentar_e_exercicio, precisao_ligacao_pessoa: derivada}
+        - {nome_parlamentar: Beto Souza, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {nome_parlamentar: Caio Lima, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {nome_parlamentar: Dani Rocha, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {nome_parlamentar: Eva Alves, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {nome_parlamentar: Fabio Santos Pereira, id_pessoa: 7, regra_ligacao_pessoa: nome_civil_e_exercicio, precisao_ligacao_pessoa: derivada}
+        - {nome_parlamentar: Sem Correspondencia, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}

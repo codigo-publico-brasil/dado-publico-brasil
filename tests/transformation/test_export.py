@@ -115,6 +115,8 @@ def test_every_table_is_exported_with_the_same_rows_and_schema(con: Connection, 
         ("staging", "stg_camara__visao", "staging/legislativo/federal/camara/stg_camara__visao", "prata"),
         ("staging", "stg_tse__x", "staging/judiciario/federal/tse/stg_tse__x", "prata"),
         ("metadata", "capturas", "metadata/capturas", "bronze"),
+        ("metadata", "fontes_verificacoes", "metadata/fontes_verificacoes", "bronze"),
+        ("metadata", "testes_resultados", "metadata/testes_resultados", "bronze"),
     }
     assert result["tabelas"] == len(tables) and result["gravadas"] == len(tables)
     live = warehouse.connect(settings, read_only=True)
@@ -903,7 +905,9 @@ def test_a_failing_model_or_test_keeps_its_previous_version_and_the_rest_is_publ
     before = {t["tabela"]: t for t in manifest(out)["tabelas"]}
     result = export.export(settings)
     after = {t["tabela"]: t for t in manifest(out)["tabelas"]}
-    assert result["excluidas"] == 2 and result["gravadas"] == 2  # a base e a view sobre ela
+    assert (
+        result["excluidas"] == 2 and result["gravadas"] == 3
+    )  # a base, a view sobre ela e o histórico dos testes
     assert after["fct_votos"]["impressao"] == before["fct_votos"]["impressao"]  # a anterior, intacta
     assert "teste not_null_votos: fail" in str(after["fct_votos"]["excluida_por"])
     assert "modelo int_x: error" in str(after["int_x"]["excluida_por"])
@@ -987,13 +991,17 @@ def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_a
     caplog.clear()
     caplog.set_level(logging.INFO)
     result = export.export(settings)
-    assert sorted(seen) == [  # só as sem nó do dbt no manifesto (staging e a captura): sempre recalculadas
+    assert sorted(seen) == [  # só as sem nó do dbt no manifesto (staging e metadata): sempre recalculadas
         "metadata.capturas",
+        "metadata.fontes_verificacoes",
+        "metadata.testes_resultados",
         "staging.stg_camara__base",
         "staging.stg_camara__visao",
         "staging.stg_tse__x",
     ]
-    assert manifest(out)["tabelas"] == complete and result["gravadas"] == 0
+    # o histórico dos testes ganhou as linhas do `build_at`: é a única tabela que muda
+    rest = [t for t in manifest(out)["tabelas"] if t["tabela"] != "testes_resultados"]
+    assert rest == [t for t in complete if t["tabela"] != "testes_resultados"] and result["gravadas"] == 1
     assert "int_x: reaproveitada" in caplog.text
     assert verify.verify(settings) == []
 
@@ -1002,7 +1010,9 @@ def test_a_table_not_rebuilt_since_the_published_manifest_is_not_fingerprinted_a
     build_at(settings, "2999-01-01T00:00:00+00:00", {"model.x.int_x": "success"})
     seen.clear()
     result = export.export(settings)
-    assert "intermediate.int_x" in seen and "marts.fct_votos" not in seen and result["gravadas"] == 1
+    assert (
+        "intermediate.int_x" in seen and "marts.fct_votos" not in seen and result["gravadas"] == 2
+    )  # int_x e o histórico
 
 
 def test_a_new_code_version_fingerprints_everything_again(
@@ -1145,6 +1155,69 @@ GOLDEN: dict[int, list[tuple[object, ...]]] = {
             ],
             [("metadata/capturas.parquet", 0)],
         ),
+        (
+            "metadata",
+            "fontes_verificacoes",
+            "metadata/fontes_verificacoes",
+            0,
+            "a337289c5086aa27e998a961b604f19cd9905e1f33435683da285124488e033e",
+            None,
+            None,
+            None,
+            [
+                ("id_verificacao", "BIGINT", "Identificador da verificação."),
+                ("dt_verificacao", "TIMESTAMP", "Instante (UTC) da verificação."),
+                ("fonte", "VARCHAR", "Fonte verificada."),
+                ("dataset", "VARCHAR", "Dataset verificado."),
+                (
+                    "particao",
+                    "INTEGER",
+                    "Partição verificada (ano, mês AAAAMM ou legislatura), quando houver.",
+                ),
+                (
+                    "verificacao",
+                    "VARCHAR",
+                    "Nome da verificação (availability, schema, volume, carga, linhas_removidas...).",
+                ),
+                ("resultado", "VARCHAR", "Resultado: ok, warn (aviso) ou error (erro)."),
+                (
+                    "detalhe",
+                    "VARCHAR",
+                    "Detalhe do resultado (contagens, colunas que mudaram, mensagem de erro).",
+                ),
+            ],
+            [("metadata/fontes_verificacoes.parquet", 0)],
+        ),
+        (
+            "metadata",
+            "testes_resultados",
+            "metadata/testes_resultados",
+            0,
+            "fef1f18e8143048b4963b92868dd83e861fcc60c137df0bb915ecf1cf98301f7",
+            None,
+            None,
+            None,
+            [
+                ("id_execucao", "BIGINT", "Execução (metadata.execucoes.id_execucao) que rodou o dbt."),
+                (
+                    "id_no",
+                    "VARCHAR",
+                    "Identificador do nó no dbt (por exemplo, test.dado_publico_brasil.nome_do_teste).",
+                ),
+                ("tipo", "VARCHAR", "Tipo do nó: model, test ou freshness."),
+                ("resultado", "VARCHAR", "Resultado: success, pass, warn, fail ou error."),
+                ("qtd_falhas", "BIGINT", "Linhas que fizeram o teste falhar ou avisar."),
+                ("mensagem", "VARCHAR", "Mensagem do dbt para o nó."),
+                ("dt_registro", "TIMESTAMP", "Instante (UTC) em que o resultado foi gravado."),
+                (
+                    "qtd_segundos",
+                    "DOUBLE",
+                    "Segundos que o dbt levou para executar o nó (execution_time do run_results.json); vazio se o "
+                    "dbt não informou.",
+                ),
+            ],
+            [("metadata/testes_resultados.parquet", 0)],
+        ),
     ],
     1: [
         (
@@ -1266,6 +1339,69 @@ GOLDEN: dict[int, list[tuple[object, ...]]] = {
                 ),
             ],
             [("metadata/capturas.parquet", 0)],
+        ),
+        (
+            "metadata",
+            "fontes_verificacoes",
+            "metadata/fontes_verificacoes",
+            0,
+            "a337289c5086aa27e998a961b604f19cd9905e1f33435683da285124488e033e",
+            None,
+            None,
+            None,
+            [
+                ("id_verificacao", "BIGINT", "Identificador da verificação."),
+                ("dt_verificacao", "TIMESTAMP", "Instante (UTC) da verificação."),
+                ("fonte", "VARCHAR", "Fonte verificada."),
+                ("dataset", "VARCHAR", "Dataset verificado."),
+                (
+                    "particao",
+                    "INTEGER",
+                    "Partição verificada (ano, mês AAAAMM ou legislatura), quando houver.",
+                ),
+                (
+                    "verificacao",
+                    "VARCHAR",
+                    "Nome da verificação (availability, schema, volume, carga, linhas_removidas...).",
+                ),
+                ("resultado", "VARCHAR", "Resultado: ok, warn (aviso) ou error (erro)."),
+                (
+                    "detalhe",
+                    "VARCHAR",
+                    "Detalhe do resultado (contagens, colunas que mudaram, mensagem de erro).",
+                ),
+            ],
+            [("metadata/fontes_verificacoes.parquet", 0)],
+        ),
+        (
+            "metadata",
+            "testes_resultados",
+            "metadata/testes_resultados",
+            0,
+            "fef1f18e8143048b4963b92868dd83e861fcc60c137df0bb915ecf1cf98301f7",
+            None,
+            None,
+            None,
+            [
+                ("id_execucao", "BIGINT", "Execução (metadata.execucoes.id_execucao) que rodou o dbt."),
+                (
+                    "id_no",
+                    "VARCHAR",
+                    "Identificador do nó no dbt (por exemplo, test.dado_publico_brasil.nome_do_teste).",
+                ),
+                ("tipo", "VARCHAR", "Tipo do nó: model, test ou freshness."),
+                ("resultado", "VARCHAR", "Resultado: success, pass, warn, fail ou error."),
+                ("qtd_falhas", "BIGINT", "Linhas que fizeram o teste falhar ou avisar."),
+                ("mensagem", "VARCHAR", "Mensagem do dbt para o nó."),
+                ("dt_registro", "TIMESTAMP", "Instante (UTC) em que o resultado foi gravado."),
+                (
+                    "qtd_segundos",
+                    "DOUBLE",
+                    "Segundos que o dbt levou para executar o nó (execution_time do run_results.json); vazio se o "
+                    "dbt não informou.",
+                ),
+            ],
+            [("metadata/testes_resultados.parquet", 0)],
         ),
     ],
 }

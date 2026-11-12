@@ -12,6 +12,8 @@ Tudo é Parquet (ZSTD) em `https://datalake.codigopublicobrasil.com.br` (a pági
 | `intermediate/<modelo>` | passos intermediários da derivação |
 | `marts/<domínio>/<tabela>` | o que se consome (contrato de colunas); domínio = `legislativo`, `eleicoes`, `pessoas`, `territorio`, `compras` |
 | `metadata/capturas` | URL, hash SHA-256 e data de cada arquivo capturado da fonte |
+| `metadata/fontes_verificacoes` | cada verificação das fontes (disponibilidade, bloqueio, integridade do arquivo, esquema, volume, carga) com resultado e detalhe: o histórico de quando e o que a fonte deixou de entregar |
+| `metadata/testes_resultados` | o resultado de cada modelo e teste do dbt em cada execução (inclui os testes de lacuna, que medem o que falta no dado) |
 | `staging/<poder>/<esfera>/<fonte>/arq_<coleção>/<caminho>` | **arquivos** que não são tabela (zip original do DOU, fotos dos candidatos), uma pasta `arq_` por coleção; o prefixo `arq_` distingue arquivo de tabela. A lista de cada coleção é a tabela `arq_<coleção>`, no manifesto |
 | `<caminho>/<id_execucao>/<nome>.parquet` | onde cada tabela de fato fica: o arquivo é gravado em pasta própria da execução e o manifesto e o catálogo dizem qual é; não monte caminho à mão |
 | `<caminho>/<id_execucao>/ano=AAAA/part-0.parquet` | as tabelas grandes que o dbt declara com partição: uma pasta por ano no lugar do arquivo único |

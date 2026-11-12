@@ -2,6 +2,7 @@
 with base as (
 
 select
+    c_digo_ug || '-' || n_mero_contrato as id_contrato,
     n_mero_contrato as numero_contrato,
     c_digo_rg_o_superior as cd_orgao_superior,
     nome_rg_o_superior as orgao_superior,

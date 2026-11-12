@@ -25,7 +25,16 @@ def test_a_failure_in_the_middle_of_a_fusion_leaves_the_identity_as_it_was(
         "CREATE TABLE intermediate.int_vinculos_propostos (origem_fonte VARCHAR, origem_tipo VARCHAR, "
         "id_origem VARCHAR, destino_fonte VARCHAR, destino_tipo VARCHAR, id_destino VARCHAR, metodo VARCHAR)"
     )
-    con.execute("CREATE TABLE intermediate.int_tse_eleitos_grupos (grupo VARCHAR, id_candidatura VARCHAR)")
+    con.execute(
+        "CREATE TABLE intermediate.int_pessoas_grupos (fonte VARCHAR, id_tipo VARCHAR, id_na_fonte VARCHAR, "
+        "grupo VARCHAR, metodo VARCHAR, metodo_fusao VARCHAR)"
+    )
+    con.execute(
+        "CREATE TABLE intermediate.fontes_identidade (fonte VARCHAR, precedencia INTEGER, fl_vinculo_derivado BOOLEAN)"
+    )
+    con.execute(
+        "INSERT INTO intermediate.fontes_identidade VALUES ('camara', 1, false), ('senado', 1, false), ('tse', 2, true)"
+    )
     assert identity.resolve(con) == (2, 2)  # duas pessoas, ainda sem vínculo
     con.execute(
         "INSERT INTO intermediate.int_vinculos_propostos VALUES "
@@ -36,7 +45,9 @@ def test_a_failure_in_the_middle_of_a_fusion_leaves_the_identity_as_it_was(
     def fail(*_: object) -> int:
         raise RuntimeError("queda no meio da fusão")
 
-    monkeypatch.setattr(identity, "_tse_people", fail)  # roda depois de a fusão apagar a pessoa absorvida
+    monkeypatch.setattr(
+        identity, "_people_of_groups", fail
+    )  # roda depois de a fusão apagar a pessoa absorvida
     with pytest.raises(RuntimeError, match="queda"):
         identity.resolve(con)
     assert identity.fingerprint(con) == before
