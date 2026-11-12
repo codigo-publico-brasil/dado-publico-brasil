@@ -1,6 +1,6 @@
 # ADR 0057: voto nominal de veto ligado à pessoa por nome, UF e exercício
 
-- **Status:** proposto (2026-11-12); retoma a parte dos vetos do [ADR 0028](0028-ligar-vetos-e-emendas-a-pessoas.md) (defasado: nunca foi implementada). Responde à issue #15. Irmão do ADR 0056 (emenda individual ligada ao autor), que faz o mesmo para emendas.
+- **Status:** aceito em 2026-11-12 (decisão do fundador); antes proposto (2026-11-12); retoma a parte dos vetos do [ADR 0028](0028-ligar-vetos-e-emendas-a-pessoas.md) (defasado: nunca foi implementada). Responde à issue #15. Irmão do ADR 0056 (emenda individual ligada ao autor), que faz o mesmo para emendas.
 - **Data:** 2026-11-12
 - **Complementa:** [ADR 0013](0013-tse-ligacao-por-nome-civil-e-nascimento.md) (regra conservadora: único ou nada).
 
