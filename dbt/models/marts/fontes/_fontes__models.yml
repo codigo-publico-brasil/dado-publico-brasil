@@ -1,0 +1,47 @@
+version: 2
+
+# Medições sobre as fontes como publicadoras de dado (ADR 0054): descrevem a publicação, nunca uma pessoa nem um juízo.
+# Sem nota, ranking nem limiar; uma expectativa (atraso) só entra com fonte citada.
+
+models:
+  - name: fct_fontes_ocorrencias
+    description: >
+      O que a fonte deixou de entregar e desde quando: cada sequência de verificações seguidas sem resultado "ok" para a mesma fonte,
+      dataset, partição e verificação, com a primeira e a última observação. Um "ok" depois encerra a ocorrência; o mesmo problema
+      depois dele abre outra. Tipos: `indisponivel` (a fonte não respondeu; inclui falha de rede do projeto, que o registro de hoje
+      não separa), `nao_publicado` (partição que a fonte ainda não publicou), `bloqueio` (a fonte barrou o pedido),
+      `arquivo_invalido` (página HTML no lugar do arquivo, tamanho diferente do informado, zip inválido ou sem o membro esperado),
+      `mudanca_esquema` (colunas novas ou removidas desde a captura anterior), `coluna_ausente` (coluna do contrato ausente) e
+      `queda_volume` (menos de 80% das linhas da carga anterior). A divergência entre fontes oficiais não é registrada por
+      verificação: está nos testes de lacuna em `metadata/testes_resultados`. Uma linha por ocorrência.
+    meta: {sensitivity: publico, grain: ocorrência (primeira verificação da sequência), owner: fundador do projeto, freshness: diário, fonte_oficial: "Verificações do projeto sobre as fontes oficiais (metadata.fontes_verificacoes)"}
+    columns:
+      - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte verificada."}
+      - {name: id_verificacao, data_type: bigint, tests: [unique, not_null, {relationships: {to: ref('stg_metadata__fontes_verificacoes'), field: id_verificacao}}], description: "Primeira verificação da ocorrência (metadata/fontes_verificacoes): a evidência, com instante e detalhe."}
+      - {name: dataset, data_type: varchar, tests: [not_null], description: "Dataset verificado."}
+      - {name: particao, data_type: integer, description: "Partição verificada (ano, mês AAAAMM ou legislatura); vazio nos datasets sem partição."}
+      - {name: tipo_ocorrencia, data_type: varchar, tests: [not_null, {accepted_values: {arguments: {values: [indisponivel, nao_publicado, bloqueio, arquivo_invalido, mudanca_esquema, coluna_ausente, queda_volume]}}}], description: "Tipo da ocorrência (veja a descrição da tabela)."}
+      - {name: dt_primeira_observacao, data_type: timestamp, tests: [not_null], description: "Instante (UTC) da primeira verificação da ocorrência: desde quando."}
+      - {name: dt_ultima_observacao, data_type: timestamp, tests: [not_null], description: "Instante (UTC) da última verificação da ocorrência."}
+      - {name: qtd_observacoes, data_type: bigint, tests: [not_null], description: "Quantas verificações seguidas registraram a ocorrência."}
+      - {name: fl_em_aberto, data_type: boolean, tests: [not_null], description: "Verdadeiro quando a última verificação desta fonte, dataset, partição e verificação ainda é a da ocorrência (nenhum ok depois)."}
+      - {name: detalhe, data_type: varchar, description: "Detalhe da primeira verificação da ocorrência, como o projeto registrou (mensagem de erro, colunas que mudaram, contagens)."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura vigente quando a ocorrência começou (a última feita até a primeira observação, metadata/capturas); vazio se a partição nunca foi capturada."}
+      - {name: dt_captura, data_type: date, description: "Data da captura de id_captura; vazia quando ela é vazia."}
+
+  - name: agg_fontes_capturas
+    description: >
+      Quando cada dataset de cada fonte trouxe conteúdo novo e quando foi consultado pela última vez: contagem de capturas e de partições,
+      primeira e última captura e última verificação. Medição de tempo sobre `metadata/capturas`, sem expectativa de periodicidade:
+      o atraso exige o prazo legal ou a periodicidade declarada pela fonte e não é calculado aqui. Uma linha por fonte e dataset.
+    meta: {sensitivity: publico, grain: fonte e dataset, owner: fundador do projeto, freshness: diário, fonte_oficial: "Verificações do projeto sobre as fontes oficiais (metadata.capturas)", auditoria_excecao: "Agregado das capturas; cada captura está em metadata/capturas."}
+    data_tests:
+      - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [fonte, dataset]}}
+    columns:
+      - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte dos arquivos."}
+      - {name: dataset, data_type: varchar, tests: [not_null], description: "Dataset dos arquivos."}
+      - {name: qtd_capturas, data_type: bigint, tests: [not_null], description: "Quantos arquivos foram capturados do dataset (um conteúdo novo, uma captura)."}
+      - {name: qtd_particoes, data_type: bigint, tests: [not_null], description: "Quantas partições distintas (ano, mês AAAAMM ou legislatura) foram capturadas; zero nos datasets sem partição."}
+      - {name: dt_primeira_captura, data_type: timestamp, description: "Instante (UTC) da primeira captura do dataset."}
+      - {name: dt_ultima_captura, data_type: timestamp, description: "Instante (UTC) da última captura com conteúdo novo."}
+      - {name: dt_ultima_verificacao, data_type: timestamp, description: "Instante (UTC) da última vez que a fonte foi consultada para o dataset."}

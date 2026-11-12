@@ -18,7 +18,7 @@ A **camada de dados** do [Código Público Brasil](https://github.com/codigo-pub
 2. O landing (arquivo recebido) é imutável, com hash.
 3. Nada é inventado, estimado ou completado: faltou, fica vazio, e a lacuna é medida por teste.
 4. Nenhum documento pessoal (CPF, RG...); só dado público de agente público.
-5. Sem métricas avaliativas derivadas (nota, ranking): a plataforma entrega fatos.
+5. Sem métricas avaliativas derivadas (nota, ranking): a plataforma entrega fatos, agregados e medições da publicação das fontes; o que é avaliação não entra ([ADR 0054](../05-decisoes/0054-fato-agregado-e-avaliacao.md)).
 6. Conteúdo gerado por IA fica em tabelas próprias, rotulado com modelo e versão, nunca misturado ao dado oficial.
 
 As regras de apresentação (neutralidade, sem recomendação de voto) pertencem às aplicações.

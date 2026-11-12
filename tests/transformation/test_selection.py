@@ -325,3 +325,8 @@ def test_phase_log_summarises_skipped_and_built_models_with_minutes() -> None:
     assert lines[0] == "dbt transform_post: 1 pulados, 2 reconstruídos (1,6 min somados), 1 com erro"
     assert "  stg_a: pulado" in lines
     assert lines[2] == "  m_b: success (1,5 min)" and "  m_c: error (0,1 min)" in lines
+
+
+def test_the_period_unit_day_changes_every_day() -> None:
+    assert selection._period(date(2026, 11, 6), "dia") != selection._period(date(2026, 11, 7), "dia")
+    assert selection._period(date(2026, 11, 6), "mes") == selection._period(date(2026, 11, 7), "mes")

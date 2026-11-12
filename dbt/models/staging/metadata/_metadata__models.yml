@@ -12,3 +12,15 @@ models:
       - {name: sha256, description: "Impressão digital (SHA-256) do arquivo capturado: prova que o arquivo guardado é o mesmo que a fonte entregou."}
       - {name: dt_captura, description: "Instante (UTC) da primeira captura deste conteúdo."}
       - {name: dt_verificacao, description: "Instante (UTC) da última vez que a fonte foi consultada e o conteúdo continuava o mesmo."}
+
+  - name: stg_metadata__fontes_verificacoes
+    description: Verificações das fontes (disponibilidade, bloqueio, integridade do arquivo, esquema, volume, carga), uma linha por verificação. Base de `fct_fontes_ocorrencias`.
+    columns:
+      - {name: id_verificacao, description: "Identificador da verificação.", tests: ["unique", "not_null"]}
+      - {name: dt_verificacao, description: "Instante (UTC) da verificação."}
+      - {name: fonte, description: "Fonte verificada."}
+      - {name: dataset, description: "Dataset verificado."}
+      - {name: particao, description: "Partição verificada (ano, mês AAAAMM ou legislatura), quando houver."}
+      - {name: verificacao, description: "Nome da verificação (availability, bloqueio, integridade, schema, schema_mudou, volume, carga...)."}
+      - {name: resultado, description: "Resultado: ok, warn (aviso) ou error (erro)."}
+      - {name: detalhe, description: "Detalhe do resultado (contagens, colunas que mudaram, mensagem de erro)."}
