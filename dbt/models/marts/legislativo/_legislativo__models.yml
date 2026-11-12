@@ -115,6 +115,10 @@ models:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: id_votacao, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}
       - {name: dt_votacao, data_type: date, tests: [not_null], description: "Data da votação."}
+      - name: id_orgao
+        data_type: varchar
+        tests: [{relationships: {to: ref('dim_orgaos'), field: id_orgao, config: {severity: warn}}}, {not_null: {config: {severity: warn}}}]
+        description: "Órgão em que ocorreu (dim_orgaos). Câmara: o identificador do órgão que a fonte informa. Senado: ligado pela sigla do colegiado, só quando ela identifica um colegiado do Senado em atividade; vazio no colegiado extinto, na sigla repetida e onde a fonte não informa (o teste de aviso mede)."
       - {name: orgao_sigla, data_type: varchar, description: "Sigla do órgão em que ocorreu."}
       - {name: descricao, data_type: varchar, description: "Descrição oficial da votação, com caixa padronizada. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing."}
       - {name: aprovada, data_type: integer, description: "1 se a fonte registra aprovação; 0 se não; vazio se não informa."}

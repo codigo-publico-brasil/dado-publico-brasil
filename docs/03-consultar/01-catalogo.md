@@ -49,6 +49,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
+| `colegiados` | Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha. Fonte do catálogo de órgãos do Senado. | publico-agente-publico |  |
 | `normas` | Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...), por ano de assinatura, só os metadados. | publico-agente-publico |  |
 | `normas_detalhe` | Detalhe, buscado por item na API, das leis, leis complementares, emendas e medidas provisórias já buscadas (`_item` é o código da norma). | publico-agente-publico |  |
 | `normas_detalhe__publicacoes_publicacao` | Publicações de cada norma no Diário Oficial (lista `publicacoes.publicacao`). | publico-agente-publico |  |
@@ -158,6 +159,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_identity__pessoas_identificadores` | Identificadores de cada pessoa em cada fonte. | publico-agente-publico |  |
 | `stg_metadata__capturas` | Capturas dos arquivos da fonte (um arquivo, uma linha). `id_captura` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
 | `stg_pep__dirigentes` | Presidente, Vice-Presidente e Ministro de Estado, uma linha por pessoa, função, órgão e início de exercício, em cada mês capturado (a mesma linha se repete nos meses). Sem CPF. | publico-agente-publico | mês capturado, pessoa, função, órgão e início de exercício |
+| `stg_senado__colegiados` | Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha; o colegiado extinto não consta da fonte. | publico-agente-publico |  |
 | `stg_senado__exercicios` | Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento. | publico-agente-publico |  |
 | `stg_senado__normas` | Catálogo das normas federais, uma linha por norma, só metadados, com a ementa padronizada e a original. | publico-agente-publico |  |
 | `stg_senado__normas_publicacoes` | Publicações de cada norma detalhada (e da Constituição) no Diário Oficial, uma linha por norma e publicação. | publico-agente-publico |  |
@@ -234,7 +236,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dim_legislaturas` | Legislaturas da Câmara, com datas oficiais de início e fim. Uma linha por legislatura. | publico | legislatura |
 | `dim_municipios` | Municípios do Brasil segundo o IBGE, com UF e região. Uma linha por município. | publico | município |
 | `dim_municipios_codigos_tse` | De-para entre o código de município do TSE e o do IBGE, por nome e UF únicos dos dois lados. Uma linha por município do TSE; sem correspondência fica com o código do IBGE vazio. | publico | município do TSE |
-| `dim_orgaos` | Os órgãos onde o mandato é exercido: comissões, plenário, mesa diretora e conselhos da Câmara. A chave id_orgao é do projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Senado, assembleias e câmaras municipais ainda não têm fonte carregada. | publico | órgão |
+| `dim_orgaos` | Os órgãos onde o mandato é exercido: comissões, plenário, mesa diretora e conselhos da Câmara. A chave id_orgao é do projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Inclui os colegiados em atividade do Senado (o extinto não consta da fonte). Assembleias, câmaras municipais e outros poderes ainda não têm fonte carregada. | publico | órgão |
 | `dim_partidos_camara` | Partidos com sigla e nome oficiais. Uma linha por partido. | publico | partido |
 | `dim_partidos_linhagem` | Mudanças de nome, fusões e incorporações de partidos, conforme o TSE, com a página oficial de cada evento. Curada à mão; só o que foi conferido. Uma linha por partido de origem e evento. | publico | partido de origem e evento |
 | `dim_pessoas` | Quem já teve pelo menos um cargo (ADR 0030 e 0031): parlamentar da Câmara ou do Senado e todo eleito do TSE, a partir do momento da eleição. Quem só se candidatou e nunca foi eleito não está aqui. Uma linha por pessoa do projeto, com a chave de identidade que nunca muda nem é reaproveitada. Cada atributo diz de qual fonte veio (a Câmara e o Senado valem mais que o TSE; o TSE vale a candidatura mais recente que o traz). Só o que a fonte publica; nada é inferido. | publico-agente-publico | pessoa |
@@ -528,7 +530,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Coluna | Tipo | Descrição | Dado pessoal |
 | --- | --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro (camara). |  |
+| `fonte` | varchar | Fonte oficial do registro (camara ou senado). |  |
 | `id_orgao` | varchar | Chave do órgão no projeto: fonte e identificador da fonte. |  |
 | `id_orgao_na_fonte` | bigint | Identificador do órgão na fonte. |  |
 | `sigla` | varchar | Sigla do órgão. |  |
@@ -1243,6 +1245,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fonte` | varchar | Fonte oficial do registro. |  |
 | `id_votacao` | varchar | Identificador da votação na fonte. |  |
 | `dt_votacao` | date | Data da votação. |  |
+| `id_orgao` | varchar | Órgão em que ocorreu (dim_orgaos). Câmara: o identificador do órgão que a fonte informa. Senado: ligado pela sigla do colegiado, só quando ela identifica um colegiado do Senado em atividade; vazio no colegiado extinto, na sigla repetida e onde a fonte não informa (o teste de aviso mede). |  |
 | `orgao_sigla` | varchar | Sigla do órgão em que ocorreu. |  |
 | `descricao` | varchar | Descrição oficial da votação, com caixa padronizada. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing. |  |
 | `aprovada` | integer | 1 se a fonte registra aprovação; 0 se não; vazio se não informa. |  |

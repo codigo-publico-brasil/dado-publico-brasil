@@ -115,3 +115,27 @@ def test_raw_keeps_the_lists_as_child_tables(full: tuple[Connection, Settings]) 
         )
         == 3
     )
+
+
+def test_the_organ_catalog_has_the_senate_colegiados_and_the_votings_point_to_them(
+    full: tuple[Connection, Settings],
+) -> None:
+    con, _ = full
+    assert con.execute(
+        "SELECT id_orgao, id_orgao_na_fonte, sigla, casa, situacao FROM marts.dim_orgaos "
+        "WHERE fonte = 'senado' ORDER BY id_orgao_na_fonte"
+    ).fetchall() == [
+        ("senado-1", 1, "PLEN", "Senado Federal", "Em atividade"),
+        ("senado-2", 2, "CMO", "Congresso Nacional", "Em atividade"),
+    ]
+    # a sigla PLEN existe na Câmara e no Senado: o id_orgao diz de qual casa é a votação
+    assert con.execute(
+        "SELECT DISTINCT id_orgao FROM marts.fct_votacoes WHERE fonte = 'senado'"
+    ).fetchall() == [("senado-1",)]
+    assert con.execute(
+        "SELECT DISTINCT id_orgao FROM marts.fct_votacoes WHERE fonte = 'camara'"
+    ).fetchall() == [("camara-180",)]
+    assert (
+        scalar(con, "SELECT COUNT(*) FROM marts.fct_votacoes v ANTI JOIN marts.dim_orgaos USING (id_orgao)")
+        == 0
+    )

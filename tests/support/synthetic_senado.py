@@ -97,6 +97,19 @@ def _votacao(
     }
 
 
+def _colegiado(codigo: str, sigla: str, nome: str, casa: str) -> dict[str, str]:
+    return {
+        "Codigo": codigo,
+        "Sigla": sigla,
+        "Nome": nome,
+        "DataInicio": "1900-01-01",
+        "Publica": "S",
+        "SiglaTipoColegiado": "PERMANENTE",
+        "DescricaoTipoColegiado": "Comissão Permanente",
+        "SiglaCasa": casa,
+    }
+
+
 def senado_files(pasta: Path) -> dict[str, Path]:
     """Os arquivos sintéticos do Senado, por URL oficial (como o extrator os pede)."""
     pasta.mkdir(parents=True, exist_ok=True)
@@ -131,7 +144,20 @@ def senado_files(pasta: Path) -> dict[str, Path]:
             [_voto(5000, "Beto Barreiras", "AAA", "SP", "Votou"), _voto(5002, "DIOGO", "CCC", "MG", "Votou")],
         ),
     ]
+    colegiados = {
+        "ListaColegiados": {
+            "Colegiados": {
+                "Colegiado": [
+                    _colegiado("1", "PLEN", "Plenário do Senado Federal", "SF"),
+                    _colegiado("2", "CMO", "Comissão Mista de Orçamento", "CN"),
+                ]
+            }
+        }
+    }
     saida: dict[str, Path] = {}
+    arquivo = pasta / "senado-colegiados.json"
+    arquivo.write_text(json.dumps(colegiados), encoding="utf-8")
+    saida[contract.url("colegiados")] = arquivo
     for dataset, partition, payload in (("senadores", 57, senadores), ("votacoes", 2024, votacoes)):
         file = pasta / f"senado-{dataset}-{partition}.json"
         file.write_text(json.dumps(payload), encoding="utf-8")
