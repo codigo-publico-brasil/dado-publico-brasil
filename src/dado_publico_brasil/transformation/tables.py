@@ -251,10 +251,14 @@ def write_table(
     rows: int,
     max_bytes: int,
 ) -> list[dict[str, Any]]:
-    """Grava a tabela (arquivo único ou pasta por ano) e devolve os arquivos; acrescenta `ano` às colunas."""
-    target = f"{root}/{key}"
+    """Grava a tabela (arquivo único ou pasta por ano) em `<key>/<id_execucao>/` e devolve os arquivos.
+
+    O caminho é próprio da execução (ADR 0052): o publicado nunca é sobrescrito; acrescenta `ano` às colunas.
+    """
+    folder = f"{key}/{meta['id_execucao']}"
+    target = f"{root}/{folder}"
     if not root.startswith("r2://"):
-        Path(target).parent.mkdir(parents=True, exist_ok=True)
+        Path(target).mkdir(parents=True, exist_ok=True)
     base = meta
     meta = _kv(base, key, description, columns)
     if expr and _estimate(con, settings, select, rows, meta) > max_bytes:
@@ -279,9 +283,10 @@ def write_table(
             f", PARTITION_BY ({YEAR_COLUMN}), WRITE_PARTITION_COLUMNS true, FILENAME_PATTERN 'part-{{i}}', "
             "OVERWRITE_OR_IGNORE",
         )
-        return _files(con, root, f"{key}/**/*.parquet")
-    _copy(con, f"{select} ORDER BY ({expr})" if expr else select, f"{target}.parquet", meta)
-    return _files(con, root, f"{key}.parquet")
+        return _files(con, root, f"{folder}/**/*.parquet")
+    file = f"{folder}/{key.rsplit('/', 1)[1]}.parquet"
+    _copy(con, f"{select} ORDER BY ({expr})" if expr else select, f"{root}/{file}", meta)
+    return _files(con, root, file)
 
 
 def fingerprint(

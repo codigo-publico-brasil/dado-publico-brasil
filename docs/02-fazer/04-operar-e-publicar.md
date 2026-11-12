@@ -73,7 +73,7 @@ O `export` **recusa** (nada é apagado nem publicado) se faltar no warehouse alg
 
 **Destino:** o CLI lê o `.env` da pasta onde roda (ou o arquivo de `DADO_PUBLICO_ENV_FILE`) sem sobrescrever o que o shell já define. Com as quatro `DADO_PUBLICO_R2_*` o `export` grava no bucket; sem elas grava em `<pasta de dados>/lake`. Confira o destino antes de dizer que publicou: pasta local não é o lake público (o `manifesto.json` público é a prova).
 
-O `export` imprime uma linha por tabela (`ignorada` ou `gravada`, com os segundos) e o tempo de cada fase; os tempos por tabela ficam também em `<pasta de dados>/.state/export_tempos.json` (só a última rodada). Em rodada sem mudança só lê (impressões digitais, quatro tabelas por vez): não grava, não envia e não troca `catalogo.duckdb` nem `manifesto.json`. Os objetos órfãos só são procurados sob as tabelas gravadas; `--prune` varre todas (e as coleções `arq_`: objeto que saiu do controle só é apagado com `--prune`). Sem mudança, `id_execucao`, `dt_exportacao` e `versao_commit` do manifesto e do catálogo continuam os da última rodada que mudou algo; mudar a URL base (`DADO_PUBLICO_LAKE_URL`) conta como mudança. Resto de rodada interrompida (objeto gravado antes do manifesto) não deixa estado para trás que a rodada seguinte enxergue se a tabela voltar a ser ignorada; `--prune` limpa.
+O `export` imprime uma linha por tabela (`ignorada` ou `gravada`, com os segundos) e o tempo de cada fase; os tempos por tabela ficam também em `<pasta de dados>/.state/export_tempos.json` (só a última rodada). Em rodada sem mudança só lê (impressões digitais, quatro tabelas por vez): não grava, não envia e não troca `catalogo.duckdb` nem `manifesto.json`. Os objetos órfãos (arquivos da execução anterior que o manifesto novo não cita nem uma versão mensal) só são procurados sob as tabelas gravadas; `--prune` varre todas (e as coleções `arq_`: objeto que saiu do controle só é apagado com `--prune`). Sem mudança, `id_execucao`, `dt_exportacao` e `versao_commit` do manifesto e do catálogo continuam os da última rodada que mudou algo; mudar a URL base (`DADO_PUBLICO_LAKE_URL`) conta como mudança. Resto de rodada interrompida (objeto gravado antes do manifesto) não deixa estado para trás que a rodada seguinte enxergue se a tabela voltar a ser ignorada; `--prune` limpa.
 
 **Memória:** o `export` usa `preserve_insertion_order = false` (a ordem só vale onde há `ORDER BY`) e, depois das tabelas, fecha o warehouse e abre uma instância nova do DuckDB para a fase de arquivos, que não precisa dele; assim a memória das varreduras e dos COPY das tabelas não sobra para os arquivos.
 
@@ -161,6 +161,22 @@ Requisitos do servidor: Linux x86_64 com Docker e Compose, um usuário no grupo 
 **Conferir:** `dc exec daemon uv run --no-sync dado-publico export --verificar`, `observe --email` (testa o SMTP) e a data do `manifesto.json` público.
 
 **Manutenção:** os serviços reiniciam sozinhos (`restart: unless-stopped`) e o log do Docker é rotacionado (3 × 10 MB). Uma execução que passa de 24 h, ou que não inicia em 15 min, é marcada como falha (`run_monitoring` do `dagster.yaml`). O landing é o único dado sem cópia: faça backup periódico de `landing` em outro disco até haver cópia no bucket privado.
+
+## Versão citável e DOI
+
+O `export` grava cada tabela alterada em `<caminho>/<id_execucao>/`, troca por último `catalogo.duckdb`, `datapackage.json` e `manifesto.json` e só então apaga os órfãos; se cair no meio, o publicado segue íntegro (`verify` confere), e os arquivos soltos da rodada que caiu saem na próxima que regravar a tabela ou com `--prune`. A primeira execução bem-sucedida de cada mês (UTC) fixa `versoes/AAAA-MM/` (manifesto, catálogo e `datapackage.json`) e nunca a reescreve; os Parquet que ela cita não são apagados. Decisão: [ADR 0052](../05-decisoes/0052-versao-citavel-do-lake.md). Para retirar uma versão (por exemplo, a pedido de titular), apague a pasta `versoes/AAAA-MM/` no bucket; o export seguinte limpa os arquivos que só ela citava.
+
+### Depositar uma versão no Zenodo (fundador)
+
+Só o `manifesto.json` e o `datapackage.json` da versão, **nunca os Parquet**: o depósito é permanente e o lake tem dado pessoal. É manual, uma vez por versão que se queira citável.
+
+1. Uma vez: crie a conta em [zenodo.org](https://zenodo.org) (login com o ORCID ou o GitHub da organização) e, se quiser, a comunidade do projeto.
+2. Baixe `https://datalake.codigopublicobrasil.com.br/versoes/AAAA-MM/manifesto.json` e `.../datapackage.json`.
+3. *New upload*: envie os dois arquivos; tipo *Dataset*; título "Dado Público Brasil, versão AAAA-MM"; descrição: o que é, o `id_execucao` e que os dados em Parquet ficam no lake (link da versão); autor e licença CC BY 4.0; *Related identifiers*: a URL da versão (*is described by* / *is supplemented by*) e o repositório do GitHub (*is supplemented by*).
+4. Publique. O Zenodo dá o DOI da versão e um DOI de conceito (sempre a última).
+5. Registre o DOI: cite-o no `CITATION.cff` (campo `identifiers`) e em "Como citar" de [consumir o lake](../03-consultar/06-consumir-o-lake.md), num PR.
+
+Se um depósito precisar sair (dado pessoal indevido), o Zenodo só o remove a pedido ao suporte: por isso o manifesto não carrega dado pessoal além de nomes de tabela e coluna.
 
 ## Restaurar numa máquina vazia (bucket privado)
 
