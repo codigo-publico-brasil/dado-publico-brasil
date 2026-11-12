@@ -2,7 +2,7 @@
 reconstrução completa (contagem e soma do hash das linhas, por tabela), no pipeline sintético."""
 
 import shutil
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +13,6 @@ from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection, scalar
 from dado_publico_brasil.transformation import build, dbt, selection
 
-MONDAY = date(2026, 11, 9)
 LAYERS = ("staging", "intermediate", "marts")
 PREFIX = "model.dado_publico_brasil."
 
@@ -64,8 +63,10 @@ def test_selective_nights_end_with_the_same_tables_as_a_complete_rebuild(
     monkeypatch.setattr(
         selection,
         "plan",
-        lambda con, s, stage, today=None, force=False: original(con, s, stage, MONDAY, force),
-    )  # segunda-feira: sem a reconstrução dominical
+        lambda con, s, stage, today=None, force=False: original(
+            con, s, stage, datetime.now(UTC).date(), force
+        ),
+    )  # o dia real: o snapshot é do mesmo dia, então não há reconstrução dominical, e os marts de período `dia` casam
     calls: list[tuple[str, ...]] = []
     invoke = dbt.invoke
 

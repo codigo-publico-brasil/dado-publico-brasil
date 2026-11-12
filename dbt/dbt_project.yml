@@ -89,6 +89,9 @@ models:
         agg_composicoes:
           +tags: [data_atual]
           +meta: {periodo: mes}
+      fontes:
+        +tags: [data_atual]  # lê só `metadata`, que o dbt não vê mudar: refaz todo dia
+        +meta: {periodo: dia}
 
 seeds:
   dado_publico_brasil:

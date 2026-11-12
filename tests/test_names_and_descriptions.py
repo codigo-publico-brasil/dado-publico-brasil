@@ -147,6 +147,32 @@ def test_file_collections_follow_the_convention() -> None:
     )
 
 
+def test_source_measurement_tables_measure_the_source_not_a_person(full: tuple[Connection, Settings]) -> None:
+    """ADR 0054, item 5: tabela `*_fontes_*` traz `fonte` (e `id_verificacao` se for `fct_`), nunca `id_pessoa` nem dado pessoal."""
+    found: dict[str, set[str]] = {}
+    for c in columns(full[0], ("marts",)):
+        if "_fontes_" in c["table_name"]:
+            found.setdefault(c["table_name"], set()).add(c["column_name"])
+    assert found, "nenhuma tabela *_fontes_* nos marts"
+    pii = {
+        n["name"]: [c for c, v in n["columns"].items() if (v.get("meta") or {}).get("pii")]
+        for n in catalog.manifest(full[1])["nodes"].values()
+        if n["resource_type"] == "model" and n["name"] in found
+    }
+    wrong = [
+        f"{t}: {why}"
+        for t, cols in found.items()
+        for why, bad in (
+            ("sem fonte", "fonte" not in cols),
+            ("fct_ sem id_verificacao", t.startswith("fct_") and "id_verificacao" not in cols),
+            ("tem id_pessoa", "id_pessoa" in cols),
+            ("tem coluna pii", bool(pii.get(t))),
+        )
+        if bad
+    ]
+    assert wrong == [], f"tabela de fontes fora do ADR 0054: {wrong}"
+
+
 EVALUATION = {"rank", "ranking", "score", "pontuacao", "indice", "posicao", "nota"}
 
 

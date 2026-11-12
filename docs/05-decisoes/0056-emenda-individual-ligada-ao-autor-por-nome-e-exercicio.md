@@ -1,6 +1,6 @@
 # ADR 0056: emenda individual ligada ao autor por nome e exercício
 
-- **Status:** proposto (2026-11-11); retoma a parte das emendas do [ADR 0028](0028-ligar-vetos-e-emendas-a-pessoas.md) (defasado: nunca foi implementada). Responde à issue #16.
+- **Status:** aceito em 2026-11-12 (decisão do fundador); antes proposto (2026-11-11); retoma a parte das emendas do [ADR 0028](0028-ligar-vetos-e-emendas-a-pessoas.md) (defasado: nunca foi implementada). Responde à issue #16.
 - **Data:** 2026-11-11
 - **Complementa:** [ADR 0013](0013-tse-ligacao-por-nome-civil-e-nascimento.md) (regra de base: conservadora, único ou nada).
 

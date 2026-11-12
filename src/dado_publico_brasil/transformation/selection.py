@@ -5,7 +5,7 @@ conhece fonte nem tabela. Um modelo entra se, desde a última construção dele:
 
 - o raw que ele lê recebeu carga (`metadata.capturas.dt_carga`, por fonte e dataset);
 - a identidade mudou (impressão diferente antes e depois da etapa `identity`) e ele lê `identity.*`;
-- o período de que depende mudou (tag `data_atual`, `meta.periodo: ano | mes`);
+- o período de que depende mudou (tag `data_atual`, `meta.periodo: ano | mes | dia`);
 - um modelo de que ele depende foi construído depois dele (inclusive na outra fase);
 - ele ou um teste dele não terminou com sucesso, ou nunca rodou.
 
@@ -127,7 +127,7 @@ def _dataset(name: str) -> str:
 
 
 def _period(moment: date | datetime, unit: str) -> str:
-    return f"{moment:%Y}" if unit == "ano" else f"{moment:%Y-%m}"
+    return f"{moment:%Y}" if unit == "ano" else f"{moment:%Y-%m-%d}" if unit == "dia" else f"{moment:%Y-%m}"
 
 
 def _full_reason(con: Connection, stage: str, has_manifest: bool, today: date) -> str | None:

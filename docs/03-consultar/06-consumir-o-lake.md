@@ -10,7 +10,7 @@ Tudo é Parquet (ZSTD) em `https://datalake.codigopublicobrasil.com.br` (a pági
 | --- | --- |
 | `staging/<poder>/<esfera>/<fonte>/<modelo>` | a base tratada de cada fonte (nomes e tipos padronizados); a árvore é a de `sources/` (ex.: `staging/legislativo/federal/camara/...`) |
 | `intermediate/<modelo>` | passos intermediários da derivação |
-| `marts/<domínio>/<tabela>` | o que se consome (contrato de colunas); domínio = `legislativo`, `eleicoes`, `pessoas`, `territorio`, `compras` |
+| `marts/<domínio>/<tabela>` | o que se consome (contrato de colunas); domínio = `legislativo`, `eleicoes`, `pessoas`, `territorio`, `compras`, `fontes` |
 | `metadata/capturas` | URL, hash SHA-256 e data de cada arquivo capturado da fonte |
 | `metadata/fontes_verificacoes` | cada verificação das fontes (disponibilidade, bloqueio, integridade do arquivo, esquema, volume, carga) com resultado e detalhe: o histórico de quando e o que a fonte deixou de entregar |
 | `metadata/testes_resultados` | o resultado de cada modelo e teste do dbt em cada execução (inclui os testes de lacuna, que medem o que falta no dado) |
@@ -102,6 +102,17 @@ FROM dim_pessoas AS p JOIN capturas AS c ON c.id_captura = p.id_captura_tse
 ```
 
 Mesmo caminho para os demais: `fct_candidaturas.id_captura` e `fct_campanhas.id_captura_receitas|despesas|bens` (arquivos do TSE), `dim_pessoas_cadastro.id_captura` (Câmara ou Senado). Um aplicativo que lê o lake lê a ficha de `dim_pessoas` (atributos já resolvidos, com `fonte_*` ao lado; todas as pessoas do projeto) e junta `dim_pessoas_cadastro` (só Câmara e Senado) para contato, gabinete, redes, situação e falecimento. As campanhas saem de `fct_candidaturas` (`fl_eleito` é o eleito informado ou derivado; `base_eleicao` diz qual), `dim_eleicoes`, `dim_disputas`, `dim_cargos`, `dim_partidos`, `fct_campanhas` e `metadata/capturas`.
+
+## O que a fonte deixou de entregar e desde quando
+
+`marts/fontes/fct_fontes_ocorrencias` traz uma linha por ocorrência (indisponível, bloqueio, arquivo inválido, mudança de esquema, coluna ausente, queda de volume), com a primeira e a última observação e a evidência (`id_verificacao` em `metadata/fontes_verificacoes`; `id_captura` em `metadata/capturas`). É medição da publicação, sem nota nem ranking ([ADR 0054](../05-decisoes/0054-fato-agregado-e-avaliacao.md)). O que está em aberto agora:
+
+```sql
+SELECT fonte, dataset, particao, tipo_ocorrencia, dt_primeira_observacao, detalhe
+FROM fct_fontes_ocorrencias WHERE fl_em_aberto ORDER BY dt_primeira_observacao
+```
+
+`agg_fontes_capturas` diz, por dataset, quando veio conteúdo novo pela última vez. O resumo gerado dessas tabelas é [cobertura e lacunas](04-cobertura-e-lacunas.md).
 
 ## O que um aplicativo lê
 

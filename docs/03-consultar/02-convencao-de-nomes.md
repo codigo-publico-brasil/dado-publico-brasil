@@ -17,6 +17,8 @@ Para quem cria ou altera tabelas e colunas (pessoas e agentes de IA): como nomea
   | `brg_` | ponte entre duas entidades, quando a relação é muitos-para-muitos | `brg_proposicoes_autorias`, `brg_frentes_membros` |
   | `agg_` | agregado por período, derivado dos fatos | `agg_composicoes` |
 
+  O tema `fontes` (pasta `marts/fontes`) reúne as **medições da publicação das fontes** ([ADR 0054](../05-decisoes/0054-fato-agregado-e-avaliacao.md)): `fct_fontes_ocorrencias` (o que a fonte deixou de entregar e desde quando, com a captura de evidência) e `agg_fontes_<medida>` (uma medida por coluna, sem nota, ranking nem limiar). Tabela `*_fontes_*` traz `fonte`, nunca `id_pessoa`; a descrição diz a unidade, o que entra e o que fica de fora.
+
   Tabela de entrada curada à mão (seed) que é dimensão leva `dim_` e fica em `marts`; a que só alimenta o dbt (`vinculos_aprovados`, `partidos_eventos`) fica em `intermediate`, sem prefixo. Snapshots do dbt, se vierem, levam `snp_`.
 - Tabelas do raw espelham o nome da fonte (ver abaixo).
 

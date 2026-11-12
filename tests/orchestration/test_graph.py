@@ -11,8 +11,9 @@ from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.transformation import dbt
 
 ROOT = Path(__file__).resolve().parents[2]
-# Único stub legítimo: `metadata.capturas` é gravada por todas as fontes direto no warehouse, sem ativo próprio.
-LEGIT_STUBS = {"metadata/capturas"}
+# Stubs legítimos: `metadata.capturas` e `metadata.fontes_verificacoes` são gravadas por todas as fontes direto
+# no warehouse, sem ativo próprio.
+LEGIT_STUBS = {"metadata/capturas", "metadata/fontes_verificacoes"}
 
 CODE = """
 import json
