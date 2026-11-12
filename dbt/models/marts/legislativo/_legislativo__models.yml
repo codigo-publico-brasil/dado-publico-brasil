@@ -583,3 +583,36 @@ models:
       - {name: fl_contem_dado_pessoal, data_type: boolean, description: "Verdadeiro quando a linha identifica uma pessoa física (CPF mascarado, tipo pessoa física ou inscrição genérica)."}
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
       - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
+
+  - name: fct_cotas_despesas
+    description: Despesas da cota para o exercício da atividade parlamentar (CEAP da Câmara, CEAPS do Senado) como cada casa publica, uma linha por despesa, desde 2008. Só fatos, sem total avaliativo nem ordenação entre pessoas. Câmara e Senado medem valores de formas diferentes e as colunas ficam separadas. A pessoa vem do identificador do deputado (Câmara) ou é derivada pelo nome e pelo exercício no mês (Senado, ADR 0057); sem ligação segura, fica vazia. Inclui fornecedor pessoa física (CPF mascarado).
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: despesa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", particao: "ano"}
+    data_tests: *monitoramento
+    columns:
+      - {name: fonte, data_type: varchar, tests: [{accepted_values: {arguments: {values: [camara, senado]}}}], description: "Fonte oficial do registro (camara ou senado)."}
+      - {name: id_despesa, data_type: varchar, tests: [unique, not_null], description: "Chave da despesa: fonte e impressão digital do conteúdo da linha (as fontes não têm identificador único)."}
+      - {name: id_pessoa, data_type: bigint, tests: [{relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa que fez a despesa. Câmara: pelo identificador do deputado que a fonte publica; Senado: DERIVADA pelo nome e pelo exercício no mês. Vazia sem ligação segura e nas linhas de liderança da Câmara."}
+      - {name: regra_ligacao_pessoa, data_type: varchar, tests: [{accepted_values: {arguments: {values: [id_na_fonte, nome_parlamentar_e_exercicio, nome_civil_e_exercicio]}}}], description: "Regra que ligou a pessoa: id_na_fonte (Câmara) ou nome_parlamentar_e_exercicio / nome_civil_e_exercicio (Senado, ADR 0057); vazia quando id_pessoa é vazio."}
+      - {name: precisao_ligacao_pessoa, data_type: varchar, tests: [{accepted_values: {arguments: {values: [informada, derivada]}}}], description: "informada (identificador publicado pela fonte) ou derivada (inferida por regra, sem identificador oficial); vazia quando id_pessoa é vazio."}
+      - {name: nome_parlamentar, data_type: varchar, description: "Nome do parlamentar como a fonte informa, com caixa padronizada (nas linhas de liderança da Câmara, o rótulo da fonte)."}
+      - {name: uf, data_type: varchar, description: "UF de representação como a Câmara informa; vazia no Senado (a fonte não traz)."}
+      - {name: partido_sigla, data_type: varchar, description: "Sigla do partido como a Câmara informa; vazia no Senado (a fonte não traz)."}
+      - {name: ano, data_type: integer, description: "Ano de competência da despesa."}
+      - {name: mes, data_type: integer, description: "Mês de competência da despesa."}
+      - {name: tipo_despesa, data_type: varchar, description: "Subcota (Câmara) ou tipo da despesa (Senado), como a fonte informa; as categorias das duas casas são diferentes."}
+      - {name: especificacao, data_type: varchar, description: "Especificação da subcota (só Câmara); vazia quando a fonte não informa."}
+      - {name: fornecedor, data_type: varchar, meta: {pii: true}, description: "Nome do fornecedor como a fonte informa, pessoa física inclusive (ADR 0050); vazio onde a fonte não publica (Senado até 2014)."}
+      - {name: documento_fornecedor, data_type: varchar, meta: {pii: true}, description: "CNPJ do fornecedor como a fonte informa; CPF de pessoa física mascarado (***.nnn.nnn-**); o original fica no landing."}
+      - {name: fl_fornecedor_pessoa_fisica, data_type: boolean, description: "Verdadeiro quando o documento do fornecedor tem 11 dígitos (CPF)."}
+      - {name: numero_documento, data_type: varchar, description: "Número do documento fiscal, como a fonte informa."}
+      - {name: dt_emissao, data_type: date, description: "Data de emissão do documento ou da despesa; vazia quando a fonte não informa."}
+      - {name: valor_documento, data_type: "decimal(18,2)", description: "Valor do documento em reais (só Câmara; negativo em estorno)."}
+      - {name: valor_glosa, data_type: "decimal(18,2)", description: "Valor glosado, não reembolsado, em reais (só Câmara)."}
+      - {name: valor_liquido, data_type: "decimal(18,2)", description: "Valor líquido em reais, como a Câmara informa (só Câmara)."}
+      - {name: valor_reembolsado, data_type: "decimal(18,2)", description: "Valor reembolsado em reais, como o Senado informa (só Senado)."}
+      - {name: trecho, data_type: varchar, description: "Trecho da viagem nas passagens aéreas (só Câmara)."}
+      - {name: detalhamento, data_type: varchar, meta: {pii: true}, description: "Texto livre do Senado (por exemplo, passageiros e voos), como a fonte informa; CPF no texto mascarado (só Senado)."}
+      - {name: id_documento, data_type: varchar, description: "Identificador do documento na fonte (Câmara: ideDocumento, que pode repetir; Senado: COD_DOCUMENTO)."}
+      - {name: url_documento, data_type: varchar, description: "Endereço oficial do documento fiscal na Câmara, quando a fonte informa (só Câmara)."}
+      - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
+      - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}

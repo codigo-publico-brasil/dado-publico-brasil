@@ -40,7 +40,7 @@ DATASET_KEYS = {
     "url", "load", "write", "columns", "primary_key", "extra_years", "first_year", "partition", "records",
     "nested", "format", "headers", "foreach", "archive", "member", "raw", "files", "first_month",
     "lag_months", "first_day", "lag_days", "step", "sequence", "only", "optional", "aliases", "on_demand",
-    "max_age_days", "tolerated_rejects",
+    "max_age_days", "tolerated_rejects", "encoding", "delimiter", "skip_lines",
 }  # fmt: skip
 FOREACH_KEYS = {"from", "item", "where", "recent_by", "version", "refresh_after_days", "batch_size"}
 FORBIDDEN_COLUMNS = {"cpf", "rg", "tituloeleitor", "cnh", "passaporte"}
@@ -99,6 +99,9 @@ class Dataset:
     records: str | None = None  # JSON: caminho (com pontos) da lista de registros
     nested: tuple[str, ...] = ()  # JSON: campos que são listas (viram tabelas filhas no raw)
     format: str | None = None  # sobrepõe `access.format` neste dataset
+    encoding: str | None = None  # (csv) sobrepõe `access.encoding` neste dataset
+    delimiter: str | None = None  # (csv) sobrepõe `access.delimiter` neste dataset
+    skip_lines: int = 0  # (csv) linhas antes do cabeçalho que não são dado (aviso de atualização da fonte)
     headers: dict[str, str] | None = None  # somam-se aos de `access.headers`
     foreach: ForEach | None = None
     archive: str | None = None  # "zip": o arquivo guardado é um pacote; `member` diz qual membro ler
@@ -258,6 +261,9 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         records=data.get("records"),
         nested=tuple(data.get("nested", ())),
         format=data.get("format"),
+        encoding=data.get("encoding"),
+        delimiter=data.get("delimiter"),
+        skip_lines=int(data.get("skip_lines", 0)),
         headers=data.get("headers"),
         foreach=foreach,
         archive=data.get("archive"),

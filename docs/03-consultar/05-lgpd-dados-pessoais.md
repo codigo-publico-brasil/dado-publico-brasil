@@ -15,6 +15,7 @@ Regra de partida: **dado publicado oficialmente continua sendo dado pessoal.** P
 | Favorecidos de emendas, pessoa física | `fct_emendas_favorecidos` | pessoal de terceiros (`publico-dados-pessoais-de-terceiros`) | CPF mascarado como o portal publica |
 | Vencedor e participante de licitação, pessoa física | `fct_licitacoes_itens`, `fct_licitacoes_participantes` | pessoal de terceiros (`publico-dados-pessoais-de-terceiros`) | CPF mascarado pelo projeto (a fonte o publica completo); `fl_contem_dado_pessoal` marca a linha |
 | Contratado de contrato federal, pessoa física | `fct_contratos` | pessoal de terceiros (`publico-dados-pessoais-de-terceiros`) | CPF mascarado pelo projeto (a fonte o publica completo); `fl_contem_dado_pessoal` marca a linha |
+| Fornecedor pessoa física e texto livre da cota parlamentar | `fct_cotas_despesas` | pessoal de terceiros (`publico-dados-pessoais-de-terceiros`) | nome como a fonte publica; CPF mascarado pelo projeto (a fonte o publica completo); `fornecedor`, `documento_fornecedor` e `detalhamento` são `meta: pii` |
 | Foto oficial do candidato | arquivos extraídos do pacote do TSE | pessoal | a hospedagem pública depende da decisão do VPS (#30) |
 | Identidade (`id_pessoa`) | `identity.*` | chave interna | não se reconstrói; não é publicada |
 
@@ -28,6 +29,7 @@ Ficam fora do projeto, por regra: CPF, título de eleitor, e-mail, telefone pess
 | Filiação partidária (sensível) | tratamento limitado ao partido de quem se candidatou ou exerceu mandato, que consta do próprio registro público de candidatura | mostrar a trajetória partidária de agente público |
 | Favorecidos de emendas, pessoa física | dado publicado pelo Portal da Transparência (art. 7º, § 4º), CPF mascarado | rastrear o destino do dinheiro público |
 | Vencedor e participante de licitação, pessoa física | dado publicado pelo Portal da Transparência (art. 7º, § 4º), CPF mascarado | rastrear quem contrata com o poder público |
+| Fornecedor pessoa física da cota parlamentar | dado publicado pela Câmara e pelo Senado (art. 7º, § 4º), CPF mascarado | acompanhar o uso da verba pública de exercício do mandato |
 | Fotos | idem, só a foto oficial do registro | identificar o candidato |
 
 Princípios que o projeto já cumpre: finalidade, adequação, necessidade (só o que responde à pergunta do projeto), transparência (toda linha com fonte, URL e data), segurança e não discriminação (sem ranking, nota nem inferência sobre pessoas).

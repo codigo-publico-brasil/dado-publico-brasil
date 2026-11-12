@@ -273,3 +273,26 @@ models:
       - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
       - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+
+  - name: stg_senado__ceaps
+    description: Despesas da cota parlamentar dos senadores (CEAPS) como o Senado publica, uma linha por despesa reembolsada; CPF mascarado. A fonte traz só o nome do senador.
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros}
+    columns:
+      - {name: hash_linha, description: "Impressão digital do conteúdo da linha na fonte (chave).", tests: [unique, not_null]}
+      - {name: ano, description: "Ano de competência da despesa."}
+      - {name: mes, description: "Mês de competência da despesa."}
+      - {name: senador_nome, description: "Nome do senador como a fonte informa, com caixa padronizada (sem código: a fonte não o traz).", tests: [not_null]}
+      - {name: tipo_despesa, description: "Tipo da despesa, como a fonte informa; vazio em parte das linhas."}
+      - {name: fornecedor_nome, description: "Nome do fornecedor como a fonte informa (pessoa física inclusive); vazio nos anos em que a fonte não o publica."}
+      - {name: fornecedor_documento, description: "CNPJ do fornecedor como a fonte informa; CPF de pessoa física mascarado (***.nnn.nnn-**); o original fica no landing."}
+      - {name: fl_fornecedor_pessoa_fisica, description: "Verdadeiro quando o documento do fornecedor tem 11 dígitos (CPF); falso quando tem outro tamanho ou falta."}
+      - {name: numero_documento, description: "Número do documento, como a fonte informa."}
+      - {name: dt_emissao, description: "Data da despesa; vazia quando a fonte não informa."}
+      - {name: detalhamento, description: "Texto livre da fonte (por exemplo, passageiros e voos); CPF no texto mascarado."}
+      - {name: valor_reembolsado, description: "Valor reembolsado em reais, como a fonte informa."}
+      - {name: id_documento, description: "Código do documento no Senado.", tests: [not_null]}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data.", tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}]}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}

@@ -55,7 +55,6 @@ O que falta no banco (histórico incompleto, tabelas que não existem, qualidade
 | Eventos e presenças | presença em sessões | volume grande; fora do primeiro entregável |
 | Tramitação detalhada (histórico de situações) | hoje só há a **última** situação | exige o conjunto de tramitações ou a API |
 | Temas e ementa detalhada | classificação por assunto | conjunto de temas da Câmara |
-| Cota parlamentar (CEAP) | gastos | traz CPF e CNPJ de fornecedores: só entra com a minimização definida (o contrato recusa CPF) |
 | Texto integral das proposições | leitura e resumo | links existem em `url_inteiro_teor`; o texto não é baixado |
 | Início e fim do mandato **de cada pessoa** | mandato exato, com suplentes | a Câmara não publica em lote; o mart traz as datas oficiais da **legislatura** e os votos observados |
 
@@ -66,6 +65,7 @@ O que falta no banco (histórico incompleto, tabelas que não existem, qualidade
 | Senadores (nome, nome civil, sexo) e mandatos | `senadores` (por legislatura, 51 a 57) | todas as legislaturas desde 1999; mandatos e exercícios ficam no raw (`senadores__mandatos_mandato`) |
 | Votações em plenário e voto de cada senador | `votacoes` (por ano) | 1999 a 2026 |
 | Matérias votadas (sigla, ementa, apresentação, página oficial) | dentro das votações | só as que foram votadas |
+| Cota parlamentar (CEAPS) e a da Câmara (CEAP): uma linha por despesa | `ceaps` e `cota_parlamentar` (por ano) | de 2008 em diante; um arquivo por ano, ~4 a 9 MB cada, ~16 mil linhas por ano no Senado e ~120 mil na Câmara |
 
 Lacunas conhecidas, medidas ou registradas:
 
@@ -76,6 +76,7 @@ Lacunas conhecidas, medidas ou registradas:
 - **Sem autoria nem situação das matérias**: exigem uma chamada por matéria; `brg_proposicoes_autorias` não tem autorias do Senado (issue 14), `situacao` fica vazia e `qtd_propostas` em `dim_pessoas_cadastro` é vazio (não zero) para senadores.
 - **Siglas de partidos sem evento conferido** (teste `partidos_encerrados_sem_linhagem`, 3 em 27/10/2026, eram 5; a lista sai do próprio teste). Os casos são de três tipos: um partido que segue registrado no TSE e só ficou sem bancada na Câmara (a ocorrência é esperada); uma troca de nome deferida pelo TSE sem data da decisão encontrada (só se conhece o primeiro voto com a sigla nova); e uma sigla antiga cujos estatutos citados pelo TSE não batem com a mudança vista nos votos, sem data sustentada. Entraram em 27/10/2026 duas mudanças de nome, só com mês ou ano (as páginas do TSE responderam 403 e a data exata não foi conferida). A tabela só tem o que foi conferido numa página do TSE.
 - **Mandato e exercício:** `fct_exercicios` traz o exercício real do Senado (titular e suplentes, com início, fim e causa de afastamento de cada período, como o Senado informa) e o da Câmara (a partir do histórico do deputado). `fct_mandatos` nasce da eleição, uma linha por candidatura eleita, e `fct_cargos_ocupacoes` junta os dois: o exercício onde há fonte e o mandato nos demais cargos.
+- **Cota parlamentar (`fct_cotas_despesas`):** a Câmara traz o identificador do deputado (`id_pessoa` `informada`); o Senado só o nome, e a pessoa é derivada pela regra do [ADR 0057](../05-decisoes/0057-voto-de-veto-ligado-a-pessoa-por-nome-uf-e-exercicio.md) com o exercício no mês da despesa (`derivada`). Sem ligação segura fica sem pessoa, e `cotas_despesas_sem_pessoa` conta (a liderança da Câmara, sem deputado, fica de fora da conta). O Senado publica o fornecedor e o documento vazios nos anos até 2014 e a data de emissão pode ser de outro ano que a competência. A Câmara repete o mesmo `ideDocumento` em linhas diferentes (18 em 123.968 em 2026): a linha se identifica pelo conteúdo. As duas casas medem valores de formas diferentes e as colunas ficam separadas; o projeto não soma nem compara pessoas ([ADR 0054](../05-decisoes/0054-fato-agregado-e-avaliacao.md)). Fornecedor pessoa física (CPF mascarado) e o texto de detalhamento do Senado são dado pessoal de terceiros publicado pela fonte ([ADR 0050](../05-decisoes/0050-dado-pessoal-publicado-pela-fonte-vem-como-esta.md)). Verba de gabinete e remuneração de servidores não entram (issues 93 e 92).
 - **Quem foi deputado e senador tem duas chaves de pessoa**: a regra conservadora liga só por identificador oficial da própria fonte, nunca por nome.
 
 ## Datasets por item (amostra)
