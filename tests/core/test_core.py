@@ -53,6 +53,7 @@ def test_migrations_apply_once_and_in_order(tmp_path: Path) -> None:
         "0009",
         "0010",
         "0011",
+        "0012",
     ]
     assert migrations.apply(con) == []
 
@@ -78,7 +79,7 @@ def test_migration_0007_renames_and_retypes_a_warehouse_that_already_has_data(tm
     con.execute(
         "INSERT INTO identity.pessoa_identificador VALUES ('camara', 'dep', '9', 1, 'oficial', 'x', '2026-10-23T10:00:00+00:00')"
     )
-    assert migrations.apply(con) == ["0007", "0008", "0009", "0010", "0011"]
+    assert migrations.apply(con) == ["0007", "0008", "0009", "0010", "0011", "0012"]
     assert migrations.apply(con) == []
     assert con.execute("SELECT id_execucao, etapa, dt_inicio FROM metadata.execucoes").fetchall() == [
         (1, "load", datetime(2026, 10, 23, 10))
@@ -97,7 +98,7 @@ def test_migration_0007_renames_and_retypes_a_warehouse_that_already_has_data(tm
         "INSERT INTO metadata.execucoes (etapa, dt_inicio, resultado) VALUES ('x', now(), 'ok') RETURNING id_execucao"
     ).fetchone() == (2,)
     assert con.execute("SELECT nextval('identity.seq_pessoas')").fetchone() == (2,)
-    assert con.execute("SELECT versao FROM metadata.migracoes ORDER BY 1").fetchall()[-1] == ("0011",)
+    assert con.execute("SELECT versao FROM metadata.migracoes ORDER BY 1").fetchall()[-1] == ("0012",)
     # instalação nova chega ao mesmo estado final
     fresh = migrations.open_warehouse(Settings(storage_root=tmp_path / "novo"))
     shape = "SELECT table_name, column_name, data_type FROM duckdb_columns() WHERE schema_name IN ('metadata', 'identity') ORDER BY 1, 2"
@@ -186,3 +187,49 @@ def test_code_version_prefers_the_image_variable(monkeypatch: pytest.MonkeyPatch
     runs.code_version.cache_clear()
     assert runs.code_version() == "abc1234"
     runs.code_version.cache_clear()
+
+
+def test_migration_0012_fills_the_columns_of_old_checks_from_the_detail_and_leaves_the_rest_empty(
+    tmp_path: Path,
+) -> None:
+    old_ddl = tmp_path / "ddl"
+    old_ddl.mkdir()
+    for file in sorted(DDL_DIR.glob("00[01][0-9]_*.sql")):
+        if file.name < "0012":
+            (old_ddl / file.name).write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
+    con = warehouse.connect(Settings(storage_root=tmp_path / "store"))
+    migrations.apply(con, old_ddl)
+    rows = [
+        ("availability", "error", "HTTP Error 404: Not Found"),
+        ("availability", "error", "ainda não publicado (u: HTTP 403)"),
+        ("availability", "error", "timed out"),
+        ("availability", "ok", "1234 bytes"),
+        ("bloqueio", "error", "u: HTTP 429"),
+        ("integridade", "error", "u: recebidos 5 bytes, a fonte informou 9"),
+        ("integridade", "error", "u: o conteúdo é uma página HTML, não o arquivo esperado"),
+        ("carga", "ok", "lidas 9, filtradas pelo only 1, carregadas 8, rejeitadas 0, colisões de chave 0"),
+        ("volume", "ok", "77 linhas"),
+        ("linhas_removidas", "warn", "3 linhas de capturas anteriores que a atual não traz (x)"),
+    ]
+    for check, status, detail in rows:
+        con.execute(
+            "INSERT INTO metadata.fontes_verificacoes (dt_verificacao, fonte, dataset, verificacao, resultado, "
+            "detalhe) VALUES ('2026-10-21', 'fonte_a', 'd', ?, ?, ?)",
+            (check, status, detail),
+        )
+    assert migrations.apply(con) == ["0012"]
+    assert con.execute(
+        "SELECT cd_status_http, tipo_ocorrencia, qtd_bytes_esperados, qtd_bytes_recebidos, qtd_linhas "
+        "FROM metadata.fontes_verificacoes ORDER BY id_verificacao"
+    ).fetchall() == [
+        (404, "nao_encontrado", None, None, None),
+        (403, "nao_publicado", None, None, None),
+        (None, None, None, None, None),
+        (None, None, None, 1234, None),
+        (429, "bloqueio", None, None, None),
+        (None, "tamanho_divergente", 9, 5, None),
+        (None, "html_no_lugar", None, None, None),
+        (None, None, None, None, 8),
+        (None, None, None, None, 77),
+        (None, None, None, None, 3),
+    ]

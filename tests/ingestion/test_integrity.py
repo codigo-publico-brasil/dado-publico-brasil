@@ -69,6 +69,9 @@ def test_a_broken_zip_is_an_integrity_error_and_is_not_a_capture_but_the_file_st
 def test_an_html_page_in_place_of_the_zip_is_rejected(con: Connection, settings: Settings) -> None:
     found, checks = extract(con, settings, b"<!DOCTYPE html><html>Acesso negado</html>")
     assert found == -1 and "página HTML" in checks[0][1]
+    assert scalar(
+        con, "SELECT tipo_ocorrencia FROM metadata.fontes_verificacoes WHERE verificacao = 'integridade'"
+    ) == ("html_no_lugar")
 
 
 def test_a_zip_without_the_expected_members_is_rejected(con: Connection, settings: Settings) -> None:
@@ -82,6 +85,10 @@ def test_the_size_must_match_the_content_length_the_source_informed(
     content = zip_with("a.xml")
     found, checks = extract(con, settings, content, size=str(len(content) + 10))
     assert found == -1 and "a fonte informou" in checks[0][1]
+    assert con.execute(
+        "SELECT tipo_ocorrencia, qtd_bytes_esperados, qtd_bytes_recebidos FROM metadata.fontes_verificacoes "
+        "WHERE verificacao = 'integridade'"
+    ).fetchall() == [("tamanho_divergente", len(content) + 10, len(content))]
 
 
 def test_after_a_rejected_download_the_next_run_tries_again_and_can_succeed(

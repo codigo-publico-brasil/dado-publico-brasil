@@ -17,7 +17,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EXTRA = {"legislature", "ainda não publicado"}
 EXCECOES = {
-    "ingestion/landing.py": "C: busca de 'ainda não publicado' no detalhe (PRs 2 e 3)",
     "ingestion/fetch.py": "docstring cita fonte como exemplo (PR 2)",
     "orchestration/__main__.py": "docstring cita fonte como exemplo (PR 2)",
     "transformation/identity.py": "B: fontes de identidade fixas no código (PR 4)",
