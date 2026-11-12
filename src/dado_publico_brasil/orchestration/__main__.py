@@ -162,6 +162,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--prune", action="store_true", help="export: retira do lake as tabelas que sumiram do warehouse"
     )
+    p.add_argument("--fixar", metavar="AAAA-MM", help="export: fixa a versão (com --doi): mantém os Parquet")
+    p.add_argument("--doi", help="export --fixar: o DOI depositado da versão")
     p.add_argument("--output", type=Path, help="arquivo de saída do comando catalog")
     p.add_argument("--port", type=int, default=8080, help="porta do comando docs")
     p.add_argument("--storage-root", type=Path, help="pasta de armazenamento (padrão: settings.yml)")
@@ -245,6 +247,14 @@ def main(argv: list[str] | None = None) -> int:
                 found = lake_verify.verify(settings)
                 print(chr(10).join(found) or "lake íntegro: todos os arquivos do manifesto conferem")
                 return 1 if found else 0
+            if args.fixar:
+                if not args.doi:
+                    p.error("--fixar exige --doi")
+                con = lake.connect(settings, warehouse_file=False)
+                lake.fix(con, lake.location(settings), args.fixar, args.doi)
+                con.close()
+                print(f"versão {args.fixar} fixada ({args.doi})")
+                return 0
             print(export.export(settings, prune=args.prune))
         case "publish-docs":
             pages = lake.publish_docs(settings, pipeline.freshness_limits())

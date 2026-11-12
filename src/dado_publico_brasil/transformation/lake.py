@@ -123,15 +123,66 @@ def put_file(root: str, key: str, file: Path) -> None:
         shutil.copyfile(file, Path(root, key))
 
 
-def pinned(con: warehouse.Connection, root: str) -> set[str]:
-    """Arquivos que as versões datadas (`versoes/AAAA-MM/`) referenciam: nunca são apagados como órfãos."""
-    found = glob(con, f"{root}/versoes/*/manifesto.json")
-    return {
-        f["arquivo"]
-        for file in found
-        for t in read_manifest(con, file.rsplit("/", 1)[0]).get("tabelas", [])
-        for f in t["arquivos"]
-    }
+def utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+def retention_months() -> int:
+    """Meses de versões mensais com Parquet retidos (`DADO_PUBLICO_VERSOES_MESES`, padrão 12)."""
+    return int(os.environ.get("DADO_PUBLICO_VERSOES_MESES", "12"))
+
+
+def retention(con: warehouse.Connection, root: str) -> tuple[set[str], dict[str, set[str]]]:
+    """Arquivos que as versões datadas citam: `(retidos, vencidos por versão)` (ADR 0052, retenção).
+
+    Retém a versão dentro da janela de meses ou com `fixada.json`; só os arquivos que NENHUMA versão retida
+    cita entram em `vencidos` (quem chama ainda os confere contra o manifesto raiz antes de apagar).
+    """
+    now = utcnow()
+    fixed = {f.split("/")[-2] for f in glob(con, f"{root}/versoes/*/fixada.json")}
+    kept: set[str] = set()
+    cited: dict[str, set[str]] = {}
+    for file in glob(con, f"{root}/versoes/*/manifesto.json"):
+        name = file.split("/")[-2]
+        files = {
+            f["arquivo"]
+            for t in read_manifest(con, file.rsplit("/", 1)[0]).get("tabelas", [])
+            for f in t["arquivos"]
+        }
+        age = (
+            (now.year - int(name[:4])) * 12 + now.month - int(name[5:7])
+            if re.fullmatch(r"\d{4}-\d{2}", name)
+            else 0
+        )
+        if name in fixed or age <= retention_months():  # nome fora do padrão: retém
+            kept |= files
+        else:
+            cited[name] = files
+    return kept, {v: files - kept for v, files in cited.items()}
+
+
+def mark_removed(con: warehouse.Connection, root: str, versions: set[str]) -> None:
+    """Marca no manifesto da versão vencida que os Parquet saíram (ela segue descrevendo e dando o hash)."""
+    for v in sorted(versions):
+        manifest = read_manifest(con, f"{root}/versoes/{v}")
+        if manifest and "arquivos_removidos" not in manifest:
+            manifest["arquivos_removidos"] = utcnow().isoformat(timespec="seconds")
+            put_text(con, root, f"versoes/{v}/manifesto.json", json.dumps(manifest, ensure_ascii=True))
+
+
+def fix(con: warehouse.Connection, root: str, version: str, doi: str) -> None:
+    """Fixa a versão: `fixada.json` (DOI e data) a mantém, com os Parquet, até pedido de remoção."""
+    manifest = read_manifest(con, f"{root}/versoes/{version}")
+    if not manifest:
+        raise ValueError(f"versão {version} não existe")
+    if "arquivos_removidos" in manifest:
+        raise ValueError(f"versão {version} já perdeu os Parquet: não há o que fixar")
+    put_text(
+        con,
+        root,
+        f"versoes/{version}/fixada.json",
+        json.dumps({"doi": doi, "dt_fixacao": utcnow().isoformat(timespec="seconds")}),
+    )
 
 
 def delete_orphans(con: warehouse.Connection, root: str, patterns: set[str], keep: set[str]) -> int:
@@ -215,13 +266,13 @@ def snapshot(con: warehouse.Connection, settings: Settings, root: str) -> str | 
     """Fixa a versão datada do mês (`versoes/AAAA-MM/`: catálogo, `datapackage.json` e manifesto por último).
 
     É o manifesto publicado agora, na primeira execução do mês; depois de gravada, nunca é reescrita. Os
-    Parquet não são copiados: a versão os referencia e `pinned` impede que sejam apagados. Devolve a versão
+    Parquet não são copiados: a versão os referencia e `retention` impede que sejam apagados. Devolve a versão
     criada, ou None se o mês já tem uma (ou não há manifesto).
     """
     manifest = read_manifest(con, root)
     if not manifest:
         return None
-    version = datetime.now(UTC).strftime("%Y-%m")
+    version = utcnow().strftime("%Y-%m")
     folder = f"versoes/{version}"
     if read_manifest(con, f"{root}/{folder}"):
         return None

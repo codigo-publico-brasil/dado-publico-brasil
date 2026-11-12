@@ -282,7 +282,8 @@ def export(
         with lake.phase("versão do mês"):
             if version := lake.snapshot(con, settings, root):
                 lake.say(f"  versão {version} fixada")
-        keep |= {f["arquivo"] for e in entries for f in e["arquivos"]} | lake.pinned(con, root)
+        retained, expired = lake.retention(con, root)
+        keep |= {f["arquivo"] for e in entries for f in e["arquivos"]} | retained
         # órfãos só sob o que foi gravado; `prune` varre tudo (tabela removida, arquivo que saiu da fonte)
         swept = {
             p
@@ -290,7 +291,11 @@ def export(
             for p in (f"{k}.parquet", f"{k}/**")
         }
         with lake.phase("órfãos"):
-            orphans = lake.delete_orphans(con, root, swept | replaced, keep)  # só depois do manifesto novo
+            vencidos = {f for files in expired.values() for f in files}
+            orphans = lake.delete_orphans(
+                con, root, swept | replaced | vencidos, keep
+            )  # só depois do manifesto novo
+            lake.mark_removed(con, root, set(expired))  # por último: se cair antes, a próxima rodada refaz
         (settings.state_dir / "export_tempos.json").write_text(json.dumps(tempos, indent=1), encoding="utf-8")
     finally:
         con.close()
