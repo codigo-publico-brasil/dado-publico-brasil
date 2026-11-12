@@ -57,7 +57,7 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 | ambiente (pasta de dados, warehouse) | variáveis `DADO_PUBLICO_STORAGE_ROOT`, `DADO_PUBLICO_WAREHOUSE` |
 | papel dos agentes (`engenheiro`, `arquiteto`, `qa`, `auditor`) | `.claude/agents/<nome>.md` (só o que é específico do papel; as regras comuns ficam neste arquivo) |
 
-`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português; nos marts o prefixo diz o tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `backfill`, `recheck`, `rebuild`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
+`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português; nos marts o prefixo diz o tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `recheck`, `rebuild`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
 
 O fundador usa o projeto para aprender arquitetura de dados e de sistemas: explique decisões e alternativas em poucas linhas e aponte o que merece ADR.
 

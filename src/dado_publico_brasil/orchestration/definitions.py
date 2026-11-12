@@ -298,7 +298,7 @@ def _dbt_phase(context: AssetExecutionContext, dbt: DbtCliResource, stage: str) 
 def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
     """Fase 1 do dbt: os modelos de que a identidade precisa (`tag:pre_identity`)."""
     with step(context, "dbt antes da identidade"):
-        pipeline.ensure_raw(SETTINGS, context.log.info)  # fonte sem captura: tabela vazia, não erro
+        pipeline.ensure_raw(SETTINGS, context.log.info)  # fonte sem captura: view vazia, não erro
         yield from _dbt_phase(context, dbt, "transform_pre")
 
 

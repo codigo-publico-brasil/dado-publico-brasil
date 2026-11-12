@@ -82,9 +82,18 @@ def test_json_loads_into_the_raw_with_a_child_table_for_the_list(tmp_path: Path)
     contract = source(tmp_path)
     settings = Settings(storage_root=tmp_path / "store")
     con = migrations.open_warehouse(settings)
-    stats = loader.load_file(settings, contract, contract.datasets["votacoes"], landed_json(tmp_path), 1, con)
+    stats = loader.load_file(settings, contract, contract.datasets["votacoes"], landed_json(tmp_path), 1)
+    loader.create_views(settings, contract, con)
     schema = contract.schema
-    assert stats == {"read": 2, "filtered": 0, "loaded": 2, "rejected": 0, "conflicting": 0, "replaced": 0}
+    assert stats == {
+        "read": 2,
+        "filtered": 0,
+        "loaded": 2,
+        "rejected": 0,
+        "conflicting": 0,
+        "replaced": 0,
+        "removed": 0,
+    }
     parents = rows(con, f"SELECT id, ementa, orgao_sigla FROM {schema}.votacoes ORDER BY id")
     assert [(p["id"], p["ementa"], p["orgao_sigla"]) for p in parents] == [
         ("1", "A", "PLEN"),
@@ -92,6 +101,31 @@ def test_json_loads_into_the_raw_with_a_child_table_for_the_list(tmp_path: Path)
     ]
     child = rows(con, f"SELECT nome, voto FROM {schema}.votacoes__votos")
     assert [(c["nome"], c["voto"]) for c in child] == [("X", "Sim")]
+
+
+def test_merge_keeps_only_the_children_of_the_parent_row_that_stays(tmp_path: Path) -> None:
+    contract = source(tmp_path)
+    settings = Settings(storage_root=tmp_path / "store")
+    dataset = contract.datasets["votacoes"]
+    loader.load_file(settings, contract, dataset, landed_json(tmp_path), 1)
+    newer = tmp_path / "votacoes2.json"
+    newer.write_text(
+        json.dumps(
+            {"dados": {"itens": [{"id": 1, "ementa": "A2", "votos": [{"nome": "Y", "voto": "Nao"}]}]}}
+        ),
+        encoding="utf-8",
+    )
+    loader.load_file(settings, contract, dataset, newer, 2)  # outra URL: as duas capturas ficam vigentes
+    con = migrations.open_warehouse(settings)
+    loader.create_views(settings, contract, con)
+    schema = contract.schema
+    assert [
+        (r["id"], r["ementa"]) for r in rows(con, f"SELECT id, ementa FROM {schema}.votacoes ORDER BY id")
+    ] == [
+        ("1", "A2"),
+        ("2", None),
+    ]
+    assert [r["nome"] for r in rows(con, f"SELECT nome FROM {schema}.votacoes__votos")] == ["Y"]
 
 
 def test_custom_module_of_the_source_replaces_reading_and_fetching(
