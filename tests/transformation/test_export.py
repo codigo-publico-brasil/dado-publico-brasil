@@ -1592,3 +1592,82 @@ def test_the_first_export_of_the_month_fixes_an_immutable_dated_version_with_the
         json.loads((out / "datapackage.json").read_text())["version"]
         == json.loads((out / "manifesto.json").read_text())["id_execucao"]
     )
+
+
+def _old_version(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings, month: str
+) -> tuple[Path, Path, Path]:
+    """Versão `month` que cita um Parquet que o lake atual já não usa: (lake, versão, arquivo só dela)."""
+    monkeypatch.setattr(lake, "snapshot", SNAPSHOT)
+    monkeypatch.setattr(lake, "utcnow", lambda: datetime.fromisoformat(f"{month}-05T00:00:00+00:00"))
+    out, _ = run(con, settings)
+    old_file = where(out, VOTOS)
+    change(settings, "INSERT INTO marts.fct_votos VALUES (5000, DATE '2021-01-01', 'x', 1)")
+    export.export(settings)
+    assert old_file.exists() and where(out, VOTOS) != old_file
+    return out, out / "versoes" / month, old_file
+
+
+def _cited(out: Path) -> list[Path]:
+    return [out / f["arquivo"] for t in manifest(out)["tabelas"] for f in t["arquivos"]]  # type: ignore[attr-defined]
+
+
+def _later(monkeypatch: pytest.MonkeyPatch, settings: Settings, month: str) -> None:
+    monkeypatch.setattr(lake, "utcnow", lambda: datetime.fromisoformat(f"{month}-05T00:00:00+00:00"))
+    export.export(settings)
+
+
+def test_retention_removes_the_parquet_of_a_version_older_than_the_window_and_marks_its_manifest(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    out, folder, old_file = _old_version(monkeypatch, con, settings, "2025-10")
+    before = json.loads((folder / "manifesto.json").read_text())
+    _later(monkeypatch, settings, "2026-11")  # 13 meses depois
+    assert not old_file.exists() and all(f.exists() for f in _cited(out))  # o citado pelo atual fica
+    after = json.loads((folder / "manifesto.json").read_text())
+    assert after.pop("arquivos_removidos") and after == before  # segue descrevendo e dando o hash
+    assert (folder / "catalogo.duckdb").exists() and (folder / "datapackage.json").exists()
+
+
+def test_retention_keeps_a_version_inside_the_window(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    out, folder, old_file = _old_version(monkeypatch, con, settings, "2025-11")
+    _later(monkeypatch, settings, "2026-11")  # 12 meses: ainda dentro
+    assert old_file.exists() and "arquivos_removidos" not in json.loads(
+        (folder / "manifesto.json").read_text()
+    )
+    monkeypatch.setenv("DADO_PUBLICO_VERSOES_MESES", "6")  # a janela é configurável
+    _later(monkeypatch, settings, "2026-11")
+    assert not old_file.exists()
+
+
+def test_a_pinned_version_keeps_its_parquet_forever(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    out, folder, old_file = _old_version(monkeypatch, con, settings, "2025-10")
+    lake.fix(lake.connect(settings, warehouse_file=False), lake.location(settings), "2025-10", "10.5281/x")
+    assert json.loads((folder / "fixada.json").read_text())["doi"] == "10.5281/x"
+    _later(monkeypatch, settings, "2030-01")
+    assert old_file.exists() and "arquivos_removidos" not in json.loads(
+        (folder / "manifesto.json").read_text()
+    )
+    with pytest.raises(ValueError, match="não existe"):
+        lake.fix(lake.connect(settings, warehouse_file=False), lake.location(settings), "2020-01", "x")
+
+
+def test_a_run_that_fails_midway_through_the_retention_deletes_nothing_cited(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    out, folder, old_file = _old_version(monkeypatch, con, settings, "2025-10")
+    monkeypatch.setattr(lake, "delete_orphans", lambda *a: (_ for _ in ()).throw(RuntimeError("caiu")))
+    with pytest.raises(RuntimeError):
+        _later(monkeypatch, settings, "2026-11")
+    assert (
+        all(f.exists() for f in _cited(out))
+        and "arquivos_removidos" not in (folder / "manifesto.json").read_text()
+    )
+    monkeypatch.undo()  # a rodada seguinte refaz a retenção
+    monkeypatch.setattr(lake, "utcnow", lambda: datetime.fromisoformat("2026-11-06T00:00:00+00:00"))
+    export.export(settings)
+    assert not old_file.exists() and all(f.exists() for f in _cited(out))

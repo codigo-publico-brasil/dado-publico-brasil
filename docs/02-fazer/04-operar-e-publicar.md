@@ -164,7 +164,7 @@ Requisitos do servidor: Linux x86_64 com Docker e Compose, um usuário no grupo 
 
 ## Versão citável e DOI
 
-O `export` grava cada tabela alterada em `<caminho>/<id_execucao>/`, troca por último `catalogo.duckdb`, `datapackage.json` e `manifesto.json` e só então apaga os órfãos; se cair no meio, o publicado segue íntegro (`verify` confere), e os arquivos soltos da rodada que caiu saem na próxima que regravar a tabela ou com `--prune`. A primeira execução bem-sucedida de cada mês (UTC) fixa `versoes/AAAA-MM/` (manifesto, catálogo e `datapackage.json`) e nunca a reescreve; os Parquet que ela cita não são apagados. Decisão: [ADR 0052](../05-decisoes/0052-versao-citavel-do-lake.md). Para retirar uma versão (por exemplo, a pedido de titular), apague a pasta `versoes/AAAA-MM/` no bucket; o export seguinte limpa os arquivos que só ela citava.
+O `export` grava cada tabela alterada em `<caminho>/<id_execucao>/`, troca por último `catalogo.duckdb`, `datapackage.json` e `manifesto.json` e só então apaga os órfãos; se cair no meio, o publicado segue íntegro (`verify` confere), e os arquivos soltos da rodada que caiu saem na próxima que regravar a tabela ou com `--prune`. A primeira execução bem-sucedida de cada mês (UTC) fixa `versoes/AAAA-MM/` (manifesto, catálogo e `datapackage.json`) e nunca a reescreve. **Retenção:** os Parquet das versões dos últimos 12 meses (`DADO_PUBLICO_VERSOES_MESES`) e das **fixadas** ficam; os de uma versão vencida e não fixada saem no `export` (órfãos), e o manifesto dela ganha `arquivos_removidos` (manifesto, catálogo e `datapackage.json` ficam). Decisão e custo: [ADR 0052](../05-decisoes/0052-versao-citavel-do-lake.md). Para retirar uma versão antes do prazo (por exemplo, a pedido de titular), apague a pasta `versoes/AAAA-MM/` no bucket; o export seguinte limpa os arquivos que só ela citava.
 
 ### Depositar uma versão no Zenodo (fundador)
 
@@ -174,7 +174,8 @@ Só o `manifesto.json` e o `datapackage.json` da versão, **nunca os Parquet**: 
 2. Baixe `https://datalake.codigopublicobrasil.com.br/versoes/AAAA-MM/manifesto.json` e `.../datapackage.json`.
 3. *New upload*: envie os dois arquivos; tipo *Dataset*; título "Dado Público Brasil, versão AAAA-MM"; descrição: o que é, o `id_execucao` e que os dados em Parquet ficam no lake (link da versão); autor e licença CC BY 4.0; *Related identifiers*: a URL da versão (*is described by* / *is supplemented by*) e o repositório do GitHub (*is supplemented by*).
 4. Publique. O Zenodo dá o DOI da versão e um DOI de conceito (sempre a última).
-5. Registre o DOI: cite-o no `CITATION.cff` (campo `identifiers`) e em "Como citar" de [consumir o lake](../03-consultar/06-consumir-o-lake.md), num PR.
+5. **Fixe a versão** para que seus Parquet nunca saiam: `uv run dado-publico export --fixar AAAA-MM --doi 10.5281/zenodo.NNN` (grava `versoes/AAAA-MM/fixada.json` com o DOI e a data; só vale antes de a versão vencer).
+6. Registre o DOI: cite-o no `CITATION.cff` (campo `identifiers`) e em "Como citar" de [consumir o lake](../03-consultar/06-consumir-o-lake.md), num PR.
 
 Se um depósito precisar sair (dado pessoal indevido), o Zenodo só o remove a pedido ao suporte: por isso o manifesto não carrega dado pessoal além de nomes de tabela e coluna.
 

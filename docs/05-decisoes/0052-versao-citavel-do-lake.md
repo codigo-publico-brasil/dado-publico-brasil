@@ -1,6 +1,6 @@
 # ADR 0052: versão citável do lake: publicação atômica, versão mensal imutável, `datapackage.json` e DOI só do manifesto
 
-- **Status:** proposto (2026-11-11)
+- **Status:** aceito (2026-11-12), com a política de retenção abaixo
 - **Data:** 2026-11-11
 - **Altera:** [ADR 0035](0035-lakehouse-publico-no-r2.md) (item 8: a versão congelada deixa de ser "para quando alguém precisar" e passa a ser mensal; o caminho de toda noite continua) e [ADR 0055](0055-lake-como-unica-publicacao.md) (item 5: "sem versão por data"). Complementa o [ADR 0049](0049-licenca-apache-2-para-o-codigo-e-cc-by-para-os-dados.md) (como citar) e o [ADR 0047](0047-reconstrucao-incremental-e-export-por-particao.md) (o export continua escrevendo só o que mudou).
 - **Para quem é:** quem publica o lake, quem o cita e quem o consome. Responde: o que um leitor vê durante o envio, como se cita um número de modo que ele se reproduza meses depois e o que (não) vai para o Zenodo.
@@ -29,6 +29,41 @@ O caminho do lake é sempre o dado atual, e o export gravava cada tabela **sobre
 ## Consequências
 
 - Leitor com o catálogo da noite nunca vê bytes de duas execuções; a janela "anos de execuções diferentes" some.
-- O armazenamento passa a guardar, além do atual, os arquivos que cada versão mensal cita; um arquivo só sai quando nem o manifesto atual nem uma versão o cita. Não há expiração automática: reter ou retirar uma versão é decisão do fundador (por exemplo, para atender um titular), editando o manifesto da versão e anotando no changelog.
+- O armazenamento passa a guardar, além do atual, os arquivos que cada versão mensal cita; um arquivo só sai quando nem o manifesto atual nem uma versão retida o cita. A retenção é automática e limitada (seção abaixo); retirar uma versão antes disso (por exemplo, para atender um titular) é decisão do fundador.
 - Rodada que falha antes da troca pode deixar arquivos soltos em `<caminho>/<id>/`; `--prune` os limpa.
 - Mudança de tipo de arquivo ou de layout fica registrada no manifesto; o consumidor continua lendo pelo catálogo ou pelo manifesto, nunca por caminho montado à mão.
+
+## Retenção e custo
+
+Não dá para guardar cópias infinitas. Política (código em `lake.retention`, aplicada pelo `export` no passo dos órfãos):
+
+1. **Retidos, com Parquet:** o que o manifesto raiz cita e as versões mensais dos últimos 12 meses (`DADO_PUBLICO_VERSOES_MESES`, padrão 12; a versão de 12 meses atrás ainda fica, a de 13 não).
+2. **Fixada:** versão com `versoes/AAAA-MM/fixada.json` (DOI e data) mantém os Parquet para sempre, ou até pedido de remoção. O fundador a declara, depois de depositar no Zenodo, com `uv run dado-publico export --fixar AAAA-MM --doi 10.5281/...` ([passo a passo](../02-fazer/04-operar-e-publicar.md#depositar-uma-versão-no-zenodo-fundador)). Escolhido por ser um arquivo auditável no próprio bucket e um comando de poucas linhas; uma lista em configuração exigiria deploy a cada versão.
+3. **Vencida** (mais de 12 meses e não fixada): perde só os Parquet que nenhuma versão retida nem o manifesto raiz cita. Mantém `manifesto.json`, `catalogo.duckdb` e `datapackage.json` (kilobytes); o manifesto ganha `arquivos_removidos` (data), de modo que a versão continua descrevendo e dando o hash, só que os dados não estão mais lá (o catálogo dela deixa de abrir as tabelas).
+4. **Segurança da deleção:** é regra de órfãos, depois da troca do manifesto raiz; nunca apaga o que o raiz, uma versão fixada ou uma versão na janela cita. O marcador `arquivos_removidos` é gravado por último: se a execução cair antes, nada citado some e a rodada seguinte refaz.
+5. **Pedido de titular (LGPD):** qualquer versão pode ser apagada à mão. O depósito no Zenodo leva só manifesto e `datapackage.json` (hashes), nunca Parquet, então o pedido pode ser atendido no bucket.
+
+### Custo estimado
+
+Preço oficial do R2 ([página consultada em 30/10/2026](https://developers.cloudflare.com/r2/pricing/)): Standard US$ 0,015 por GB-mês; saída de dados grátis; 10 GB-mês grátis; operações Class A US$ 4,50 e Class B US$ 0,36 por milhão. Infrequent Access (US$ 0,01 por GB-mês, mínimo de 30 dias, US$ 0,01 por GB recuperado) não compensa.
+
+Tamanho medido no `manifesto.json` de 12/11/2026: **2,08 GB em 123 tabelas** (staging 1,51; marts 0,48; intermediate 0,09). Cerca de 1,64 GB são tabelas eleitorais, que só mudam em ano de eleição (só a votação do TSE tem 0,92 GB); cerca de 0,44 GB mudam durante o ano. **A fração que muda por mês é estimativa, não medida.**
+
+Armazenamento = lake + 12 × mudança mensal × anos, sem política; com política = lake + 12 × mudança mensal + 1 versão fixada por ano (no máximo o lake). Custo mensal:
+
+| Cenário | Horizonte | Sem política | Com política |
+| --- | --- | --- | --- |
+| Hoje, muda 0,44 GB/mês | 1 ano | 7,4 GB, US$ 0,00 (dentro dos 10 GB grátis) | igual |
+| | 5 anos | 28,5 GB, US$ 0,28 | 17,8 GB, US$ 0,12 |
+| | 10 anos | 54,9 GB, US$ 0,67 | 28,2 GB, US$ 0,27 |
+| Pior caso, muda tudo (2,08 GB/mês) | 1 ano | 27 GB, US$ 0,26 | igual |
+| | 5 anos | 127 GB, US$ 1,75 | 37 GB, US$ 0,41 |
+| | 10 anos | 252 GB, US$ 3,63 | 48 GB, US$ 0,57 |
+| Lake 10x (20,8 GB, muda 4,4 GB/mês) | 5 anos | 285 GB, US$ 4,12 | 178 GB, US$ 2,51 |
+| | 10 anos | 549 GB, US$ 8,08 | 282 GB, US$ 4,07 |
+| Lake 50x (104 GB, muda 22 GB/mês) | 5 anos | US$ 21 | US$ 13 |
+| | 10 anos | US$ 41 | US$ 21 |
+
+**Conclusão honesta:** no tamanho de hoje, até guardar tudo sem limite custa centavos a poucos dólares por mês; a política não é por dinheiro agora. Ela existe para o custo não crescer sem teto quando o lake crescer (dados novos de despesas e empenhos podem multiplicá-lo), para limitar o que precisa ser auditado e para facilitar a remoção por pedido de titular.
+
+**Não medido:** o bucket privado (`cpb-interno`: cópias da identidade e do `metadata`) fica fora destas contas. **Revisar** a estimativa com o tamanho real depois do primeiro ano de versões mensais.

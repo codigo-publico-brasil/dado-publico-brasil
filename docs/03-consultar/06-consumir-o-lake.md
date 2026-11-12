@@ -109,7 +109,7 @@ Só os marts do lake e `metadata/capturas`. Não há views `app_*` (o prefixo n�
 
 ## Como citar
 
-Cite a **versão do mês** (`AAAA-MM`), não o caminho de toda noite: ela não muda. Em `https://datalake.codigopublicobrasil.com.br/versoes/AAAA-MM/` estão o `manifesto.json` (o SHA-256 de cada arquivo), o `catalogo.duckdb` e o `datapackage.json`, e os Parquet que eles citam continuam no bucket enquanto a versão existir.
+Cite a **versão do mês** (`AAAA-MM`), não o caminho de toda noite: ela não muda. Em `https://datalake.codigopublicobrasil.com.br/versoes/AAAA-MM/` estão o `manifesto.json` (o SHA-256 de cada arquivo), o `catalogo.duckdb` e o `datapackage.json`, e os Parquet que eles citam ficam no bucket nos 12 meses seguintes e, para sempre, se a versão tem DOI (fixada). Passado o prazo sem fixação, o manifesto traz `arquivos_removidos`: a versão ainda descreve os dados e dá o hash, mas os arquivos não estão mais lá ([retenção](../05-decisoes/0052-versao-citavel-do-lake.md#retenção-e-custo)).
 
 Modelo (ajuste a data de acesso; acrescente o DOI do manifesto depositado quando houver):
 
