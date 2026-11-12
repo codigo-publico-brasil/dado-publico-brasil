@@ -22,17 +22,25 @@ from dado_publico_brasil.ingestion.contract import ITEM, Dataset, SourceContract
 SAMPLE = 200  # registros olhados para listar os campos de um JSON
 
 
+def _rows(text: io.TextIOBase, contract: SourceContract, dataset: Dataset) -> Iterator[dict[str, Any]]:
+    for _ in range(dataset.skip_lines):
+        text.readline()
+    yield from csv.DictReader(text, delimiter=dataset.delimiter or contract.delimiter)
+
+
 def _csv(file: Path, contract: SourceContract, dataset: Dataset) -> Iterator[dict[str, Any]]:
+    encoding = dataset.encoding or contract.encoding
     if dataset.archive == "zip":  # lê o membro direto do pacote, sem extrair
         with zipfile.ZipFile(file) as package:
             for info in package.infolist():
                 if fnmatch.fnmatch(info.filename, dataset.member):
                     with package.open(info) as member:
-                        text = io.TextIOWrapper(member, encoding=contract.encoding, newline="")
-                        yield from csv.DictReader(text, delimiter=contract.delimiter)
+                        yield from _rows(
+                            io.TextIOWrapper(member, encoding=encoding, newline=""), contract, dataset
+                        )
         return
-    with file.open(encoding=contract.encoding, newline="") as f:
-        yield from csv.DictReader(f, delimiter=contract.delimiter)
+    with file.open(encoding=encoding, newline="") as f:
+        yield from _rows(f, contract, dataset)
 
 
 def flatten(value: dict[str, Any], prefix: str = "") -> dict[str, Any]:
@@ -89,10 +97,10 @@ def records(file: Path, contract: SourceContract, dataset: Dataset) -> Iterator[
 
 def fields(file: Path, contract: SourceContract, dataset: Dataset) -> list[str]:
     """Campos do arquivo: o cabeçalho do CSV ou a união dos campos dos primeiros registros do JSON."""
-    plain_csv = contract.format_of(dataset.name) == "csv" and not dataset.archive
+    plain_csv = contract.format_of(dataset.name) == "csv" and not dataset.archive and not dataset.skip_lines
     if plain_csv and not contract.custom and not dataset.foreach:
-        with file.open(encoding=contract.encoding, newline="") as f:
-            return next(csv.reader(f, delimiter=contract.delimiter), [])
+        with file.open(encoding=dataset.encoding or contract.encoding, newline="") as f:
+            return next(csv.reader(f, delimiter=dataset.delimiter or contract.delimiter), [])
     names: dict[str, None] = {}
     for record in islice(records(file, contract, dataset), SAMPLE):
         names.update(dict.fromkeys(record))

@@ -78,3 +78,9 @@ sources:
         description: >
           Tramitação das proposições que podem virar norma, buscada por item na API (`_item` é o id da
           proposição), só das que já foram buscadas.
+      - name: cota_parlamentar
+        description: >
+          Cota para o exercício da atividade parlamentar (CEAP): uma linha por despesa reembolsada, um pacote por ano
+          (foto completa do ano, substituída a cada captura). Sem o CPF do deputado, a carteira parlamentar e o nome de
+          passageiro, que a fonte traz e o contrato não lê. O CPF de fornecedor pessoa física vem como a fonte publica
+          (raw privado) e é mascarado no staging.

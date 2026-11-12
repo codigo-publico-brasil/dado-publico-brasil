@@ -23,6 +23,7 @@ Os dados públicos estão espalhados em portais com formatos diferentes, mudam s
 | --- | --- | --- |
 | Câmara dos Deputados | deputados, proposições, autorias, tramitações, votações e voto de cada deputado, órgãos, frentes | `dim_pessoas`, `fct_proposicoes`, `fct_votacoes`, `fct_votos` |
 | Senado Federal | senadores, votações e votos, normas, vetos | `fct_normas`, `fct_vetos`, `fct_vetos_votos` |
+| Câmara e Senado (cota parlamentar) | despesas da cota de deputados e senadores, desde 2008 | `fct_cotas_despesas` |
 | TSE | candidaturas, mandatos, bens, votos e contas de campanha | `fct_candidaturas`, `fct_mandatos`, `fct_candidaturas_bens` |
 | Portal da Transparência | emendas parlamentares, convênios e favorecidos | `fct_emendas`, `fct_emendas_convenios` |
 | Constituição de 1988 | texto por dispositivo | `dim_constituicao_dispositivos` |

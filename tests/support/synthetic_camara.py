@@ -6,6 +6,7 @@ ementa toda em maiúsculas) e uma autoria de proposição não carregada, 2 vota
 
 import csv
 import hashlib
+import zipfile
 from collections.abc import Callable
 from pathlib import Path
 
@@ -21,6 +22,20 @@ def write_csv(caminho: Path, colunas: list[str], linhas: list[list[str]]) -> Pat
         escritor.writerow(colunas)
         escritor.writerows(linhas)
     return caminho
+
+
+# Cota parlamentar: só as colunas que o contrato lê, mais `cpf` e `txtPassageiro`, que a fonte traz e o raw não guarda.
+COTA_COLUNAS = (
+    "txNomeParlamentar cpf ideCadastro sgUF sgPartido codLegislatura numSubCota txtDescricao "
+    "numEspecificacaoSubCota txtDescricaoEspecificacao txtFornecedor txtCNPJCPF txtNumero indTipoDocumento "
+    "datEmissao vlrDocumento vlrGlosa vlrLiquido numMes numAno numParcela txtPassageiro txtTrecho numLote "
+    "numRessarcimento datPagamentoRestituicao vlrRestituicao ideDocumento urlDocumento"
+)
+
+
+def cota_linha(nome: str, ide: str, partido: str, uf: str, descricao: str, especificacao: str) -> list[str]:
+    """Começo de uma linha da cota: nome, CPF (vazio, como a fonte), identificador, UF, partido e subcota."""
+    return [nome, "", ide, uf, partido, "57", "3", descricao, "1", especificacao]
 
 
 def fake_downloader(arquivos: dict[str, Path]) -> Callable[[str, Path], tuple[Path, str, int]]:
@@ -244,4 +259,32 @@ def synthetic_files(pasta: Path) -> dict[str, Path]:
             ["500", "98", "57", "", "1004", "Membro", "", ""],
         ],
     )
+    cota = write_csv(
+        pasta / "Ano-2024.csv",
+        COTA_COLUNAS.split(),
+        [
+            # deputado com identificador do cadastro, fornecedor pessoa jurídica
+            cota_linha(
+                "ANA ÁRVORE", "10", "AAA", "SP", "COMBUSTÍVEIS E LUBRIFICANTES.", "Veículos Automotores"
+            )
+            + ["POSTO X LTDA", "11.222.333/0001-81", "N1", "4", "2024-03-05T00:00:00", "150.5", "0", "150.5"]
+            + ["3", "2024", "0", "", "", "900", "", "", "", "5001", "http://nf/5001"],
+            # fornecedor pessoa física: o CPF não passa de "***" no staging
+            cota_linha("ANA ÁRVORE", "10", "AAA", "SP", "SERVIÇOS POSTAIS", "")
+            + ["FULANO DE TAL", "123.456.789-09", "N2", "0", "2024-04-06T00:00:00", "80", "10", "70"]
+            + ["4", "2024", "0", "", "", "901", "", "", "", "5002", ""],
+            # liderança: sem deputado, sem identificador
+            cota_linha("LID.GOV-CD", "", "", "NA", "TELEFONIA", "")
+            + ["TELECOM S.A.", "44.555.666/0001-00", "N3", "4", "2024-05-07T00:00:00", "200", "0", "200"]
+            + ["5", "2024", "0", "", "", "902", "", "", "", "5003", ""],
+            # deputado que o cadastro não tem: fica sem pessoa
+            cota_linha("ZED", "99", "CCC", "MG", "TELEFONIA", "")
+            + ["TELECOM S.A.", "44.555.666/0001-00", "N4", "4", "2024-05-08T00:00:00", "-20", "0", "-20"]
+            + ["5", "2024", "0", "", "", "903", "", "", "", "5004", ""],
+        ],
+    )
+    pacote = pasta / "Ano-2024.csv.zip"
+    with zipfile.ZipFile(pacote, "w") as z:
+        z.write(cota, "Ano-2024.csv")
+    saida[url_do_conjunto("cota_parlamentar", 2024)] = pacote
     return saida

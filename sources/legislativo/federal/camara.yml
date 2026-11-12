@@ -241,3 +241,25 @@ datasets:
       [_item, sequencia, dataHora, siglaOrgao, regime, descricaoTramitacao, codTipoTramitacao,
        descricaoSituacao, codSituacao, despacho, ambito, apreciacao]
 
+  cota_parlamentar:
+    # Cota para o exercício da atividade parlamentar (CEAP): uma linha por despesa reembolsada, um pacote .zip por ano
+    # (2008 em diante; ~4 a 9 MB zipado, ~120 mil linhas por ano, o arquivo do ano em curso muda todo dia). É a foto
+    # completa do ano: `replace_partition`. A fonte não traz chave única (o mesmo `ideDocumento` repete em até 18 linhas
+    # num ano), então a linha se identifica pelo conteúdo. Não entram: `cpf` do deputado (documento pessoal, vazio na fonte),
+    # carteira parlamentar, `nuDeputadoId` (identificador interno que não é o do cadastro) nem `txtPassageiro` (nome
+    # de passageiro, que pode ser terceiro). `txtCNPJCPF` do fornecedor pessoa física vem como a fonte publica no raw
+    # (privado); o staging mascara o CPF. `ideCadastro` vazio: linhas da liderança/partido, sem deputado.
+    url: "https://www.camara.leg.br/cotas/Ano-{year}.csv.zip"
+    max_age_days: 3   # avisa se a última verificação passar de 3 dias (a fonte se atualiza todo dia)
+    load: yearly
+    first_year: 2008
+    archive: zip
+    member: "Ano-*.csv"
+    write: replace_partition
+    primary_key: [_row_hash]
+    columns:
+      [txNomeParlamentar, ideCadastro, sgUF, sgPartido, codLegislatura, numSubCota, txtDescricao,
+       numEspecificacaoSubCota, txtDescricaoEspecificacao, txtFornecedor, txtCNPJCPF, txtNumero,
+       indTipoDocumento, datEmissao, vlrDocumento, vlrGlosa, vlrLiquido, numMes, numAno, numParcela,
+       txtTrecho, numLote, numRessarcimento, datPagamentoRestituicao, vlrRestituicao, ideDocumento,
+       urlDocumento]
