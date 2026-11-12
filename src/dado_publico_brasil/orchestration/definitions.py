@@ -34,6 +34,7 @@ from dagster import (
     AssetSpec,
     Config,
     DagsterRunStatus,
+    DataVersion,
     DefaultScheduleStatus,
     DefaultSensorStatus,
     Definitions,
@@ -163,10 +164,14 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
                     force=config.force,
                     recover=config.mode == "incremental",
                 )
+                version = landing.content_version(con, source.source)
         finally:
             con.close()
         context.log.info(f"landing {source.source}: {n} datasets verificados")
-        return MaterializeResult(metadata={"datasets": n, "mode": config.mode})
+        # a versão só muda com conteúdo novo: o raw só fica "Unsynced" quando há dado ainda não carregado
+        return MaterializeResult(
+            metadata={"datasets": n, "mode": config.mode}, data_version=DataVersion(version)
+        )
 
     @multi_asset(
         specs=[AssetSpec(key=k, group_name="raw", deps=[captured], skippable=True) for k in raw_tables],
