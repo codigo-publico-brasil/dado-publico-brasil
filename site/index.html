@@ -267,6 +267,8 @@ curl -s https://datalake.codigopublicobrasil.com.br/marts/pessoas/dim_pessoas.pa
             <tr><td><code>staging/</code> e <code>intermediate/</code></td><td>A base tratada de cada fonte e os passos da derivação.</td></tr>
             <tr><td><code>arq_*</code> (pastas de arquivos)</td><td>Arquivos que não são tabela, cada coleção com sua lista <code>arq_*.parquet</code>: os zips originais do Diário Oficial da União (<strong>fonte: Imprensa Nacional</strong>, licença CC BY-ND 3.0, sem modificação) e as fotos oficiais dos candidatos (TSE).</td></tr>
             <tr><td><code>metadata/capturas.parquet</code></td><td>URL oficial, SHA-256 e data de cada arquivo capturado da fonte.</td></tr>
+            <tr><td><code>metadata/fontes_verificacoes.parquet</code></td><td>Cada verificação das fontes (disponibilidade, bloqueio, integridade, esquema, volume, carga), com resultado e detalhe.</td></tr>
+            <tr><td><code>metadata/testes_resultados.parquet</code></td><td>Resultado de cada modelo e teste do dbt em cada execução, inclusive os testes de lacuna.</td></tr>
           </tbody>
         </table>
       </div>
