@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "Se usar os dados ou o código, cite como abaixo e informe o id_execucao da publicação (metadata.exportacao ou manifesto.json)."
+message: "Se usar os dados, cite como abaixo e informe a versão datada (AAAA-MM, em versoes/AAAA-MM/ do lake) e o id_execucao do manifesto dela; veja Como citar em docs/03-consultar/06-consumir-o-lake.md."
 title: "Dado Público Brasil"
 type: software
 abstract: "Plataforma de dados públicos abertos: captura das fontes oficiais, transformação em camadas, identidade de pessoas e lake público em Parquet, com a origem de cada dado rastreável."
