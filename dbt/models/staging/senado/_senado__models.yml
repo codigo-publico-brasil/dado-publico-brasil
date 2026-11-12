@@ -57,6 +57,22 @@ models:
       - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
       - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
       - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
+  - name: stg_senado__colegiados
+    description: Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha; o colegiado extinto não consta da fonte.
+    columns:
+      - {name: id_colegiado, description: "Código do colegiado no Senado.", tests: ["unique", "not_null"]}
+      - {name: sigla, description: "Sigla do colegiado.", tests: ["not_null"]}
+      - {name: nome, description: "Nome oficial do colegiado."}
+      - {name: dt_inicio, description: "Data de início do colegiado, como a fonte informa (1900-01-01 nos permanentes antigos)."}
+      - {name: fl_publico, description: "Verdadeiro se o colegiado é público, como a fonte informa (campo Publica: S ou N)."}
+      - {name: tipo_sigla, description: "Sigla do tipo do colegiado, como a fonte informa."}
+      - {name: tipo, description: "Descrição do tipo do colegiado, como a fonte informa (por exemplo, Comissão Permanente)."}
+      - {name: casa_sigla, description: "Casa a que o colegiado pertence: SF (Senado), CN (Congresso Nacional) ou outra sigla que a fonte informe."}
+      - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
+      - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
+      - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
+      - {name: url_fonte, description: "Endereço oficial de onde o arquivo de origem foi baixado."}
+      - {name: sha256_captura, description: "Impressão digital (SHA-256) do arquivo de origem: prova de que é o que a fonte entregou."}
   - name: stg_senado__processos
     meta: {colunas_omitidas: {id: "Igual a _item (conferido em todas as linhas), que o modelo expõe como id_processo."}}
     description: Processo de cada matéria votada (só as já buscadas), com a situação atual e a norma gerada.

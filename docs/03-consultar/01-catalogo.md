@@ -49,6 +49,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Tabela | O que é | Sensibilidade | Grain |
 | --- | --- | --- | --- |
+| `colegiados` | Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha. Fonte do catálogo de órgãos do Senado. | publico-agente-publico |  |
 | `normas` | Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...), por ano de assinatura, só os metadados. | publico-agente-publico |  |
 | `normas_detalhe` | Detalhe, buscado por item na API, das leis, leis complementares, emendas e medidas provisórias já buscadas (`_item` é o código da norma). | publico-agente-publico |  |
 | `normas_detalhe__publicacoes_publicacao` | Publicações de cada norma no Diário Oficial (lista `publicacoes.publicacao`). | publico-agente-publico |  |
@@ -159,6 +160,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `stg_metadata__capturas` | Capturas dos arquivos da fonte (um arquivo, uma linha). `id_captura` liga as linhas do raw ao arquivo. | publico-agente-publico |  |
 | `stg_metadata__fontes_verificacoes` | Verificações das fontes (disponibilidade, bloqueio, integridade do arquivo, esquema, volume, carga), uma linha por verificação. Base de `fct_fontes_ocorrencias`. | publico-agente-publico |  |
 | `stg_pep__dirigentes` | Presidente, Vice-Presidente e Ministro de Estado, uma linha por pessoa, função, órgão e início de exercício, em cada mês capturado (a mesma linha se repete nos meses). Sem CPF. | publico-agente-publico | mês capturado, pessoa, função, órgão e início de exercício |
+| `stg_senado__colegiados` | Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha; o colegiado extinto não consta da fonte. | publico-agente-publico |  |
 | `stg_senado__exercicios` | Exercício oficial de cada senador em cada mandato (titular ou suplente), com a causa de afastamento. | publico-agente-publico |  |
 | `stg_senado__normas` | Catálogo das normas federais, uma linha por norma, só metadados, com a ementa padronizada e a original. | publico-agente-publico |  |
 | `stg_senado__normas_publicacoes` | Publicações de cada norma detalhada (e da Constituição) no Diário Oficial, uma linha por norma e publicação. | publico-agente-publico |  |
@@ -236,7 +238,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `dim_legislaturas` | Legislaturas da Câmara, com datas oficiais de início e fim. Uma linha por legislatura. | publico | legislatura |
 | `dim_municipios` | Municípios do Brasil segundo o IBGE, com UF e região. Uma linha por município. | publico | município |
 | `dim_municipios_codigos_tse` | De-para entre o código de município do TSE e o do IBGE, por nome e UF únicos dos dois lados. Uma linha por município do TSE; sem correspondência fica com o código do IBGE vazio. | publico | município do TSE |
-| `dim_orgaos` | Os órgãos onde o mandato é exercido: comissões, plenário, mesa diretora e conselhos da Câmara. A chave id_orgao é do projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Senado, assembleias e câmaras municipais ainda não têm fonte carregada. | publico | órgão |
+| `dim_orgaos` | Os órgãos onde o mandato é exercido: comissões, plenário, mesa diretora e conselhos da Câmara. A chave id_orgao é do projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Inclui os colegiados em atividade do Senado (o extinto não consta da fonte). Assembleias, câmaras municipais e outros poderes ainda não têm fonte carregada. | publico | órgão |
 | `dim_partidos_camara` | Partidos com sigla e nome oficiais. Uma linha por partido. | publico | partido |
 | `dim_partidos_linhagem` | Mudanças de nome, fusões e incorporações de partidos, conforme o TSE, com a página oficial de cada evento. Curada à mão; só o que foi conferido. Uma linha por partido de origem e evento. | publico | partido de origem e evento |
 | `dim_pessoas` | Quem já teve pelo menos um cargo (ADR 0030 e 0031): parlamentar da Câmara ou do Senado e todo eleito do TSE, a partir do momento da eleição. Quem só se candidatou e nunca foi eleito não está aqui. Uma linha por pessoa do projeto, com a chave de identidade que nunca muda nem é reaproveitada. Cada atributo diz de qual fonte veio (a Câmara e o Senado valem mais que o TSE; o TSE vale a candidatura mais recente que o traz). Só o que a fonte publica; nada é inferido. | publico-agente-publico | pessoa |
@@ -251,7 +253,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fct_contratos` | Contratos do governo federal, de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora e número do contrato; se a fonte repete o contrato em mais de um mês, vale a captura mais recente. Contratado pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. Contrato sigiloso traz `-11` e `Sigiloso` no contratado, como a fonte. | publico-dados-pessoais-de-terceiros | contrato (unidade gestora e número do contrato) |
 | `fct_contratos_aditivos` | Termos aditivos dos contratos do governo federal, uma linha por termo como a fonte publica. | publico-agente-publico | termo aditivo de contrato |
 | `fct_contratos_itens` | Itens dos contratos do governo federal, uma linha por item como a fonte publica (a fonte pode repetir linhas idênticas e deixar o código do item vazio). | publico-dados-pessoais-de-terceiros | item de contrato |
-| `fct_emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
+| `fct_emendas` | Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código do SIAFI (não é o código do parlamentar); a pessoa é derivada só para emenda individual, quando o nome é o de uma só pessoa com mandato federal no ano da emenda ou no anterior (ADR 0056), e fica vazia no resto. Uma linha por emenda, localidade, função, programa e ação. | publico | emenda |
 | `fct_emendas_convenios` | Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda. | publico | convênio e emenda |
 | `fct_emendas_favorecidos` | Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês. | publico-dados-pessoais-de-terceiros | emenda |
 | `fct_eventos` | A linha do tempo da pessoa, uma linha por evento, DERIVADA dos fatos tipados (a verdade está neles; aqui não há texto livre). O tipo vem do catálogo fechado dim_evento_tipos e fato_origem diz de qual fato a linha nasceu. ano_evento sempre existe; dt_evento só quando a fonte dá o dia (eleição e candidatura só têm o ano). Tipos sem fato carregado (diplomação, nomeação, exoneração, entrada e saída de órgão, filiação e desfiliação por data, retorno de afastamento) ainda não têm linha: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é fct_eventos. | publico-agente-publico | evento da pessoa |
@@ -543,7 +545,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 
 | Coluna | Tipo | Descrição | Dado pessoal |
 | --- | --- | --- | --- |
-| `fonte` | varchar | Fonte oficial do registro (camara). |  |
+| `fonte` | varchar | Fonte oficial do registro (camara ou senado). |  |
 | `id_orgao` | varchar | Chave do órgão no projeto: fonte e identificador da fonte. |  |
 | `id_orgao_na_fonte` | bigint | Identificador do órgão na fonte. |  |
 | `sigla` | varchar | Sigla do órgão. |  |
@@ -849,6 +851,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `tipo` | varchar | Tipo da emenda (individual, de bancada, de comissão, de relator). |  |
 | `cd_autor` | varchar | Código do autor da emenda como registrado no SIAFI (não é o código do parlamentar); vazio quando a fonte não informa. |  |
 | `autor_nome` | varchar | Nome do autor da emenda como registrado no SIAFI (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada. |  |
+| `id_pessoa` | bigint | Pessoa autora, DERIVADA (não vem da fonte): só em emenda individual cujo nome do autor é o nome parlamentar ou civil de uma só pessoa com mandato federal no ano da emenda ou no anterior; vazia em emenda de bancada, comissão ou relator, sem autor, sem correspondência ou ambígua. |  |
+| `regra_ligacao_pessoa` | varchar | Regra que ligou a pessoa: nome_parlamentar_e_exercicio ou nome_civil_e_exercicio (ADR 0056); vazia quando id_pessoa é vazio. |  |
+| `precisao_ligacao_pessoa` | varchar | Precisão do vínculo: derivada (inferida por regra, sem identificador oficial); vazia quando id_pessoa é vazio. |  |
 | `numero` | varchar | Número da emenda. |  |
 | `localidade` | varchar | Atributo do Plano de Trabalho que indica a região onde a despesa ocorre, como a fonte informa. |  |
 | `municipio_ibge` | integer | Código IBGE do município de destinação do recurso; pode estar em branco, conforme a localidade de aplicação. |  |
@@ -1272,6 +1277,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fonte` | varchar | Fonte oficial do registro. |  |
 | `id_votacao` | varchar | Identificador da votação na fonte. |  |
 | `dt_votacao` | date | Data da votação. |  |
+| `id_orgao` | varchar | Órgão em que ocorreu (dim_orgaos). Câmara: o identificador do órgão que a fonte informa. Senado: ligado pela sigla do colegiado, só quando ela identifica um colegiado do Senado em atividade; vazio no colegiado extinto, na sigla repetida e onde a fonte não informa (o teste de aviso mede). |  |
 | `orgao_sigla` | varchar | Sigla do órgão em que ocorreu. |  |
 | `descricao` | varchar | Descrição oficial da votação, com caixa padronizada. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing. |  |
 | `aprovada` | integer | 1 se a fonte registra aprovação; 0 se não; vazio se não informa. |  |

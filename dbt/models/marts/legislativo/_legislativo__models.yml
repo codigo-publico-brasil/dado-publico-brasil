@@ -115,6 +115,10 @@ models:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
       - {name: id_votacao, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}
       - {name: dt_votacao, data_type: date, tests: [not_null], description: "Data da votação."}
+      - name: id_orgao
+        data_type: varchar
+        tests: [{relationships: {to: ref('dim_orgaos'), field: id_orgao, config: {severity: warn}}}, {not_null: {config: {severity: warn}}}]
+        description: "Órgão em que ocorreu (dim_orgaos). Câmara: o identificador do órgão que a fonte informa. Senado: ligado pela sigla do colegiado, só quando ela identifica um colegiado do Senado em atividade; vazio no colegiado extinto, na sigla repetida e onde a fonte não informa (o teste de aviso mede)."
       - {name: orgao_sigla, data_type: varchar, description: "Sigla do órgão em que ocorreu."}
       - {name: descricao, data_type: varchar, description: "Descrição oficial da votação, com caixa padronizada. CPF após o rótulo CPF é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing."}
       - {name: aprovada, data_type: integer, description: "1 se a fonte registra aprovação; 0 se não; vazio se não informa."}
@@ -498,7 +502,7 @@ models:
       - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
 
   - name: fct_emendas
-    description: Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código orçamentário (não é o código do parlamentar), por isso não ligado a pessoas. Uma linha por emenda, localidade, função, programa e ação.
+    description: Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código do SIAFI (não é o código do parlamentar); a pessoa é derivada só para emenda individual, quando o nome é o de uma só pessoa com mandato federal no ano da emenda ou no anterior (ADR 0056), e fica vazia no resto. Uma linha por emenda, localidade, função, programa e ação.
     meta: {sensitivity: publico, grain: emenda, localidade, função, programa e ação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests: *monitoramento
     columns:
@@ -508,6 +512,9 @@ models:
       - {name: tipo, data_type: varchar, description: "Tipo da emenda (individual, de bancada, de comissão, de relator)."}
       - {name: cd_autor, data_type: varchar, description: "Código do autor da emenda como registrado no SIAFI (não é o código do parlamentar); vazio quando a fonte não informa."}
       - {name: autor_nome, data_type: varchar, description: "Nome do autor da emenda como registrado no SIAFI (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada."}
+      - {name: id_pessoa, data_type: bigint, tests: [{relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa autora, DERIVADA (não vem da fonte): só em emenda individual cujo nome do autor é o nome parlamentar ou civil de uma só pessoa com mandato federal no ano da emenda ou no anterior; vazia em emenda de bancada, comissão ou relator, sem autor, sem correspondência ou ambígua."}
+      - {name: regra_ligacao_pessoa, data_type: varchar, description: "Regra que ligou a pessoa: nome_parlamentar_e_exercicio ou nome_civil_e_exercicio (ADR 0056); vazia quando id_pessoa é vazio."}
+      - {name: precisao_ligacao_pessoa, data_type: varchar, description: "Precisão do vínculo: derivada (inferida por regra, sem identificador oficial); vazia quando id_pessoa é vazio."}
       - {name: numero, data_type: varchar, description: "Número da emenda."}
       - {name: localidade, data_type: varchar, description: "Atributo do Plano de Trabalho que indica a região onde a despesa ocorre, como a fonte informa."}
       - {name: municipio_ibge, data_type: integer, description: "Código IBGE do município de destinação do recurso; pode estar em branco, conforme a localidade de aplicação."}

@@ -1,4 +1,4 @@
-"""O lake publicado: raiz (R2 ou pasta local), conexão, manifesto, catálogo, órfãos e a página de docs.
+"""O lake publicado: raiz (R2 ou pasta local), conexão, manifesto, catálogo, versões, órfãos e docs.
 
 O catálogo é um DuckDB, que o DuckDB não escreve no R2: sobe, e os órfãos saem, por requisições assinadas
 (SigV4, `core/s3.py`).
@@ -7,10 +7,12 @@ O catálogo é um DuckDB, que o DuckDB não escreve no R2: sobe, e os órfãos s
 import json
 import logging
 import os
+import re
+import shutil
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -101,20 +103,136 @@ def glob(con: warehouse.Connection, pattern: str) -> list[str]:
     return [r[0].replace("\\", "/") for r in con.execute(f"SELECT file FROM glob('{q(pattern)}')").fetchall()]
 
 
-def delete_orphans(con: warehouse.Connection, root: str, keys: set[str], keep: set[str]) -> int:
-    """Apaga o que há sob `keys` (`k.parquet`, `k/**`) e não está em `keep`; só prefixos conhecidos."""
-    orphans = [
-        f
-        for key in sorted(keys)
-        for f in glob(con, f"{root}/{key}.parquet") + glob(con, f"{root}/{key}/**")
-        if f[len(root) + 1 :] not in keep
-    ]
+def put_text(con: warehouse.Connection, root: str, key: str, text: str) -> None:
+    """Grava um texto de uma linha em `root/key` (o COPY do DuckDB serve para o R2 e para a pasta local)."""
+    if not r2():
+        Path(root, key).parent.mkdir(parents=True, exist_ok=True)
+    con.execute(
+        f"COPY (SELECT ?) TO '{q(root)}/{key}' "
+        "(FORMAT csv, HEADER false, QUOTE '', ESCAPE '', DELIMITER '\x01')",
+        (text,),
+    )
+
+
+def put_file(root: str, key: str, file: Path) -> None:
+    """Sobe (ou copia) um arquivo para `root/key`."""
+    if r2():
+        request("PUT", key, file)
+    else:
+        Path(root, key).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(file, Path(root, key))
+
+
+def pinned(con: warehouse.Connection, root: str) -> set[str]:
+    """Arquivos que as versões datadas (`versoes/AAAA-MM/`) referenciam: nunca são apagados como órfãos."""
+    found = glob(con, f"{root}/versoes/*/manifesto.json")
+    return {
+        f["arquivo"]
+        for file in found
+        for t in read_manifest(con, file.rsplit("/", 1)[0]).get("tabelas", [])
+        for f in t["arquivos"]
+    }
+
+
+def delete_orphans(con: warehouse.Connection, root: str, patterns: set[str], keep: set[str]) -> int:
+    """Apaga o que casa com `patterns` (relativos à raiz) e não está em `keep`; só padrões conhecidos."""
+    orphans = sorted(
+        {f for pattern in patterns for f in glob(con, f"{root}/{pattern}") if f[len(root) + 1 :] not in keep}
+    )
     for f in orphans:
         if root.startswith("r2://"):
             request("DELETE", f[len(root) + 1 :])
         else:
             Path(f).unlink()
     return len(orphans)
+
+
+_INT = ("INT", "INTEGER")
+
+
+def _type(duck: str) -> str:
+    """Tipo do Frictionless para o tipo do DuckDB (`any` se não houver correspondente exato)."""
+    t = re.sub(r"\(.*", "", duck.upper())
+    if t.endswith(_INT):
+        return "integer"
+    return {
+        "VARCHAR": "string",
+        "BOOLEAN": "boolean",
+        "DATE": "date",
+        "TIME": "time",
+        "TIMESTAMP": "datetime",
+        "TIMESTAMP WITH TIME ZONE": "datetime",
+        "DOUBLE": "number",
+        "FLOAT": "number",
+        "DECIMAL": "number",
+    }.get(t, "any")
+
+
+def datapackage(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Descritor Frictionless Data Package (https://datapackage.org) gerado do manifesto, sem dado novo."""
+    base = manifest["base"].rstrip("/")
+    resources = []
+    for t in manifest["tabelas"]:
+        paths = [f"{base}/{f['arquivo']}" for f in t["arquivos"]]
+        res: dict[str, Any] = {
+            "name": f"{t['camada']}.{t['tabela']}".lower(),
+            "path": paths[0] if len(paths) == 1 else paths,
+            "format": "parquet",
+            "mediatype": "application/vnd.apache.parquet",
+            "description": t["descricao"],
+            "schema": {
+                "fields": [
+                    {"name": c["nome"], "type": _type(c["tipo"]), "description": c["descricao"]}
+                    for c in t["colunas"]
+                ]
+            },
+        }
+        if len(paths) == 1:
+            res |= {"bytes": t["arquivos"][0]["bytes"], "hash": f"sha256:{t['arquivos'][0]['sha256']}"}
+        if t.get("licenca"):
+            res["licenses"] = [{"name": t["licenca"]}]
+        resources.append(res)
+    return {
+        "name": "dado-publico-brasil",
+        "title": "Dado Público Brasil",
+        "version": manifest.get("versao") or manifest["id_execucao"],
+        "created": manifest["dt_exportacao"],
+        "id_execucao": manifest["id_execucao"],
+        "versao_commit": manifest["versao_commit"],
+        "homepage": "https://datalake.codigopublicobrasil.com.br",
+        "licenses": [
+            {
+                "name": "CC-BY-4.0",
+                "path": "https://creativecommons.org/licenses/by/4.0/",
+                "title": "Dados curados; cada recurso cita a licença da fonte quando há",
+            }
+        ],
+        "resources": resources,
+    }
+
+
+def snapshot(con: warehouse.Connection, settings: Settings, root: str) -> str | None:
+    """Fixa a versão datada do mês (`versoes/AAAA-MM/`: catálogo, `datapackage.json` e manifesto por último).
+
+    É o manifesto publicado agora, na primeira execução do mês; depois de gravada, nunca é reescrita. Os
+    Parquet não são copiados: a versão os referencia e `pinned` impede que sejam apagados. Devolve a versão
+    criada, ou None se o mês já tem uma (ou não há manifesto).
+    """
+    manifest = read_manifest(con, root)
+    if not manifest:
+        return None
+    version = datetime.now(UTC).strftime("%Y-%m")
+    folder = f"versoes/{version}"
+    if read_manifest(con, f"{root}/{folder}"):
+        return None
+    manifest["versao"] = version
+    catalog = settings.state_dir / "catalogo_versao.duckdb"
+    write_catalog(manifest["tabelas"], catalog, manifest["base"], manifest)
+    put_file(root, f"{folder}/catalogo.duckdb", catalog)
+    catalog.unlink()
+    put_text(con, root, f"{folder}/datapackage.json", json.dumps(datapackage(manifest), ensure_ascii=True))
+    put_text(con, root, f"{folder}/manifesto.json", json.dumps(manifest, ensure_ascii=True))
+    return version
 
 
 def write_catalog(entries: list[dict[str, Any]], file: Path, base: str, meta: dict[str, str]) -> None:

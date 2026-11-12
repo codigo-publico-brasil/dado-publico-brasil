@@ -30,6 +30,8 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0037](0037-arquivos-no-lake-com-prefixo-arq.md) | Arquivos (DOU, fotos) no lake público: pasta `arq_` na camada da fonte, com tabela de controle `arq_<nome>.parquet`; publicar é opt-in por dataset | aceito; altera 0035 (item 7) e 0036 (fotos) |
 | [0038](0038-cortesia-e-bloqueio-na-ingestao.md) | Cortesia em toda requisição, bloqueio sem insistência e partição mensal | aceito; complementa o [0012](0012-dataset-por-item-lotes-com-envelope.md) |
 | [0055](0055-lake-como-unica-publicacao.md) | O lake é a única publicação: sem PostgreSQL de serviço, cada aplicação monta as suas consultas sobre os marts | aceito; substitui 0034 e altera 0014 e 0033 |
+| [0056](0056-emenda-individual-ligada-ao-autor-por-nome-e-exercicio.md) | Emenda individual ligada ao autor por nome único e exercício de mandato federal; vínculo derivado, com regra e precisão por linha | proposto; retoma as emendas do 0028 |
+| [0052](0052-versao-citavel-do-lake.md) | Versão citável do lake: cada execução em caminho próprio, catálogo e manifesto trocados por último, versão mensal imutável (`versoes/AAAA-MM/`), `datapackage.json` e DOI só do manifesto | proposto; altera 0035 (item 8) e 0055 (item 5) |
 | [0057](0057-voto-de-veto-ligado-a-pessoa-por-nome-uf-e-exercicio.md) | Voto nominal de veto ligado à pessoa por nome único, UF e exercício do cargo no dia da sessão; vínculo derivado, com regra e precisão por linha | proposto; retoma os vetos do 0028 |
 | [0039](0039-marts-como-camada-semantica.md) | Os marts são a camada semântica: regra de negócio nos marts (não nas `app_*`), mudança só aditiva, derivado sempre marcado | aceito; altera 0055 (itens 3 e 4) |
 | [0040](0040-ocupacao-de-cargo.md) | Ocupação de cargo como fato (`fct_cargos_ocupacoes`): exercício publicado vence, mandato cobre o resto | aceito; complementa 0039 e 0030 |
@@ -82,7 +84,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0015](0015-normas-vetos-e-constituicao.md) | Normas, vetos e Constituição | vigente |
 | [0016](0016-bens-votos-e-emendas.md) | Bens, votos por candidato e emendas | vigente |
 | [0023](0023-eleitos-escopo-regras-e-fontes.md) | Eleitos: escopo, regras e fontes | substituído em parte por [0030](0030-modelo-de-dados-pessoa-no-centro.md) (marts `eleitos*` aposentados) |
-| [0025](0025-historico-do-eleito-ligacao-entre-eleicoes-do-tse.md) | Histórico do eleito entre eleições | defasado: implementado de outra forma (fundador, 2026-11-11); os vetos foram retomados no [0057](0057-voto-de-veto-ligado-a-pessoa-por-nome-uf-e-exercicio.md) |
+| [0025](0025-historico-do-eleito-ligacao-entre-eleicoes-do-tse.md) | Histórico do eleito entre eleições | defasado: implementado de outra forma (fundador, 2026-11-11); as emendas foram retomadas no [0056](0056-emenda-individual-ligada-ao-autor-por-nome-e-exercicio.md) e os vetos no [0057](0057-voto-de-veto-ligado-a-pessoa-por-nome-uf-e-exercicio.md) |
 | [0026](0026-segunda-chave-nome-de-urna-e-nascimento.md) | Segunda chave: nome de urna e nascimento | defasado: implementado de outra forma (fundador, 2026-11-11) |
 | [0028](0028-ligar-vetos-e-emendas-a-pessoas.md) | Ligar votos de vetos e emendas a pessoas | defasado: implementado de outra forma (fundador, 2026-11-11) |
 | [0029](0029-campos-de-pessoas-nos-marts.md) | Campos de pessoas no raw e nos marts | aceito (2026-11-11) |
@@ -95,6 +97,6 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0050](0050-dado-pessoal-publicado-pela-fonte-vem-como-esta.md) | Dado pessoal que a fonte oficial publica (data de nascimento, conta em descrição) vem como está, com fonte; CPF continua fora | aceito; revisão jurídica pendente; complementa 0017 |
 | [0051](0051-raw-em-parquet-por-captura-e-estado-em-arquivo-proprio.md) | Raw em Parquet por captura (views no DuckDB) e `metadata`/`identity` em `estado.duckdb` | aceito; altera 0014 e 0043 |
 
-**Numeração:** o ADR do lake nasceu como um segundo `0038` e foi renumerado para 0055; os números 0049 a 0054 estão reservados para outros ADRs. Confira `git ls-tree origin/main docs/05-decisoes/` antes de escolher o próximo número.
+**Numeração:** o ADR do lake nasceu como um segundo `0038` e foi renumerado para 0055. Confira `git ls-tree origin/main docs/05-decisoes/` antes de escolher o próximo número.
 
 Ao criar um ADR, acrescente uma linha aqui e, se ele substituir outro, atualize a situação do antigo.
