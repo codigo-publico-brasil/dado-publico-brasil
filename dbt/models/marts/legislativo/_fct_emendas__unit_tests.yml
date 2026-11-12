@@ -1,0 +1,54 @@
+version: 2
+
+# Testes unitários da ligação da emenda individual à pessoa (ADR 0056), com dados sintéticos. Rodam com
+# `dbt test --select test_type:unit`.
+unit_tests:
+  - name: emenda_individual_liga_so_quando_o_nome_aponta_para_uma_pessoa_com_mandato_no_periodo
+    description: >
+      Liga a emenda individual de nome igual (sem acento e caixa) ao nome parlamentar ou, na falta, ao nome civil de uma
+      só pessoa com exercício no ano da emenda ou no anterior. Não liga: homônimos com exercício, código de autor com
+      dois nomes na fonte, emenda que não é individual, pessoa sem exercício no período e nome sem correspondência.
+    model: fct_emendas
+    given:
+      - input: ref('stg_transparencia__emendas')
+        rows:
+          - {cd_emenda: e1, ano: 2024, tipo: Emenda Individual - X, cd_autor: "1", autor_nome: Ana Arvore}
+          - {cd_emenda: e2, ano: 2024, tipo: Emenda Individual - X, cd_autor: "2", autor_nome: Beto Souza}
+          - {cd_emenda: e3, ano: 2023, tipo: Emenda Individual - X, cd_autor: "3", autor_nome: Caio Lima}
+          - {cd_emenda: e4, ano: 2024, tipo: Emenda Individual - X, cd_autor: "3", autor_nome: Caio de Lima}
+          - {cd_emenda: e5, ano: 2024, tipo: Emenda de Relator, cd_autor: "4", autor_nome: Dani Rocha}
+          - {cd_emenda: e6, ano: 2024, tipo: Emenda Individual - X, cd_autor: "5", autor_nome: Eva Alves}
+          - {cd_emenda: e7, ano: 2024, tipo: Emenda Individual - X, cd_autor: "6", autor_nome: Fabio Santos Pereira}
+          - {cd_emenda: e8, ano: 2024, tipo: Emenda Individual - X, cd_autor: "7", autor_nome: Sem Correspondencia}
+          - {cd_emenda: e9, ano: 2024, tipo: Emenda Individual - X, cd_autor: null, autor_nome: null}
+      - input: ref('stg_metadata__capturas')
+        rows: []
+      - input: ref('dim_pessoas')
+        rows:
+          - {id_pessoa: 1, nome_publico: Ana Árvore, nome_civil: Ana da Silva}
+          - {id_pessoa: 2, nome_publico: Beto Souza, nome_civil: Beto A Souza}
+          - {id_pessoa: 3, nome_publico: Beto Souza, nome_civil: Beto B Souza}
+          - {id_pessoa: 4, nome_publico: Caio Lima, nome_civil: Caio Lima}
+          - {id_pessoa: 5, nome_publico: Dani Rocha, nome_civil: Dani Rocha}
+          - {id_pessoa: 6, nome_publico: Eva Alves, nome_civil: Eva Alves}
+          - {id_pessoa: 7, nome_publico: Fabio Santos, nome_civil: Fabio Santos Pereira}
+      - input: ref('fct_exercicios')
+        rows:
+          - {id_pessoa: 1, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 2, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 3, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 4, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 5, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+          - {id_pessoa: 6, dt_inicio: "2015-02-01", dt_fim: "2018-12-01", dt_mandato_fim: "2019-01-31"}
+          - {id_pessoa: 7, dt_inicio: "2023-02-01", dt_fim: null, dt_mandato_fim: "2027-01-31"}
+    expect:
+      rows:
+        - {cd_emenda: e1, id_pessoa: 1, regra_ligacao_pessoa: nome_parlamentar_e_exercicio, precisao_ligacao_pessoa: derivada}
+        - {cd_emenda: e2, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {cd_emenda: e3, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {cd_emenda: e4, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {cd_emenda: e5, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {cd_emenda: e6, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {cd_emenda: e7, id_pessoa: 7, regra_ligacao_pessoa: nome_civil_e_exercicio, precisao_ligacao_pessoa: derivada}
+        - {cd_emenda: e8, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
+        - {cd_emenda: e9, id_pessoa: null, regra_ligacao_pessoa: null, precisao_ligacao_pessoa: null}
