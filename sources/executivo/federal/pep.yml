@@ -1,0 +1,41 @@
+# Declaração da fonte: Pessoas Expostas Politicamente (PEP), Portal da Transparência (CGU). Um .zip por mês (AAAAMM_PEP.zip)
+# com quem exerce ou exerceu, nos últimos cinco anos, função pública relevante: nome, função, órgão e datas de exercício e de
+# carência. Aqui só interessa o topo do Executivo federal (Presidente, Vice-Presidente e Ministro de Estado): `only` descarta
+# as demais ~133 mil linhas do raw (o zip original, com tudo, fica no landing). Minimização: o CPF (mascarado pela fonte) não está
+# em `columns`. Licença: política de dados abertos (Decreto 8.777/2016); a página do conjunto
+# (https://portaldatransparencia.gov.br/download-de-dados/pep, lida em 12/11/2026) não declara licença própria.
+# Fonte separada do Portal da Transparência de propósito: o portal só mantém o arquivo do último mês publicado (os anteriores
+# viram 403), e um 403 em mês antigo não pode interromper as despesas e os contratos. O módulo custom trata esse 403 como mês retirado.
+
+source: pep
+power: executivo
+level: federal
+description: Pessoas Expostas Politicamente (CGU, Portal da Transparência), topo do Executivo federal
+license: "Livre utilização (Decreto 8.777/2016)"
+
+schedule: "30 2 22 * *"  # mensal, dia 22, noturna (cron, fuso America/Sao_Paulo; ADR 0042): o arquivo do mês anterior sai por volta do dia 21
+
+access:
+  base_url: https://dadosabertos-download.cgu.gov.br/PortalDaTransparencia/saida/pep
+  format: csv
+  delimiter: ";"
+  encoding: latin-1
+
+datasets:
+  dirigentes:
+    # Uma linha por pessoa, função, órgão e início de exercício. Cada mês traz a foto dos últimos cinco anos.
+    url: "{base_url}/{month}_PEP.zip"
+    max_age_days: 45   # avisa se a última verificação passar de 45 dias
+    load: yearly
+    partition: month
+    first_month: 202609   # o primeiro arquivo que a fonte ainda mantém (conferido em 12/11/2026)
+    lag_months: 1
+    archive: zip
+    member: "*_PEP.csv"
+    write: replace_partition   # o arquivo do mês é a foto completa (ADR 0043)
+    primary_key: [_row_hash]
+    only:
+      Descrição_Função: [PRESIDENTE DA REPUBLICA, VICE-PRESIDENTE DA REPUBLICA, MINISTRO DE ESTADO]
+    columns:
+      [Nome_PEP, Sigla_Função, Descrição_Função, Nível_Função, Nome_Órgão, Data_Início_Exercício, Data_Fim_Exercício,
+       Data_Fim_Carência]

@@ -226,18 +226,21 @@ models:
     columns:
       - {name: id_candidatura, description: "Identificador da candidatura (ano, unidade eleitoral e sequencial do candidato).", tests: ["unique", "not_null"]}
       - {name: id_pessoa_tse, description: "Identificador da pessoa entre as eleições do TSE, derivado do nome civil e da data de nascimento; não é uma pessoa do projeto.", tests: ["not_null"]}
-  - name: int_tse_eleitos_grupos
+  - name: int_pessoas_grupos
     meta: {fonte_oficial: "Tribunal Superior Eleitoral"}
     description: >
-      As candidaturas do TSE de quem foi eleito pelo menos uma vez, agrupadas por pessoa entre as eleições. Entrada da
-      identidade (ADR 0031): é daqui que nascem as pessoas de todo eleito. O grupo não é estável; a identidade usa a
-      candidatura, que é.
+      Os registros que uma fonte diz serem a mesma pessoa, agrupados (hoje: as candidaturas do TSE de quem foi eleito
+      pelo menos uma vez, agrupadas por pessoa entre as eleições). Entrada da identidade (ADR 0031 e 0053): é daqui que
+      nascem as pessoas de todo eleito. O grupo não é estável; a identidade usa o registro, que é.
     config:
       tags: [pre_identity]
     columns:
-      - {name: id_candidatura, description: "Identificador da candidatura (ano, unidade eleitoral e sequencial do candidato).", tests: ["unique", "not_null"]}
-      - {name: grupo, description: "Pessoa entre as eleições (id_pessoa_tse) ou, sem ele, a própria candidatura.", tests: ["not_null"]}
-      - {name: fl_eleita, description: "Verdadeiro se esta candidatura foi eleita em algum turno."}
+      - {name: fonte, description: "Fonte do registro agrupado.", tests: ["not_null"]}
+      - {name: id_tipo, description: "Tipo do identificador do registro na fonte (candidatura_de_eleito para o TSE).", tests: ["not_null"]}
+      - {name: id_na_fonte, description: "Identificador do registro na fonte (a candidatura: ano, unidade eleitoral e sequencial do candidato).", tests: ["not_null"]}
+      - {name: grupo, description: "Pessoa entre as eleições (id_pessoa_tse) ou, sem ele, o próprio registro.", tests: ["not_null"]}
+      - {name: metodo, description: "Método gravado na ponte de identificadores para o registro ligado por este grupo.", tests: ["not_null"]}
+      - {name: metodo_fusao, description: "Método gravado na fusão de duas pessoas que o grupo mostra serem uma só.", tests: ["not_null"]}
   - name: int_tse_eleitos
     meta: {fonte_oficial: "Tribunal Superior Eleitoral"}
     description: >

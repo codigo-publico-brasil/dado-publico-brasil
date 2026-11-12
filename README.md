@@ -38,7 +38,7 @@ fonte oficial ─► landing ─► raw ─► staging ─► intermediate ─�
                  + hash)
 ```
 
-O arquivo original nunca é alterado; o resto se refaz a partir dele. O DuckDB é só o motor de cálculo: o dado público é o **Parquet no lake** (`staging`, `intermediate`, `marts` e `metadata.capturas`, em caminho estável, com catálogo e manifesto), consultável sem instalar nada além do DuckDB ([consumir o lake](docs/03-consultar/06-consumir-o-lake.md)). O landing (que guarda campos que o raw descarta) nunca é público. As aplicações leem os marts do lake e montam as suas consultas. Cada camada, o porquê das ferramentas (dlt, dbt, DuckDB, Dagster) e as alternativas descartadas estão em [arquitetura](docs/01-entender/02-arquitetura.md) e [camadas](docs/01-entender/03-camadas.md).
+O arquivo original nunca é alterado; o resto se refaz a partir dele. O DuckDB é só o motor de cálculo: o dado público é o **Parquet no lake** (`staging`, `intermediate`, `marts` e `metadata`, em caminho estável, com catálogo e manifesto), consultável sem instalar nada além do DuckDB ([consumir o lake](docs/03-consultar/06-consumir-o-lake.md)). O landing (que guarda campos que o raw descarta) nunca é público. As aplicações leem os marts do lake e montam as suas consultas. Cada camada, o porquê das ferramentas (dlt, dbt, DuckDB, Dagster) e as alternativas descartadas estão em [arquitetura](docs/01-entender/02-arquitetura.md) e [camadas](docs/01-entender/03-camadas.md).
 
 ## Estado
 

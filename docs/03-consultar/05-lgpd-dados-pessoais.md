@@ -14,6 +14,7 @@ Regra de partida: **dado publicado oficialmente continua sendo dado pessoal.** P
 | Bens, receitas e despesas de campanha | `fct_campanhas`, `fct_candidaturas_bens` | pessoal patrimonial | prestação de contas obrigatória por lei; a descrição vem como o TSE publica, inclusive agência e conta bancária que o candidato escreveu (ADR 0050, issue 289; só o CPF é mascarado). A republicação das tabelas afetadas, `stg_tse__bens`, `stg_tse__despesas_candidatos` e `fct_candidaturas_bens`, é do fundador, e a pendência jurídica segue na issue 38 |
 | Favorecidos de emendas, pessoa física | `fct_emendas_favorecidos` | pessoal de terceiros (`publico-dados-pessoais-de-terceiros`) | CPF mascarado como o portal publica |
 | Vencedor e participante de licitação, pessoa física | `fct_licitacoes_itens`, `fct_licitacoes_participantes` | pessoal de terceiros (`publico-dados-pessoais-de-terceiros`) | CPF mascarado pelo projeto (a fonte o publica completo); `fl_contem_dado_pessoal` marca a linha |
+| Contratado de contrato federal, pessoa física | `fct_contratos` | pessoal de terceiros (`publico-dados-pessoais-de-terceiros`) | CPF mascarado pelo projeto (a fonte o publica completo); `fl_contem_dado_pessoal` marca a linha |
 | Foto oficial do candidato | arquivos extraídos do pacote do TSE | pessoal | a hospedagem pública depende da decisão do VPS (#30) |
 | Identidade (`id_pessoa`) | `identity.*` | chave interna | não se reconstrói; não é publicada |
 

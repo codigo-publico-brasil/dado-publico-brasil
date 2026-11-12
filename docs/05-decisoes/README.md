@@ -31,6 +31,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0038](0038-cortesia-e-bloqueio-na-ingestao.md) | Cortesia em toda requisição, bloqueio sem insistência e partição mensal | aceito; complementa o [0012](0012-dataset-por-item-lotes-com-envelope.md) |
 | [0055](0055-lake-como-unica-publicacao.md) | O lake é a única publicação: sem PostgreSQL de serviço, cada aplicação monta as suas consultas sobre os marts | aceito; substitui 0034 e altera 0014 e 0033 |
 | [0056](0056-emenda-individual-ligada-ao-autor-por-nome-e-exercicio.md) | Emenda individual ligada ao autor por nome único e exercício de mandato federal; vínculo derivado, com regra e precisão por linha | proposto; retoma as emendas do 0028 |
+| [0057](0057-voto-de-veto-ligado-a-pessoa-por-nome-uf-e-exercicio.md) | Voto nominal de veto ligado à pessoa por nome único, UF e exercício do cargo no dia da sessão; vínculo derivado, com regra e precisão por linha | proposto; retoma os vetos do 0028 |
 | [0039](0039-marts-como-camada-semantica.md) | Os marts são a camada semântica: regra de negócio nos marts (não nas `app_*`), mudança só aditiva, derivado sempre marcado | aceito; altera 0055 (itens 3 e 4) |
 | [0040](0040-ocupacao-de-cargo.md) | Ocupação de cargo como fato (`fct_cargos_ocupacoes`): exercício publicado vence, mandato cobre o resto | aceito; complementa 0039 e 0030 |
 | [0041](0041-eleito-completo-e-fim-das-views-app.md) | `fl_eleito` passa a ser o eleito completo (informado ou derivado) e as views `app_*` deixam de existir | aceito; altera 0039 (item sobre `fl_eleito`) e 0055 (item 4) |
@@ -82,7 +83,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0015](0015-normas-vetos-e-constituicao.md) | Normas, vetos e Constituição | vigente |
 | [0016](0016-bens-votos-e-emendas.md) | Bens, votos por candidato e emendas | vigente |
 | [0023](0023-eleitos-escopo-regras-e-fontes.md) | Eleitos: escopo, regras e fontes | substituído em parte por [0030](0030-modelo-de-dados-pessoa-no-centro.md) (marts `eleitos*` aposentados) |
-| [0025](0025-historico-do-eleito-ligacao-entre-eleicoes-do-tse.md) | Histórico do eleito entre eleições | defasado: implementado de outra forma (fundador, 2026-11-11); as emendas foram retomadas no [0056](0056-emenda-individual-ligada-ao-autor-por-nome-e-exercicio.md) |
+| [0025](0025-historico-do-eleito-ligacao-entre-eleicoes-do-tse.md) | Histórico do eleito entre eleições | defasado: implementado de outra forma (fundador, 2026-11-11); as emendas foram retomadas no [0056](0056-emenda-individual-ligada-ao-autor-por-nome-e-exercicio.md) e os vetos no [0057](0057-voto-de-veto-ligado-a-pessoa-por-nome-uf-e-exercicio.md) |
 | [0026](0026-segunda-chave-nome-de-urna-e-nascimento.md) | Segunda chave: nome de urna e nascimento | defasado: implementado de outra forma (fundador, 2026-11-11) |
 | [0028](0028-ligar-vetos-e-emendas-a-pessoas.md) | Ligar votos de vetos e emendas a pessoas | defasado: implementado de outra forma (fundador, 2026-11-11) |
 | [0029](0029-campos-de-pessoas-nos-marts.md) | Campos de pessoas no raw e nos marts | aceito (2026-11-11) |

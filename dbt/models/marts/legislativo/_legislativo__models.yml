@@ -395,7 +395,7 @@ models:
       - {name: id_captura, data_type: bigint, tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}], description: "Captura do arquivo de origem (URL, data e hash em metadata.capturas)."}
 
   - name: fct_vetos_votos
-    description: Voto de deputados e senadores em cada dispositivo vetado votado, como a fonte entrega (nome, partido e UF, sem o código do parlamentar), por isso não ligado a pessoas. Só dos dispositivos já buscados. Uma linha por dispositivo e voto.
+    description: Voto de deputados e senadores em cada dispositivo vetado votado, como a fonte entrega (nome, partido e UF, sem o código do parlamentar); a pessoa é derivada quando o nome é o de uma só pessoa que exercia o cargo da casa, na UF, no dia da sessão (ADR 0057), e fica vazia no resto. Só dos dispositivos já buscados. Uma linha por dispositivo e voto.
     meta: {sensitivity: publico-agente-publico, grain: dispositivo e voto, owner: fundador do projeto, freshness: diário, fonte_oficial: "Senado Federal"}
     data_tests: *monitoramento
     columns:
@@ -403,6 +403,9 @@ models:
       - {name: id_dispositivo, data_type: bigint, tests: [not_null], description: "Dispositivo votado (fct_vetos_dispositivos)."}
       - {name: casa, data_type: varchar, description: "Câmara ou Senado."}
       - {name: nome_parlamentar, data_type: varchar, description: "Nome do parlamentar como a fonte informa, com caixa padronizada."}
+      - {name: id_pessoa, data_type: bigint, tests: [{relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa votante, DERIVADA (não vem da fonte): nome parlamentar ou civil de uma só pessoa que exercia o cargo da casa, na UF, no dia da sessão; vazia sem correspondência ou ambígua."}
+      - {name: regra_ligacao_pessoa, data_type: varchar, description: "Regra que ligou a pessoa: nome_parlamentar_e_exercicio ou nome_civil_e_exercicio (ADR 0057); vazia quando id_pessoa é vazio."}
+      - {name: precisao_ligacao_pessoa, data_type: varchar, description: "Precisão do vínculo: derivada (inferida por regra, sem identificador oficial); vazia quando id_pessoa é vazio."}
       - {name: partido, data_type: varchar, description: "Partido na sessão, como a fonte informa."}
       - {name: uf, data_type: varchar, description: "UF do parlamentar."}
       - {name: voto, data_type: varchar, description: "Voto como a fonte informa (Sim, Não, Branco, Abstenção...)."}
