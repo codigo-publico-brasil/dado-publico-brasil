@@ -20,21 +20,32 @@ meses as (
 
 ),
 
+nomes_de_pessoas as (
+
+    -- uma chave por nome, para ligar por igualdade (join por hash); `in (f(a), f(b))` ou `or` na condição vira produto cartesiano
+    select id_pessoa, name_key(nome_publico) as chave, true as por_nome_parlamentar from {{ ref('dim_pessoas') }}
+
+    union all
+
+    select id_pessoa, name_key(nome_civil), false from {{ ref('dim_pessoas') }} where nome_civil is not null
+
+),
+
 candidatas as (
 
     select
         m.nome_chave,
         m.dt_mes,
-        p.id_pessoa,
-        m.nome_chave = name_key(p.nome_publico) as por_nome_parlamentar
+        n.id_pessoa,
+        n.por_nome_parlamentar
 
     from meses as m
 
-    inner join {{ ref('dim_pessoas') }} as p on m.nome_chave in (name_key(p.nome_publico), name_key(p.nome_civil))
+    inner join nomes_de_pessoas as n on m.nome_chave = n.chave
 
     where exists (
         select 1 from {{ ref('fct_exercicios') }} as x
-        where x.id_pessoa = p.id_pessoa
+        where x.id_pessoa = n.id_pessoa
             and x.id_cargo = 'senador'
             and x.dt_inicio <= last_day(m.dt_mes)
             and coalesce(x.dt_fim, x.dt_mandato_fim, current_date) >= m.dt_mes

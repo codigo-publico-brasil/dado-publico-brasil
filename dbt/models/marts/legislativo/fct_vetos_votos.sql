@@ -17,6 +17,17 @@ with votos as (
 
 ),
 
+nomes_de_pessoas as (
+
+    -- uma chave por nome, para ligar por igualdade (join por hash); `in (f(a), f(b))` ou `or` na condição vira produto cartesiano
+    select id_pessoa, name_key(nome_publico) as chave, true as por_nome_parlamentar from {{ ref('dim_pessoas') }}
+
+    union all
+
+    select id_pessoa, name_key(nome_civil), false from {{ ref('dim_pessoas') }} where nome_civil is not null
+
+),
+
 candidatas as (
 
     select
@@ -24,16 +35,16 @@ candidatas as (
         v.casa,
         v.nome_chave,
         v.uf,
-        p.id_pessoa,
-        v.nome_chave = name_key(p.nome_publico) as por_nome_parlamentar
+        n.id_pessoa,
+        n.por_nome_parlamentar
 
     from (select distinct id_dispositivo, casa, nome_chave, uf, id_cargo, dt_sessao from votos) as v
 
-    inner join {{ ref('dim_pessoas') }} as p on v.nome_chave in (name_key(p.nome_publico), name_key(p.nome_civil))
+    inner join nomes_de_pessoas as n on v.nome_chave = n.chave
 
     where exists (
         select 1 from {{ ref('fct_exercicios') }} as x
-        where x.id_pessoa = p.id_pessoa
+        where x.id_pessoa = n.id_pessoa
             and x.id_cargo = v.id_cargo
             and x.uf = v.uf
             and v.dt_sessao between x.dt_inicio and coalesce(x.dt_fim, x.dt_mandato_fim, current_date)
