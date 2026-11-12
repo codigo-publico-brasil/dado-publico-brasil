@@ -269,7 +269,7 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `fct_resultados` | O que aconteceu em cada turno da eleição, candidatura a candidatura, só com arquivos do TSE. Uma linha por candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente). fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE. | publico-agente-publico | candidatura e turno |
 | `fct_vetos` | Vetos presidenciais apreciados pelo Congresso, de 1994 em diante (antes disso a fonte não informa), com a matéria vetada, a norma gerada e as datas. Uma linha por veto. | publico | veto |
 | `fct_vetos_dispositivos` | Cada dispositivo vetado, com o texto vetado, a razão do veto escrita pela Presidência e o que o Congresso decidiu (situação como a fonte informa). Só dos vetos já buscados. Uma linha por dispositivo. | publico | dispositivo vetado |
-| `fct_vetos_votos` | Voto de deputados e senadores em cada dispositivo vetado votado, como a fonte entrega (nome, partido e UF, sem o código do parlamentar), por isso não ligado a pessoas. Só dos dispositivos já buscados. Uma linha por dispositivo e voto. | publico-agente-publico | dispositivo e voto |
+| `fct_vetos_votos` | Voto de deputados e senadores em cada dispositivo vetado votado, como a fonte entrega (nome, partido e UF, sem o código do parlamentar); a pessoa é derivada quando o nome é o de uma só pessoa que exercia o cargo da casa, na UF, no dia da sessão (ADR 0057), e fica vazia no resto. Só dos dispositivos já buscados. Uma linha por dispositivo e voto. | publico-agente-publico | dispositivo e voto |
 | `fct_votacoes` | Votações com resultado oficial, totais e proposições. Uma linha por votação. | publico | votação |
 | `fct_votos` | O voto nominal de cada parlamentar em cada votação (Câmara e Senado), com o partido que a pessoa tinha na data do voto como chave (id_partido) e a sigla da fonte ao lado. A sigla pode ser de dois partidos (duas legendas diferentes em épocas diferentes): vale o partido cujo período de uso da sigla está mais perto do ano do voto. Sem partido ("S.Part.", "Sem registro") ou com sigla ainda não curada, o id_partido fica vazio; o teste de aviso mede as não curadas. Só votos de quem tem pessoa no projeto. | publico-agente-publico | voto de um parlamentar em uma votação |
 
@@ -1223,6 +1223,9 @@ Gerado do projeto dbt (`dado-publico catalog`). Não edite à mão: edite a desc
 | `id_dispositivo` | bigint | Dispositivo votado (fct_vetos_dispositivos). |  |
 | `casa` | varchar | Câmara ou Senado. |  |
 | `nome_parlamentar` | varchar | Nome do parlamentar como a fonte informa, com caixa padronizada. |  |
+| `id_pessoa` | bigint | Pessoa votante, DERIVADA (não vem da fonte): nome parlamentar ou civil de uma só pessoa que exercia o cargo da casa, na UF, no dia da sessão; vazia sem correspondência ou ambígua. |  |
+| `regra_ligacao_pessoa` | varchar | Regra que ligou a pessoa: nome_parlamentar_e_exercicio ou nome_civil_e_exercicio (ADR 0057); vazia quando id_pessoa é vazio. |  |
+| `precisao_ligacao_pessoa` | varchar | Precisão do vínculo: derivada (inferida por regra, sem identificador oficial); vazia quando id_pessoa é vazio. |  |
 | `partido` | varchar | Partido na sessão, como a fonte informa. |  |
 | `uf` | varchar | UF do parlamentar. |  |
 | `voto` | varchar | Voto como a fonte informa (Sim, Não, Branco, Abstenção...). |  |
