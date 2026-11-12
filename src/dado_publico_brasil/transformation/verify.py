@@ -30,9 +30,11 @@ def _verify_collection(con: warehouse.Connection, base: str, table: dict[str, An
         elif row[0] != sha:
             found.append(f"{key}/{name} difere do controle")
     try:  # bucket público não lista: objetos soltos só se conferem com pasta local ou segredo do R2
-        stray = {f[len(base) + 1 :] for f in lake.glob(con, f"{base}/{key}/**")} - {
-            f"{key}/{n}" for n, _ in listed
-        }
+        stray = (
+            {f[len(base) + 1 :] for f in lake.glob(con, f"{base}/{key}/**")}
+            - {f"{key}/{n}" for n, _ in listed}
+            - {f["arquivo"] for f in table["arquivos"]}
+        )
     except duckdb.Error:
         stray = set()
     return found + [f"{name} fora do controle" for name in sorted(stray)]
