@@ -13,6 +13,8 @@ sources:
       sensitivity: publico-agente-publico
       owner: fundador do projeto
     tables:
+      - name: colegiados
+        description: Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha. Fonte do catálogo de órgãos do Senado.
       - name: senadores
         description: Senadores por legislatura (o mesmo senador aparece em várias), com os mandatos em tabelas filhas.
       - name: senadores__mandatos_mandato

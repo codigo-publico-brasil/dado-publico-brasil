@@ -35,6 +35,17 @@ datasets:
        Mandatos__Mandato]
     nested: [Mandatos__Mandato]
 
+  colegiados:
+    # Catálogo dos colegiados em atividade (comissões, plenário, conselhos, comitês e mistos com a Câmara): a fonte lista só os
+    # que estão em atividade hoje (o título do conjunto diz "EM ATIVIDADE"), então o colegiado extinto não aparece aqui.
+    url: "{base_url}/dados/ListaColegiados.json"
+    max_age_days: 45   # avisa se a última verificação passar de 45 dias
+    load: full
+    write: replace
+    records: ListaColegiados.Colegiados.Colegiado
+    primary_key: [Codigo]
+    columns: [Codigo, Sigla, Nome, DataInicio, Publica, SiglaTipoColegiado, DescricaoTipoColegiado, SiglaCasa]
+
   votacoes:
     # Votações em plenário de um ano, cada uma com a lista de votos nominais (`votos`). Votação secreta
     # traz a sigla "Votou" no lugar da escolha.

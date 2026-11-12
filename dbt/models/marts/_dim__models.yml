@@ -97,11 +97,12 @@ models:
   - name: dim_orgaos
     description: >
       Os órgãos onde o mandato é exercido: comissões, plenário, mesa diretora e conselhos da Câmara. A chave id_orgao é do
-      projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Senado, assembleias e
-      câmaras municipais ainda não têm fonte carregada.
-    meta: {sensitivity: publico, grain: órgão, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+      projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Inclui os colegiados
+      em atividade do Senado (o extinto não consta da fonte). Assembleias, câmaras municipais e outros poderes ainda não
+      têm fonte carregada.
+    meta: {sensitivity: publico, grain: órgão, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     columns:
-      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara)."}
+      - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara ou senado)."}
       - {name: id_orgao, data_type: varchar, tests: [unique, not_null], description: "Chave do órgão no projeto: fonte e identificador da fonte."}
       - {name: id_orgao_na_fonte, data_type: bigint, description: "Identificador do órgão na fonte."}
       - {name: sigla, data_type: varchar, description: "Sigla do órgão."}
