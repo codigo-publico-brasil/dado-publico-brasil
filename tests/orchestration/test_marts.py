@@ -154,6 +154,17 @@ def test_organs_and_fronts_link_members_to_people_and_report_unknown_deputies(
     ).fetchall()
     assert front == [("Frente X", "Em andamento", True)]
     assert scalar(con, "SELECT count(*) FROM marts.brg_frentes_membros") == 2
+    # a participação em órgão vira evento com o órgão como chave de dim_orgaos; os demais eventos não têm órgão
+    assert scalar(
+        con,
+        "SELECT count(*) FROM marts.fct_eventos e JOIN marts.dim_orgaos o USING (id_orgao) "
+        "WHERE e.id_tipo_evento = 'entrada_em_orgao'",
+    )
+    assert not scalar(
+        con,
+        "SELECT count(*) FROM marts.fct_eventos WHERE id_orgao IS NOT NULL "
+        "AND id_tipo_evento NOT IN ('entrada_em_orgao', 'saida_de_orgao')",
+    )
 
 
 def test_photo_comes_from_the_fronts_when_the_person_has_no_vote_photo(

@@ -206,6 +206,57 @@ eventos as (
 
     where id_partido_anterior is not null and id_partido_anterior <> id_partido
 
+),
+
+-- vínculo: a participação em órgão da Câmara (brg_orgaos_membros) gera a entrada no início e a saída no fim, com o órgão
+-- como chave de dim_orgaos. A fonte repete às vezes a mesma participação (uma aberta, outra encerrada): a repetição vale um evento.
+participacoes as (
+
+    select id_pessoa, id_orgao, cargo, dt_inicio, dt_fim, max(id_captura) as id_captura
+    from {{ ref('brg_orgaos_membros') }}
+    where id_pessoa is not null
+    group by all
+
+),
+
+eventos_de_orgao as (
+
+    select
+        id_pessoa, 'entrada_em_orgao' as id_tipo_evento, 'brg_orgaos_membros' as fato_origem,
+        concat_ws('|', id_pessoa, id_orgao, cargo, dt_inicio) as id_fato_origem,
+        year(dt_inicio) as ano_evento, dt_inicio as dt_evento,
+        cast(null as varchar) as id_disputa, cast(null as varchar) as id_cargo, cast(null as varchar) as id_territorio,
+        cast(null as integer) as id_partido, 'informado' as base, max(id_captura) as id_captura,
+        '{{ var("source_camara") }}-' || id_orgao as id_orgao
+
+    from participacoes
+
+    where dt_inicio is not null
+
+    group by id_pessoa, id_orgao, cargo, dt_inicio
+
+    union all
+
+    select
+        id_pessoa, 'saida_de_orgao', 'brg_orgaos_membros',
+        concat_ws('|', id_pessoa, id_orgao, cargo, coalesce(cast(dt_inicio as varchar), ''), dt_fim),
+        year(dt_fim), dt_fim, null, null, null, null, 'informado', id_captura,
+        '{{ var("source_camara") }}-' || id_orgao
+
+    from participacoes
+
+    where dt_fim is not null
+
+),
+
+todos as (
+
+    select *, cast(null as varchar) as id_orgao from eventos
+
+    union all
+
+    select * from eventos_de_orgao
+
 )
 
 -- `fonte` e `dt_captura` vêm da captura do fato de origem (o falecimento, a do cadastro que o informa); o nascimento
@@ -216,7 +267,7 @@ select
     coalesce(k.fonte, n.fonte_dt_nascimento) as fonte,
     cast(k.dt_captura as date) as dt_captura
 
-from eventos as e
+from todos as e
 
 left join {{ ref('stg_metadata__capturas') }} as k on k.id_captura = e.id_captura
 
