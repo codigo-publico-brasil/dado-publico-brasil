@@ -209,7 +209,7 @@ def test_foreach_needs_item_in_the_url_and_the_item_column_in_the_key(tmp_path: 
 
 def test_a_dataset_whose_source_has_not_been_loaded_yet_has_no_items_instead_of_failing(env: Env) -> None:
     con, _, contract = env
-    con.execute(f"DROP VIEW {contract.schema}.pais")  # o raw da origem ainda não existe: não há o que buscar
+    con.execute(f"DROP TABLE {contract.schema}.pais")  # o raw da origem ainda não existe: não há o que buscar
     assert foreach.pending(con, contract, "filhos") == []
     assert foreach.coverage(con, contract, "filhos") == {
         "esperados": 0,

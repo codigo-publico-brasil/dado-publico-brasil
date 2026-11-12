@@ -147,19 +147,31 @@ def test_every_raw_row_has_the_time_it_arrived(raw: tuple[Connection, Settings])
         assert sem_data == 0, table
 
 
+def fingerprint(con: Connection, schema: str) -> dict[str, tuple[Any, ...]]:
+    """(linhas, soma do hash do conteúdo) de toda tabela do raw, sem o que muda a cada carga."""
+    volatile = {"_ingested_at", "_dlt_id", "_dlt_load_id", "_dlt_parent_id"}
+    out = {}
+    for table in tables(con, schema):
+        cols = ", ".join(f'"{c}"' for c in sorted(set(columns(con, schema, table)) - volatile))
+        out[table] = (
+            con.execute(
+                f'SELECT count(*), coalesce(sum(hash(row({cols}))::HUGEINT), 0) FROM {schema}."{table}"'
+            ).fetchone()
+            or ()
+        )
+    return out
+
+
 def test_loading_again_is_idempotent(raw: tuple[Connection, Settings], contract: SourceContract) -> None:
     con, settings = raw
-    before = {
-        t: scalar(con, f"SELECT COUNT(*) FROM raw_federal_camara.{t}")
-        for t in tables(con, "raw_federal_camara")
-    }
+    before = fingerprint(con, "raw_federal_camara")
+    assert len(before) > 10 and any(n > 0 for n, _ in before.values())
     assert loader.load_pending(con, settings, contract) == (0, 0)  # nada novo
     loader.load_pending(con, settings, contract, rebuild=True)
-    after = {
-        t: scalar(con, f"SELECT COUNT(*) FROM raw_federal_camara.{t}")
-        for t in tables(con, "raw_federal_camara")
-    }
-    assert before == after
+    assert fingerprint(con, "raw_federal_camara") == before  # contagem e conteúdo, não só contagem
+    con.execute("DROP SCHEMA raw_federal_camara CASCADE")
+    loader.create_views(settings, contract, con)  # as views se refazem só do Parquet
+    assert fingerprint(con, "raw_federal_camara") == before
 
 
 def test_recheck_headers_reads_the_landing_files_again(

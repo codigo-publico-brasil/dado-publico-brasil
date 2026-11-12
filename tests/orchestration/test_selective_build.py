@@ -92,7 +92,7 @@ def test_selective_nights_end_with_the_same_tables_as_a_complete_rebuild(
     for settings in both:
         sql(
             settings,
-            "CREATE VIEW raw_federal_camara.deputados_antes AS SELECT * FROM raw_federal_camara.deputados",
+            "CREATE TABLE raw_federal_camara.deputados_antes AS SELECT * FROM raw_federal_camara.deputados",
         )
         sql(
             settings,

@@ -103,6 +103,31 @@ def test_json_loads_into_the_raw_with_a_child_table_for_the_list(tmp_path: Path)
     assert [(c["nome"], c["voto"]) for c in child] == [("X", "Sim")]
 
 
+def test_merge_keeps_only_the_children_of_the_parent_row_that_stays(tmp_path: Path) -> None:
+    contract = source(tmp_path)
+    settings = Settings(storage_root=tmp_path / "store")
+    dataset = contract.datasets["votacoes"]
+    loader.load_file(settings, contract, dataset, landed_json(tmp_path), 1)
+    newer = tmp_path / "votacoes2.json"
+    newer.write_text(
+        json.dumps(
+            {"dados": {"itens": [{"id": 1, "ementa": "A2", "votos": [{"nome": "Y", "voto": "Nao"}]}]}}
+        ),
+        encoding="utf-8",
+    )
+    loader.load_file(settings, contract, dataset, newer, 2)  # outra URL: as duas capturas ficam vigentes
+    con = migrations.open_warehouse(settings)
+    loader.create_views(settings, contract, con)
+    schema = contract.schema
+    assert [
+        (r["id"], r["ementa"]) for r in rows(con, f"SELECT id, ementa FROM {schema}.votacoes ORDER BY id")
+    ] == [
+        ("1", "A2"),
+        ("2", None),
+    ]
+    assert [r["nome"] for r in rows(con, f"SELECT nome FROM {schema}.votacoes__votos")] == ["Y"]
+
+
 def test_custom_module_of_the_source_replaces_reading_and_fetching(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
