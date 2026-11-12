@@ -64,7 +64,7 @@ Um teste falha se alguma coluna dos marts ficar sem descrição.
 
 ## Poder, esfera e fonte
 
-O projeto vai capturar dados dos três poderes (legislativo, executivo, judiciário) e das três esferas (federal, estadual, municipal); hoje há o legislativo federal (Câmara, Senado e a legislação), o judiciário federal (TSE) e, do executivo federal, o Portal da Transparência, o IBGE e o Diário Oficial (só no landing). A regra de organização:
+O projeto vai capturar dados dos três poderes (legislativo, executivo, judiciário) e das três esferas (federal, estadual, municipal); hoje há o legislativo federal (Câmara, Senado e a legislação), o judiciário federal (TSE) e, do executivo federal, o Portal da Transparência, as Pessoas Expostas Politicamente (CGU), o IBGE e o Diário Oficial (só no landing). A regra de organização:
 
 | Eixo | Onde aparece |
 | --- | --- |

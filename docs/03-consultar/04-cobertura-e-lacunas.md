@@ -165,7 +165,7 @@ Lacunas conhecidas, medidas ou registradas:
 | Necessidade | Fonte provável | Por que a Câmara não basta |
 | --- | --- | --- |
 | Senadores, votos e matérias do Senado | Senado Federal, dados abertos | outra casa legislativa |
-| Presidente, vice e ministros | TSE (candidaturas e eleitos), Planalto, DOU | pertencem ao Executivo |
+| Presidente, vice e ministros | TSE (candidaturas e eleitos) para o eleito; PEP da CGU (`fct_executivo_ocupacoes`) para presidente, vice e ministros dos últimos cinco anos, sem ligação à pessoa | pertencem ao Executivo; antes de 2019 e os demais cargos de confiança ainda não têm fonte aberta carregada (issue 19) |
 | Candidaturas, eleições e resultados | TSE | a Câmara só conhece quem tomou posse |
 | Filiação partidária por período | TSE | a Câmara só informa o partido **na data do voto**; mudanças de nome, fusões e incorporações dos partidos estão em `dim_partidos_linhagem` (curada, só o que foi conferido no TSE; faltam as siglas medidas por `partidos_encerrados_sem_linhagem`) |
 | Lei, decreto ou medida provisória que resultou da proposição | Diário Oficial da União, API de legislação do Senado | a Câmara termina no trâmite; a norma publicada é outro documento (o catálogo de normas já está em `fct_normas`; falta ligar as proposições da Câmara) |
