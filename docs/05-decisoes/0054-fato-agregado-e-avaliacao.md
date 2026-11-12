@@ -1,6 +1,6 @@
 # ADR 0054: Fato, agregado, medição e avaliação
 
-- **Status:** proposto
+- **Status:** aceito em 2026-11-12 (decisão do fundador); antes proposto
 - **Data:** 2026-11-11
 - **Complementa:** a regra "sem ranking, nota ou métrica avaliativa" do `AGENTS.md` e da [visão geral](../01-entender/01-visao-geral.md) (itens 5 e 6), o [ADR 0033](0033-marts-com-a-terminologia-da-dbt-labs.md) (prefixos dos marts), o [ADR 0039](0039-marts-como-camada-semantica.md) (derivado marcado, mudança só aditiva) e o [ADR 0053](0053-nucleo-sem-nomes-de-fonte.md) (item 3, verificações com colunas próprias).
 - **Para quem é:** quem cria um mart novo ou revisa um. Responde: em que categoria cai uma métrica, onde ela mora, como o método é publicado e o que impede que uma avaliação entre no lake.
