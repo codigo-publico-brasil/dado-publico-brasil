@@ -1,0 +1,9 @@
+version: 2
+
+# Um grupo por camada: aparece como "Owner" na aba Details do dbt docs e vira o grupo dos ativos no Dagster.
+# Sem e-mail: o projeto não tem um endereço genérico público (o campo é opcional).
+groups:
+  - {name: staging, owner: {name: Código Público Brasil}}
+  - {name: intermediate, owner: {name: Código Público Brasil}}
+  - {name: marts, owner: {name: Código Público Brasil}}
+  - {name: seeds, owner: {name: Código Público Brasil}}

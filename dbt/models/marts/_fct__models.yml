@@ -9,7 +9,7 @@ models:
       eleições diferentes é achada por id_pessoa_tse; sem ele a candidatura não tem histórico, o que não quer dizer
       novato. fl_eleito vale para o eleito informado pelo TSE ou derivado dos votos pela Constituição (base_eleicao diz
       qual; o texto original do TSE segue em resultado); fl_eleito_informado guarda só o informado.
-    meta: {sensitivity: publico-agente-publico, grain: candidatura, owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "IBGE; Tribunal Superior Eleitoral", particao: "try_cast(split_part(id_candidatura, ':', 1) as integer)"}
+    meta: {sensitivity: publico-agente-publico, grain: candidatura, owner: Código Público Brasil, freshness: a cada eleição, fonte_oficial: "IBGE; Tribunal Superior Eleitoral", particao: "try_cast(split_part(id_candidatura, ':', 1) as integer)"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
       - {name: id_candidatura, data_type: varchar, tests: [unique, not_null], description: "Identificador da candidatura: ano da eleição, unidade eleitoral e sequencial do candidato, como o TSE informa."}
@@ -68,7 +68,7 @@ models:
       candidatura e turno, de todos os cargos (inclusive vereador). resultado e resultado_votacao são o que cada arquivo
       do TSE informa e podem estar vazios (em 2006 o TSE não informa quem venceu o 2º turno de presidente).
       fl_mais_votado_no_turno é derivado dos votos e não é resultado do TSE.
-    meta: {sensitivity: publico-agente-publico, grain: candidatura e turno, owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "Tribunal Superior Eleitoral", particao: "try_cast(split_part(id_candidatura, ':', 1) as integer)"}
+    meta: {sensitivity: publico-agente-publico, grain: candidatura e turno, owner: Código Público Brasil, freshness: a cada eleição, fonte_oficial: "Tribunal Superior Eleitoral", particao: "try_cast(split_part(id_candidatura, ':', 1) as integer)"}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [id_candidatura, turno]}}
     columns:
@@ -95,7 +95,7 @@ models:
       A campanha de cada candidatura, só com arquivos do TSE: bens declarados, receitas e despesas da prestação de
       contas. Uma linha por candidatura que tenha ao menos um desses dados. O total fica vazio, e não zero, quando o
       arquivo daquele dado não foi carregado ou não traz o candidato.
-    meta: {sensitivity: publico-agente-publico, grain: candidatura, owner: fundador do projeto, freshness: a cada prestação de contas, fonte_oficial: "Tribunal Superior Eleitoral", auditoria_excecao: "Junta três arquivos (bens, receitas e despesas) com capturas distintas: veja id_captura_bens, id_captura_receitas e id_captura_despesas.", particao: "try_cast(split_part(id_candidatura, ':', 1) as integer)"}
+    meta: {sensitivity: publico-agente-publico, grain: candidatura, owner: Código Público Brasil, freshness: a cada prestação de contas, fonte_oficial: "Tribunal Superior Eleitoral", auditoria_excecao: "Junta três arquivos (bens, receitas e despesas) com capturas distintas: veja id_captura_bens, id_captura_receitas e id_captura_despesas.", particao: "try_cast(split_part(id_candidatura, ':', 1) as integer)"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
       - name: id_candidatura
@@ -125,7 +125,7 @@ models:
       da data de posse do TSE quando plausível. O fim é sempre derivado da
       duração do cargo. Só TSE; a ligação com a pessoa do projeto virá com as pessoas de todos os eleitos. O nome do
       modelo leva o prefixo fatos_ só porque fct_mandatos ainda existe; a tabela é fct_mandatos.
-    meta: {sensitivity: publico-agente-publico, grain: mandato (candidatura eleita), owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "IBGE; Tribunal Superior Eleitoral"}
+    meta: {sensitivity: publico-agente-publico, grain: mandato (candidatura eleita), owner: Código Público Brasil, freshness: a cada eleição, fonte_oficial: "IBGE; Tribunal Superior Eleitoral"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (tse)."}
       - name: id_candidatura
@@ -161,7 +161,7 @@ models:
       entram, pois não há fonte oficial de exercício carregada para eles (o mandato deles está em fct_mandatos; a
       ocupação dos dois juntos, em fct_cargos_ocupacoes). O nome do modelo leva o prefixo fatos_ só porque pode haver
       colisão futura com marts; a tabela é fct_exercicios.
-    meta: {sensitivity: publico-agente-publico, grain: período de exercício, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
+    meta: {sensitivity: publico-agente-publico, grain: período de exercício, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara ou senado)."}
       - {name: id_exercicio, data_type: varchar, tests: [unique, not_null], description: "Identificador do período: fonte e identificador da fonte (Câmara: deputado, legislatura e momento da entrada)."}
@@ -201,7 +201,7 @@ models:
       (vereador, prefeito, governador, presidente, deputado estadual), com o fim previsto pela duração do cargo. O
       exercício vence: o mandato que ele cumpre não gera outra linha. Cassação e renúncia dos cargos sem exercício não
       aparecem (issue 162). Quem filtra a data usa dt_inicio e dt_fim.
-    meta: {sensitivity: publico-agente-publico, grain: período de ocupação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral"}
+    meta: {sensitivity: publico-agente-publico, grain: período de ocupação, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral"}
     columns:
       - {name: id_ocupacao, data_type: varchar, tests: [unique, not_null], description: "Identificador do período: a base (exercicio ou mandato) e o identificador do exercício ou da candidatura de origem."}
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro de origem (camara e senado para o exercício; tse para o mandato)."}
@@ -237,7 +237,7 @@ models:
       não é a data de filiação, e a filiação partidária por data (arquivo de filiados do TSE) não é carregada: ver a base
       legal em docs/03-consultar/05-lgpd-dados-pessoais.md. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela
       é fct_pessoas_partidos.
-    meta: {sensitivity: publico-agente-publico, grain: partido de uma pessoa em um momento por fonte, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", particao: "ano_referencia"}
+    meta: {sensitivity: publico-agente-publico, grain: partido de uma pessoa em um momento por fonte, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", particao: "ano_referencia"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara, senado ou tse)."}
       - {name: base, data_type: varchar, tests: [{accepted_values: {arguments: {values: [historico_de_deputados, inicio_da_legislatura, votos, candidatura]}}}], description: "De onde sai o partido: historico_de_deputados (períodos do histórico da Câmara), inicio_da_legislatura (partido no início de cada legislatura, para deputados sem períodos no histórico), votos (partido do parlamentar em cada voto, só para quem não tem histórico) ou candidatura (partido pelo qual concorreu no TSE)."}
@@ -267,7 +267,7 @@ models:
       texto de fct_votacoes por linhas que ligam a fct_proposicoes. Câmara: afetada (a votação mudou a situação da
       proposição) ou objeto (foi o assunto votado). Senado: a matéria da votação. Votação sem proposição na fonte não tem
       linha. O prefixo fatos_ do modelo é só pela colisão de nomes; a tabela é brg_votacoes_proposicoes.
-    meta: {sensitivity: publico, grain: votação e proposição, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
+    meta: {sensitivity: publico, grain: votação e proposição, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [fonte, id_votacao, id_proposicao, papel]}}
     columns:
@@ -290,7 +290,7 @@ models:
       linha; a entrada e a saída de órgão vêm da participação em órgãos da Câmara (brg_orgaos_membros), sem repetir a linha
       que a fonte duplica: o teste eventos_de_tipo_sem_fato lista quais. O prefixo fatos_ do modelo é só
       pela colisão de nomes; a tabela é fct_eventos.
-    meta: {sensitivity: publico-agente-publico, grain: evento da pessoa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Evento derivado de outros fatos do projeto; fato_origem e id_fato_origem apontam a linha com fonte e captura (id_captura vem quando o fato a tem)."}
+    meta: {sensitivity: publico-agente-publico, grain: evento da pessoa, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Evento derivado de outros fatos do projeto; fato_origem e id_fato_origem apontam a linha com fonte e captura (id_captura vem quando o fato a tem)."}
     columns:
       - {name: id_evento, data_type: varchar, tests: [unique, not_null], description: "Tipo, fato de origem e identificador do registro de origem."}
       - {name: id_pessoa, data_type: bigint, tests: [not_null, {relationships: {to: ref('dim_pessoas'), field: id_pessoa}}], description: "Pessoa do evento (dim_pessoas)."}
@@ -316,7 +316,7 @@ models:
       diferentes): vale o partido cujo período de uso da sigla está mais perto do ano do voto. Sem partido ("S.Part.", "Sem
       registro") ou com sigla ainda não curada, o id_partido fica vazio; o teste de aviso mede as não curadas. Só votos de
       quem tem pessoa no projeto.
-    meta: {sensitivity: publico-agente-publico, grain: voto de um parlamentar em uma votação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", particao: "year(dt_voto)"}
+    meta: {sensitivity: publico-agente-publico, grain: voto de um parlamentar em uma votação, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", particao: "year(dt_voto)"}
     columns:
       - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte oficial do voto (camara ou senado)."}
       - {name: id_votacao, data_type: varchar, tests: [not_null], description: "Identificador da votação na fonte."}

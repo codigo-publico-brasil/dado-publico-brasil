@@ -40,7 +40,7 @@ DATASET_KEYS = {
     "url", "load", "write", "columns", "primary_key", "extra_years", "first_year", "partition", "records",
     "nested", "format", "headers", "foreach", "archive", "member", "raw", "files", "first_month",
     "lag_months", "first_day", "lag_days", "step", "sequence", "only", "optional", "aliases", "on_demand",
-    "max_age_days", "tolerated_rejects", "encoding", "delimiter", "skip_lines",
+    "max_age_days", "tolerated_rejects", "encoding", "delimiter", "skip_lines", "missing_status",
 }  # fmt: skip
 FOREACH_KEYS = {"from", "item", "where", "recent_by", "version", "refresh_after_days", "batch_size"}
 FORBIDDEN_COLUMNS = {"cpf", "rg", "tituloeleitor", "cnh", "passaporte"}
@@ -121,6 +121,7 @@ class Dataset:
     aliases: dict[str, str] = field(
         default_factory=dict
     )  # layout antigo: nome antigo da coluna -> nome em `columns`
+    missing_status: tuple[int, ...] = ()  # HTTP de "arquivo inexistente" do host (S3: 403), ADR 0059
     on_demand: bool = False  # true: fora do plano incremental e da recuperação; só quando pedido
     max_age_days: int | None = (
         None  # idade máxima da última verificação da fonte; mais velha que isso é problema
@@ -221,6 +222,13 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
     if int(data.get("lag_months", 0)) and data.get("partition") != "month":
         raise InvalidContract(f"{where}: lag_months exige partition: month")
     _day_rules(where, data)
+    status = data.get("missing_status", [])
+    if not isinstance(status, list) or any(
+        not isinstance(c, int) or not 400 <= c <= 499 or c in (405, 429) for c in status
+    ):
+        raise InvalidContract(
+            f"{where}: missing_status é uma lista de códigos 4xx, exceto 405 e 429 (bloqueio)"
+        )
     if data.get("archive") is not None and data["archive"] not in ARCHIVES:
         raise InvalidContract(f"{where}: archive deve ser um de {sorted(ARCHIVES)}")
     if int(data.get("step", 1)) > 1 and data.get("first_year") is None:
@@ -272,6 +280,7 @@ def _dataset(source: str, name: str, data: dict[str, Any]) -> Dataset:
         files=_files(where, data),
         first_month=int(data["first_month"]) if data.get("first_month") else None,
         lag_months=int(data.get("lag_months", 0)),
+        missing_status=tuple(data.get("missing_status", ())),
         first_day=int(data["first_day"]) if "first_day" in data else None,
         lag_days=int(data.get("lag_days", 0)),
         sequence=tuple(int(data["sequence"][k]) for k in ("first_year", "first_value", "years"))

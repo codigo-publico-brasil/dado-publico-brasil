@@ -6,7 +6,7 @@ version: 2
 models:
   - name: fct_licitacoes
     description: Licitações do governo federal (SIASG), de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora, modalidade e número da licitação; se a fonte repete a licitação em mais de um mês, vale a captura mais recente.
-    meta: {sensitivity: publico-agente-publico, grain: licitação (unidade gestora, modalidade e número), owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico-agente-publico, grain: licitação (unidade gestora, modalidade e número), owner: Código Público Brasil, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests: &monitoramento
       - elementary.volume_anomalies: {config: {severity: warn}}
       - elementary.schema_changes: {config: {severity: warn}}
@@ -36,7 +36,7 @@ models:
 
   - name: fct_licitacoes_itens
     description: Itens das licitações do governo federal, com o vencedor, uma linha por item e vencedor como a fonte publica (a fonte repete linhas idênticas e deixa o código do item vazio em parte delas; o teste de lacunas as mede). Vencedor pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas.
-    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: item e vencedor, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: item e vencedor, owner: Código Público Brasil, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -53,7 +53,7 @@ models:
 
   - name: fct_licitacoes_participantes
     description: Participantes dos itens das licitações do governo federal, com a marca de vencedor, uma linha por item e participante como a fonte publica (a fonte repete linhas idênticas). Participante pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas.
-    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: item e participante, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: item e participante, owner: Código Público Brasil, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -69,7 +69,7 @@ models:
 
   - name: brg_licitacoes_empenhos
     description: Ponte entre as licitações do governo federal e os empenhos relacionados a elas, como o Portal da Transparência publica. Uma linha por licitação e empenho.
-    meta: {sensitivity: publico-agente-publico, grain: licitação e empenho, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico-agente-publico, grain: licitação e empenho, owner: Código Público Brasil, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -83,7 +83,7 @@ models:
 
   - name: fct_contratos
     description: Contratos do governo federal, de 2022-11 em diante (só meses fechados), como o Portal da Transparência publica. Uma linha por unidade gestora e número do contrato; se a fonte repete o contrato em mais de um mês, vale a captura mais recente. Contratado pessoa física tem o CPF mascarado; `fl_contem_dado_pessoal` marca essas linhas. Contrato sigiloso traz `-11` e `Sigiloso` no contratado, como a fonte.
-    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: contrato (unidade gestora e número do contrato), owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: contrato (unidade gestora e número do contrato), owner: Código Público Brasil, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -114,7 +114,7 @@ models:
 
   - name: fct_contratos_itens
     description: Itens dos contratos do governo federal, uma linha por item como a fonte publica (a fonte pode repetir linhas idênticas e deixar o código do item vazio).
-    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: item de contrato, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: item de contrato, owner: Código Público Brasil, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -129,7 +129,7 @@ models:
 
   - name: fct_contratos_aditivos
     description: Termos aditivos dos contratos do governo federal, uma linha por termo como a fonte publica.
-    meta: {sensitivity: publico-agente-publico, grain: termo aditivo de contrato, owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico-agente-publico, grain: termo aditivo de contrato, owner: Código Público Brasil, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}

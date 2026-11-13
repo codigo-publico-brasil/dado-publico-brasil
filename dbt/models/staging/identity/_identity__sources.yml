@@ -9,7 +9,7 @@ sources:
     schema: identity
     meta:
       sensitivity: publico-agente-publico
-      owner: fundador do projeto
+      owner: Código Público Brasil
     tables:
       - name: pessoas
         description: Pessoa do projeto, com chave própria, independente da fonte.

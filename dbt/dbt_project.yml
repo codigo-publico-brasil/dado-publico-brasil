@@ -39,39 +39,49 @@ models:
     staging:
       +schema: staging
       +materialized: view
+      +group: staging
+      +tags: [staging]
       +meta:
         sensitivity: publico-agente-publico
-        owner: fundador do projeto
+        owner: Código Público Brasil
+        camada: staging
       camara:
-        +tags: [pre_identity]
+        +tags: [camara, pre_identity]
         +meta: {fonte_oficial: Câmara dos Deputados}
       senado:
-        +tags: [pre_identity]
+        +tags: [senado, pre_identity]
         +meta: {fonte_oficial: Senado Federal}
       tse:
         +materialized: table  # exceção ao "staging = views" (ADR 0044): lido dezenas de vezes por noite, com limpeza de texto cara
-        +tags: [pre_identity]
+        +tags: [tse, pre_identity]
         +meta: {fonte_oficial: Tribunal Superior Eleitoral}
       ibge:
+        +tags: [ibge]
         +meta: {fonte_oficial: IBGE}
       transparencia:
+        +tags: [transparencia]
         +meta: {fonte_oficial: Portal da Transparência (CGU)}
       pep:
+        +tags: [pep]
         +meta: {fonte_oficial: Portal da Transparência (CGU)}
       constituicao:
-        +tags: [pre_identity]
+        +tags: [constituicao, pre_identity]
         +meta: {fonte_oficial: Câmara dos Deputados (texto da Constituição)}
       metadata:
-        +tags: [pre_identity]
+        +tags: [metadata, pre_identity]
         +meta: {fonte_oficial: Projeto (registro das capturas), auditoria_excecao: Tabela do projeto que descreve as capturas; não vem de arquivo de fonte.}
       identity:
+        +tags: [identity]
         +meta: {fonte_oficial: Projeto (identidade interna), auditoria_excecao: Tabela interna do projeto (schema identity); não vem de arquivo de fonte.}
     intermediate:
       +schema: intermediate
       +materialized: table
+      +group: intermediate
+      +tags: [intermediate]
       +meta:
         sensitivity: publico-agente-publico
-        owner: fundador do projeto
+        owner: Código Público Brasil
+        camada: intermediate
       int_tse_eleitos:
         +tags: [data_atual]  # lê a data de hoje: entra na reconstrução quando o período muda, não toda noite (ADR 0047)
         +meta: {periodo: ano}
@@ -80,9 +90,19 @@ models:
       +materialized: table
       +contract:
         enforced: true
+      +group: marts
+      +tags: [marts]
       +meta:
-        owner: fundador do projeto
+        owner: Código Público Brasil
+        camada: marts
+      compras: {+tags: [compras], +meta: {dominio: compras}}
+      executivo: {+tags: [executivo], +meta: {dominio: executivo}}
+      legislativo: {+tags: [legislativo], +meta: {dominio: legislativo}}
+      pessoas: {+tags: [pessoas], +meta: {dominio: pessoas}}
+      territorio: {+tags: [territorio], +meta: {dominio: territorio}}
       eleicoes:
+        +tags: [eleicoes]
+        +meta: {dominio: eleicoes}
         fct_mandatos:
           +tags: [data_atual]
           +meta: {periodo: ano}
@@ -90,13 +110,15 @@ models:
           +tags: [data_atual]
           +meta: {periodo: mes}
       fontes:
-        +tags: [data_atual]  # lê só `metadata`, que o dbt não vê mudar: refaz todo dia
-        +meta: {periodo: dia}
+        +tags: [fontes, data_atual]  # lê só `metadata`, que o dbt não vê mudar: refaz todo dia
+        +meta: {dominio: fontes, periodo: dia}
 
 seeds:
   dado_publico_brasil:
     +schema: intermediate
-    +tags: [pre_identity]
+    +tags: [seeds, pre_identity]
+    +group: seeds
+    +meta: {camada: seeds}
     +persist_docs:
       relation: true
       columns: true

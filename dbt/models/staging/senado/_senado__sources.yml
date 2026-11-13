@@ -11,7 +11,7 @@ sources:
       url: https://legis.senado.leg.br/dadosabertos
       origin: Senado Federal
       sensitivity: publico-agente-publico
-      owner: fundador do projeto
+      owner: Código Público Brasil
     tables:
       - name: colegiados
         description: Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha. Fonte do catálogo de órgãos do Senado.

@@ -7,7 +7,7 @@ sources:
     schema: metadata
     meta:
       sensitivity: controle
-      owner: fundador do projeto
+      owner: Código Público Brasil
     tables:
       - name: capturas
         description: Cada arquivo recebido da fonte, com URL, hash, caminho no landing e datas.
