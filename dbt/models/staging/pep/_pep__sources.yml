@@ -14,7 +14,7 @@ sources:
       url: https://portaldatransparencia.gov.br/download-de-dados/pep
       origin: Controladoria-Geral da União (Portal da Transparência)
       sensitivity: publico-agente-publico
-      owner: fundador do projeto
+      owner: Código Público Brasil
     tables:
       - name: dirigentes
         meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura

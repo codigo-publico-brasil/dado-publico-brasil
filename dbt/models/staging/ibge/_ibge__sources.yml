@@ -12,7 +12,7 @@ sources:
       url: https://servicodados.ibge.gov.br/api/docs/localidades
       origin: Instituto Brasileiro de Geografia e Estatística (IBGE)
       sensitivity: publico
-      owner: fundador do projeto
+      owner: Código Público Brasil
     tables:
       - name: municipios
         description: Municípios do Brasil, uma linha por município, com a hierarquia regional imediata e intermediária.

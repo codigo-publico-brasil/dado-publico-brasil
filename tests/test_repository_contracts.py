@@ -1,6 +1,7 @@
 """Garantias do repositório: catálogo em dia, fronteiras entre os motores e definições do Dagster carregáveis."""
 
 import ast
+import json
 import os
 import subprocess
 import sys
@@ -160,3 +161,39 @@ def test_alert_failure_is_logged_as_a_warning(caplog: pytest.LogCaptureFixture) 
     finally:
         alert.send = original
     assert [r.levelname for r in caplog.records] == ["WARNING"] and "sem rede" in caplog.text
+
+
+def test_dagster_assets_carry_layer_group_owner_tags_and_kinds(tmp_path: Path) -> None:
+    """Interface do Dagster: todo ativo executável tem grupo = camada, dono, tag da camada e kinds."""
+    settings = Settings(storage_root=tmp_path / "store")
+    dbt.invoke(settings, "parse")
+    code = (
+        "import json;"
+        "from dado_publico_brasil.orchestration.definitions import defs;"
+        "g = defs.resolve_asset_graph();"
+        "print(json.dumps({k.to_user_string(): [g.get(k).group_name, list(g.get(k).owners), sorted(g.get(k).tags), sorted(g.get(k).kinds)]"
+        " for k in g.get_all_asset_keys() if g.get(k).is_executable and g.get(k).group_name != 'edr'}))"
+    )
+    env = {**os.environ, "DADO_PUBLICO_STORAGE_ROOT": str(settings.storage_root)}
+    result = subprocess.run(
+        [sys.executable, "-W", "ignore", "-c", code],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=ROOT,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr[-1500:]
+    assets = json.loads(result.stdout.splitlines()[-1])
+    layers = {"landing", "staging", "intermediate", "marts", "identity", "publicacao"}
+    bad = [
+        k
+        for k, (group, owners, tags, kinds) in assets.items()
+        if owners != ["team:Código Público Brasil"]
+        or not kinds
+        or group not in layers | {"raw", "seeds"}
+        or (k.split("/")[0] in layers and group not in (k.split("/")[0], "seeds"))
+        or (group != "seeds" and group not in tags)
+    ]
+    assert bad == [], f"ativos sem grupo/dono/tag/kind padrão: {bad}"
+    assert {g for g, *_ in assets.values()} >= layers | {"raw"}

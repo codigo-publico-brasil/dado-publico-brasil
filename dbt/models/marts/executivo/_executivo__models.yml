@@ -11,7 +11,7 @@ models:
       início de exercício; vale a captura mais recente. Sem CPF nem nascimento na fonte, a pessoa não é ligada a
       dim_pessoas (a ligação por nome seria um palpite); o presidente e o vice eleitos, com pessoa, estão em
       fct_cargos_ocupacoes. Quem filtra a data usa dt_inicio e dt_fim (vazio enquanto a fonte não informa o fim).
-    meta: {sensitivity: publico-agente-publico, grain: "pessoa, função, órgão e início de exercício", owner: fundador do projeto, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico-agente-publico, grain: "pessoa, função, órgão e início de exercício", owner: Código Público Brasil, freshness: mensal, fonte_oficial: "Portal da Transparência (CGU)"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (pep)."}
       - {name: id_ocupacao_executivo, data_type: varchar, tests: [unique, not_null], description: "Chave do projeto: hash do nome, da função, do órgão e do início do exercício, como a fonte publica."}

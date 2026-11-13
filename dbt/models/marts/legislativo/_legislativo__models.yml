@@ -6,7 +6,7 @@ models:
   - name: dim_pessoas_cadastro
     description: >
       Cadastro parlamentar: só Câmara e Senado (cerca de 8,5 mil pessoas), com o que só as casas publicam: contato institucional, gabinete, redes, situação e falecimento. A atividade legislativa (contagens e último partido) está em agg_pessoas_atividade. Uma linha por pessoa. A ficha completa da pessoa, inclusive o que vem do TSE com `fonte_*` por atributo, está em dim_pessoas (cerca de 322 mil pessoas).
-    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     data_tests: &monitoramento
       - elementary.volume_anomalies: {config: {severity: warn}}
       - elementary.schema_changes: {config: {severity: warn}}
@@ -40,7 +40,7 @@ models:
 
   - name: brg_pessoas_ocupacoes
     description: Ocupações anteriores declaradas. Uma linha por pessoa e ocupação.
-    meta: {sensitivity: publico-agente-publico, grain: pessoa e ocupação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    meta: {sensitivity: publico-agente-publico, grain: pessoa e ocupação, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
     data_tests: *monitoramento
     columns:
       - name: id_pessoa
@@ -62,7 +62,7 @@ models:
 
   - name: fct_proposicoes
     description: Proposições com ementa padronizada, ementa oficial, situação atual e URL da fonte. Uma linha por proposição.
-    meta: {sensitivity: publico, grain: proposição, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", particao: "year(dt_apresentacao)"}
+    meta: {sensitivity: publico, grain: proposição, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", particao: "year(dt_apresentacao)"}
     data_tests:
       - elementary.volume_anomalies: {timestamp_column: dt_apresentacao, seasonality: day_of_week, config: {severity: warn}}
       - elementary.freshness_anomalies: {timestamp_column: dt_apresentacao, config: {severity: warn}}
@@ -84,7 +84,7 @@ models:
 
   - name: brg_proposicoes_autorias
     description: Autores de cada proposição (deputados e também comissão, Senado, Executivo e outros), com a posição na assinatura e o total de autores; id_pessoa só existe quando o autor é deputado. Uma linha por autor e proposição.
-    meta: {sensitivity: publico-agente-publico, grain: autor e proposição, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    meta: {sensitivity: publico-agente-publico, grain: autor e proposição, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
     data_tests: *monitoramento
     columns:
       - name: id_pessoa
@@ -105,7 +105,7 @@ models:
 
   - name: fct_votacoes
     description: Votações com resultado oficial, totais e proposições. Uma linha por votação.
-    meta: {sensitivity: publico, grain: votação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
+    meta: {sensitivity: publico, grain: votação, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     data_tests:
       - elementary.volume_anomalies: {timestamp_column: dt_votacao, seasonality: day_of_week, config: {severity: warn}}
       - elementary.freshness_anomalies: {timestamp_column: dt_votacao, config: {severity: warn}}
@@ -132,7 +132,7 @@ models:
 
   - name: dim_legislaturas
     description: Legislaturas da Câmara, com datas oficiais de início e fim. Uma linha por legislatura.
-    meta: {sensitivity: publico, grain: legislatura, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    meta: {sensitivity: publico, grain: legislatura, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -145,7 +145,7 @@ models:
 
   - name: dim_partidos_camara
     description: Partidos com sigla e nome oficiais. Uma linha por partido.
-    meta: {sensitivity: publico, grain: partido, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    meta: {sensitivity: publico, grain: partido, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -158,7 +158,7 @@ models:
 
   - name: dim_partidos_linhagem
     description: Mudanças de nome, fusões e incorporações de partidos, conforme o TSE, com a página oficial de cada evento. Curada à mão; só o que foi conferido. Uma linha por partido de origem e evento.
-    meta: {sensitivity: publico, grain: partido de origem e evento, owner: fundador do projeto, freshness: manual, fonte_oficial: "Tribunal Superior Eleitoral", auditoria_excecao: "Curadoria do projeto (seed partidos_eventos), com a página oficial em fonte_url de cada linha."}
+    meta: {sensitivity: publico, grain: partido de origem e evento, owner: Código Público Brasil, freshness: manual, fonte_oficial: "Tribunal Superior Eleitoral", auditoria_excecao: "Curadoria do projeto (seed partidos_eventos), com a página oficial em fonte_url de cada linha."}
     data_tests: *monitoramento
     columns:
       - {name: sigla_anterior, data_type: varchar, tests: [not_null], description: "Sigla do partido antes do evento, como aparece nos votos."}
@@ -171,7 +171,7 @@ models:
 
   - name: brg_orgaos_membros
     description: Participação de pessoas em órgãos da Câmara, com cargo e período. Uma linha por pessoa, órgão, cargo e período informado.
-    meta: {sensitivity: publico-agente-publico, grain: pessoa, órgão, cargo e período, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, órgão, cargo e período, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -201,7 +201,7 @@ models:
 
   - name: dim_frentes
     description: Frentes parlamentares, com legislatura de criação e coordenador. Uma linha por frente.
-    meta: {sensitivity: publico, grain: frente parlamentar, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    meta: {sensitivity: publico, grain: frente parlamentar, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -216,7 +216,7 @@ models:
 
   - name: brg_frentes_membros
     description: Participação de pessoas em frentes parlamentares, com o título e a legislatura. Uma linha por pessoa, frente, legislatura e título.
-    meta: {sensitivity: publico-agente-publico, grain: pessoa, frente e legislatura, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, frente e legislatura, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -241,7 +241,7 @@ models:
 
   - name: fct_proposicoes_tramitacoes
     description: Andamentos das proposições que podem virar norma (só as já buscadas), na ordem em que ocorreram. Uma linha por proposição, sequência e hora (a fonte às vezes repete a sequência com outra hora).
-    meta: {sensitivity: publico, grain: "proposição, sequência e hora", owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
+    meta: {sensitivity: publico, grain: "proposição, sequência e hora", owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados"}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [fonte, id_proposicao, sequencia, dt_registro]}}
       - elementary.volume_anomalies: {config: {severity: warn}}
@@ -262,7 +262,7 @@ models:
 
   - name: fct_normas_geradas
     description: Norma jurídica que resultou de uma matéria, com número, datas e veículo de publicação. Só o Senado informa por enquanto. Uma linha por matéria.
-    meta: {sensitivity: publico, grain: matéria, owner: fundador do projeto, freshness: diário, fonte_oficial: "Senado Federal"}
+    meta: {sensitivity: publico, grain: matéria, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Senado Federal"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -280,7 +280,7 @@ models:
 
   - name: fct_pessoas_fusoes
     description: Chaves de pessoa absorvidas por outra quando se mostraram a mesma pessoa (por exemplo, deputado que virou senador). Uma linha por chave absorvida.
-    meta: {sensitivity: publico-agente-publico, grain: chave absorvida, owner: fundador do projeto, freshness: diário, fonte_oficial: "Projeto (sem arquivo de fonte externa)", auditoria_excecao: "Registro interno do projeto (schema identity), sem arquivo de fonte."}
+    meta: {sensitivity: publico-agente-publico, grain: chave absorvida, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Projeto (sem arquivo de fonte externa)", auditoria_excecao: "Registro interno do projeto (schema identity), sem arquivo de fonte."}
     data_tests: *monitoramento
     columns:
       - {name: id_pessoa_absorvida, data_type: bigint, tests: [unique, not_null], description: "Chave que deixou de existir."}
@@ -290,7 +290,7 @@ models:
 
   - name: fct_normas
     description: Catálogo das normas federais (leis, decretos, medidas provisórias, emendas...) desde 1808, só metadados; o texto integral não vem desta fonte. Uma linha por norma.
-    meta: {sensitivity: publico, grain: norma, owner: fundador do projeto, freshness: diário, fonte_oficial: "Senado Federal"}
+    meta: {sensitivity: publico, grain: norma, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Senado Federal"}
     data_tests:
       - elementary.volume_anomalies: {timestamp_column: dt_assinatura, seasonality: day_of_week, config: {severity: warn}}
       - elementary.freshness_anomalies: {timestamp_column: dt_assinatura, config: {severity: warn}}
@@ -315,7 +315,7 @@ models:
 
   - name: brg_normas_relacoes
     description: Ligações de cada norma com atos posteriores, como o Senado declara (alteração, regulamentação, veto, declaração de constitucionalidade). Só das normas detalhadas (leis, leis complementares, emendas, medidas provisórias e a Constituição). Uma linha por norma, ato posterior e tipo de relação.
-    meta: {sensitivity: publico, grain: norma, ato posterior e relação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Senado Federal"}
+    meta: {sensitivity: publico, grain: norma, ato posterior e relação, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Senado Federal"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -331,7 +331,7 @@ models:
 
   - name: fct_normas_publicacoes
     description: Onde cada norma foi publicada no Diário Oficial (a original e, por exemplo, a do veto), com página e coluna. Só das normas detalhadas. Uma linha por norma e publicação.
-    meta: {sensitivity: publico, grain: norma e publicação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Senado Federal"}
+    meta: {sensitivity: publico, grain: norma e publicação, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Senado Federal"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -348,7 +348,7 @@ models:
 
   - name: fct_vetos
     description: Vetos presidenciais apreciados pelo Congresso, de 1994 em diante (antes disso a fonte não informa), com a matéria vetada, a norma gerada e as datas. Uma linha por veto.
-    meta: {sensitivity: publico, grain: veto, owner: fundador do projeto, freshness: diário, fonte_oficial: "Senado Federal"}
+    meta: {sensitivity: publico, grain: veto, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Senado Federal"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -380,7 +380,7 @@ models:
 
   - name: fct_vetos_dispositivos
     description: Cada dispositivo vetado, com o texto vetado, a razão do veto escrita pela Presidência e o que o Congresso decidiu (situação como a fonte informa). Só dos vetos já buscados. Uma linha por dispositivo.
-    meta: {sensitivity: publico, grain: dispositivo vetado, owner: fundador do projeto, freshness: diário, fonte_oficial: "Senado Federal"}
+    meta: {sensitivity: publico, grain: dispositivo vetado, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Senado Federal"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -400,7 +400,7 @@ models:
 
   - name: fct_vetos_votos
     description: Voto de deputados e senadores em cada dispositivo vetado votado, como a fonte entrega (nome, partido e UF, sem o código do parlamentar); a pessoa é derivada quando o nome é o de uma só pessoa que exercia o cargo da casa, na UF, no dia da sessão (ADR 0057), e fica vazia no resto. Só dos dispositivos já buscados. Uma linha por dispositivo e voto.
-    meta: {sensitivity: publico-agente-publico, grain: dispositivo e voto, owner: fundador do projeto, freshness: diário, fonte_oficial: "Senado Federal"}
+    meta: {sensitivity: publico-agente-publico, grain: dispositivo e voto, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Senado Federal"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -419,7 +419,7 @@ models:
 
   - name: dim_constituicao_dispositivos
     description: A Constituição de 1988 e o ADCT dispositivo a dispositivo, como a Câmara publica (texto atualizado até a emenda indicada). O tipo e o contexto saem da posição e do começo de cada linha; o texto não é reescrito. Uma linha por parágrafo do arquivo.
-    meta: {sensitivity: publico, grain: parágrafo do arquivo, owner: fundador do projeto, freshness: a cada emenda, fonte_oficial: "Câmara dos Deputados (texto da Constituição)"}
+    meta: {sensitivity: publico, grain: parágrafo do arquivo, owner: Código Público Brasil, freshness: a cada emenda, fonte_oficial: "Câmara dos Deputados (texto da Constituição)"}
     data_tests: *monitoramento
     columns:
       - {name: parte, data_type: varchar, description: "Constituição (parte permanente) ou ADCT."}
@@ -442,7 +442,7 @@ models:
 
   - name: fct_constituicao_alteracoes
     description: Cada indicação de emenda que o texto da Constituição traz entre parênteses, por dispositivo (por exemplo, Redação dada pela Emenda Constitucional nº 45, de 2004). Uma linha por dispositivo e emenda citada.
-    meta: {sensitivity: publico, grain: dispositivo e emenda citada, owner: fundador do projeto, freshness: a cada emenda, fonte_oficial: "Câmara dos Deputados (texto da Constituição)"}
+    meta: {sensitivity: publico, grain: dispositivo e emenda citada, owner: Código Público Brasil, freshness: a cada emenda, fonte_oficial: "Câmara dos Deputados (texto da Constituição)"}
     data_tests: *monitoramento
     columns:
       - {name: parte, data_type: varchar, description: "Constituição (parte permanente) ou ADCT."}
@@ -458,7 +458,7 @@ models:
       - {name: dt_captura, data_type: date, description: "Data da captura do arquivo de origem."}
   - name: fct_candidaturas_bens
     description: Bens declarados à Justiça Eleitoral por candidatos que já são pessoa do projeto, de 2006 em diante, como o TSE publica (valor declarado, sem correção). Uma linha por bem.
-    meta: {sensitivity: publico-agente-publico, grain: candidatura e bem, owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "Tribunal Superior Eleitoral"}
+    meta: {sensitivity: publico-agente-publico, grain: candidatura e bem, owner: Código Público Brasil, freshness: a cada eleição, fonte_oficial: "Tribunal Superior Eleitoral"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -480,7 +480,7 @@ models:
 
   - name: fct_candidaturas_votos
     description: Votos de cada candidatura de quem já é pessoa do projeto, somados dos municípios e zonas, nas eleições gerais já carregadas. Uma linha por candidatura e turno.
-    meta: {sensitivity: publico-agente-publico, grain: candidatura e turno, owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "Tribunal Superior Eleitoral"}
+    meta: {sensitivity: publico-agente-publico, grain: candidatura e turno, owner: Código Público Brasil, freshness: a cada eleição, fonte_oficial: "Tribunal Superior Eleitoral"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -503,7 +503,7 @@ models:
 
   - name: fct_emendas
     description: Emendas parlamentares ao orçamento federal como o Portal da Transparência publica, com valores empenhado, liquidado e pago. O autor vem pelo nome e pelo código do SIAFI (não é o código do parlamentar); a pessoa é derivada só para emenda individual, quando o nome é o de uma só pessoa com mandato federal no ano da emenda ou no anterior (ADR 0056), e fica vazia no resto. Uma linha por emenda, localidade, função, programa e ação.
-    meta: {sensitivity: publico, grain: emenda, localidade, função, programa e ação, owner: fundador do projeto, freshness: diário, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico, grain: emenda, localidade, função, programa e ação, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -539,7 +539,7 @@ models:
 
   - name: fct_emendas_convenios
     description: Convênios firmados com recursos de emendas parlamentares, como o Portal da Transparência publica, com convenente, objeto e valor. Uma linha por convênio e emenda.
-    meta: {sensitivity: publico, grain: convênio e emenda, owner: fundador do projeto, freshness: diário, fonte_oficial: "Portal da Transparência (CGU)"}
+    meta: {sensitivity: publico, grain: convênio e emenda, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Portal da Transparência (CGU)"}
     data_tests:
       - elementary.volume_anomalies: {timestamp_column: dt_publicacao, seasonality: day_of_week, config: {severity: warn}}
       - elementary.freshness_anomalies: {timestamp_column: dt_publicacao, config: {severity: warn}}
@@ -562,7 +562,7 @@ models:
 
   - name: fct_emendas_favorecidos
     description: Quem recebeu o dinheiro de cada emenda parlamentar, por mês, como o Portal da Transparência publica. Inclui pessoa física (cidadão comum, com CPF mascarado); contem_dado_pessoal marca essas linhas. Uma linha por emenda, favorecido e mês.
-    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: emenda, favorecido e mês, owner: fundador do projeto, freshness: diário, fonte_oficial: "Portal da Transparência (CGU)", particao: "ano"}
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: emenda, favorecido e mês, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Portal da Transparência (CGU)", particao: "ano"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro."}
@@ -586,7 +586,7 @@ models:
 
   - name: fct_cotas_despesas
     description: Despesas da cota para o exercício da atividade parlamentar (CEAP da Câmara, CEAPS do Senado) como cada casa publica, uma linha por despesa, desde 2008. Só fatos, sem total avaliativo nem ordenação entre pessoas. Câmara e Senado medem valores de formas diferentes e as colunas ficam separadas. A pessoa vem do identificador do deputado (Câmara) ou é derivada pelo nome e pelo exercício no mês (Senado, ADR 0057); sem ligação segura, fica vazia. Inclui fornecedor pessoa física (CPF mascarado).
-    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: despesa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", particao: "ano"}
+    meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: despesa, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", particao: "ano"}
     data_tests: *monitoramento
     columns:
       - {name: fonte, data_type: varchar, tests: [{accepted_values: {arguments: {values: [camara, senado]}}}], description: "Fonte oficial do registro (camara ou senado)."}
