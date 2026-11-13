@@ -276,14 +276,18 @@ def write_table(
         if not has_year:
             columns.append({"nome": YEAR_COLUMN, "tipo": kind, "descricao": f"Ano da partição: {expr}."})
             meta = _kv(base, key, description, columns)
-        _copy(
-            con,
-            select if has_year else select.replace(" FROM ", f", ({expr}) AS {YEAR_COLUMN} FROM ", 1),
-            target,
-            meta,
-            f", PARTITION_BY ({YEAR_COLUMN}), WRITE_PARTITION_COLUMNS true, FILENAME_PATTERN 'part-{{i}}', "
-            "OVERWRITE_OR_IGNORE",
-        )
+        full = select if has_year else select.replace(" FROM ", f", ({expr}) AS {YEAR_COLUMN} FROM ", 1)
+        # Um COPY por ano, em ordem: o PARTITION_BY mantém um escritor aberto por ano e estoura a memória
+        # em tabela grande; aqui cada COPY segura um arquivo só, no mesmo layout (`ano=AAAA/part-0.parquet`).
+        for (year,) in con.execute(f"SELECT DISTINCT {YEAR_COLUMN} FROM ({full}) ORDER BY 1").fetchall():
+            if not root.startswith("r2://"):
+                Path(target, f"{YEAR_COLUMN}={year}").mkdir(parents=True, exist_ok=True)
+            _copy(
+                con,
+                f"SELECT * FROM ({full}) WHERE {YEAR_COLUMN} = {int(year)}",
+                f"{target}/{YEAR_COLUMN}={year}/part-0.parquet",
+                meta,
+            )
         return _files(con, root, f"{folder}/**/*.parquet")
     file = f"{folder}/{key.rsplit('/', 1)[1]}.parquet"
     _copy(con, f"{select} ORDER BY ({expr})" if expr else select, f"{root}/{file}", meta)

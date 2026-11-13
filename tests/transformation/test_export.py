@@ -1671,3 +1671,27 @@ def test_a_run_that_fails_midway_through_the_retention_deletes_nothing_cited(
     monkeypatch.setattr(lake, "utcnow", lambda: datetime.fromisoformat("2026-11-06T00:00:00+00:00"))
     export.export(settings)
     assert not old_file.exists() and all(f.exists() for f in _cited(out))
+
+
+def test_a_big_partitioned_table_is_written_one_year_at_a_time_under_a_low_memory_limit(
+    monkeypatch: pytest.MonkeyPatch, con: Connection, settings: Settings
+) -> None:
+    """Um arquivo por ano (`ano=AAAA/part-0.parquet`, anos em ordem), com a coluna `ano` e o conteúdo da tabela.
+
+    O limite baixo reproduz só o contorno do servidor; a prova de memória em escala está no PR (benchmark).
+    """
+    monkeypatch.setattr(lake, "MEMORY_LIMIT", "200MB")
+    out, _ = run(con, settings, max_bytes=1)
+    files: list[dict[str, str]] = votos(out)["arquivos"]  # type: ignore[assignment]
+    assert [plain(f["arquivo"]) for f in files] == [
+        f"{VOTOS}/ano={y}/part-0.parquet" for y in (2020, 2021, 2022)
+    ]
+    glob = f"{(out / VOTOS).as_posix()}/**/*.parquet"
+    live = warehouse.connect(settings, read_only=True)
+    want = "SELECT year(dt_voto) AS ano, count(*), sum(hash(id_voto, dt_voto, qtd)) FROM marts.fct_votos GROUP BY 1 ORDER BY 1"
+    got = (
+        f"SELECT ano, count(*), sum(hash(id_voto, dt_voto, qtd)) FROM read_parquet('{glob}', hive_partitioning = false) "
+        "GROUP BY 1 ORDER BY 1"
+    )
+    assert live.execute(got).fetchall() == live.execute(want).fetchall()
+    live.close()
