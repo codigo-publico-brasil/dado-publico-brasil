@@ -34,7 +34,7 @@ jobs:
       - run: uv sync --locked --all-extras
       - name: Testes rápidos (PR só de documentação)
         if: steps.docs.outputs.so_docs == 'true'
-        run: uv run pytest tests/test_docs_links.py tests/test_no_names.py tests/test_repository_contracts.py tests/test_nucleo_sem_nomes_de_fonte.py
+        run: uv run pytest tests/test_docs_links.py tests/test_no_names.py tests/test_repository_contracts.py tests/test_nucleo_sem_nomes_de_fonte.py tests/test_docs_in_sync.py
       - run: uv run ruff check .
         if: steps.docs.outputs.so_docs != 'true'
       - run: uv run ruff format --check .
@@ -51,6 +51,19 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           uv run coverage report --skip-covered >> "$GITHUB_STEP_SUMMARY" || true
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  documentacao:
+    # PR que muda src/, sources/, ddl/ ou dbt/ atualiza a documentação ou declara `Docs: não se aplica — <motivo>` (AGENTS.md).
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 2  # no PR, HEAD é o merge com a base: HEAD^1 é a base
+      - name: Código sem documentação?
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}  # por variável, nunca interpolado no script
+        run: git diff --name-only HEAD^1 HEAD | bash scripts/checar-docs.sh
 
   dependencias:
     # Reprova em qualquer vulnerabilidade conhecida (base OSV) das dependências travadas no uv.lock (ADR 0003).

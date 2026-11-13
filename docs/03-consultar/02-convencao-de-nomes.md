@@ -74,4 +74,4 @@ O projeto e os dados gerados precisam ser fáceis de auditar pelo público: cada
 ## Como é garantido
 
 - Este documento é citado no `CLAUDE.md` e no `AGENTS.md`, que os agentes de IA leem antes de trabalhar, e no modelo de pull request.
-- Testes no CI (`tests/test_names_and_descriptions.py`) conferem, no warehouse que a pipeline constrói, os prefixos de tipo, os nomes de tabela sem conectivo e a descrição de toda tabela e coluna. A regra vale para staging, intermediate, marts, `identity` e `metadata` (nomes em português desde a migração `ddl/0007`); o raw espelha a fonte; o esquema `elementary` é do pacote do Elementary e fica de fora.
+- Testes no CI (`tests/test_names_and_descriptions.py`) conferem, no warehouse que a pipeline constrói, os prefixos de tipo, os nomes de tabela sem conectivo e a descrição de toda tabela e coluna. A regra vale para staging, intermediate, marts, `identity` e `metadata` (nomes em português desde a migração `ddl/0007_nomes_em_portugues.sql`); o raw espelha a fonte; o esquema `elementary` é do pacote do Elementary e fica de fora.

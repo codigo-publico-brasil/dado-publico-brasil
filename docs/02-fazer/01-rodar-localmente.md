@@ -30,7 +30,7 @@ uv run dado-publico run --incremental --foreach 300
 
 ## Modos de execução
 
-A pasta de armazenamento (`data_store/`, fora do git) vem de `DADO_PUBLICO_STORAGE_ROOT` (padrão `data_store`). Tudo a partir da raiz do repositório:
+A pasta de armazenamento (`data_store/`, fora do git) vem de `DADO_PUBLICO_STORAGE_ROOT` (padrão `data_store`). Não se definem à mão: `DADO_PUBLICO_WAREHOUSE_FILE` e `DADO_PUBLICO_ESTADO_FILE` são gravadas pelo CLI para o dbt e o Elementary, que leem o warehouse e o estado (ADR 0051) onde o CLI aponta; `DADO_PUBLICO_GIT_SHA` é gravada pelo build da imagem (`--build-arg GIT_SHA`) para registrar o commit, pois na imagem não há `.git`. Tudo a partir da raiz do repositório:
 
 ```bash
 uv run dado-publico run --incremental                               # só a partição em curso (só as fontes com `schedule`)
@@ -42,7 +42,7 @@ uv run dado-publico run --incremental --foreach 300                 # + os 300 i
 
 - **Incremental:** datasets completos mais o ano corrente e o anterior (anos antigos são estáveis). Antes de baixar, pergunta-se à fonte (`ETag`, `Last-Modified`, tamanho) se o arquivo mudou; se não mudou, só se atualiza a data da última verificação. Se nada novo foi carregado, o dbt nem roda.
 - **Histórico:** todos os anos do intervalo, para a primeira carga ou uma recarga.
-- Etapas separadas: `extract`, `load [--rebuild]`, `transform` (dbt em duas fases, com a identidade no meio), `identity`, `export`, `catalog`, `docs`, `query`, `observe`, `fotos`. Reparos sem baixar nada: `recheck`, `rebuild` (reconstrói o warehouse do landing). Verificação: `verify` e `coverage`. O `transform` mostra uma linha por modelo e por teste enquanto roda.
+- Etapas separadas: `extract`, `load [--rebuild]`, `transform` (dbt em duas fases, com a identidade no meio), `identity`, `export`, `catalog`, `docs`, `query`, `observe`, `gaps`. Reparos sem baixar nada: `recheck`, `rebuild` (reconstrói o warehouse do landing). Verificação: `verify` e `coverage`. O `transform` mostra uma linha por modelo e por teste enquanto roda.
 - **Datasets por item** (tramitação da Câmara, processo e detalhe do senador, detalhe das normas, vetos) só rodam com `--foreach N` ou `--foreach all`; a carga total é decisão de quem opera, por levar horas.
 - **Auditoria:** `uv run dado-publico verify` (hashes do landing e das respostas) e `uv run dado-publico coverage` (o que já foi buscado e o que falta). Ver [auditoria](../02-fazer/05-auditar.md).
 - **Dagster:** ver a seção seguinte.
