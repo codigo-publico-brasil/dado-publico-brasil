@@ -11,7 +11,7 @@ sources:
       url: https://dadosabertos.camara.leg.br
       origin: Câmara dos Deputados
       sensitivity: publico-agente-publico
-      owner: fundador do projeto
+      owner: Código Público Brasil
     tables:
       - name: deputados
         description: Cadastro de deputados (sem documentos pessoais).

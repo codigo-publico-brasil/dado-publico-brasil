@@ -3,7 +3,7 @@ version: 2
 models:
   - name: dim_municipios
     description: Municípios do Brasil segundo o IBGE, com UF e região. Uma linha por município.
-    meta: {sensitivity: publico, grain: município, owner: fundador do projeto, freshness: a cada mudança do IBGE, fonte_oficial: "IBGE"}
+    meta: {sensitivity: publico, grain: município, owner: Código Público Brasil, freshness: a cada mudança do IBGE, fonte_oficial: "IBGE"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (ibge)."}
       - {name: id_municipio, data_type: integer, tests: [unique, not_null], description: "Código do município no IBGE (7 dígitos)."}
@@ -20,7 +20,7 @@ models:
 
   - name: dim_municipios_codigos_tse
     description: De-para entre o código de município do TSE e o do IBGE, por nome e UF únicos dos dois lados. Uma linha por município do TSE; sem correspondência fica com o código do IBGE vazio.
-    meta: {sensitivity: publico, grain: município do TSE, owner: fundador do projeto, freshness: a cada eleição municipal, fonte_oficial: "IBGE; Tribunal Superior Eleitoral", auditoria_excecao: "De-para derivado do TSE e do IBGE, por nome e UF; as capturas estão nos staging de origem."}
+    meta: {sensitivity: publico, grain: município do TSE, owner: Código Público Brasil, freshness: a cada eleição municipal, fonte_oficial: "IBGE; Tribunal Superior Eleitoral", auditoria_excecao: "De-para derivado do TSE e do IBGE, por nome e UF; as capturas estão nos staging de origem."}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte do código de município (tse)."}
       - {name: cd_municipio_tse, data_type: varchar, tests: [unique, not_null], description: "Código do município no TSE (unidade eleitoral das eleições municipais)."}

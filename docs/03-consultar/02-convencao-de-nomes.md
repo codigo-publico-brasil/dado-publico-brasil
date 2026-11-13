@@ -60,10 +60,27 @@ O projeto e os dados gerados precisam ser fáceis de auditar pelo público: cada
 
 - **colunas de auditoria ([ADR 0035](../05-decisoes/0035-lakehouse-publico-no-r2.md)):** todo staging de fonte traz `fonte`, `id_captura`, `dt_captura`, `url_fonte` e `sha256_captura`, acrescentadas pela macro `colunas_auditoria()` (junção com `metadata.capturas`); intermediate e todo `dim_`, `fct_` e `brg_` propagam `fonte`, `id_captura` e `dt_captura`. Quem não tem arquivo de fonte próprio (identidade, curadoria, agregado, consulta do aplicativo) declara o motivo em `meta.auditoria_excecao`. `tests/test_names_and_descriptions.py` falha sem isso (a conferência é estrutural, por isso fica no CI e não no dbt);
 - o staging expõe **todas** as colunas do raw (teste do dbt `staging_sem_colunas_do_raw`, que roda a cada carga); a que ficar de fora tem o motivo em `meta.colunas_omitidas` (coluna: motivo);
-- todo modelo leva em `meta` as chaves `owner`, `sensitivity` e `fonte_oficial` (herdadas de `dbt_project.yml` quando iguais);
+- todo modelo leva em `meta` as chaves `owner` (`Código Público Brasil`), `sensitivity` e `fonte_oficial` (herdadas de `dbt_project.yml` quando iguais);
 - tabelas dos marts que trazem dado de fonte têm a fonte, o endereço da fonte e a data de captura;
 - padronizar um valor não apaga o original: guarde o valor como a fonte publica quando ele for alterado (por exemplo, a sigla original do partido);
 - nenhum nome ou transformação pode esconder de onde a informação veio.
+
+## Camadas, grupos, donos e tags (dbt docs e Dagster)
+
+Uma só configuração por pasta em `dbt/dbt_project.yml` (`+group`, `+tags`, `+meta`) alimenta as duas interfaces; o Dagster lê o grupo do dbt (`get_group_name` em `orchestration/definitions.py`). Nenhum modelo repete isso. Os donos dos grupos estão em `dbt/models/_groups.yml`.
+
+| Camada = grupo | O que são | Dono | Tags | `meta` |
+| --- | --- | --- | --- | --- |
+| `landing` | arquivos originais (ativo do Dagster) | `team:Código Público Brasil` | `landing`, fonte | URL de origem, licença e catálogo (do contrato da fonte) |
+| `raw` | tabelas do dlt (ativos do Dagster) | idem | `raw`, fonte | idem |
+| `staging` | `stg_<fonte>__*` | `Código Público Brasil` (grupo dbt) | `staging`, fonte (`camara`, `senado`, `tse`...) | `camada`, `fonte_oficial` |
+| `intermediate` | `int_*` | idem | `intermediate` | `camada` |
+| `marts` | `dim_`, `fct_`, `brg_`, `agg_` | idem | `marts`, domínio (`legislativo`, `eleicoes`, `pessoas`, `compras`, `executivo`, `territorio`, `fontes`) | `camada`, `dominio` |
+| `seeds` | tabelas de apoio (`dbt/seeds/`) | idem | `seeds` | `camada` |
+| `identity` | pessoas, identificadores e fusões (Python) | `team:Código Público Brasil` | `identity` | |
+| `publicacao` | lake em Parquet e docs no R2 | idem | `publicacao` | |
+
+No **dbt docs** (aba *Details*): `Owner` vem do `group` do modelo (sem grupo, o dbt mostra o dono do objeto no banco, que o DuckDB não tem: ficava vazio); `Tags` vêm de `tags`; `Version` é a versão de modelo do dbt (recurso de contrato com `versions:`), que o projeto não usa e por isso fica vazia. O `meta.owner` aparece na seção *Meta*. O grupo não leva e-mail: o projeto não publica um endereço genérico. No **Dagster**, `owners` aceita só e-mail ou `team:<nome>` ([referência da API](https://docs.dagster.io/api/dagster/assets), `owners` do `@asset`; a versão 1.13.29 valida em `is_valid_owner`); as tags são só o nome (camada e fonte/domínio) e os `kinds` mostram o motor (`python`, `dlt`, `dbt`, `duckdb`, `parquet`). Um teste (`test_dagster_assets_carry_layer_group_owner_tags_and_kinds`) confere o padrão.
 
 ## Como renomear
 

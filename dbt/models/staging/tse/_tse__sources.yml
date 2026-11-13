@@ -11,7 +11,7 @@ sources:
       url: https://dadosabertos.tse.jus.br
       origin: Tribunal Superior Eleitoral
       sensitivity: publico-agente-publico
-      owner: fundador do projeto
+      owner: Código Público Brasil
     tables:
       - name: candidaturas
         meta: {escrita: replace_partition}   # confere com `write:` do contrato; teste carga_do_raw_diferente_da_captura

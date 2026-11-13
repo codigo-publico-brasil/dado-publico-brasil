@@ -8,7 +8,7 @@ models:
       composição em exercício (quem de fato exercia o cargo, só deputado federal e senador, com o partido mais recente
       conhecido até o corte) são sempre separadas, porque respondem coisas diferentes. Mandato sem início não aparece na
       eleita. O prefixo analise_ do modelo é só pela colisão de nomes; a tabela é agg_composicoes.
-    meta: {sensitivity: publico, grain: corte, tipo de composição, cargo, território e partido, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
+    meta: {sensitivity: publico, grain: corte, tipo de composição, cargo, território e partido, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; IBGE; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Consulta ou agregado derivado dos marts; fonte e captura estão nas tabelas de origem."}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [dt_corte, tipo_composicao, id_cargo, id_territorio, id_partido]}}
     columns:
@@ -25,7 +25,7 @@ models:
       voto e o partido e a UF do voto mais recente. Fica fora do cadastro (dim_pessoas_cadastro) porque muda a cada carga,
       enquanto o cadastro só descreve a pessoa. Uma linha por pessoa do cadastro (Câmara e Senado); quem não votou tem zero
       votos e o resto vazio. O partido e a UF são os do voto, como a fonte informa, e não afirmam filiação.
-    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", auditoria_excecao: "Agregado derivado dos votos e das autorias; fonte e captura estão em fct_votos e brg_proposicoes_autorias."}
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal", auditoria_excecao: "Agregado derivado dos votos e das autorias; fonte e captura estão em fct_votos e brg_proposicoes_autorias."}
     columns:
       - {name: id_pessoa, data_type: bigint, tests: [unique, not_null, {relationships: {to: ref('dim_pessoas_cadastro'), field: id_pessoa}}], description: "Pessoa (dim_pessoas_cadastro)."}
       - {name: qtd_votos, data_type: bigint, tests: [not_null], description: "Quantidade de votos nominais registrados."}

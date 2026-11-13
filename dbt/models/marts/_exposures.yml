@@ -7,7 +7,7 @@ exposures:
     maturity: low
     description: Página local para olhar pessoas, propostas, votos e a qualidade dos dados. Lê só os marts, em modo somente leitura.
     owner:
-      name: fundador do projeto
+      name: Código Público Brasil
     depends_on:
       - ref('dim_pessoas_cadastro')
       - ref('brg_pessoas_ocupacoes')

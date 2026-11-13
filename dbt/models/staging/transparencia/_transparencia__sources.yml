@@ -13,7 +13,7 @@ sources:
       url: https://portaldatransparencia.gov.br/download-de-dados/emendas-parlamentares
       origin: Controladoria-Geral da União (Portal da Transparência)
       sensitivity: publico-dados-pessoais-de-terceiros
-      owner: fundador do projeto
+      owner: Código Público Brasil
     tables:
       - name: emendas
         description: Emendas parlamentares por localidade, função, programa e ação, com os valores empenhado, liquidado e pago.

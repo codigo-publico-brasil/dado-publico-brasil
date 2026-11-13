@@ -12,7 +12,7 @@ sources:
       url: https://www2.camara.leg.br/atividade-legislativa/legislacao/constituicao1988
       origin: Câmara dos Deputados
       sensitivity: publico
-      owner: fundador do projeto
+      owner: Código Público Brasil
     tables:
       - name: constituicao
         description: Texto da Constituição (parte permanente), uma linha por parágrafo do arquivo.

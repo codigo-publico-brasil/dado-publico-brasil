@@ -39,6 +39,7 @@ from dagster import (
     DefaultSensorStatus,
     Definitions,
     MaterializeResult,
+    MetadataValue,
     RunFailureSensorContext,
     RunRequest,
     RunStatusSensorContext,
@@ -94,8 +95,26 @@ SOURCES = contract.find_all()
 TIMEZONE = pipeline.TIMEZONE  # fuso dos `schedule` das fontes
 
 
+REPO_URL = "https://github.com/codigo-publico-brasil/dado-publico-brasil"
+OWNERS = ["team:Código Público Brasil"]  # formato do Dagster: e-mail ou `team:<nome>`
+
+
+def _tags(*names: str) -> dict[str, str]:
+    """Tags só com o nome (como as do dbt): camada e fonte, para filtrar na interface."""
+    return {n: "" for n in names}
+
+
+def _source_metadata(source: contract.SourceContract) -> dict[str, Any]:
+    """Origem, licença e catálogo, tudo do contrato da fonte (ADR 0053): nada por nome de fonte."""
+    meta: dict[str, Any] = {
+        "url_origem": MetadataValue.url(source.base_url),
+        "catalogo": MetadataValue.url(f"{REPO_URL}/blob/main/docs/03-consultar/01-catalogo.md"),
+    }
+    return meta | ({"licenca": source.license} if source.license else {})
+
+
 class LayerTranslator(DagsterDbtTranslator):
-    """Grupo = camada do dbt (staging, intermediate, marts); tabela aninhada do dlt = ativo do dataset."""
+    """Grupo = `group` do dbt (a camada); tabela aninhada do dlt = ativo do dataset."""
 
     def get_asset_key(self, dbt_resource_props: Mapping[str, Any]) -> AssetKey:
         key = super().get_asset_key(dbt_resource_props)
@@ -113,9 +132,11 @@ class LayerTranslator(DagsterDbtTranslator):
         return key
 
     def get_group_name(self, dbt_resource_props: Mapping[str, Any]) -> str | None:
-        if dbt_resource_props["resource_type"] == "seed":  # o `fqn` de um seed é só o nome dele
-            return "seeds"
-        return str(dbt_resource_props["fqn"][1])
+        group = dbt_resource_props.get("config", {}).get("group")
+        return str(group or dbt_resource_props["fqn"][1])  # sem `group` (pacote Elementary): a pasta
+
+    def get_owners(self, dbt_resource_props: Mapping[str, Any]) -> list[str]:
+        return OWNERS
 
 
 # várias tabelas aninhadas do dlt apontam ao mesmo ativo (o do dataset), então as chaves de source repetem
@@ -150,7 +171,14 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
     raw = {AssetKey([source.source, loader.normalize(n)]): n for n, d in source.datasets.items() if d.raw}
     raw_tables = list(raw)
 
-    @asset(key=captured, group_name="landing")
+    @asset(
+        key=captured,
+        group_name="landing",
+        owners=OWNERS,
+        tags=_tags("landing", source.source),
+        kinds={"python"},
+        metadata=_source_metadata(source),
+    )
     def landing_asset(context: AssetExecutionContext, config: ExtractionConfig) -> MaterializeResult[Any]:
         """Arquivos da fonte, intactos, com hash e data."""
         con = migrations.open_warehouse(SETTINGS)
@@ -174,7 +202,19 @@ def _source_assets(source: contract.SourceContract) -> list[AssetsDefinition]:
         )
 
     @multi_asset(
-        specs=[AssetSpec(key=k, group_name="raw", deps=[captured], skippable=True) for k in raw_tables],
+        specs=[
+            AssetSpec(
+                key=k,
+                group_name="raw",
+                deps=[captured],
+                skippable=True,
+                owners=OWNERS,
+                tags=_tags("raw", source.source),
+                kinds={"dlt", "duckdb"},
+                metadata=_source_metadata(source),
+            )
+            for k in raw_tables
+        ],
         name=f"raw_{source.source}",
     )
     def raw_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult[Any]]:
@@ -296,9 +336,7 @@ def _dbt_phase(context: AssetExecutionContext, dbt: DbtCliResource, stage: str) 
     manifest=PROJECT.manifest_path,
     select="tag:pre_identity",
     name="dbt_pre_identity",
-    dagster_dbt_translator=LayerTranslator(
-        DagsterDbtTranslatorSettings(enable_duplicate_source_asset_keys=True)
-    ),
+    dagster_dbt_translator=TRANSLATOR,
 )
 def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
     """Fase 1 do dbt: os modelos de que a identidade precisa (`tag:pre_identity`)."""
@@ -308,7 +346,17 @@ def dbt_pre_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Ite
 
 
 @multi_asset(
-    specs=[AssetSpec(key=k, group_name="identity", deps=[IDS_MODEL]) for k in PEOPLE],
+    specs=[
+        AssetSpec(
+            key=k,
+            group_name="identity",
+            deps=[IDS_MODEL],
+            owners=OWNERS,
+            tags=_tags("identity"),
+            kinds={"python", "duckdb"},
+        )
+        for k in PEOPLE
+    ],
     name="identity",
 )
 def identity_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult[Any]]:
@@ -324,9 +372,7 @@ def identity_asset(context: AssetExecutionContext) -> Iterator[MaterializeResult
     manifest=PROJECT.manifest_path,
     exclude="tag:pre_identity",
     name="dbt_post_identity",
-    dagster_dbt_translator=LayerTranslator(
-        DagsterDbtTranslatorSettings(enable_duplicate_source_asset_keys=True)
-    ),
+    dagster_dbt_translator=TRANSLATOR,
 )
 def dbt_post_identity(context: AssetExecutionContext, dbt: DbtCliResource) -> Iterator[Any]:
     """Fase 3 do dbt: o resto dos modelos, que já leem `identity.pessoas` (todos menos `tag:pre_identity`)."""
@@ -356,7 +402,10 @@ def _marts() -> list[AssetKey]:
 @asset(
     key=AssetKey(["publicacao", "lake"]),
     deps=_marts(),
-    group_name="marts",
+    group_name="publicacao",
+    owners=OWNERS,
+    tags=_tags("publicacao"),
+    kinds={"python", "parquet"},
 )
 def export_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
     """Grava o lake público em Parquet (no R2, se houver segredo) depois dos testes do dbt (ADR 0035)."""
@@ -369,7 +418,10 @@ def export_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
 @asset(
     key=AssetKey(["publicacao", "docs"]),
     deps=[AssetKey(["publicacao", "lake"])],
-    group_name="marts",
+    group_name="publicacao",
+    owners=OWNERS,
+    tags=_tags("publicacao"),
+    kinds={"python"},
 )
 def docs_asset(context: AssetExecutionContext) -> MaterializeResult[Any]:
     """Sobe ao R2 o dbt docs, o relatório do Elementary e a página inicial do lake (sem R2, não faz nada)."""

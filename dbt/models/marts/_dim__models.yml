@@ -6,7 +6,7 @@ models:
       Territórios do país em uma só tabela: o Brasil, as 27 UFs e os municípios, cada um com a chave do IBGE e, nos
       municípios, o código do TSE quando a ligação por nome e UF é única. Uma linha por território. Chave de todo fato
       que fala de lugar (ADR 0030).
-    meta: {sensitivity: publico, grain: território, owner: fundador do projeto, freshness: a cada mudança do IBGE, fonte_oficial: "IBGE; Tribunal Superior Eleitoral"}
+    meta: {sensitivity: publico, grain: território, owner: Código Público Brasil, freshness: a cada mudança do IBGE, fonte_oficial: "IBGE; Tribunal Superior Eleitoral"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (ibge)."}
       - {name: id_territorio, data_type: varchar, tests: [unique, not_null], description: "Chave do território: BR para o país, o código do IBGE de 2 dígitos para a UF e o de 7 dígitos para o município."}
@@ -23,7 +23,7 @@ models:
     description: >
       Eleições do arquivo de vagas do TSE, uma por ano e código do TSE, ordinárias e suplementares. Se a eleição é
       ordinária é regra do projeto (cobertura de unidades por ano e cargo), e não informação do TSE.
-    meta: {sensitivity: publico, grain: eleição, owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "Tribunal Superior Eleitoral"}
+    meta: {sensitivity: publico, grain: eleição, owner: Código Público Brasil, freshness: a cada eleição, fonte_oficial: "Tribunal Superior Eleitoral"}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [ano_eleicao, cd_eleicao]}}
     columns:
@@ -42,7 +42,7 @@ models:
     description: >
       Cada cargo em cada unidade eleitoral de uma eleição, com o número de vagas que o TSE informa. Uma linha por
       eleição, cargo e unidade. É a base das candidaturas e dos resultados, e permite medir se alguma vaga ficou sem eleito.
-    meta: {sensitivity: publico, grain: eleição, cargo e unidade eleitoral, owner: fundador do projeto, freshness: a cada eleição, fonte_oficial: "IBGE; Tribunal Superior Eleitoral"}
+    meta: {sensitivity: publico, grain: eleição, cargo e unidade eleitoral, owner: Código Público Brasil, freshness: a cada eleição, fonte_oficial: "IBGE; Tribunal Superior Eleitoral"}
     data_tests:
       - dbt_utils.equal_rowcount: {arguments: {compare_model: ref('stg_tse__vagas')}}
     columns:
@@ -70,7 +70,7 @@ models:
       com a chave de identidade que nunca muda nem é reaproveitada. Cada atributo diz de qual fonte veio (a Câmara e o
       Senado valem mais que o TSE; o TSE vale a candidatura mais recente que o traz). Só o que a fonte publica; nada é
       inferido.
-    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Entidade do projeto resolvida de várias fontes; a fonte de cada atributo está nas colunas fonte_*."}
+    meta: {sensitivity: publico-agente-publico, grain: pessoa, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal; Tribunal Superior Eleitoral", auditoria_excecao: "Entidade do projeto resolvida de várias fontes; a fonte de cada atributo está nas colunas fonte_*."}
     columns:
       - {name: id_pessoa, data_type: bigint, tests: [unique, not_null], description: "Chave própria e estável da pessoa (schema identity)."}
       - {name: nome_civil, data_type: varchar, description: "Nome civil, como a fonte publica, com caixa padronizada."}
@@ -100,7 +100,7 @@ models:
       projeto (fonte e identificador da fonte); o identificador da fonte fica ao lado para auditoria. Inclui os colegiados
       em atividade do Senado (o extinto não consta da fonte). Assembleias, câmaras municipais e outros poderes ainda não
       têm fonte carregada.
-    meta: {sensitivity: publico, grain: órgão, owner: fundador do projeto, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
+    meta: {sensitivity: publico, grain: órgão, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Câmara dos Deputados; Senado Federal"}
     columns:
       - {name: fonte, data_type: varchar, description: "Fonte oficial do registro (camara ou senado)."}
       - {name: id_orgao, data_type: varchar, tests: [unique, not_null], description: "Chave do órgão no projeto: fonte e identificador da fonte."}

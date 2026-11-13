@@ -14,7 +14,7 @@ models:
       `mudanca_esquema` (colunas novas ou removidas desde a captura anterior), `coluna_ausente` (coluna do contrato ausente) e
       `queda_volume` (menos de 80% das linhas da carga anterior). A divergência entre fontes oficiais não é registrada por
       verificação: está nos testes de lacuna em `metadata/testes_resultados`. Uma linha por ocorrência.
-    meta: {sensitivity: publico, grain: ocorrência (primeira verificação da sequência), owner: fundador do projeto, freshness: diário, fonte_oficial: "Verificações do projeto sobre as fontes oficiais (metadata.fontes_verificacoes)"}
+    meta: {sensitivity: publico, grain: ocorrência (primeira verificação da sequência), owner: Código Público Brasil, freshness: diário, fonte_oficial: "Verificações do projeto sobre as fontes oficiais (metadata.fontes_verificacoes)"}
     columns:
       - {name: fonte, data_type: varchar, tests: [not_null], description: "Fonte verificada."}
       - {name: id_verificacao, data_type: bigint, tests: [unique, not_null, {relationships: {to: ref('stg_metadata__fontes_verificacoes'), field: id_verificacao}}], description: "Primeira verificação da ocorrência (metadata/fontes_verificacoes): a evidência, com instante e detalhe."}
@@ -34,7 +34,7 @@ models:
       Quando cada dataset de cada fonte trouxe conteúdo novo e quando foi consultado pela última vez: contagem de capturas e de partições,
       primeira e última captura e última verificação. Medição de tempo sobre `metadata/capturas`, sem expectativa de periodicidade:
       o atraso exige o prazo legal ou a periodicidade declarada pela fonte e não é calculado aqui. Uma linha por fonte e dataset.
-    meta: {sensitivity: publico, grain: fonte e dataset, owner: fundador do projeto, freshness: diário, fonte_oficial: "Verificações do projeto sobre as fontes oficiais (metadata.capturas)", auditoria_excecao: "Agregado das capturas; cada captura está em metadata/capturas."}
+    meta: {sensitivity: publico, grain: fonte e dataset, owner: Código Público Brasil, freshness: diário, fonte_oficial: "Verificações do projeto sobre as fontes oficiais (metadata.capturas)", auditoria_excecao: "Agregado das capturas; cada captura está em metadata/capturas."}
     data_tests:
       - dbt_utils.unique_combination_of_columns: {arguments: {combination_of_columns: [fonte, dataset]}}
     columns:
