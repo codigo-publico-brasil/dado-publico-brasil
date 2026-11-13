@@ -6,7 +6,7 @@ run_coordinator:
   config:
     max_concurrent_runs: 1
 
-# Execução que não inicia em 5 min ou passa de 24 h é marcada como falha (o sensor avisa) e libera a fila.
+# Execução que não inicia em 15 min ou passa de 24 h (limite geral; cada job tem o seu na tag `dagster/max_runtime`, em orchestration/definitions.py) é marcada como falha (o sensor avisa) e libera a fila.
 run_monitoring:
   enabled: true
   start_timeout_seconds: 900  # subir o processo de uma execução leva minutos em máquina pequena e com disco lento

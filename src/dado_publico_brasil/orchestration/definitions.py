@@ -385,28 +385,44 @@ INGESTED = [key for s in SOURCES for key in _keys(s)]  # landing e raw de todas 
 # não foi materializado, e um modelo em erro travaria o lake inteiro. O sensor `publicar_apos_processar` a
 # pede, numa execução própria, quando o processamento termina com sucesso (ADR 0046).
 PUBLISH = AssetSelection.assets(AssetKey(["publicacao", "lake"]), AssetKey(["publicacao", "docs"]))
-publish_job = define_asset_job("publicar", selection=PUBLISH)  # só publica, sem capturar nem transformar
+
+
+# Limite de tempo por execução (tag `dagster/max_runtime`, em segundos; o daemon encerra a execução e a marca
+# como falha, o sensor `falha_de_execucao` avisa). Cerca de 2,5 a 3 vezes o medido: processar_tudo completo
+# 1 h 33, publicar 16 min, captura de uma fonte de 5 min a pouco mais de 1 h; o padrão de 24 h (dagster.yaml)
+# fica de rede de segurança para o resto.
+def _limit(hours: float, **tags: str) -> dict[str, str]:
+    return {"dagster/max_runtime": str(int(hours * 3600)), **tags}
+
+
+# só publica, sem capturar nem transformar
+publish_job = define_asset_job("publicar", selection=PUBLISH, tags=_limit(3))
 process_jobs = [
-    define_asset_job("atualizar_tudo", selection=AssetSelection.all() - PUBLISH, tags=REFRESH),
+    define_asset_job("atualizar_tudo", selection=AssetSelection.all() - PUBLISH, tags=_limit(8, **REFRESH)),
     # processa tudo (dbt, identidade) a partir do que já está no raw, sem capturar nada
     define_asset_job(
-        "processar_tudo", selection=AssetSelection.all() - AssetSelection.assets(*INGESTED) - PUBLISH
+        "processar_tudo",
+        selection=AssetSelection.all() - AssetSelection.assets(*INGESTED) - PUBLISH,
+        tags=_limit(4),
     ),
     *(
         define_asset_job(
             f"atualizar_{s.source}",
             selection=AssetSelection.assets(*_keys(s)).downstream() - PUBLISH,
-            tags=REFRESH,
+            tags=_limit(4, **REFRESH),
         )
         for s in SOURCES
     ),
 ]
 jobs = [
     # captura tudo (landing e raw de todas as fontes), sem processar
-    define_asset_job("capturar_tudo", selection=AssetSelection.assets(*INGESTED)),
+    define_asset_job("capturar_tudo", selection=AssetSelection.assets(*INGESTED), tags=_limit(4)),
     publish_job,
     *process_jobs,
-    *(define_asset_job(f"captura_{s.source}", selection=AssetSelection.assets(*_keys(s))) for s in SOURCES),
+    *(
+        define_asset_job(f"captura_{s.source}", selection=AssetSelection.assets(*_keys(s)), tags=_limit(2))
+        for s in SOURCES
+    ),
 ]
 
 
