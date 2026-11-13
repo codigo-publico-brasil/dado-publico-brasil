@@ -35,18 +35,21 @@ def advance_sequences(con: Connection) -> None:
 def start_from(settings: Settings, old_warehouse: Path | None = None) -> dict[str, int]:
     """Cria o warehouse novo e põe de lado o estado do dlt; devolve as linhas do `metadata`.
 
-    O `estado.duckdb` não depende do warehouse: se já existe, fica como está e só as capturas voltam a
+    O `registry.duckdb` não depende do warehouse: se já existe, fica como está e só as capturas voltam a
     carregar. Senão, com `old_warehouse` (anterior ao ADR 0051, com o `metadata` dentro), leva dele o
     `metadata` (a identidade é criada de novo); sem ele, restaura do bucket privado o `metadata` e a
     identidade, com as mesmas chaves (ADR 0036). Recusa se o warehouse novo já existe.
     """
     from dado_publico_brasil.core import privado  # privado importa este módulo
 
+    migrations.adopt_registry(settings)
     if settings.warehouse.exists():
         raise FileExistsError(f"{settings.warehouse} já existe: mova o warehouse antigo antes de reconstruir")
-    if old_warehouse is not None and settings.estado.exists():
-        raise FileExistsError(f"{settings.estado} já existe: ele guarda o estado, omita o warehouse antigo")
-    if old_warehouse is None and not settings.estado.exists() and privado.root(settings) is None:
+    if old_warehouse is not None and settings.registry.exists():
+        raise FileExistsError(
+            f"{settings.registry} já existe: ele guarda o registry, omita o warehouse antigo"
+        )
+    if old_warehouse is None and not settings.registry.exists() and privado.root(settings) is None:
         raise FileNotFoundError(f"sem warehouse antigo e sem {privado.ENV}: nada de onde restaurar")
     if old_warehouse is not None and not old_warehouse.exists():
         raise FileNotFoundError(f"warehouse antigo não encontrado: {old_warehouse}")

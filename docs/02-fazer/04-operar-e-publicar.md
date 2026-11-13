@@ -138,7 +138,7 @@ Requisitos do servidor: Linux x86_64 com Docker e Compose, um usuário no grupo 
 **Uma vez só, da pasta do repositório:**
 
 1. `scripts/servidor.sh preparar usuario@host [porta]`: envia sua chave SSH (pede a senha uma vez, só se a chave ainda não autentica), cria o contexto Docker `servidor`, gera o `.env.servidor` a partir de [`.env.servidor.example`](../../.env.servidor.example) e do seu `.env` (copia só `DADO_PUBLICO_LAKE_URL` e `DADO_PUBLICO_R2_*`; nunca o Postgres; não imprime segredo) e confere o servidor: Docker e Compose, arquitetura, RAM e swap, espaço, pasta de dados gravável (tenta `sudo -n mkdir`; sem sudo, imprime o comando para você rodar) e porta da interface livre. Termina com um resumo `OK`/`FALTA`; pode rodar quantas vezes quiser. Revise o `.env.servidor` (pasta de dados, memória, `DADO_PUBLICO_PORT`, `DADO_PUBLICO_BIND`).
-2. `scripts/servidor.sh dados`: copia `landing/`, `arquivos/`, `warehouse.duckdb` e `estado.duckdb` de `DADO_PUBLICO_STORAGE_ROOT` (padrão `./data_store`) para a pasta de dados do servidor. O landing só existe na máquina antiga (o R2 não o guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)); `arquivos/` também se refaz do landing, mas leva cerca de 40 minutos. Feche tudo que use o warehouse local (Dagster, CLI, DBeaver): o script recusa se houver `warehouse.duckdb.wal`, e recusa também se o warehouse já existir no servidor, a menos que você passe `--forcar`. É idempotente: compara arquivos e bytes de cada pasta e só copia a que difere (`rsync` se existir nas duas pontas; senão `tar | ssh`, que recopia a pasta inteira).
+2. `scripts/servidor.sh dados`: copia `landing/`, `arquivos/`, `warehouse.duckdb` e `registry.duckdb` de `DADO_PUBLICO_STORAGE_ROOT` (padrão `./data_store`) para a pasta de dados do servidor. O landing só existe na máquina antiga (o R2 não o guarda, [ADR 0036](../05-decisoes/0036-r2-privado-fonte-da-verdade-do-que-nao-se-reconstroi.md)); `arquivos/` também se refaz do landing, mas leva cerca de 40 minutos. Feche tudo que use o warehouse local (Dagster, CLI, DBeaver): o script recusa se houver `warehouse.duckdb.wal`, e recusa também se o warehouse já existir no servidor, a menos que você passe `--forcar`. É idempotente: compara arquivos e bytes de cada pasta e só copia a que difere (`rsync` se existir nas duas pontas; senão `tar | ssh`, que recopia a pasta inteira).
 3. `scripts/servidor.sh implantar`: baixa as imagens e sobe `webserver` e `daemon`. **Nunca lança o `atualizar_tudo` sozinho.**
 4. Só na primeira vez: `scripts/servidor.sh primeira-carga` (aceita `--dry-run` e `--forcar`). Recusa se há execução em andamento, exige o warehouse no servidor, espera a interface e lança o `atualizar_tudo` uma vez (não lança de novo se já houve, salvo `--forcar`).
 
@@ -183,7 +183,7 @@ Se um depósito precisar sair (dado pessoal indevido), o Zenodo só o remove a p
 
 ## Restaurar numa máquina vazia (bucket privado)
 
-Com `DADO_PUBLICO_R2_BUCKET_PRIVADO` e as credenciais do R2 (`.env.example`), um estado novo (`estado.duckdb` inexistente) restaura sozinho o `metadata` e a cópia mais recente e concluída da identidade, **com as mesmas chaves `id_pessoa`**, e avança as sequências. Depois: `uv run dado-publico rebuild` (sem `--old-warehouse`) e `run --historical` recapturam o raw das fontes.
+Com `DADO_PUBLICO_R2_BUCKET_PRIVADO` e as credenciais do R2 (`.env.example`), um registry novo (`registry.duckdb` inexistente) restaura sozinho o `metadata` e a cópia mais recente e concluída da identidade, **com as mesmas chaves `id_pessoa`**, e avança as sequências. Depois: `uv run dado-publico rebuild` (sem `--old-warehouse`) e `run --historical` recapturam o raw das fontes.
 
 - **Volta:** `id_pessoa` e suas ligações, o registro das capturas (URL, hash, data), execuções e testes.
 - **Não volta sem o landing:** os arquivos. Eles são baixados de novo; o que a fonte mudou ou tirou do ar fica no `metadata` com o hash, e `verify` o aponta como ausente. Os lotes dos datasets por item (`foreach`) não se refazem iguais, e o acumulado dos datasets `merge` não volta (issue 155; nos `replace_partition` não há acumulado: o raw é a versão atual). Os arquivos de `arquivos/` se materializam de novo do landing.
@@ -191,19 +191,21 @@ Com `DADO_PUBLICO_R2_BUCKET_PRIVADO` e as credenciais do R2 (`.env.example`), um
 
 ## Estado em arquivo próprio (migração única)
 
-A partir do [ADR 0051](../05-decisoes/0051-raw-em-parquet-por-captura-e-estado-em-arquivo-proprio.md), `metadata` e `identity` moram em `estado.duckdb`, ao lado do warehouse. Quem já tem esses esquemas dentro do `warehouse.duckdb` não faz nada além de subir a versão nova: a primeira abertura para escrita (`run`, `load`, `transform`...) copia as tabelas, **prova contagem e soma de hash por tabela** e só então as apaga do warehouse (se a prova falhar, nada é apagado e o `estado.duckdb` parcial é descartado). Com o pipeline parado:
+**Nome do arquivo (ADR 0060):** o `registry.duckdb` se chamava `estado.duckdb`. Na primeira abertura para escrita, se só o antigo existe, ele é **renomeado** (com o `.wal`), sem cópia e sem apagar nada, e o log registra; se os dois existem, vale o `registry.duckdb`, o log avisa e o antigo não é tocado. Para implantar: pare o Dagster, copie `estado.duckdb` como backup, suba a imagem nova e confira as contagens de `metadata.capturas` e `identity.pessoas` antes e depois ([ADR 0060](../05-decisoes/0060-renomeia-o-arquivo-de-estado-para-registry.md)).
 
-1. Faça cópia dos dois arquivos (`warehouse.duckdb` e, se existir, `estado.duckdb`).
+A partir do [ADR 0051](../05-decisoes/0051-raw-em-parquet-por-captura-e-estado-em-arquivo-proprio.md), `metadata` e `identity` moram em `registry.duckdb`, ao lado do warehouse. Quem já tem esses esquemas dentro do `warehouse.duckdb` não faz nada além de subir a versão nova: a primeira abertura para escrita (`run`, `load`, `transform`...) copia as tabelas, **prova contagem e soma de hash por tabela** e só então as apaga do warehouse (se a prova falhar, nada é apagado e o `registry.duckdb` parcial é descartado). Com o pipeline parado:
+
+1. Faça cópia dos dois arquivos (`warehouse.duckdb` e, se existir, `registry.duckdb`).
 2. Rode qualquer comando de escrita, por exemplo `uv run dado-publico transform`, ou deixe o Dagster subir.
-3. Confira: `ATTACH 'data_store/estado.duckdb' AS estado (READ_ONLY); SELECT count(*) FROM estado.metadata.capturas;` e que o warehouse não tem mais os esquemas (`SELECT count(*) FROM duckdb_tables() WHERE schema_name IN ('metadata','identity') AND database_name = 'warehouse'` dá 0).
+3. Confira: `ATTACH 'data_store/registry.duckdb' AS registry (READ_ONLY); SELECT count(*) FROM registry.metadata.capturas;` e que o warehouse não tem mais os esquemas (`SELECT count(*) FROM duckdb_tables() WHERE schema_name IN ('metadata','identity') AND database_name = 'warehouse'` dá 0).
 
-O espaço do warehouse só volta ao disco se ele for exportado e recriado (o DuckDB não encolhe o arquivo sozinho); não é necessário. O `export` e o dbt leem o estado só para leitura; quem escreve nele é um processo por vez, como antes.
+O espaço do warehouse só volta ao disco se ele for exportado e recriado (o DuckDB não encolhe o arquivo sozinho); não é necessário. O `export` e o dbt leem o registry só para leitura; quem escreve nele é um processo por vez, como antes.
 
 ## Raw em Parquet (migração única)
 
 O [ADR 0051](../05-decisoes/0051-raw-em-parquet-por-captura-e-estado-em-arquivo-proprio.md) tira o raw do `warehouse.duckdb`: o dlt grava Parquet em `data_store/raw/` e as tabelas `raw_*` viram views. **Não há migração automática do raw antigo**: ele se refaz do landing, e a carga que já foi marcada como feita não se repete sozinha. O hash de linha novo (issue 269) exige a mesma recarga, então as duas coincidem. Ordem, no servidor (peça autorização antes de agir, e liste as execuções ativas):
 
-1. Pare o Dagster e confira que nenhum container órfão segura os arquivos; faça cópia de `warehouse.duckdb` e `estado.duckdb`.
+1. Pare o Dagster e confira que nenhum container órfão segura os arquivos; faça cópia de `warehouse.duckdb` e `registry.duckdb`.
 2. Atualize o código (`scripts/servidor.sh`) e suba só o necessário para rodar um comando avulso.
 3. `uv run dado-publico load --rebuild` (todas as fontes; para uma, `--source`; para um dataset, `--dataset`). Cada dataset apaga a tabela nativa antiga e vira view; enquanto não for recarregado, a tabela nativa continua valendo (o `load` avisa "ainda é tabela nativa").
 4. `uv run dado-publico transform --rebuild` (refaz staging, intermediate e marts; confira que nenhuma pessoa nova nasce e que os testes passam).
@@ -278,9 +280,9 @@ Comandos de container no Git Bash precisam de `MSYS_NO_PATHCONV=1`. Antes de agi
 
 ## Reconstruir o warehouse do zero, a partir do landing
 
-Quando o warehouse precisa ser refeito (mudança incompatível, arquivo corrompido, limpeza geral). O raw, o dbt e as consultas se refazem do landing; a identidade e o registro das capturas (URL, data, hash, ETag e itens de cada lote, em `metadata`, issue 153) não se refazem dele e moram em `estado.duckdb` ([ADR 0051](../05-decisoes/0051-raw-em-parquet-por-captura-e-estado-em-arquivo-proprio.md)). **Se o `estado.duckdb` existe, ele fica como está** e só o warehouse é refeito (ignore os passos de `--old-warehouse`). Se não existe, vêm do bucket privado (mesmas chaves) ou, sem ele, do warehouse antigo anterior ao ADR 0051 (`--old-warehouse`, com o `metadata` ainda dentro), e a **identidade é criada de novo, com chaves `id_pessoa` novas**; só faça isso se nenhuma aplicação guarda as chaves antigas.
+Quando o warehouse precisa ser refeito (mudança incompatível, arquivo corrompido, limpeza geral). O raw, o dbt e as consultas se refazem do landing; a identidade e o registro das capturas (URL, data, hash, ETag e itens de cada lote, em `metadata`, issue 153) não se refazem dele e moram em `registry.duckdb` ([ADR 0051](../05-decisoes/0051-raw-em-parquet-por-captura-e-estado-em-arquivo-proprio.md)). **Se o `registry.duckdb` existe, ele fica como está** e só o warehouse é refeito (ignore os passos de `--old-warehouse`). Se não existe, vêm do bucket privado (mesmas chaves) ou, sem ele, do warehouse antigo anterior ao ADR 0051 (`--old-warehouse`, com o `metadata` ainda dentro), e a **identidade é criada de novo, com chaves `id_pessoa` novas**; só faça isso se nenhuma aplicação guarda as chaves antigas.
 
-1. **Pare tudo que escreve no warehouse e no estado**, em especial o Dagster (`docker compose stop webserver daemon`): uma imagem com código antigo apagaria as ligações novas da identidade.
+1. **Pare tudo que escreve no warehouse e no registry**, em especial o Dagster (`docker compose stop webserver daemon`): uma imagem com código antigo apagaria as ligações novas da identidade.
 2. Mova o warehouse antigo para fora do caminho, **sem apagá-lo** (ele é a fonte do `metadata`):
 
 ```bash

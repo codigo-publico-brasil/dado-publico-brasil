@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 
 USO='Uso: scripts/servidor.sh <subcomando> [--dry-run]
   preparar usuario@host [porta]  chave SSH, contexto Docker, .env.servidor e verificação do servidor
-  dados [--forcar]               copia landing/, arquivos/, warehouse.duckdb e estado.duckdb locais para o servidor
+  dados [--forcar]               copia landing/, arquivos/, warehouse.duckdb e registry.duckdb locais (aceita o estado.duckdb antigo) para o servidor
   implantar [--forcar]           baixa a imagem e (re)inicia webserver e daemon; --forcar ignora execução em andamento
   primeira-carga [--forcar]      lança o atualizar_tudo uma vez (só no primeiro uso; nunca é automático)
   status                         containers, últimas execuções, daemons, verificações em erro, memória e endereço
@@ -129,7 +129,7 @@ EOF
 verificar() {
   local k s rest need=0 fix=1 saida
   ((DRY)) && fix=0
-  [ -d "${DADO_PUBLICO_STORAGE_ROOT:-./data_store}" ] && need=$(du -sk "${DADO_PUBLICO_STORAGE_ROOT:-./data_store}"/{landing,arquivos,warehouse.duckdb,estado.duckdb} 2>/dev/null | awk '{s+=$1}END{printf "%d",s/1048576}') || true
+  [ -d "${DADO_PUBLICO_STORAGE_ROOT:-./data_store}" ] && need=$(du -sk "${DADO_PUBLICO_STORAGE_ROOT:-./data_store}"/{landing,arquivos,warehouse.duckdb,registry.duckdb,estado.duckdb} 2>/dev/null | awk '{s+=$1}END{printf "%d",s/1048576}') || true
   say "Verificação do servidor:"
   if ((DRY)); then
     printf '+ ssh ... sh -s -- %s %s %s  # verificação (docker, compose, arch, RAM, swap, disco, pasta, porta)\n' "$QD" "$UIPORT" "$fix" >&3
@@ -251,10 +251,11 @@ dados() {
       [ "$l" = "$r" ] && say "$d: conferido ($l)." || die "$d: depois de copiar, local '$l' x servidor '$r'. Rode de novo."
     fi
   done
-  for d in warehouse.duckdb estado.duckdb; do  # o estado (metadata e identity) mora no seu próprio arquivo
-    if [ -f "$ROOT/$d" ]; then
-      say "$d: copiando ($(($(wc -c <"$ROOT/$d") / 1048576)) MB)..."
-      run scp -P "$PORT" -o BatchMode=yes "$ROOT/$d" "$SSH:$DATA/$d.enviando"
+  for d in warehouse.duckdb registry.duckdb; do  # o registry (metadata e identity) mora no seu próprio arquivo
+    s=$d; [ "$d" = registry.duckdb ] && [ ! -f "$ROOT/$d" ] && [ -f "$ROOT/estado.duckdb" ] && s=estado.duckdb  # nome antigo (ADR 0060)
+    if [ -f "$ROOT/$s" ]; then
+      say "$d: copiando ($(($(wc -c <"$ROOT/$s") / 1048576)) MB)..."
+      run scp -P "$PORT" -o BatchMode=yes "$ROOT/$s" "$SSH:$DATA/$d.enviando"
       run "${RSH[@]}" "mv $QD/$d.enviando $QD/$d"
     else say "$d: não existe localmente, pulado."; fi
   done

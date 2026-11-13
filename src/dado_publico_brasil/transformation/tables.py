@@ -12,7 +12,7 @@ from typing import Any
 import yaml
 
 from dado_publico_brasil.core import runs, warehouse
-from dado_publico_brasil.core.settings import DBT_DIR, SOURCES_DIR, Settings
+from dado_publico_brasil.core.settings import DBT_DIR, REGISTRY_ALIAS, SOURCES_DIR, Settings
 from dado_publico_brasil.core.warehouse import scalar
 from dado_publico_brasil.transformation import dbt, lake
 
@@ -34,7 +34,7 @@ FINGERPRINTS = (
 )
 
 
-DB = "database_name IN (current_database(), 'estado')"  # o warehouse e o estado (`metadata.capturas`)
+DB = f"database_name IN (current_database(), '{REGISTRY_ALIAS}')"  # o warehouse e o registry
 
 
 def relations(con: warehouse.Connection) -> list[tuple[str, str]]:

@@ -7,9 +7,9 @@ dado_publico_brasil:
       type: duckdb
       path: "{{ env_var('DADO_PUBLICO_WAREHOUSE_FILE', '../data_store/warehouse.duckdb') }}"
       schema: main
-      attach:  # `metadata` e `identity` moram no estado, só para leitura (ADR 0051)
-        - path: "{{ env_var('DADO_PUBLICO_ESTADO_FILE', '../data_store/estado.duckdb') }}"
-          alias: estado
+      attach:  # `metadata` e `identity` moram no registry, só para leitura (ADR 0051)
+        - path: "{{ env_var('DADO_PUBLICO_REGISTRY_FILE', '../data_store/registry.duckdb') }}"
+          alias: registry
           read_only: true
       settings:
         memory_limit: "{{ env_var('DADO_PUBLICO_DUCKDB_MEMORY', '80%') }}"  # acima disso o DuckDB usa o disco

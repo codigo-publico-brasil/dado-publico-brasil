@@ -5,6 +5,7 @@ Só estas tabelas têm migração, porque não se reconstroem do raw: o resto é
 por `;` no fim da linha. Cada arquivo e o seu registro rodam numa transação.
 """
 
+import logging
 import re
 from pathlib import Path
 
@@ -12,8 +13,10 @@ import duckdb
 
 from dado_publico_brasil.core import warehouse
 from dado_publico_brasil.core.runs import now
-from dado_publico_brasil.core.settings import DDL_DIR, Settings
+from dado_publico_brasil.core.settings import DDL_DIR, REGISTRY_LEGADO_FILE, Settings
 from dado_publico_brasil.core.warehouse import Connection
+
+logger = logging.getLogger(__name__)
 
 PATTERN = re.compile(r"^(\d{4})_[\w-]+\.sql$")
 
@@ -82,15 +85,15 @@ def _fingerprint(con: Connection, source: str, table: str, columns: list[str]) -
 
 
 def migrate_legacy(settings: Settings, schemas: list[str]) -> dict[str, int]:
-    """Copia `metadata` e `identity` do warehouse para o `estado.duckdb` e só então os apaga do warehouse.
+    """Copia `metadata` e `identity` do warehouse para o `registry.duckdb` e só então os apaga do warehouse.
 
-    A cópia e a prova (contagem e soma de hash por tabela) rodam numa transação do estado; se divergirem,
+    A cópia e a prova (contagem e soma de hash por tabela) rodam numa transação do registry; se divergirem,
     nada é apagado do warehouse. Repetível: uma queda depois da cópia e antes do `DROP` refaz a cópia.
     """
     from dado_publico_brasil.core import rebuild  # rebuild importa este módulo
 
-    settings.estado.parent.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(str(settings.estado))  # o catálogo padrão é o estado: o DDL vale sem qualificar
+    settings.registry.parent.mkdir(parents=True, exist_ok=True)
+    con = duckdb.connect(str(settings.registry))  # o catálogo padrão é o registry: o DDL vale sem qualificar
     copied: dict[str, int] = {}
     try:
         apply(con)
@@ -119,7 +122,7 @@ def migrate_legacy(settings: Settings, schemas: list[str]) -> dict[str, int]:
                 common = [c for (c,) in old_cols if c in cols]
                 if len(common) != len(old_cols):
                     raise RuntimeError(
-                        f"legado.{schema}.{table} tem coluna que o estado não tem: migre o warehouse antes"
+                        f"legado.{schema}.{table} tem coluna que o registry não tem: migre antes"
                     )
                 list_ = ", ".join(f'"{c}"' for c in common)
                 con.execute(f"DELETE FROM {schema}.{table}")
@@ -150,20 +153,48 @@ def migrate_legacy(settings: Settings, schemas: list[str]) -> dict[str, int]:
     return copied
 
 
-def open_warehouse(settings: Settings, restore: bool = True) -> Connection:
-    """Abre o warehouse (com o estado anexado) para escrita e aplica as migrações pendentes.
+def adopt_registry(settings: Settings) -> None:
+    """Renomeia o `estado.duckdb` (nome anterior ao ADR 0060) para `registry.duckdb`, sem copiar nem apagar.
 
-    Warehouse anterior ao ADR 0051 (com `metadata` e `identity` dentro): leva o estado para o `estado.duckdb`.
-    Estado novo com o bucket privado configurado: restaura dele o metadata e a identidade (ADR 0036).
+    O `.wal` vai primeiro: uma queda no meio deixa `estado.duckdb` inteiro e a próxima abertura refaz.
+    Com os dois arquivos, vale o `registry.duckdb` e o antigo não é tocado.
+    """
+    old = settings.registry.with_name(REGISTRY_LEGADO_FILE)
+    if not old.exists():
+        return
+    if settings.registry.exists():
+        logger.warning(
+            "%s e %s existem: usando %s; %s não foi tocado",
+            old,
+            settings.registry,
+            settings.registry.name,
+            old.name,
+        )
+        return
+    for src, dst in (
+        (old.with_name(old.name + ".wal"), settings.registry.with_name(settings.registry.name + ".wal")),
+        (old, settings.registry),
+    ):
+        if src.exists():
+            src.rename(dst)
+    logger.info("%s renomeado para %s (ADR 0060)", old.name, settings.registry.name)
+
+
+def open_warehouse(settings: Settings, restore: bool = True) -> Connection:
+    """Abre o warehouse (com o registry anexado) para escrita e aplica as migrações pendentes.
+
+    Warehouse anterior ao ADR 0051 (com `metadata` e `identity` dentro): leva-os ao `registry.duckdb`.
+    Registry novo com o bucket privado configurado: restaura dele o metadata e a identidade (ADR 0036).
     Se a migração ou a restauração falhar num arquivo recém-criado, ele é apagado: um arquivo pela metade
     faria a próxima subida pular a restauração.
     """
     from dado_publico_brasil.core import privado  # privado importa rebuild, que importa este módulo
 
-    new = not settings.estado.exists()
+    adopt_registry(settings)
+    new = not settings.registry.exists()
     new_warehouse = not settings.warehouse.exists()
     con: Connection | None = None
-    migrated = False  # depois de migrar, o estado é a única cópia: nunca se apaga
+    migrated = False  # depois de migrar, o registry é a única cópia: nunca se apaga
     try:
         legacy = _legacy_schemas(settings)
         if legacy:
@@ -177,7 +208,7 @@ def open_warehouse(settings: Settings, restore: bool = True) -> Connection:
         if con is not None:
             con.close()
         for file, created in (
-            (settings.estado, new and not migrated),
+            (settings.registry, new and not migrated),
             (settings.warehouse, new_warehouse and not migrated),
         ):
             for f in (file, file.with_name(file.name + ".wal")) if created else ():
