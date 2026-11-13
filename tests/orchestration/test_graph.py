@@ -56,7 +56,8 @@ in_jobs = {
 }
 sensor = defs.get_sensor_def("publicar_apos_processar")
 print(json.dumps({"bad": bad, "chain": chain, "linked": [a in ancestors(b) for a, b in zip(chain, chain[1:])],
-                  "publish": publish_steps, "in_jobs": in_jobs, "request": sensor.job_name}))
+                  "publish": publish_steps, "in_jobs": in_jobs, "request": sensor.job_name,
+                  "limits": {j.name: (j.tags or {}).get("dagster/max_runtime") for j in defs.jobs}}))
 """
 
 
@@ -82,3 +83,6 @@ def test_graph_has_no_stub_dependency_and_processing_follows_the_order(tmp_path:
     # em erro não pode fazer o Dagster pular o export
     assert not any(out["in_jobs"].values()), out["in_jobs"]
     assert out["request"] == "publicar" and len(out["publish"]) == 2, out
+    # todo job tem limite de tempo (o daemon do Dagster encerra a execução e a marca como falha)
+    assert out["limits"]["processar_tudo"] == "14400" and out["limits"]["publicar"] == "10800", out["limits"]
+    assert all(out["limits"].values()), out["limits"]
