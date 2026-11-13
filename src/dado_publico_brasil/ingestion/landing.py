@@ -313,11 +313,11 @@ def partition_gaps(
             "QUALIFY ROW_NUMBER() OVER (PARTITION BY particao ORDER BY id_verificacao DESC) = 1",
             (contract.source, d.name),
         )
-        unavailable = {
-            int(r["particao"])
-            for r in latest
-            if r["resultado"] == "error" and r["tipo_ocorrencia"] in ("nao_encontrado", "nao_publicado")
-        } - got
+        errors = {int(r["particao"]): r["tipo_ocorrencia"] for r in latest if r["resultado"] == "error"}
+        # com `missing_status`, nao_publicado é falta a retomar (o arquivo pode sair), não indisponível
+        gone = ("nao_encontrado",) if d.missing_status else ("nao_encontrado", "nao_publicado")
+        unavailable = {p for p, kind in errors.items() if kind in gone} - got
+        waiting = {p for p, kind in errors.items() if kind == "nao_publicado" and d.missing_status} - got
         current = current_partition(d, today)  # o anterior ainda é pedido: um 404 na virada não o descarta
         if d.partition == "month":
             unavailable.discard(previous_month(current))
@@ -334,6 +334,8 @@ def partition_gaps(
             "faltam": missing,  # `on_demand`: sempre vazio, o que falta é escolha e não lacuna
             "sob_demanda": d.on_demand,
         }
+        if d.missing_status:  # faltam e a última tentativa foi nao_publicado
+            result[d.name]["aguardando"] = sorted(waiting & set(missing))
     return result
 
 
@@ -350,7 +352,10 @@ def plan_recovery(
     items: list[Item] = []
     for name, gap in partition_gaps(con, contract, today).items():
         current = current_partition(contract.datasets[name], today)
-        late = [p for p in sorted(gap["faltam"], reverse=True) if p != current]
+        # as já vistas como não publicadas por último: não ocupam o lugar do que existe e falta
+        late = sorted(
+            (p for p in gap["faltam"] if p != current), key=lambda p: (p in gap.get("aguardando", ()), -p)
+        )
         # a janela do dataset diário é o `first_day` do YAML; nos demais, `limit` poupa a fonte
         keep = late if contract.datasets[name].partition == "day" else late[:limit]
         items += [(name, p) for p in keep]
@@ -374,8 +379,8 @@ def record_gaps(con: Connection, contract: SourceContract) -> None:
 
 
 def _not_yet_published(dataset: Dataset, year: int | None, error: fetch.SourceBlocked) -> bool:
-    """403 no arquivo do mês mais recente de um dataset mensal: mês em curso sem arquivo (não é bloqueio)."""
-    return (
+    """Sem arquivo, não bloqueio: código de `missing_status` (ADR 0059) ou 403 no mês mais recente."""
+    return error.status in dataset.missing_status or (
         error.status == 403
         and dataset.partition == "month"
         and year is not None

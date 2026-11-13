@@ -83,6 +83,7 @@ datasets:
     partition: month
     first_month: 202211
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    missing_status: [403]   # o host é um bucket S3: arquivo que não existe (ainda) dá 403, não 404 (ADR 0059)
     archive: zip
     member: "*_Despesas.csv"
     write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
@@ -109,6 +110,7 @@ datasets:
     partition: month
     first_month: 202211
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    missing_status: [403]   # o host é um bucket S3: arquivo que não existe (ainda) dá 403, não 404 (ADR 0059)
     archive: zip
     member: "*_Compras.csv"
     write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
@@ -129,6 +131,7 @@ datasets:
     partition: month
     first_month: 202211
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    missing_status: [403]   # o host é um bucket S3: arquivo que não existe (ainda) dá 403, não 404 (ADR 0059)
     archive: zip
     member: "*_ItemCompra.csv"
     write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
@@ -145,6 +148,7 @@ datasets:
     partition: month
     first_month: 202211
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    missing_status: [403]   # o host é um bucket S3: arquivo que não existe (ainda) dá 403, não 404 (ADR 0059)
     archive: zip
     member: "*_TermoAditivo.csv"
     write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
@@ -163,6 +167,7 @@ datasets:
     partition: month
     first_month: 202211
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    missing_status: [403]   # o host é um bucket S3: arquivo que não existe (ainda) dá 403, não 404 (ADR 0059)
     archive: zip
     member: "*_Licita*.csv"
     write: replace_partition   # o zip do mês é a foto completa: a captura nova (mês republicado) substitui a anterior (ADR 0043)
@@ -181,6 +186,7 @@ datasets:
     partition: month
     first_month: 202211
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    missing_status: [403]   # o host é um bucket S3: arquivo que não existe (ainda) dá 403, não 404 (ADR 0059)
     archive: zip
     member: "*_ItemLicita*.csv"
     write: replace_partition   # o zip do mês é a foto completa (ADR 0043)
@@ -198,6 +204,7 @@ datasets:
     partition: month
     first_month: 202211
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    missing_status: [403]   # o host é um bucket S3: arquivo que não existe (ainda) dá 403, não 404 (ADR 0059)
     archive: zip
     member: "*_ParticipantesLicita*.csv"
     write: replace_partition   # o zip do mês é a foto completa (ADR 0043)
@@ -215,6 +222,7 @@ datasets:
     partition: month
     first_month: 202211
     lag_months: 1      # só meses fechados: o portal publica o mês depois de fechar
+    missing_status: [403]   # o host é um bucket S3: arquivo que não existe (ainda) dá 403, não 404 (ADR 0059)
     archive: zip
     member: "*_EmpenhosRelacionados.csv"
     write: replace_partition   # o zip do mês é a foto completa (ADR 0043)
