@@ -10,6 +10,9 @@ from pathlib import Path
 ENV_ROOT = "DADO_PUBLICO_STORAGE_ROOT"
 ENV_WAREHOUSE = "DADO_PUBLICO_WAREHOUSE"
 DEFAULT_WAREHOUSE = "{root}/warehouse.duckdb"
+REGISTRY_ALIAS = "registry"  # alias do arquivo anexado ao warehouse (ADR 0060)
+REGISTRY_FILE = f"{REGISTRY_ALIAS}.duckdb"
+REGISTRY_LEGADO_FILE = "estado.duckdb"  # nome anterior ao ADR 0060, adotado na primeira abertura
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SOURCES_DIR = REPO_ROOT / "sources"
@@ -28,16 +31,16 @@ class Settings:
         return Path(self.warehouse_template.format(root=self.storage_root))
 
     @property
-    def estado(self) -> Path:
-        """`estado.duckdb`, ao lado do warehouse: `metadata` e `identity` (ADR 0051)."""
-        return self.warehouse.with_name("estado.duckdb")
+    def registry(self) -> Path:
+        """`registry.duckdb`, ao lado do warehouse: `metadata` e `identity` (ADR 0051 e 0060)."""
+        return self.warehouse.with_name(REGISTRY_FILE)
 
     @property
     def dbt_env(self) -> dict[str, str]:
-        """Arquivos que o dbt e o `edr` (outros processos) abrem: o warehouse e o estado (só leitura)."""
+        """Arquivos que o dbt e o `edr` (outros processos) abrem: o warehouse e o registry (só leitura)."""
         return {
             "DADO_PUBLICO_WAREHOUSE_FILE": str(self.warehouse.resolve()),
-            "DADO_PUBLICO_ESTADO_FILE": str(self.estado.resolve()),
+            "DADO_PUBLICO_REGISTRY_FILE": str(self.registry.resolve()),
         }
 
     @property

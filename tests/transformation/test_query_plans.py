@@ -75,7 +75,7 @@ def compiled(
         if n["resource_type"] == "model" and n["package_name"] == "dado_publico_brasil"
     }
     con = duckdb.connect(str(settings.warehouse), read_only=True)
-    con.execute(f"ATTACH '{settings.estado}' AS estado (READ_ONLY)")
+    con.execute(f"ATTACH '{settings.registry}' AS registry (READ_ONLY)")
     yield con, sql
     con.close()
 

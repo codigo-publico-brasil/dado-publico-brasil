@@ -1,9 +1,9 @@
-"""Acesso ao data warehouse (DuckDB, esquemas por camada) e ao `estado.duckdb` (ADR 0051).
+"""Acesso ao data warehouse (DuckDB, esquemas por camada) e ao `registry.duckdb` (ADR 0051 e 0060).
 
 Um arquivo DuckDB aceita um processo escritor por vez (ou vários leitores). Por isso o dbt roda em
 outro processo, com a conexão do chamador fechada, e a aplicação abre em modo somente leitura.
 
-O `metadata` e a `identity` moram em `estado.duckdb`, anexado como `estado`. O `search_path` os põe ao
+O `metadata` e a `identity` moram em `registry.duckdb`, anexado como `registry`. O `search_path` os põe ao
 alcance do nome curto (`metadata.capturas`), e o `main` na frente mantém o warehouse como catálogo padrão.
 """
 
@@ -12,10 +12,10 @@ from typing import Any
 
 import duckdb
 
-from dado_publico_brasil.core.settings import Settings
+from dado_publico_brasil.core.settings import REGISTRY_ALIAS, Settings
 
 Connection = duckdb.DuckDBPyConnection
-SEARCH_PATH = "main,estado.metadata,estado.identity"
+SEARCH_PATH = f"main,{REGISTRY_ALIAS}.metadata,{REGISTRY_ALIAS}.identity"
 
 
 def connect(settings: Settings, read_only: bool = False) -> Connection:
@@ -23,12 +23,14 @@ def connect(settings: Settings, read_only: bool = False) -> Connection:
     if not read_only:
         path.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(path), read_only=read_only)
-    estado = settings.estado
-    if not read_only or estado.exists():
-        con.execute(f"ATTACH '{estado.as_posix()}' AS estado" + (" (READ_ONLY)" if read_only else ""))
+    registry = settings.registry
+    if not read_only or registry.exists():
+        con.execute(
+            f"ATTACH '{registry.as_posix()}' AS {REGISTRY_ALIAS}" + (" (READ_ONLY)" if read_only else "")
+        )
         if not read_only:
-            con.execute("CREATE SCHEMA IF NOT EXISTS estado.metadata")
-            con.execute("CREATE SCHEMA IF NOT EXISTS estado.identity")
+            con.execute(f"CREATE SCHEMA IF NOT EXISTS {REGISTRY_ALIAS}.metadata")
+            con.execute(f"CREATE SCHEMA IF NOT EXISTS {REGISTRY_ALIAS}.identity")
         con.execute(f"SET search_path = '{SEARCH_PATH}'")
     # `SET`, não `config=`: outra conexão ao mesmo arquivo (o dlt) com configuração diferente é recusada
     con.execute(f"SET memory_limit = '{os.environ.get('DADO_PUBLICO_DUCKDB_MEMORY', '80%')}'")
@@ -38,9 +40,9 @@ def connect(settings: Settings, read_only: bool = False) -> Connection:
 def cursor(con: Connection) -> Connection:
     """Cursor de leitura que herda o `search_path` da conexão (o `cursor()` do DuckDB não o herda)."""
     cur = con.cursor()
-    if cur.execute("SELECT count(*) FROM duckdb_databases() WHERE database_name = 'estado'").fetchone() != (
-        0,
-    ):
+    if cur.execute(
+        "SELECT count(*) FROM duckdb_databases() WHERE database_name = ?", (REGISTRY_ALIAS,)
+    ).fetchone() != (0,):
         cur.execute(f"SET search_path = '{SEARCH_PATH}'")
     return cur
 
