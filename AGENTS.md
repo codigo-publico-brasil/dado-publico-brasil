@@ -35,7 +35,7 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
    ```
 3. Dependência nova só com ADR. Merge e implantação são da pessoa e da esteira.
 4. No PR, preencha "autoria da IA": o que a IA escreveu, o que uma pessoa revisou, o que ficou incerto. Commits levam o trailer `Co-Authored-By` do agente.
-5. **Documentação no mesmo PR:** quem muda comportamento, camada, comando, tabela ou estrutura de pastas atualiza o documento correspondente (e o `README.md` se a estrutura mudar). Doc desatualizada é bug.
+5. **Documentação no mesmo PR, verificada, nunca de memória:** exige doc a mudança de comportamento, camada, comando, tabela, coluna, chave de contrato, variável de ambiente, estrutura de pastas ou ADR. Doc desatualizada é bug. O procedimento e as travas estão em [Documentação](#documentação).
 6. Erro recorrente de agente vira regra aqui ou teste.
 7. **Núcleo agnóstico:** antes de dar nome de fonte a comando, função, ativo ou tabela do núcleo, pergunte se outra fonte faria o mesmo; se sim, é configuração do YAML da fonte.
 8. **Plano concreto e sem retrabalho:** antes de agir, escreva um plano curto (arquivos, passos, testes, como verificar) e siga-o; o que já foi apurado nesta conversa ou nos ADRs não se reapura nem se refaz. Leia só o necessário, rode primeiro os testes dos arquivos afetados e a suíte completa uma vez, no fim. Aviso de escopo ou de risco vem antes do trabalho, não depois.
@@ -57,7 +57,7 @@ Leia `README.md`, `docs/README.md` (mapa da documentação) e `docs/01-entender/
 | ambiente (pasta de dados, warehouse) | variáveis `DADO_PUBLICO_STORAGE_ROOT`, `DADO_PUBLICO_WAREHOUSE` |
 | papel dos agentes (`engenheiro`, `arquiteto`, `qa`, `auditor`) | `.claude/agents/<nome>.md` (só o que é específico do papel; as regras comuns ficam neste arquivo) |
 
-`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português; nos marts o prefixo diz o tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish-docs`, `catalog`, `docs`, `query`, `verify`, `coverage`, `observe`, `recheck`, `rebuild`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
+`src/dado_publico_brasil/`: `ingestion` e `transformation` só importam `core`; só `orchestration` conhece os dois (um teste confere). Termos técnicos em inglês (landing, raw, staging, intermediate, marts); entidades em português; nos marts o prefixo diz o tipo (`dim_pessoas`, `fct_votos`, `brg_proposicoes_autorias`). Comando: `uv run dado-publico` (`run`, `extract`, `load`, `transform`, `identity`, `export`, `publish-docs`, `catalog`, `gaps`, `docs`, `query`, `verify`, `coverage`, `observe`, `recheck`, `rebuild`; `--foreach N` roda os datasets por item e `--dataset` escolhe um).
 
 O fundador usa o projeto para aprender arquitetura de dados e de sistemas: explique decisões e alternativas em poucas linhas e aponte o que merece ADR.
 
@@ -71,7 +71,10 @@ Mapa em [`docs/README.md`](docs/README.md): `01-entender` (explica), `02-fazer` 
 
 - **Um assunto, um lugar:** antes de escrever, procure se já existe; os outros arquivos linkam, não copiam.
 - Todo documento começa dizendo para quem é e o que responde. Explique o porquê e as alternativas, não só o como.
-- O catálogo (`03-consultar/01-catalogo.md`) é gerado; nunca edite à mão.
+- O catálogo (`03-consultar/01-catalogo.md`) é gerado (`dado-publico catalog`); nunca edite à mão.
+- **Número ou fato com data** (contagem, tamanho, tempo, "hoje há N") leva a data e a origem (issue, PR, ADR, comando) ou vira link para onde é gerado. Sem isso envelhece em silêncio.
+- **Procedimento antes de abrir o PR:** (1) leia o próprio diff e liste o que mudou de comportamento, nome, valor, chave, comando e variável; (2) `git grep` cada nome e valor antigo em `docs/` e `README.md` (e em `AGENTS.md`) e atualize **cada** ocorrência, não só o doc óbvio; (3) rode `uv run pytest tests/test_docs_in_sync.py tests/test_docs_links.py`; (4) preencha `Docs:` no PR com os documentos atualizados ou `Docs: não se aplica — <motivo>`.
+- **O que faz valer:** `tests/test_docs_in_sync.py` (toda chave do contrato, subcomando do CLI e variável `DADO_PUBLICO_*` está documentada; todo caminho citado entre crases existe; o índice de ADRs bate com o arquivo), `tests/test_docs_links.py` (links) e o job `documentacao` do CI, que reprova o PR que muda `src/`, `sources/`, `ddl/` ou `dbt/` sem tocar `docs/`, `README.md` ou `AGENTS.md` e sem `Docs: não se aplica`. A trava não prova que a doc está certa: `qa` e `auditor` conferem o `Docs:` contra o diff. Defasagem achada por um guarda se corrige na doc, nunca afrouxando o teste.
 - Decisão aceita não se edita: novo ADR, e a situação do antigo muda no índice de `05-decisoes/README.md`.
 - Pendência e decisão aberta são issues, nunca `.md`.
 - **Sem nomes de candidatos, partidos ou informações do tipo, em lugar nenhum:** exemplos, textos, **comentários de código, docstrings**, testes, mensagens de commit e descrições de PR e issue. Use rótulos genéricos ("Pessoa Exemplo", "Partido A"). A exceção são as tabelas de referência de `dbt/seeds/`, que são dado com fonte oficial. Três travas: o teste `tests/test_no_names.py` (roda no CI e guarda a lista só como hash), o gancho `.claude/hooks/no_names.py` (bloqueia o agente antes de gravar ou de commitar) e esta regra. Outros agentes que não usem o gancho continuam obrigados a cumprir a regra e a rodar o teste. Não cite também outras aplicações do projeto: este repositório é independente.
@@ -79,7 +82,7 @@ Mapa em [`docs/README.md`](docs/README.md): `01-entender` (explica), `02-fazer` 
 ## Lições de experiência
 
 - **Um escritor por vez no DuckDB:** pare o Dagster e container órfão antes de rodar etapas; o `export` e o `transform` falham se algo segura o arquivo. Detalhes e receitas em [Operar e publicar](docs/02-fazer/04-operar-e-publicar.md).
-- **Coluna nova em dataset com `primary_key: [_row_hash]` duplica o raw** (o hash muda); recarregue o dataset ou limpe as duplicatas antes de seguir (issue 156). **Trocar a chave para uma coluna que a tabela do raw não tem** (ex.: `_row_hash`) já é detectado: o `load_pending` descarta o dataset e o recarrega do landing, registrando `recarga_por_chave` (ADR 0046).
+- **Raw em Parquet por captura (ADR 0051):** recarregar uma captura substitui a pasta dela, então coluna nova não duplica linha; a captura antiga só ganha a coluna ao recarregar o dataset. **Trocar a chave para uma coluna que a tabela do raw não tem** (ex.: `_row_hash`) já é detectado: o `load_pending` descarta o dataset e o recarrega do landing, registrando `recarga_por_chave` (ADR 0046).
 - No Windows o `dado-publico.exe` pode ser bloqueado: use `uv run python -m dado_publico_brasil.orchestration <comando>`.
 - **Confira antes de afirmar:** leia o arquivo, rode o comando ou busque no código antes de dizer que algo existe, falta ou está desatualizado.
 - Ao mover arquivos, use `git mv` e reescreva os links (inclusive em código e testes); depois confira que nenhum link relativo ficou quebrado.
