@@ -45,6 +45,10 @@ uv run dado-publico transform
 uv run dado-publico catalog     # regenera docs/03-consultar/01-catalogo.md
 ```
 
+### Plano de execução: o que o CI reprova e como declarar exceção
+
+O `tests/transformation/test_query_plans.py` compila cada modelo no warehouse sintético e roda `EXPLAIN` no DuckDB: reprova `NESTED_LOOP_JOIN`, `BLOCKWISE_NL_JOIN` e `CROSS_PRODUCT`, que são quadráticos. A causa típica é juntar por `in (f(a), f(b))`, por `or` ou só por desigualdade: o DuckDB não faz hash join e, com milhões de linhas, o `dbt build` trava (foi o `fct_emendas`). O conserto é calcular a chave uma vez por linha (`union all` das chaves) e ligar por igualdade. Junção com um lado minúsculo e fixo (tabela de apoio, agregado de uma linha, cortes de data) é segura: declare em `ALLOWED` do teste, com `(modelo, operador)` e o motivo em uma linha. Cuidado: com dado sintético minúsculo o otimizador escolhe laço aninhado até para junção por intervalo; confira o motivo antes de pôr na lista.
+
 ## 7. Publicar
 
 ```bash
