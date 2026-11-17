@@ -30,7 +30,7 @@ uv run dado-publico run --incremental --foreach 300
 
 ## Modos de execução
 
-A pasta de armazenamento (`data_store/`, fora do git) vem de `DADO_PUBLICO_STORAGE_ROOT` (padrão `data_store`). Não se definem à mão: `DADO_PUBLICO_WAREHOUSE_FILE` e `DADO_PUBLICO_ESTADO_FILE` são gravadas pelo CLI para o dbt e o Elementary, que leem o warehouse e o estado (ADR 0051) onde o CLI aponta; `DADO_PUBLICO_GIT_SHA` é gravada pelo build da imagem (`--build-arg GIT_SHA`) para registrar o commit, pois na imagem não há `.git`. Tudo a partir da raiz do repositório:
+A pasta de armazenamento (`data_store/`, fora do git) vem de `DADO_PUBLICO_STORAGE_ROOT` (padrão `data_store`). Não se definem à mão: `DADO_PUBLICO_WAREHOUSE_FILE` e `DADO_PUBLICO_REGISTRY_FILE` são gravadas pelo CLI para o dbt e o Elementary, que leem o warehouse e o registry (ADR 0051; nome pelo ADR 0060) onde o CLI aponta; `DADO_PUBLICO_GIT_SHA` é gravada pelo build da imagem (`--build-arg GIT_SHA`) para registrar o commit, pois na imagem não há `.git`. Tudo a partir da raiz do repositório:
 
 ```bash
 uv run dado-publico run --incremental                               # só a partição em curso (só as fontes com `schedule`)
