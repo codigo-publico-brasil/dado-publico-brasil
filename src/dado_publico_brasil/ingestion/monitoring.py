@@ -171,13 +171,16 @@ def check_volume(con: Connection, source: str, dataset: str, partition: int | No
 def latest_status(con: Connection, source: str, dataset: str) -> tuple[str, list[str]]:
     """O pior estado (`error`, `warn` ou `ok`) de um dataset e os detalhes das verificações fora de `ok`.
 
-    Cada verificação (por partição e nome) vale pelo registro mais recente: erro já corrigido não conta.
+    Cada verificação (por partição e nome) vale pelo registro mais recente: erro já corrigido não conta. Mês
+    `nao_publicado` (a fonte ainda não publicou, ADR 0059) vale aviso: a lacuna segue em `particoes`, sem
+    derrubar o check por semanas; bloqueio e demais erros continuam `error`.
     """
     found = con.execute(
-        "SELECT resultado, verificacao, particao, detalhe FROM metadata.fontes_verificacoes "
+        "SELECT CASE WHEN tipo_ocorrencia = 'nao_publicado' THEN 'warn' ELSE resultado END AS r, "
+        "verificacao, particao, detalhe FROM metadata.fontes_verificacoes "
         "WHERE fonte = ? AND dataset = ? AND resultado <> 'ok' AND id_verificacao IN ("
         "SELECT max(id_verificacao) FROM metadata.fontes_verificacoes WHERE fonte = ? AND dataset = ? "
-        "GROUP BY particao, verificacao) ORDER BY resultado DESC, verificacao, particao",
+        "GROUP BY particao, verificacao) ORDER BY r DESC, verificacao, particao",
         (source, dataset, source, dataset),
     ).fetchall()
     details = [f"[{s}] {name}{f' ({p})' if p is not None else ''}: {d}" for s, name, p, d in found]

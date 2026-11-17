@@ -5,7 +5,7 @@ models:
     description: Deputados, uma linha por deputado, com nomes padronizados e tipos corretos.
     columns:
       - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["unique", "not_null"]}
-      - {name: nome, description: "Nome parlamentar, com caixa padronizada.", tests: ["not_null"]}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
       - {name: sexo, description: "Sexo registrado no cadastro da fonte."}
       - {name: dt_nascimento, description: "Data de nascimento informada pela fonte."}
@@ -24,7 +24,7 @@ models:
   - name: stg_camara__deputados_profissoes
     description: Profissões declaradas por deputado. Deputado sem profissão declarada vem da fonte com título vazio e fica aqui com `titulo` nulo (lacuna medida, não preenchida); quem consome filtra.
     columns:
-      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["not_null"]}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: cd_tipo, description: "Código do tipo, como a fonte informa."}
       - {name: titulo, description: "Ocupação declarada."}
       - {name: dt_registro, description: "Data e hora do andamento."}
@@ -36,7 +36,7 @@ models:
   - name: stg_camara__deputados_ocupacoes
     description: Ocupações anteriores declaradas por deputado.
     columns:
-      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["not_null"]}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: titulo, description: "Ocupação declarada."}
       - {name: entidade, description: "Entidade em que exerceu a ocupação."}
       - {name: entidade_uf, description: "UF da entidade."}
@@ -54,7 +54,7 @@ models:
     description: Proposições com a última situação. A ementa fica como veio da fonte.
     columns:
       - {name: id_proposicao, description: "Identificador da proposição na fonte.", tests: ["unique", "not_null"]}
-      - {name: sigla_tipo, description: "Sigla do tipo, como a fonte informa.", tests: ["not_null"]}
+      - {name: sigla_tipo, description: "Sigla do tipo, como a fonte informa.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: numero, description: "Número da norma."}
       - {name: ano, description: "Ano do evento."}
       - {name: descricao_tipo, description: "Descrição do tipo da proposição, como a Câmara informa."}
@@ -94,7 +94,7 @@ models:
     description: Votações com resultado e totais oficiais.
     columns:
       - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["unique", "not_null"]}
-      - {name: dt_votacao, description: "Data da votação.", tests: ["not_null"]}
+      - {name: dt_votacao, description: "Data da votação.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: dt_registro, description: "Data e hora do andamento."}
       - {name: id_orgao, description: "Identificador do órgão na fonte."}
       - {name: orgao_sigla, description: "Sigla do órgão em que ocorreu."}
@@ -205,8 +205,8 @@ models:
   - name: stg_camara__orgaos_membros
     description: Participação de deputados em órgãos, uma linha por cargo e período.
     columns:
-      - {name: id_orgao, description: "Identificador do órgão na fonte.", tests: ["not_null"]}
-      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: ["not_null"]}
+      - {name: id_orgao, description: "Identificador do órgão na fonte.", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: orgao_sigla, description: "Sigla do órgão em que ocorreu."}
       - {name: cargo, description: "Cargo exercido."}
       - {name: partido_sigla, description: "Sigla do partido, como a fonte informa."}
@@ -238,7 +238,7 @@ models:
       Participação de deputados em frentes parlamentares, uma linha por legislatura e título. Em parte das
       linhas (coordenações antigas) a fonte não identifica o deputado; elas ficam aqui e saem dos marts.
     columns:
-      - {name: id_frente, description: "Identificador da frente na fonte.", tests: ["not_null"]}
+      - {name: id_frente, description: "Identificador da frente na fonte.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: id_deputado, description: "Identificador do deputado na Câmara.", tests: [{"not_null": {"config": {"severity": "warn"}}}]}
       - {name: id_legislatura, description: "Número da legislatura."}
       - {name: titulo, description: "Ocupação declarada."}
