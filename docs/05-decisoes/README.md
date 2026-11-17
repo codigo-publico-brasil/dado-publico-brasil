@@ -99,6 +99,7 @@ Para quem quer saber **por que** algo é como é. Responde: quando uma decisão 
 | [0058](0058-particao-diaria-generica.md) | Partição diária genérica (`partition: day`, `first_day`, `lag_days`) no contrato | proposto; complementa 0045 e 0053 |
 | [0059](0059-missing-status-host-s3.md) | `missing_status`: o 403 do host S3 é arquivo inexistente, declarado no contrato | proposto; complementa 0045 e 0053 |
 | [0060](0060-renomeia-o-arquivo-de-estado-para-registry.md) | Renomeia `estado.duckdb` para `registry.duckdb` (alias `registry`), com migração por renomeação | proposto; altera em parte 0051 |
+| [0061](0061-cache-negativo-e-uma-pergunta-por-arquivo.md) | Cache negativo na recuperação (7 dias) e uma pergunta por arquivo por execução | proposto; complementa 0038 e 0059 |
 
 **Numeração:** o ADR do lake nasceu como um segundo `0038` e foi renumerado para 0055. Confira `git ls-tree origin/main docs/05-decisoes/` antes de escolher o próximo número.
 
