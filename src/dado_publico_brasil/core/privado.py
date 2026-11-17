@@ -25,7 +25,13 @@ def credentials() -> dict[str, str]:
 
 
 def secret(con: Connection) -> None:
-    """Cria o segredo `lake` do R2 na conexão, se houver credenciais."""
+    """Prepara a conexão para o R2: tentativas do httpfs e, se houver credenciais, o segredo `lake`.
+
+    `http_retries` 8, espera inicial de 1 s e fator 2: o DuckDB espera 1, 2, 4... 128 s (~4 min) antes de
+    desistir, o que tolera uma queda de DNS ou de rede; erro permanente (403, 404) não é repetido.
+    https://duckdb.org/docs/2.0/configuration/overview.html
+    """
+    con.execute("SET http_retries = 8; SET http_retry_wait_ms = 1000; SET http_retry_backoff = 2.0")
     if cfg := credentials():
         quoted = {k: v.replace("'", "''") for k, v in cfg.items()}
         con.execute(

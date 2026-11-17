@@ -11,6 +11,8 @@ ao warehouse.
 
 from datetime import UTC, datetime
 
+import duckdb
+
 from dado_publico_brasil.core import privado, warehouse
 from dado_publico_brasil.core.settings import Settings
 from dado_publico_brasil.core.warehouse import Connection
@@ -51,9 +53,18 @@ def take(con: Connection, settings: Settings) -> str | None:
         return None
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     target = privado.prepare(f"{privado.snapshots(settings)}/{stamp}")
-    for table in warehouse.tables(con, SCHEMA):
-        con.execute(f"COPY {SCHEMA}.{table} TO '{target}/{table}.parquet' (FORMAT parquet, COMPRESSION zstd)")
-    con.execute(f"COPY (SELECT now() AS dt_conclusao) TO '{target}/{privado.MARKER}' (FORMAT csv)")
+    try:
+        for table in warehouse.tables(con, SCHEMA):
+            con.execute(
+                f"COPY {SCHEMA}.{table} TO '{target}/{table}.parquet' (FORMAT parquet, COMPRESSION zstd)"
+            )
+        con.execute(f"COPY (SELECT now() AS dt_conclusao) TO '{target}/{privado.MARKER}' (FORMAT csv)")
+    except duckdb.IOException as error:
+        raise RuntimeError(
+            f"envio da cópia da identidade falhou (falha de rede, mesmo após as tentativas): {error}. "
+            "A cópia é obrigatória (ADR 0036); reexecutar a partir do passo `identity` é seguro: a pasta "
+            "sem `_concluido` é ignorada e a próxima tentativa grava outra."
+        ) from error
     return target
 
 
