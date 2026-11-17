@@ -8,6 +8,8 @@ import base64
 import hashlib
 import hmac
 import http.client
+import logging
+import ssl
 import threading
 import time
 import xml.etree.ElementTree as ET
@@ -17,7 +19,8 @@ from pathlib import Path
 from urllib.parse import quote
 
 _LOCAL = threading.local()  # uma conexão HTTPS persistente por thread de envio
-ATTEMPTS = 6  # tentativas por requisição
+log = logging.getLogger(__name__)
+ATTEMPTS = 9  # tentativas por requisição; esperas de 2, 4, 8, 16, 32 e 3 x 60 s: ~4 min de queda de rede
 
 
 def sign(
@@ -114,12 +117,20 @@ def request(
             except (http.client.HTTPException, OSError) as error:
                 conn.close()
                 _LOCAL.conn = None
-                failure, retry = repr(error), True
+                failure, retry = repr(error), not isinstance(error, ssl.SSLCertVerificationError)
             if failure is None:
                 return detail
-            if not retry or attempt == ATTEMPTS:
+            if not retry:
                 raise RuntimeError(f"R2 {method} {key}: {failure}")
-            time.sleep(min(2**attempt, 30))
+            if attempt == ATTEMPTS:
+                raise RuntimeError(
+                    f"R2 {method} {key}: falha de rede ou do servidor após {ATTEMPTS} tentativas: {failure}"
+                )
+            wait = min(2**attempt, 60)
+            log.warning(
+                "R2 %s %s: %s; nova tentativa em %s s (%s/%s)", method, key, failure, wait, attempt, ATTEMPTS
+            )
+            time.sleep(wait)
     raise AssertionError("ATTEMPTS deve ser positivo")  # pragma: no cover
 
 

@@ -3,6 +3,7 @@
 import shutil
 from pathlib import Path
 
+import duckdb
 import pytest
 from synthetic_camara import fake_downloader, no_headers, synthetic_files
 
@@ -133,3 +134,24 @@ def test_a_failed_restore_on_a_new_warehouse_removes_the_file(
     with pytest.raises(RuntimeError, match="R2 fora do ar"):
         migrations.open_warehouse(settings)
     assert not settings.registry.exists()  # senão a próxima subida pularia a restauração
+
+
+def test_the_connection_tolerates_a_few_minutes_of_network_failure() -> None:
+    con = duckdb.connect()
+    privado.secret(con)
+    got = con.execute(
+        "SELECT name, value FROM duckdb_settings() WHERE name LIKE 'http_retr%' ORDER BY name"
+    ).fetchall()
+    assert got == [("http_retries", "8"), ("http_retry_backoff", "2.0"), ("http_retry_wait_ms", "1000")]
+
+
+def test_a_failed_snapshot_upload_says_it_is_the_network_and_that_rerunning_is_safe(
+    con: Connection, settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    add_person(con)
+    blocked = tmp_path / "arquivo"
+    blocked.write_text("não é pasta")
+    monkeypatch.setattr(privado, "root", lambda s: (blocked / "bucket").as_posix())
+    monkeypatch.setattr(privado, "prepare", lambda path: path)
+    with pytest.raises(RuntimeError, match=r"(?s)falha de rede.*reexecutar"):
+        snapshot.take(con, settings)
