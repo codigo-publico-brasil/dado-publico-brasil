@@ -161,7 +161,9 @@ def test_months_already_seen_as_not_published_go_last_in_the_recovery(
         source = contract(tmp_path, base)
         landing.extract_plan(con, settings, source, [("mensal", 202605), ("mensal", 202603)])
         order = [p for _, p in landing.plan_recovery(con, source, TODAY, limit=9)]
-    assert order == [202604, 202602, 202601, 202605, 202603]  # o que nunca foi pedido vem antes
+    # o que nunca foi pedido vem antes; o anterior ao mês em curso fica no fim (o cache negativo, ADR 0061,
+    # tira o 202603, visto há pouco)
+    assert order == [202604, 202602, 202601, 202605]
     assert [p for _, p in landing.plan_recovery(con, source, TODAY, limit=3)] == [202604, 202602, 202601]
 
 

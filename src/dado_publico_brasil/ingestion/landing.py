@@ -16,7 +16,7 @@ import json
 import logging
 import shutil
 import urllib.error
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from contextlib import suppress
 from datetime import date, datetime, timedelta
 from http.client import HTTPException
@@ -268,6 +268,29 @@ def plan_incremental(contract: SourceContract, today: date | None = None) -> lis
 # ---------------------------------------------------------------- lacunas e recuperação
 
 RECOVERY_LIMIT = 3  # partições antigas por dataset e execução: pausa longa não vira carga gigante
+NEGATIVE_CACHE_DAYS = 7  # arquivo visto `nao_publicado` não é sondado de novo na recuperação por este prazo
+
+
+def _recently_absent(con: Connection, contract: SourceContract) -> set[str]:
+    """URLs (sem o `#`) cuja última verificação `availability`, em qualquer dataset que leia o arquivo, foi
+    `nao_publicado` há menos de `NEGATIVE_CACHE_DAYS` (cache negativo, ADR 0061)."""
+    cutoff = (datetime.fromisoformat(runs.now()) - timedelta(days=NEGATIVE_CACHE_DAYS)).isoformat(
+        timespec="seconds"
+    )
+    latest: dict[str, tuple[int, bool]] = {}
+    for r in rows(
+        con,
+        "SELECT dataset, particao, id_verificacao, tipo_ocorrencia = 'nao_publicado' AND dt_verificacao > ? "
+        "AS absent FROM metadata.fontes_verificacoes WHERE fonte = ? AND verificacao = 'availability' "
+        "AND particao IS NOT NULL "
+        "QUALIFY ROW_NUMBER() OVER (PARTITION BY dataset, particao ORDER BY id_verificacao DESC) = 1",
+        (cutoff, contract.source),
+    ):
+        d = contract.datasets.get(r["dataset"])
+        if d and d.yearly and not d.foreach:
+            url = contract.url(d.name, int(r["particao"])).partition("#")[0]
+            latest[url] = max(latest.get(url, (0, False)), (int(r["id_verificacao"]), bool(r["absent"])))
+    return {url for url, (_, absent) in latest.items() if absent}
 
 
 def expected_partitions(dataset: Dataset, today: date) -> list[int]:
@@ -350,12 +373,21 @@ def plan_recovery(
     if contract.schedule is None:
         return []
     items: list[Item] = []
+    absent = _recently_absent(con, contract)
     for name, gap in partition_gaps(con, contract, today).items():
-        current = current_partition(contract.datasets[name], today)
+        d = contract.datasets[name]
+        current = current_partition(d, today)
+        # cache negativo: arquivo visto não publicado há pouco não é sondado de novo; o mês em curso e o
+        # anterior, que o plano normal pede toda noite, ficam de fora dele
+        exempt = {current, previous_month(current)} if d.partition == "month" else {current}
+        cached = {
+            p
+            for p in gap["faltam"]
+            if d.missing_status and p not in exempt and contract.url(name, p).partition("#")[0] in absent
+        }
+        late = [p for p in gap["faltam"] if p != current and p not in cached]
         # as já vistas como não publicadas por último: não ocupam o lugar do que existe e falta
-        late = sorted(
-            (p for p in gap["faltam"] if p != current), key=lambda p: (p in gap.get("aguardando", ()), -p)
-        )
+        late.sort(key=lambda p: (p in gap.get("aguardando", ()), -p))
         # a janela do dataset diário é o `first_day` do YAML; nos demais, `limit` poupa a fonte
         keep = late if contract.datasets[name].partition == "day" else late[:limit]
         items += [(name, p) for p in keep]
@@ -395,6 +427,18 @@ def _latest_day(dataset: Dataset, value: int | None) -> bool:
     )
 
 
+def _once(memo: dict[tuple[str, str], Any], key: tuple[str, str], call: Callable[[], Any]) -> Any:
+    """Faz a pergunta à fonte uma vez por chave e execução; a falha também é lembrada."""
+    if key not in memo:
+        try:
+            memo[key] = call()
+        except (OSError, fetch.SourceBlocked) as error:
+            memo[key] = error
+    if isinstance(result := memo[key], Exception):
+        raise result
+    return result
+
+
 def _keep_previous(settings: Settings, previous: Mapping[str, Any], file: Path, lost: bool) -> None:
     """O download repetiu a captura anterior: o arquivo novo sai; se o antigo sumiu, o novo ocupa o lugar."""
     original = settings.storage_root / previous["caminho"]
@@ -418,19 +462,25 @@ def extract(
     downloader: Downloader | None = None,
     head_request: HeadRequest | None = None,
     force: bool = False,
+    memo: dict[tuple[str, str], Any] | None = None,
 ) -> int:
     """Captura um dataset e devolve o id da captura (nova ou a anterior, se nada mudou).
+
+    `memo` (um por execução do plano) guarda o que a fonte respondeu por arquivo (URL sem o `#`): os datasets
+    irmãos do mesmo pacote não repetem o HEAD nem o GET recusado, e cada um registra a própria verificação.
 
     O arquivo vai para `<storage_root>/landing/<fonte>/`. `force` ignora a pergunta à fonte. Se a fonte
     falhar, a falha é registrada em `metadata.fontes_verificacoes` e devolve -1, sem interromper o plano.
     """
     url = contract.url(dataset, year)
+    base = url.partition("#")[0]
+    memo = {} if memo is None else memo
     downloader = downloader or fetch.downloader(contract, dataset)
     head_request = head_request or fetch.head_request(contract, dataset)
     with runs.track(con, "extract", contract.source, dataset, year) as run:
         previous = last_capture(con, url)
         try:
-            headers = {} if force else head_request(url)
+            headers = {} if force else _once(memo, ("head", base), lambda: head_request(url))
         except (OSError, fetch.SourceBlocked):  # HEAD brando: 403/405 não aborta; só o GET bloqueia
             headers = {}
         lost = previous is not None and not (settings.storage_root / previous["caminho"]).exists()
@@ -442,6 +492,8 @@ def extract(
             None if force else same_file(con, contract, dataset, url, year, settings.storage_root, headers)
         )
         try:
+            if (refused := memo.get(("get", base))) is not None:  # o irmão já recebeu a recusa
+                raise refused
             if reused:  # o pacote já veio por outro dataset: sem novo download
                 file, digest, size = (
                     settings.storage_root / reused["caminho"],
@@ -453,6 +505,7 @@ def extract(
                     url, folder(settings, contract.source, dataset, year, runs.now())
                 )
         except fetch.SourceBlocked as error:
+            memo[("get", base)] = error
             if not _not_yet_published(contract.datasets[dataset], year, error):
                 raise
             monitoring.record(
@@ -531,10 +584,11 @@ def extract_plan(
     if recover:
         items = [*items, *(i for i in plan_recovery(con, contract) if i not in items)]
     done = 0
+    memo: dict[tuple[str, str], Any] = {}
     for dataset, year in items:
         logger.info("Extraindo %s", f"{dataset} {year or ''}".strip())
         try:
-            extract(con, settings, contract, dataset, year, downloader, head_request, force)
+            extract(con, settings, contract, dataset, year, downloader, head_request, force, memo)
             done += 1
             if (
                 con.execute(  # um bloqueio antigo deixa de contar quando a fonte volta a responder
