@@ -81,6 +81,7 @@ Mapa em [`docs/README.md`](docs/README.md): `01-entender` (explica), `02-fazer` 
 
 ## Lições de experiência
 
+- **Teste em coluna que vem da fonte é `warn`** (a lacuna é medida, não bloqueia); `error` só para chave ou invariante nossa: um `error` derruba o `processar_tudo` e a publicação inteiros (incidente 16/11/2026, `stg_senado__ceaps`, 2 linhas em 276 mil sem número de documento). Mês `nao_publicado` também vale aviso na `saude_da_fonte`.
 - **Um escritor por vez no DuckDB:** pare o Dagster e container órfão antes de rodar etapas; o `export` e o `transform` falham se algo segura o arquivo. Detalhes e receitas em [Operar e publicar](docs/02-fazer/04-operar-e-publicar.md).
 - **Raw em Parquet por captura (ADR 0051):** recarregar uma captura substitui a pasta dela, então coluna nova não duplica linha; a captura antiga só ganha a coluna ao recarregar o dataset. **Trocar a chave para uma coluna que a tabela do raw não tem** (ex.: `_row_hash`) já é detectado: o `load_pending` descarta o dataset e o recarrega do landing, registrando `recarga_por_chave` (ADR 0046).
 - No Windows o `dado-publico.exe` pode ser bloqueado: use `uv run python -m dado_publico_brasil.orchestration <comando>`.

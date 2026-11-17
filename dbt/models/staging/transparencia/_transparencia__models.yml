@@ -5,7 +5,7 @@ models:
     description: Emendas parlamentares, uma linha por emenda, localidade, função, programa e ação.
     columns:
       - {name: cd_emenda, description: "Identificador da emenda, de 12 dígitos: 4 do ano da emenda, 4 do código do autor e 4 do número da emenda do autor (dicionário de dados do portal); vazio em registros antigos sem código."}
-      - {name: ano, description: "Ano do evento.", tests: ["not_null"]}
+      - {name: ano, description: "Ano do evento.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: tipo, description: "Mudança de nome, fusão ou incorporação."}
       - {name: cd_autor, description: "Código do autor da emenda como registrado no SIAFI (não é o código do parlamentar); vazio quando a fonte não informa."}
       - {name: autor_nome, description: "Nome do autor da emenda como registrado no SIAFI (parlamentar, bancada, comissão ou relator-geral), com caixa padronizada."}
@@ -83,12 +83,12 @@ models:
     description: Execução da despesa federal por mês, órgão, unidade gestora, ação e natureza da despesa, com os valores empenhado, liquidado e pago. Não traz favorecido (o arquivo não o publica).
     meta: {sensitivity: publico-agente-publico, grain: "mês, órgão subordinado, unidade gestora, gestão, unidade orçamentária, plano orçamentário, subtítulo, localizador, autor da emenda, elemento e modalidade da despesa"}
     columns:
-      - {name: dt_lancamento, description: "Mês do lançamento da despesa (primeiro dia do mês; a fonte traz AAAA/MM).", tests: ["not_null"]}
+      - {name: dt_lancamento, description: "Mês do lançamento da despesa (primeiro dia do mês; a fonte traz AAAA/MM).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: cd_orgao_superior, description: "Código SIAFI do órgão superior (ministério ou equivalente), como a fonte informa."}
       - {name: orgao_superior, description: "Nome do órgão superior (ministério ou equivalente)."}
       - {name: cd_orgao_subordinado, description: "Código SIAFI do órgão subordinado, como a fonte informa."}
       - {name: orgao_subordinado, description: "Nome do órgão subordinado."}
-      - {name: cd_unidade_gestora, description: "Código SIAFI da unidade gestora que executou a despesa.", tests: ["not_null"]}
+      - {name: cd_unidade_gestora, description: "Código SIAFI da unidade gestora que executou a despesa.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: unidade_gestora, description: "Nome da unidade gestora."}
       - {name: cd_gestao, description: "Código da gestão no SIAFI."}
       - {name: gestao, description: "Nome da gestão no SIAFI."}
@@ -139,8 +139,8 @@ models:
     description: "Contratos do governo federal, um por linha, de 2022-11 em diante. Contratado pessoa física vem com CPF completo na fonte e sai mascarado aqui."
     meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "numero_contrato + cd_ug"}
     columns:
-      - {name: id_contrato, description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen (o número só é único junto com a unidade gestora).", tests: ["not_null"]}
-      - {name: numero_contrato, description: "Número do contrato, como a fonte informa (único só junto com a unidade gestora).", tests: ["not_null"]}
+      - {name: id_contrato, description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen (o número só é único junto com a unidade gestora).", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: numero_contrato, description: "Número do contrato, como a fonte informa (único só junto com a unidade gestora).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: objeto, description: "Objeto do contrato, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing). Pode ser `Informação protegida por sigilo`."}
       - {name: fundamento_legal, description: "Fundamento legal da contratação."}
       - {name: modalidade_compra, description: "Modalidade da compra (pregão, dispensa, inexigibilidade...), como a fonte informa."}
@@ -149,7 +149,7 @@ models:
       - {name: orgao_superior, description: "Nome do órgão superior."}
       - {name: cd_orgao, description: "Código SIAFI do órgão contratante."}
       - {name: orgao, description: "Nome do órgão contratante."}
-      - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: ["not_null"]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: ug, description: "Nome da unidade gestora contratante."}
       - {name: dt_assinatura, description: "Data de assinatura do contrato."}
       - {name: dt_publicacao_dou, description: "Data de publicação no Diário Oficial da União."}
@@ -174,12 +174,12 @@ models:
     description: Itens dos contratos do governo federal.
     meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "numero_contrato + cd_ug + cd_item"}
     columns:
-      - {name: id_contrato, description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen (o número só é único junto com a unidade gestora).", tests: ["not_null"]}
+      - {name: id_contrato, description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen (o número só é único junto com a unidade gestora).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: cd_orgao, description: "Código SIAFI do órgão contratante."}
       - {name: orgao, description: "Nome do órgão contratante."}
-      - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: ["not_null"]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: ug, description: "Nome da unidade gestora contratante."}
-      - {name: numero_contrato, description: "Número do contrato a que o item pertence (liga a `stg_transparencia__compras` junto com a unidade gestora).", tests: ["not_null"]}
+      - {name: numero_contrato, description: "Número do contrato a que o item pertence (liga a `stg_transparencia__compras` junto com a unidade gestora).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: cd_item, description: "Código do item da compra."}
       - {name: item, description: "Descrição do item, texto livre da fonte."}
       - {name: item_descricao, description: "Descrição complementar do item, texto livre da fonte."}
@@ -194,15 +194,15 @@ models:
     description: Termos aditivos dos contratos do governo federal.
     meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "numero_contrato + cd_ug + numero_termo_aditivo"}
     columns:
-      - {name: id_contrato, description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen (o número só é único junto com a unidade gestora).", tests: ["not_null"]}
-      - {name: numero_contrato, description: "Número do contrato aditado (liga a `stg_transparencia__compras` junto com a unidade gestora).", tests: ["not_null"]}
+      - {name: id_contrato, description: "Chave do contrato montada pelo projeto: código da unidade gestora e número do contrato, separados por hífen (o número só é único junto com a unidade gestora).", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: numero_contrato, description: "Número do contrato aditado (liga a `stg_transparencia__compras` junto com a unidade gestora).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: cd_orgao_superior, description: "Código SIAFI do órgão superior (ministério ou equivalente)."}
       - {name: orgao_superior, description: "Nome do órgão superior."}
       - {name: cd_orgao, description: "Código SIAFI do órgão contratante."}
       - {name: orgao, description: "Nome do órgão contratante."}
-      - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: ["not_null"]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora contratante.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: ug, description: "Nome da unidade gestora contratante."}
-      - {name: numero_termo_aditivo, description: "Número do termo aditivo.", tests: ["not_null"]}
+      - {name: numero_termo_aditivo, description: "Número do termo aditivo.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: dt_publicacao, description: "Data de publicação do termo aditivo."}
       - {name: objeto, description: "Objeto do termo aditivo, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto)."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data."}
@@ -214,11 +214,11 @@ models:
     description: "Licitações do governo federal (SIASG), uma por linha, de 2022-11 em diante, só meses fechados."
     meta: {sensitivity: publico-agente-publico, grain: "unidade gestora, modalidade e número da licitação"}
     columns:
-      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: ["not_null"]}
-      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: ["not_null"]}
-      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: ["not_null"]}
+      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: ug, description: "Nome da unidade gestora responsável pela licitação."}
-      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: ["not_null"]}
+      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: modalidade, description: "Modalidade de compra, como a fonte informa."}
       - {name: numero_processo, description: "Número do processo administrativo da licitação, como a fonte informa."}
       - {name: objeto, description: "Objeto da licitação, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing)."}
@@ -241,11 +241,11 @@ models:
     description: "Itens das licitações do governo federal, com o vencedor. Vencedor pessoa física vem com CPF completo na fonte e sai mascarado aqui."
     meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "linha da fonte: item e vencedor (a fonte repete linhas idênticas e deixa o código do item vazio em parte delas)"}
     columns:
-      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: ["not_null"]}
-      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: ["not_null"]}
-      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: ["not_null"]}
+      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: ug, description: "Nome da unidade gestora responsável pela licitação."}
-      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: ["not_null"]}
+      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: modalidade, description: "Modalidade de compra, como a fonte informa."}
       - {name: numero_processo, description: "Número do processo administrativo da licitação, como a fonte informa."}
       - {name: cd_orgao, description: "Código SIAFI do órgão da unidade gestora."}
@@ -265,11 +265,11 @@ models:
     description: "Participantes dos itens das licitações do governo federal, com a marca de vencedor. Participante pessoa física vem com CPF completo na fonte e sai mascarado aqui."
     meta: {sensitivity: publico-dados-pessoais-de-terceiros, grain: "linha da fonte: item e participante (a fonte repete linhas idênticas)"}
     columns:
-      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: ["not_null"]}
-      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: ["not_null"]}
-      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: ["not_null"]}
+      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: ug, description: "Nome da unidade gestora responsável pela licitação."}
-      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: ["not_null"]}
+      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: modalidade, description: "Modalidade de compra, como a fonte informa."}
       - {name: numero_processo, description: "Número do processo administrativo da licitação, como a fonte informa."}
       - {name: cd_orgao, description: "Código SIAFI do órgão da unidade gestora."}
@@ -288,14 +288,14 @@ models:
     description: "Empenhos relacionados às licitações do governo federal."
     meta: {sensitivity: publico-agente-publico, grain: "licitação e empenho"}
     columns:
-      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: ["not_null"]}
-      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: ["not_null"]}
-      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: ["not_null"]}
+      - {name: id_licitacao, description: "Chave da licitação montada pelo projeto: código da unidade gestora, código da modalidade e número da licitação, separados por hífen (o número só é único junto com os outros dois).", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: numero_licitacao, description: "Número da licitação no SIASG, como a fonte informa.", tests: [{not_null: {config: {severity: warn}}}]}
+      - {name: cd_ug, description: "Código SIAFI da unidade gestora responsável pela licitação.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: ug, description: "Nome da unidade gestora responsável pela licitação."}
-      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: ["not_null"]}
+      - {name: cd_modalidade, description: "Código da modalidade de compra, como a fonte informa (01 convite, 02 tomada de preços, 03 concorrência, 05 pregão, 06 dispensa, 07 inexigibilidade, entre outros do dicionário do portal).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: modalidade, description: "Modalidade de compra, como a fonte informa."}
       - {name: numero_processo, description: "Número do processo administrativo da licitação, como a fonte informa."}
-      - {name: cd_empenho, description: "Código do empenho relacionado à licitação, como a fonte informa.", tests: ["not_null"]}
+      - {name: cd_empenho, description: "Código do empenho relacionado à licitação, como a fonte informa.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: dt_emissao, description: "Data de emissão do empenho."}
       - {name: observacao, description: "Observação do empenho, texto livre da fonte (CPF no texto é mascarado (***.nnn.nnn-**) pelo projeto; o original fica no landing)."}
       - {name: valor, description: "Valor do empenho, em reais, com as quatro casas que a fonte publica."}

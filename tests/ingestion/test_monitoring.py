@@ -152,3 +152,11 @@ def test_the_source_health_is_the_worst_of_the_latest_record_of_each_check(con: 
     status, details = monitoring.latest_status(con, "camara", "votos")
     assert status == "warn" and details == ["[warn] volume (2023): de 100 para 50 linhas"]
     assert monitoring.latest_status(con, "camara", "outro") == ("ok", [])
+
+
+def test_a_not_yet_published_month_is_only_a_warning(con: Connection) -> None:
+    monitoring.record(con, "camara", "votos", 202611, "availability", "error", "403", tipo="nao_publicado")
+    status, details = monitoring.latest_status(con, "camara", "votos")
+    assert status == "warn" and details[0].startswith("[warn] availability (202611)")
+    monitoring.record(con, "camara", "votos", 202610, "bloqueio", "error", "429", tipo="bloqueio")
+    assert monitoring.latest_status(con, "camara", "votos")[0] == "error"

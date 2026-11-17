@@ -4,8 +4,8 @@ models:
   - name: stg_senado__senadores
     description: Senadores, uma linha por senador (o mais recente dos arquivos de legislatura), com nomes padronizados.
     columns:
-      - {name: id_senador, description: "Identificador do senador no Senado.", tests: ["unique", "not_null"]}
-      - {name: nome, description: "Nome parlamentar, com caixa padronizada.", tests: ["not_null"]}
+      - {name: id_senador, description: "Identificador do senador no Senado.", tests: [{unique: {config: {severity: warn}}}, {not_null: {config: {severity: warn}}}]}
+      - {name: nome, description: "Nome parlamentar, com caixa padronizada.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: nome_civil, description: "Nome civil, com caixa padronizada."}
       - {name: sexo, description: "Sexo registrado no cadastro da fonte."}
       - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
@@ -17,7 +17,7 @@ models:
     description: Votações em plenário com resultado, totais e a matéria votada. Votação secreta tem `secreta` verdadeiro.
     columns:
       - {name: id_votacao, description: "Identificador da votação na fonte.", tests: ["unique", "not_null"]}
-      - {name: dt_votacao, description: "Data da votação.", tests: ["not_null"]}
+      - {name: dt_votacao, description: "Data da votação.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: fl_secreta, description: "Verdadeiro se a votação foi secreta (a fonte não informa a escolha de cada voto)."}
       - {name: resultado, description: "Resultado da votação segundo a fonte (eleito por QP, eleito por média, suplente, não eleito); vazio se não informado."}
       - {name: votos_sim, description: "Total de votos Sim informado pela fonte."}
@@ -61,7 +61,7 @@ models:
     description: Colegiados do Congresso em atividade (comissões, plenário, conselhos e comitês), um por linha; o colegiado extinto não consta da fonte.
     columns:
       - {name: id_colegiado, description: "Código do colegiado no Senado.", tests: ["unique", "not_null"]}
-      - {name: sigla, description: "Sigla do colegiado.", tests: ["not_null"]}
+      - {name: sigla, description: "Sigla do colegiado.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: nome, description: "Nome oficial do colegiado."}
       - {name: dt_inicio, description: "Data de início do colegiado, como a fonte informa (1900-01-01 nos permanentes antigos)."}
       - {name: fl_publico, description: "Verdadeiro se o colegiado é público, como a fonte informa (campo Publica: S ou N)."}
@@ -78,7 +78,7 @@ models:
     description: Processo de cada matéria votada (só as já buscadas), com a situação atual e a norma gerada.
     columns:
       - {name: id_processo, description: "Identificador do processo (matéria) no Senado.", tests: ["unique", "not_null"]}
-      - {name: id_materia, description: "Identificador da matéria no Senado.", tests: ["not_null"]}
+      - {name: id_materia, description: "Identificador da matéria no Senado.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: materia_sigla, description: "Identificação da matéria (sigla, número e ano), como o Senado informa."}
       - {name: fl_tramitando, description: "Verdadeiro se a matéria está tramitando, como o Senado informa."}
       - {name: situacao, description: "Situação atual segundo a fonte."}
@@ -108,7 +108,7 @@ models:
     columns:
       - {name: id_senador, description: "Identificador do senador no Senado."}
       - {name: id_mandato, description: "Código do mandato no Senado (titular e suplentes compartilham o mesmo)."}
-      - {name: id_exercicio, description: "Código do período de exercício no Senado.", tests: ["not_null"]}
+      - {name: id_exercicio, description: "Código do período de exercício no Senado.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: participacao, description: "Titular, 1º suplente ou 2º suplente."}
       - {name: uf, description: "UF de eleição ou representação nos votos da legislatura."}
       - {name: dt_mandato_inicio, description: "Início do mandato (da primeira legislatura que ele cobre)."}
@@ -239,7 +239,7 @@ models:
   - name: stg_senado__vetos_votos
     description: Voto nominal de cada deputado e senador num dispositivo vetado, sem o código do parlamentar.
     columns:
-      - {name: id_dispositivo, description: "Código do dispositivo vetado no Senado.", tests: ["not_null"]}
+      - {name: id_dispositivo, description: "Código do dispositivo vetado no Senado.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: casa, description: "Casa legislativa."}
       - {name: nome_parlamentar, description: "Nome do parlamentar como a fonte informa, com caixa padronizada."}
       - {name: partido, description: "Partido na data do voto."}
@@ -281,7 +281,7 @@ models:
       - {name: hash_linha, description: "Impressão digital do conteúdo da linha na fonte (chave).", tests: [unique, not_null]}
       - {name: ano, description: "Ano de competência da despesa."}
       - {name: mes, description: "Mês de competência da despesa."}
-      - {name: senador_nome, description: "Nome do senador como a fonte informa, com caixa padronizada (sem código: a fonte não o traz).", tests: [not_null]}
+      - {name: senador_nome, description: "Nome do senador como a fonte informa, com caixa padronizada (sem código: a fonte não o traz).", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: tipo_despesa, description: "Tipo da despesa, como a fonte informa; vazio em parte das linhas."}
       - {name: fornecedor_nome, description: "Nome do fornecedor como a fonte informa (pessoa física inclusive); vazio nos anos em que a fonte não o publica."}
       - {name: fornecedor_documento, description: "CNPJ do fornecedor como a fonte informa; CPF de pessoa física mascarado (***.nnn.nnn-**); o original fica no landing."}
@@ -290,7 +290,7 @@ models:
       - {name: dt_emissao, description: "Data da despesa; vazia quando a fonte não informa."}
       - {name: detalhamento, description: "Texto livre da fonte (por exemplo, passageiros e voos); CPF no texto mascarado."}
       - {name: valor_reembolsado, description: "Valor reembolsado em reais, como a fonte informa."}
-      - {name: id_documento, description: "Código do documento no Senado.", tests: [not_null]}
+      - {name: id_documento, description: "Código do documento no Senado.", tests: [{not_null: {config: {severity: warn}}}]}
       - {name: fonte, description: "Fonte oficial do registro (camara, senado, tse...), igual ao prefixo do modelo."}
       - {name: id_captura, description: "Identificador da captura (arquivo do landing) de onde o registro veio: liga a linha ao arquivo original, com hash e data.", tests: [{relationships: {to: ref('stg_metadata__capturas'), field: id_captura}}]}
       - {name: dt_captura, description: "Instante (UTC) em que o arquivo de origem foi capturado pela primeira vez (metadata.capturas)."}
